@@ -100,6 +100,11 @@ class SHAKE128_XOF:
         :rtype: byte string
         """
 
+        if not isinstance(length, int) or isinstance(length, bool):
+            raise TypeError("'length' must be an integer")
+        if length < 0:
+            raise ValueError("'length' must be a non-negative integer")
+
         self._is_squeezing = True
         bfr = create_string_buffer(length)
         result = _raw_keccak_lib.keccak_squeeze(

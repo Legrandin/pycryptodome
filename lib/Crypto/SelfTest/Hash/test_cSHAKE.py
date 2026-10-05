@@ -108,6 +108,18 @@ class cSHAKETest:
         with pytest.raises(TypeError):
             mac.update(b"ttt")
 
+    def test_read_negative(self):
+        xof = self.cshake.new()
+        for bad in (True, False, 1.0, "1", None):
+            with pytest.raises(TypeError):
+                xof.read(bad)
+        with pytest.raises(ValueError):
+            xof.read(-1)
+
+        # A rejected read() does not start squeezing
+        xof.update(b"abc")
+        assert xof.read(10) == self.cshake.new(data=b"abc").read(10)
+
     def test_shake(self):
         # When no customization string is passed, results must match SHAKE
         for digest_len in range(64):

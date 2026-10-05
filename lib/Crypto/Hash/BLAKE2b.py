@@ -242,6 +242,9 @@ def new(
 
     if None not in (digest_bytes, digest_bits):
         raise TypeError("Only one digest parameter must be provided")
+    for name, value in (("digest_bytes", digest_bytes), ("digest_bits", digest_bits)):
+        if value is not None and (not isinstance(value, int) or isinstance(value, bool)):
+            raise TypeError("'%s' must be an integer" % name)
     if digest_bits is None:
         if digest_bytes is None:
             digest_bytes = 64

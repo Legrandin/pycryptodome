@@ -303,6 +303,11 @@ class K12_XOF:
         :rtype: byte string
         """
 
+        if not isinstance(length, int) or isinstance(length, bool):
+            raise TypeError("'length' must be an integer")
+        if length < 0:
+            raise ValueError("'length' must be a non-negative integer")
+
         custom_was_consumed = False
 
         # The message and the customization string together may still

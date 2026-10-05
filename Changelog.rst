@@ -13,6 +13,10 @@ Breaking changes
   ``python -m Crypto.SelfTest`` to work.
 * Remove the ``test`` command of ``setup.py``. Install the package
   (e.g. with ``pip install -e .``) and run ``python -m Crypto.SelfTest`` instead.
+* The output length must be a proper integer (``bool`` is rejected) in ``read()``
+  of SHAKE, cSHAKE, TurboSHAKE and KangarooTwelve objects, and for
+  ``digest_bytes`` and ``digest_bits`` of BLAKE2b and BLAKE2s.
+  Before, ``True`` was accepted as 1 and produced a 1-byte output.
 
 Resolved issues
 ---------------

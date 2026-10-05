@@ -69,6 +69,18 @@ class TurboSHAKETest:
         with pytest.raises(TypeError):
             xof1.update(b"ttt")
 
+    def test_read_negative(self):
+        xof = self.TurboSHAKE.new()
+        for bad in (True, False, 1.0, "1", None):
+            with pytest.raises(TypeError):
+                xof.read(bad)
+        with pytest.raises(ValueError):
+            xof.read(-1)
+
+        # A rejected read() does not start squeezing
+        xof.update(b"abc")
+        assert xof.read(10) == self.TurboSHAKE.new(data=b"abc").read(10)
+
     def test_new(self):
         xof1 = self.TurboSHAKE.new(domain=0x07)
         xof1.update(b"90")
