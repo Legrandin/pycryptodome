@@ -1,19 +1,21 @@
 # This file is licensed under the BSD 2-Clause License.
 # See https://opensource.org/licenses/BSD-2-Clause for details.
 
-from ._curve import _Curve
 from Crypto.Math.Numbers import Integer
-from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
-                                  SmartPointer)
+from Crypto.Util._raw_api import SmartPointer, VoidPointer, load_pycryptodome_raw_lib
+
+from ._curve import _Curve
 
 
 def ed25519_curve():
-    p = 0x7fffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffed  # 2**255 - 19
-    order = 0x1000000000000000000000000000000014def9dea2f79cd65812631a5cf5d3ed
-    Gx = 0x216936d3cd6e53fec0a4e231fdd6dc5c692cc7609525a7b2c9562d608f25d51a
+    p = 0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFED  # 2**255 - 19
+    order = 0x1000000000000000000000000000000014DEF9DEA2F79CD65812631A5CF5D3ED
+    Gx = 0x216936D3CD6E53FEC0A4E231FDD6DC5C692CC7609525A7B2C9562D608F25D51A
     Gy = 0x6666666666666666666666666666666666666666666666666666666666666658
 
-    _ed25519_lib = load_pycryptodome_raw_lib("Crypto.PublicKey._ed25519", """
+    _ed25519_lib = load_pycryptodome_raw_lib(
+        "Crypto.PublicKey._ed25519",
+        """
 typedef void Point;
 int ed25519_new_point(Point **out,
                       const uint8_t x[32],
@@ -28,9 +30,10 @@ int ed25519_get_xy(uint8_t *xb, uint8_t *yb, size_t modsize, Point *p);
 int ed25519_double(Point *p);
 int ed25519_add(Point *P1, const Point *P2);
 int ed25519_scalar(Point *P, const uint8_t *scalar, size_t scalar_len, uint64_t seed);
-""")
+""",
+    )
 
-    class EcLib(object):
+    class EcLib:
         new_point = _ed25519_lib.ed25519_new_point
         clone = _ed25519_lib.ed25519_clone
         free_point = _ed25519_lib.ed25519_free_point
@@ -41,28 +44,32 @@ int ed25519_scalar(Point *P, const uint8_t *scalar, size_t scalar_len, uint64_t 
         add = _ed25519_lib.ed25519_add
         scalar = _ed25519_lib.ed25519_scalar
 
-    ed25519 = _Curve(Integer(p),
-                     None,
-                     Integer(order),
-                     Integer(Gx),
-                     Integer(Gy),
-                     None,
-                     255,
-                     "1.3.101.112",     # RFC8410
-                     None,
-                     "Ed25519",
-                     "ssh-ed25519",
-                     EcLib)
+    ed25519 = _Curve(
+        Integer(p),
+        None,
+        Integer(order),
+        Integer(Gx),
+        Integer(Gy),
+        None,
+        255,
+        "1.3.101.112",  # RFC8410
+        None,
+        "Ed25519",
+        "ssh-ed25519",
+        EcLib,
+    )
     return ed25519
 
 
 def ed448_curve():
-    p = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffeffffffffffffffffffffffffffffffffffffffffffffffffffffffff  # 2**448 - 2**224 - 1
-    order = 0x3fffffffffffffffffffffffffffffffffffffffffffffffffffffff7cca23e9c44edb49aed63690216cc2728dc58f552378c292ab5844f3
-    Gx = 0x4f1970c66bed0ded221d15a622bf36da9e146570470f1767ea6de324a3d3a46412ae1af72ab66511433b80e18b00938e2626a82bc70cc05e
-    Gy = 0x693f46716eb6bc248876203756c9c7624bea73736ca3984087789c1e05a0c2d73ad3ff1ce67c39c4fdbd132c4ed7c8ad9808795bf230fa14
+    p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF  # 2**448 - 2**224 - 1
+    order = 0x3FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF7CCA23E9C44EDB49AED63690216CC2728DC58F552378C292AB5844F3
+    Gx = 0x4F1970C66BED0DED221D15A622BF36DA9E146570470F1767EA6DE324A3D3A46412AE1AF72AB66511433B80E18B00938E2626A82BC70CC05E
+    Gy = 0x693F46716EB6BC248876203756C9C7624BEA73736CA3984087789C1E05A0C2D73AD3FF1CE67C39C4FDBD132C4ED7C8AD9808795BF230FA14
 
-    _ed448_lib = load_pycryptodome_raw_lib("Crypto.PublicKey._ed448", """
+    _ed448_lib = load_pycryptodome_raw_lib(
+        "Crypto.PublicKey._ed448",
+        """
 typedef void EcContext;
 typedef void PointEd448;
 int ed448_new_context(EcContext **pec_ctx);
@@ -81,9 +88,10 @@ int ed448_get_xy(uint8_t *xb, uint8_t *yb, size_t len, const PointEd448 *p);
 int ed448_double(PointEd448 *p);
 int ed448_add(PointEd448 *P1, const PointEd448 *P2);
 int ed448_scalar(PointEd448 *P, const uint8_t *scalar, size_t scalar_len, uint64_t seed);
-""")
+""",
+    )
 
-    class EcLib(object):
+    class EcLib:
         new_point = _ed448_lib.ed448_new_point
         clone = _ed448_lib.ed448_clone
         free_point = _ed448_lib.ed448_free_point
@@ -101,16 +109,18 @@ int ed448_scalar(PointEd448 *P, const uint8_t *scalar, size_t scalar_len, uint64
 
     context = SmartPointer(ed448_context.get(), _ed448_lib.ed448_free_context)
 
-    ed448 = _Curve(Integer(p),
-                   None,
-                   Integer(order),
-                   Integer(Gx),
-                   Integer(Gy),
-                   None,
-                   448,
-                   "1.3.101.113",       # RFC8410
-                   context,
-                   "Ed448",
-                   None,
-                   EcLib)
+    ed448 = _Curve(
+        Integer(p),
+        None,
+        Integer(order),
+        Integer(Gx),
+        Integer(Gy),
+        None,
+        448,
+        "1.3.101.113",  # RFC8410
+        context,
+        "Ed448",
+        None,
+        EcLib,
+    )
     return ed448

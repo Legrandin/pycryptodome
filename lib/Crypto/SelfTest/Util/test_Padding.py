@@ -31,123 +31,122 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-import unittest
 from binascii import unhexlify as uh
 
-from Crypto.Util.py3compat import *
-from Crypto.SelfTest.st_common import list_test_cases
+import pytest
+
 from Crypto.Util.Padding import pad, unpad
 
-class PKCS7_Tests(unittest.TestCase):
 
+class TestPKCS7:
     def test1(self):
-        padded = pad(b(""), 4)
-        self.assertTrue(padded == uh(b("04040404")))
-        padded = pad(b(""), 4, 'pkcs7')
-        self.assertTrue(padded == uh(b("04040404")))
+        padded = pad(b"", 4)
+        assert padded == uh(b"04040404")
+        padded = pad(b"", 4, "pkcs7")
+        assert padded == uh(b"04040404")
         back = unpad(padded, 4)
-        self.assertTrue(back == b(""))
+        assert back == b""
 
     def test2(self):
-        padded = pad(uh(b("12345678")), 4)
-        self.assertTrue(padded == uh(b("1234567804040404")))
+        padded = pad(uh(b"12345678"), 4)
+        assert padded == uh(b"1234567804040404")
         back = unpad(padded, 4)
-        self.assertTrue(back == uh(b("12345678")))
+        assert back == uh(b"12345678")
 
     def test3(self):
-        padded = pad(uh(b("123456")), 4)
-        self.assertTrue(padded == uh(b("12345601")))
+        padded = pad(uh(b"123456"), 4)
+        assert padded == uh(b"12345601")
         back = unpad(padded, 4)
-        self.assertTrue(back == uh(b("123456")))
+        assert back == uh(b"123456")
 
     def test4(self):
-        padded = pad(uh(b("1234567890")), 4)
-        self.assertTrue(padded == uh(b("1234567890030303")))
+        padded = pad(uh(b"1234567890"), 4)
+        assert padded == uh(b"1234567890030303")
         back = unpad(padded, 4)
-        self.assertTrue(back == uh(b("1234567890")))
+        assert back == uh(b"1234567890")
 
     def testn1(self):
-        self.assertRaises(ValueError, pad, uh(b("12")), 4, 'pkcs8')
+        with pytest.raises(ValueError):
+            pad(uh(b"12"), 4, "pkcs8")
 
     def testn2(self):
-        self.assertRaises(ValueError, unpad, b("\0\0\0"), 4)
-        self.assertRaises(ValueError, unpad, b(""), 4)
+        with pytest.raises(ValueError):
+            unpad(b"\0\0\0", 4)
+        with pytest.raises(ValueError):
+            unpad(b"", 4)
 
     def testn3(self):
-        self.assertRaises(ValueError, unpad, b("123456\x02"), 4)
-        self.assertRaises(ValueError, unpad, b("123456\x00"), 4)
-        self.assertRaises(ValueError, unpad, b("123456\x05\x05\x05\x05\x05"), 4)
+        with pytest.raises(ValueError):
+            unpad(b"123456\x02", 4)
+        with pytest.raises(ValueError):
+            unpad(b"123456\x00", 4)
+        with pytest.raises(ValueError):
+            unpad(b"123456\x05\x05\x05\x05\x05", 4)
 
-class X923_Tests(unittest.TestCase):
 
+class TestX923:
     def test1(self):
-        padded = pad(b(""), 4, 'x923')
-        self.assertTrue(padded == uh(b("00000004")))
-        back = unpad(padded, 4, 'x923')
-        self.assertTrue(back == b(""))
+        padded = pad(b"", 4, "x923")
+        assert padded == uh(b"00000004")
+        back = unpad(padded, 4, "x923")
+        assert back == b""
 
     def test2(self):
-        padded = pad(uh(b("12345678")), 4, 'x923')
-        self.assertTrue(padded == uh(b("1234567800000004")))
-        back = unpad(padded, 4, 'x923')
-        self.assertTrue(back == uh(b("12345678")))
+        padded = pad(uh(b"12345678"), 4, "x923")
+        assert padded == uh(b"1234567800000004")
+        back = unpad(padded, 4, "x923")
+        assert back == uh(b"12345678")
 
     def test3(self):
-        padded = pad(uh(b("123456")), 4, 'x923')
-        self.assertTrue(padded == uh(b("12345601")))
-        back = unpad(padded, 4, 'x923')
-        self.assertTrue(back == uh(b("123456")))
+        padded = pad(uh(b"123456"), 4, "x923")
+        assert padded == uh(b"12345601")
+        back = unpad(padded, 4, "x923")
+        assert back == uh(b"123456")
 
     def test4(self):
-        padded = pad(uh(b("1234567890")), 4, 'x923')
-        self.assertTrue(padded == uh(b("1234567890000003")))
-        back = unpad(padded, 4, 'x923')
-        self.assertTrue(back == uh(b("1234567890")))
+        padded = pad(uh(b"1234567890"), 4, "x923")
+        assert padded == uh(b"1234567890000003")
+        back = unpad(padded, 4, "x923")
+        assert back == uh(b"1234567890")
 
     def testn1(self):
-        self.assertRaises(ValueError, unpad, b("123456\x02"), 4, 'x923')
-        self.assertRaises(ValueError, unpad, b("123456\x00"), 4, 'x923')
-        self.assertRaises(ValueError, unpad, b("123456\x00\x00\x00\x00\x05"), 4, 'x923')
-        self.assertRaises(ValueError, unpad, b(""), 4, 'x923')
+        with pytest.raises(ValueError):
+            unpad(b"123456\x02", 4, "x923")
+        with pytest.raises(ValueError):
+            unpad(b"123456\x00", 4, "x923")
+        with pytest.raises(ValueError):
+            unpad(b"123456\x00\x00\x00\x00\x05", 4, "x923")
+        with pytest.raises(ValueError):
+            unpad(b"", 4, "x923")
 
-class ISO7816_Tests(unittest.TestCase):
 
+class TestISO7816:
     def test1(self):
-        padded = pad(b(""), 4, 'iso7816')
-        self.assertTrue(padded == uh(b("80000000")))
-        back = unpad(padded, 4, 'iso7816')
-        self.assertTrue(back == b(""))
+        padded = pad(b"", 4, "iso7816")
+        assert padded == uh(b"80000000")
+        back = unpad(padded, 4, "iso7816")
+        assert back == b""
 
     def test2(self):
-        padded = pad(uh(b("12345678")), 4, 'iso7816')
-        self.assertTrue(padded == uh(b("1234567880000000")))
-        back = unpad(padded, 4, 'iso7816')
-        self.assertTrue(back == uh(b("12345678")))
+        padded = pad(uh(b"12345678"), 4, "iso7816")
+        assert padded == uh(b"1234567880000000")
+        back = unpad(padded, 4, "iso7816")
+        assert back == uh(b"12345678")
 
     def test3(self):
-        padded = pad(uh(b("123456")), 4, 'iso7816')
-        self.assertTrue(padded == uh(b("12345680")))
-        back = unpad(padded, 4, 'iso7816')
-        self.assertTrue(back == uh(b("123456")))
+        padded = pad(uh(b"123456"), 4, "iso7816")
+        assert padded == uh(b"12345680")
+        back = unpad(padded, 4, "iso7816")
+        assert back == uh(b"123456")
 
     def test4(self):
-        padded = pad(uh(b("1234567890")), 4, 'iso7816')
-        self.assertTrue(padded == uh(b("1234567890800000")))
-        back = unpad(padded, 4, 'iso7816')
-        self.assertTrue(back == uh(b("1234567890")))
+        padded = pad(uh(b"1234567890"), 4, "iso7816")
+        assert padded == uh(b"1234567890800000")
+        back = unpad(padded, 4, "iso7816")
+        assert back == uh(b"1234567890")
 
     def testn1(self):
-        self.assertRaises(ValueError, unpad, b("123456\x81"), 4, 'iso7816')
-        self.assertRaises(ValueError, unpad, b(""), 4, 'iso7816')
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(PKCS7_Tests)
-    tests += list_test_cases(X923_Tests)
-    tests += list_test_cases(ISO7816_Tests)
-    return tests
-
-if __name__ == '__main__':
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
-
+        with pytest.raises(ValueError):
+            unpad(b"123456\x81", 4, "iso7816")
+        with pytest.raises(ValueError):
+            unpad(b"", 4, "iso7816")

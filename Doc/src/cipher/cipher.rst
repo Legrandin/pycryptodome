@@ -64,8 +64,7 @@ The base API of a cipher is fairly simple:
 
     Plaintexts and ciphertexts (input/output) can only be ``bytes``,
     ``bytearray`` or ``memoryview``.
-    In Python 3, you cannot pass strings.
-    In Python 2, you cannot pass Unicode strings.
+    You cannot pass strings.
 
 Often, the sender has to deliver to the receiver other data in addition
 to ciphertext alone (e.g. **initialization vectors** or **nonces**, **MAC tags**, etc).

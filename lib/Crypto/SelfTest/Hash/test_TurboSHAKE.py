@@ -1,40 +1,43 @@
 """Self-test suite for Crypto.Hash.TurboSHAKE128 and TurboSHAKE256"""
 
-import unittest
 from binascii import unhexlify
 
-from Crypto.SelfTest.st_common import list_test_cases
+import pytest
 
 from Crypto.Hash import TurboSHAKE128, TurboSHAKE256
-from Crypto.Util.py3compat import bchr
 
 
-class TurboSHAKETest(unittest.TestCase):
-
+class TurboSHAKETest:
     def test_new_positive(self):
 
         xof1 = self.TurboSHAKE.new()
-        xof1.update(b'90')
+        xof1.update(b"90")
 
         xof2 = self.TurboSHAKE.new(domain=0x1F)
-        xof2.update(b'90')
+        xof2.update(b"90")
 
-        xof3 = self.TurboSHAKE.new(data=b'90')
+        xof3 = self.TurboSHAKE.new(data=b"90")
 
         out1 = xof1.read(128)
         out2 = xof2.read(128)
         out3 = xof3.read(128)
 
-        self.assertEqual(out1, out2)
-        self.assertEqual(out1, out3)
+        assert out1 == out2
+        assert out1 == out3
+
+    def test_new_unknown_parameters(self):
+        with pytest.raises(TypeError):
+            self.TurboSHAKE.new(domian=0x1D)
+        with pytest.raises(TypeError):
+            self.TurboSHAKE.new(b"90")
 
     def test_new_domain(self):
         xof1 = self.TurboSHAKE.new(domain=0x1D)
         xof2 = self.TurboSHAKE.new(domain=0x20)
-        self.assertNotEqual(xof1.read(128), xof2.read(128))
+        assert xof1.read(128) != xof2.read(128)
 
     def test_update(self):
-        pieces = [bchr(10) * 200, bchr(20) * 300]
+        pieces = [bytes([10]) * 200, bytes([20]) * 300]
 
         xof1 = self.TurboSHAKE.new()
         xof1.update(pieces[0]).update(pieces[1])
@@ -44,45 +47,48 @@ class TurboSHAKETest(unittest.TestCase):
         xof2.update(pieces[0] + pieces[1])
         digest2 = xof2.read(10)
 
-        self.assertEqual(digest1, digest2)
+        assert digest1 == digest2
 
     def test_update_negative(self):
         xof1 = self.TurboSHAKE.new()
-        self.assertRaises(TypeError, xof1.update, u"string")
+        with pytest.raises(TypeError):
+            xof1.update("string")
 
     def test_read(self):
         xof1 = self.TurboSHAKE.new()
         digest = xof1.read(90)
 
         # read returns a byte string of the right length
-        self.assertTrue(isinstance(digest, bytes))
-        self.assertEqual(len(digest), 90)
+        assert isinstance(digest, bytes)
+        assert len(digest) == 90
 
     def test_update_after_read(self):
         xof1 = self.TurboSHAKE.new()
         xof1.update(b"rrrr")
         xof1.read(90)
-        self.assertRaises(TypeError, xof1.update, b"ttt")
+        with pytest.raises(TypeError):
+            xof1.update(b"ttt")
 
     def test_new(self):
         xof1 = self.TurboSHAKE.new(domain=0x07)
-        xof1.update(b'90')
+        xof1.update(b"90")
         digest1 = xof1.read(100)
 
         xof2 = xof1.new()
-        xof2.update(b'90')
+        xof2.update(b"90")
         digest2 = xof2.read(100)
 
-        self.assertEqual(digest1, digest2)
+        assert digest1 == digest2
 
-        self.assertRaises(TypeError, xof1.new, domain=0x07)
+        with pytest.raises(TypeError):
+            xof1.new(domain=0x07)
 
 
-class TurboSHAKE128Test(TurboSHAKETest):
+class TestTurboSHAKE128(TurboSHAKETest):
     TurboSHAKE = TurboSHAKE128
 
 
-class TurboSHAKE256Test(TurboSHAKETest):
+class TestTurboSHAKE256(TurboSHAKETest):
     TurboSHAKE = TurboSHAKE256
 
 
@@ -93,9 +99,9 @@ def txt2bin(txt):
 
 def ptn(n):
     res = bytearray(n)
-    pattern = b"".join([bchr(x) for x in range(0, 0xFB)])
+    pattern = b"".join([bytes([x]) for x in range(0xFB)])
     for base in range(0, n - 0xFB, 0xFB):
-        res[base:base + 0xFB] = pattern
+        res[base : base + 0xFB] = pattern
     remain = n % 0xFB
     if remain:
         base = (n // 0xFB) * 0xFB
@@ -106,18 +112,17 @@ def ptn(n):
 
 def chunked(source, size):
     for i in range(0, len(source), size):
-        yield source[i:i+size]
+        yield source[i : i + size]
 
 
-class TurboSHAKE128TV(unittest.TestCase):
-
+class TestTurboSHAKE128TV:
     def test_zero_1(self):
         tv = """1E 41 5F 1C 59 83 AF F2 16 92 17 27 7D 17 BB 53
         8C D9 45 A3 97 DD EC 54 1F 1C E4 1A F2 C1 B7 4C"""
 
         btv = txt2bin(tv)
         res = TurboSHAKE128.new().read(32)
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_zero_2(self):
         tv = """1E 41 5F 1C 59 83 AF F2 16 92 17 27 7D 17 BB 53
@@ -127,7 +132,7 @@ class TurboSHAKE128TV(unittest.TestCase):
 
         btv = txt2bin(tv)
         res = TurboSHAKE128.new().read(64)
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_zero_3(self):
         tv = """A3 B9 B0 38 59 00 CE 76 1F 22 AE D5 48 E7 54 DA
@@ -135,7 +140,7 @@ class TurboSHAKE128TV(unittest.TestCase):
 
         btv = txt2bin(tv)
         res = TurboSHAKE128.new().read(10032)[-32:]
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_ptn_1(self):
         tv = """55 CE DD 6F 60 AF 7B B2 9A 40 42 AE 83 2E F3 F5
@@ -143,7 +148,7 @@ class TurboSHAKE128TV(unittest.TestCase):
 
         btv = txt2bin(tv)
         res = TurboSHAKE128.new(data=ptn(1)).read(32)
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_ptn_17(self):
         tv = """9C 97 D0 36 A3 BA C8 19 DB 70 ED E0 CA 55 4E C6
@@ -151,7 +156,7 @@ class TurboSHAKE128TV(unittest.TestCase):
 
         btv = txt2bin(tv)
         res = TurboSHAKE128.new(data=ptn(17)).read(32)
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_ptn_17_2(self):
         tv = """96 C7 7C 27 9E 01 26 F7 FC 07 C9 B0 7F 5C DA E1
@@ -159,7 +164,7 @@ class TurboSHAKE128TV(unittest.TestCase):
 
         btv = txt2bin(tv)
         res = TurboSHAKE128.new(data=ptn(17**2)).read(32)
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_ptn_17_3(self):
         tv = """D4 97 6E B5 6B CF 11 85 20 58 2B 70 9F 73 E1 D6
@@ -167,7 +172,7 @@ class TurboSHAKE128TV(unittest.TestCase):
 
         btv = txt2bin(tv)
         res = TurboSHAKE128.new(data=ptn(17**3)).read(32)
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_ptn_17_4(self):
         tv = """DA 67 C7 03 9E 98 BF 53 0C F7 A3 78 30 C6 66 4E
@@ -178,14 +183,14 @@ class TurboSHAKE128TV(unittest.TestCase):
 
         # All at once
         res = TurboSHAKE128.new(data=data).read(32)
-        self.assertEqual(res, btv)
+        assert res == btv
 
         # Byte by byte
         xof = TurboSHAKE128.new()
         for x in data:
-            xof.update(bchr(x))
+            xof.update(bytes([x]))
         res = xof.read(32)
-        self.assertEqual(res, btv)
+        assert res == btv
 
         # Chunks of various prime sizes
         for chunk_size in (13, 17, 19, 23, 31):
@@ -193,7 +198,7 @@ class TurboSHAKE128TV(unittest.TestCase):
             for x in chunked(data, chunk_size):
                 xof.update(x)
             res = xof.read(32)
-            self.assertEqual(res, btv)
+            assert res == btv
 
     def test_ptn_17_5(self):
         tv = """B9 7A 90 6F BF 83 EF 7C 81 25 17 AB F3 B2 D0 AE
@@ -204,14 +209,14 @@ class TurboSHAKE128TV(unittest.TestCase):
 
         # All at once
         res = TurboSHAKE128.new(data=data).read(32)
-        self.assertEqual(res, btv)
+        assert res == btv
 
         # Chunks
         xof = TurboSHAKE128.new()
         for chunk in chunked(data, 8192):
             xof.update(chunk)
         res = xof.read(32)
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_ptn_17_6(self):
         tv = """35 CD 49 4A DE DE D2 F2 52 39 AF 09 A7 B8 EF 0C
@@ -221,7 +226,7 @@ class TurboSHAKE128TV(unittest.TestCase):
         data = ptn(17**6)
 
         res = TurboSHAKE128.new(data=data).read(32)
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_ffffff_d01(self):
         tv = """BF 32 3F 94 04 94 E8 8E E1 C5 40 FE 66 0B E8 A0
@@ -229,51 +234,50 @@ class TurboSHAKE128TV(unittest.TestCase):
 
         btv = txt2bin(tv)
         res = TurboSHAKE128.new(data=b"\xff\xff\xff", domain=0x01).read(32)
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_ff_d06(self):
         tv = """8E C9 C6 64 65 ED 0D 4A 6C 35 D1 35 06 71 8D 68
         7A 25 CB 05 C7 4C CA 1E 42 50 1A BD 83 87 4A 67"""
 
         btv = txt2bin(tv)
-        res = TurboSHAKE128.new(data=b'\xFF', domain=0x06).read(32)
-        self.assertEqual(res, btv)
+        res = TurboSHAKE128.new(data=b"\xff", domain=0x06).read(32)
+        assert res == btv
 
     def test_ffffff_d07(self):
         tv = """B6 58 57 60 01 CA D9 B1 E5 F3 99 A9 F7 77 23 BB
         A0 54 58 04 2D 68 20 6F 72 52 68 2D BA 36 63 ED"""
 
         btv = txt2bin(tv)
-        res = TurboSHAKE128.new(data=b'\xFF' * 3, domain=0x07).read(32)
-        self.assertEqual(res, btv)
+        res = TurboSHAKE128.new(data=b"\xff" * 3, domain=0x07).read(32)
+        assert res == btv
 
     def test_ffffffffffff_d0b(self):
         tv = """8D EE AA 1A EC 47 CC EE 56 9F 65 9C 21 DF A8 E1
         12 DB 3C EE 37 B1 81 78 B2 AC D8 05 B7 99 CC 37"""
 
         btv = txt2bin(tv)
-        res = TurboSHAKE128.new(data=b'\xFF' * 7, domain=0x0B).read(32)
-        self.assertEqual(res, btv)
+        res = TurboSHAKE128.new(data=b"\xff" * 7, domain=0x0B).read(32)
+        assert res == btv
 
     def test_ff_d30(self):
         tv = """55 31 22 E2 13 5E 36 3C 32 92 BE D2 C6 42 1F A2
         32 BA B0 3D AA 07 C7 D6 63 66 03 28 65 06 32 5B"""
 
         btv = txt2bin(tv)
-        res = TurboSHAKE128.new(data=b'\xFF', domain=0x30).read(32)
-        self.assertEqual(res, btv)
+        res = TurboSHAKE128.new(data=b"\xff", domain=0x30).read(32)
+        assert res == btv
 
     def test_ffffff_d7f(self):
         tv = """16 27 4C C6 56 D4 4C EF D4 22 39 5D 0F 90 53 BD
         A6 D2 8E 12 2A BA 15 C7 65 E5 AD 0E 6E AF 26 F9"""
 
         btv = txt2bin(tv)
-        res = TurboSHAKE128.new(data=b'\xFF' * 3, domain=0x7F).read(32)
-        self.assertEqual(res, btv)
+        res = TurboSHAKE128.new(data=b"\xff" * 3, domain=0x7F).read(32)
+        assert res == btv
 
 
-class TurboSHAKE256TV(unittest.TestCase):
-
+class TestTurboSHAKE256TV:
     def test_zero_1(self):
         tv = """36 7A 32 9D AF EA 87 1C 78 02 EC 67 F9 05 AE 13
         C5 76 95 DC 2C 66 63 C6 10 35 F5 9A 18 F8 E7 DB
@@ -282,7 +286,7 @@ class TurboSHAKE256TV(unittest.TestCase):
 
         btv = txt2bin(tv)
         res = TurboSHAKE256.new().read(64)
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_zero_2(self):
         tv = """AB EF A1 16 30 C6 61 26 92 49 74 26 85 EC 08 2F
@@ -290,7 +294,7 @@ class TurboSHAKE256TV(unittest.TestCase):
 
         btv = txt2bin(tv)
         res = TurboSHAKE256.new().read(10032)[-32:]
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_ptn_1(self):
         tv = """3E 17 12 F9 28 F8 EA F1 05 46 32 B2 AA 0A 24 6E
@@ -300,7 +304,7 @@ class TurboSHAKE256TV(unittest.TestCase):
 
         btv = txt2bin(tv)
         res = TurboSHAKE256.new(data=ptn(1)).read(64)
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_ptn_17(self):
         tv = """B3 BA B0 30 0E 6A 19 1F BE 61 37 93 98 35 92 35
@@ -310,7 +314,7 @@ class TurboSHAKE256TV(unittest.TestCase):
 
         btv = txt2bin(tv)
         res = TurboSHAKE256.new(data=ptn(17)).read(64)
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_ptn_17_2(self):
         tv = """66 B8 10 DB 8E 90 78 04 24 C0 84 73 72 FD C9 57
@@ -320,7 +324,7 @@ class TurboSHAKE256TV(unittest.TestCase):
 
         btv = txt2bin(tv)
         res = TurboSHAKE256.new(data=ptn(17**2)).read(64)
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_ptn_17_3(self):
         tv = """C7 4E BC 91 9A 5B 3B 0D D1 22 81 85 BA 02 D2 9E
@@ -330,7 +334,7 @@ class TurboSHAKE256TV(unittest.TestCase):
 
         btv = txt2bin(tv)
         res = TurboSHAKE256.new(data=ptn(17**3)).read(64)
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_ptn_17_4(self):
         tv = """02 CC 3A 88 97 E6 F4 F6 CC B6 FD 46 63 1B 1F 52
@@ -343,14 +347,14 @@ class TurboSHAKE256TV(unittest.TestCase):
 
         # All at once
         res = TurboSHAKE256.new(data=data).read(64)
-        self.assertEqual(res, btv)
+        assert res == btv
 
         # Byte by byte
         xof = TurboSHAKE256.new()
         for x in data:
-            xof.update(bchr(x))
+            xof.update(bytes([x]))
         res = xof.read(64)
-        self.assertEqual(res, btv)
+        assert res == btv
 
         # Chunks of various prime sizes
         for chunk_size in (13, 17, 19, 23, 31):
@@ -358,7 +362,7 @@ class TurboSHAKE256TV(unittest.TestCase):
             for x in chunked(data, chunk_size):
                 xof.update(x)
             res = xof.read(64)
-            self.assertEqual(res, btv)
+            assert res == btv
 
     def test_ptn_17_5(self):
         tv = """AD D5 3B 06 54 3E 58 4B 58 23 F6 26 99 6A EE 50
@@ -371,14 +375,14 @@ class TurboSHAKE256TV(unittest.TestCase):
 
         # All at once
         res = TurboSHAKE256.new(data=data).read(64)
-        self.assertEqual(res, btv)
+        assert res == btv
 
         # Chunks
         xof = TurboSHAKE256.new()
         for chunk in chunked(data, 8192):
             xof.update(chunk)
         res = xof.read(64)
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_ptn_17_6(self):
         tv = """9E 11 BC 59 C2 4E 73 99 3C 14 84 EC 66 35 8E F7
@@ -390,7 +394,7 @@ class TurboSHAKE256TV(unittest.TestCase):
         data = ptn(17**6)
 
         res = TurboSHAKE256.new(data=data).read(64)
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_ffffff_d01(self):
         tv = """D2 1C 6F BB F5 87 FA 22 82 F2 9A EA 62 01 75 FB
@@ -400,7 +404,7 @@ class TurboSHAKE256TV(unittest.TestCase):
 
         btv = txt2bin(tv)
         res = TurboSHAKE256.new(data=b"\xff\xff\xff", domain=0x01).read(64)
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_ff_d06(self):
         tv = """73 8D 7B 4E 37 D1 8B 7F 22 AD 1B 53 13 E3 57 E3
@@ -409,8 +413,8 @@ class TurboSHAKE256TV(unittest.TestCase):
         E3 2A 0A 97 2E 22 E6 3A DC 1B 09 0D AE FE 00 4B"""
 
         btv = txt2bin(tv)
-        res = TurboSHAKE256.new(data=b'\xFF', domain=0x06).read(64)
-        self.assertEqual(res, btv)
+        res = TurboSHAKE256.new(data=b"\xff", domain=0x06).read(64)
+        assert res == btv
 
     def test_ffffff_d07(self):
         tv = """18 B3 B5 B7 06 1C 2E 67 C1 75 3A 00 E6 AD 7E D7
@@ -419,8 +423,8 @@ class TurboSHAKE256TV(unittest.TestCase):
         B5 50 06 12 B8 F2 57 89 85 DE D5 35 7D 00 EC 67"""
 
         btv = txt2bin(tv)
-        res = TurboSHAKE256.new(data=b'\xFF' * 3, domain=0x07).read(64)
-        self.assertEqual(res, btv)
+        res = TurboSHAKE256.new(data=b"\xff" * 3, domain=0x07).read(64)
+        assert res == btv
 
     def test_ffffffffffff_d0b(self):
         tv = """BB 36 76 49 51 EC 97 E9 D8 5F 7E E9 A6 7A 77 18
@@ -429,8 +433,8 @@ class TurboSHAKE256TV(unittest.TestCase):
         08 34 FA 75 6C B0 34 71 BA B1 3A 1E 2C 16 B3 C0"""
 
         btv = txt2bin(tv)
-        res = TurboSHAKE256.new(data=b'\xFF' * 7, domain=0x0B).read(64)
-        self.assertEqual(res, btv)
+        res = TurboSHAKE256.new(data=b"\xff" * 7, domain=0x0B).read(64)
+        assert res == btv
 
     def test_ff_d30(self):
         tv = """F3 FE 12 87 3D 34 BC BB 2E 60 87 79 D6 B7 0E 7F
@@ -439,8 +443,8 @@ class TurboSHAKE256TV(unittest.TestCase):
         3B 5D DA B8 EE 25 5E 39 EE 38 90 72 96 2C 11 1A"""
 
         btv = txt2bin(tv)
-        res = TurboSHAKE256.new(data=b'\xFF', domain=0x30).read(64)
-        self.assertEqual(res, btv)
+        res = TurboSHAKE256.new(data=b"\xff", domain=0x30).read(64)
+        assert res == btv
 
     def test_ffffff_d7f(self):
         tv = """AB E5 69 C1 F7 7E C3 40 F0 27 05 E7 D3 7C 9A B7
@@ -449,20 +453,5 @@ class TurboSHAKE256TV(unittest.TestCase):
         CF 7E D9 11 0B A9 7C E0 38 8D 07 4B AC 76 87 76"""
 
         btv = txt2bin(tv)
-        res = TurboSHAKE256.new(data=b'\xFF' * 3, domain=0x7F).read(64)
-        self.assertEqual(res, btv)
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(TurboSHAKE128Test)
-    tests += list_test_cases(TurboSHAKE256Test)
-    tests += list_test_cases(TurboSHAKE128TV)
-    tests += list_test_cases(TurboSHAKE256TV)
-    return tests
-
-
-if __name__ == '__main__':
-    def suite():
-        return unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+        res = TurboSHAKE256.new(data=b"\xff" * 3, domain=0x7F).read(64)
+        assert res == btv

@@ -2,19 +2,20 @@
 
 import struct
 
-from common import counter, make_main, split64
+from common import counter, make_main
+
 
 def make_test(secret):
 
     assert len(secret) <= 16
 
     padded = secret + b"\x01" + b"\x00" * (20 - len(secret) - 1)
-    split = struct.unpack('<IIIII', padded)
-    m_out = [ "0x%08xUL" % x for x in split ]
+    split = struct.unpack("<IIIII", padded)
+    m_out = ["0x%08xUL" % x for x in split]
 
     print("")
     print("void test_%d(void) {" % next(counter))
-    print("    uint8_t secret[%d] = {" % len(secret), end=' ')
+    print("    uint8_t secret[%d] = {" % len(secret), end=" ")
     print(",".join([str(x) for x in secret]) + "};")
     print("    uint32_t m[5] = { 0 };")
     print("    const uint32_t expected_m[5] = {" + ", ".join(m_out) + "};")
@@ -35,7 +36,7 @@ print("#include <stdio.h>")
 print()
 print("void poly1305_load_m(uint32_t r[5], const uint8_t data[], size_t len);")
 
-for len_secret in range(1, 16+1):
+for len_secret in range(1, 16 + 1):
     make_test(b"\xaa" * len_secret)
 make_test(b"\xcc" * 16)
 make_test(b"\xff" * 16)

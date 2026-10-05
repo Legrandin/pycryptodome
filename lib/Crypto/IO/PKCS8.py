@@ -32,23 +32,32 @@
 # ===================================================================
 
 
-from Crypto.Util.py3compat import *
+from __future__ import annotations
 
+from typing import Callable, Optional, Tuple, Union
+
+from Crypto.IO._PBES import PBES1, PBES2, PbesError, ProtParams
+from Crypto.Util._bytes import tobytes
 from Crypto.Util.asn1 import (
-            DerNull,
-            DerSequence,
-            DerObjectId,
-            DerOctetString,
-            )
+    DerNull,
+    DerObject,
+    DerObjectId,
+    DerOctetString,
+    DerSequence,
+)
 
-from Crypto.IO._PBES import PBES1, PBES2, PbesError, _DEFAULT_MAX_ITERATION_COUNT
-
-
-__all__ = ['wrap', 'unwrap']
+__all__ = ["wrap", "unwrap"]
 
 
-def wrap(private_key, key_oid, passphrase=None, protection=None,
-         prot_params=None, key_params=DerNull(), randfunc=None):
+def wrap(
+    private_key: bytes,
+    key_oid: str,
+    passphrase: Optional[Union[bytes, str]] = None,
+    protection: Optional[str] = None,
+    prot_params: Optional[ProtParams] = None,
+    key_params: Optional[DerObject] = DerNull(),  # noqa: B008
+    randfunc: Optional[Callable[[int], bytes]] = None,
+) -> bytes:
     """Wrap a private key into a PKCS#8 blob (clear or encrypted).
 
     Args:
@@ -105,11 +114,7 @@ def wrap(private_key, key_oid, passphrase=None, protection=None,
     else:
         algorithm = DerSequence([DerObjectId(key_oid), key_params])
 
-    pk_info = DerSequence([
-                0,
-                algorithm,
-                DerOctetString(private_key)
-            ])
+    pk_info = DerSequence([0, algorithm, DerOctetString(private_key)])
     pk_info_der = pk_info.encode()
 
     if passphrase is None:
@@ -121,12 +126,15 @@ def wrap(private_key, key_oid, passphrase=None, protection=None,
     # Encryption with PBES2
     passphrase = tobytes(passphrase)
     if protection is None:
-        protection = 'PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC'
-    return PBES2.encrypt(pk_info_der, passphrase,
-                         protection, prot_params, randfunc)
+        protection = "PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC"
+    return PBES2.encrypt(pk_info_der, passphrase, protection, prot_params, randfunc)
 
 
-def unwrap(p8_private_key, passphrase=None, max_iteration_count=None):
+def unwrap(
+    p8_private_key: bytes,
+    passphrase: Optional[Union[bytes, str]] = None,
+    max_iteration_count: Optional[int] = None,
+) -> Tuple[str, bytes, Optional[bytes]]:
     """Unwrap a private key from a PKCS#8 blob (clear or encrypted).
 
     Args:
@@ -159,8 +167,9 @@ def unwrap(p8_private_key, passphrase=None, max_iteration_count=None):
 
         found = False
         try:
-            p8_private_key = PBES1.decrypt(p8_private_key, passphrase,
-                                           max_iteration_count=max_iteration_count)
+            p8_private_key = PBES1.decrypt(
+                p8_private_key, passphrase, max_iteration_count=max_iteration_count
+            )
             found = True
         except PbesError as e:
             error_str = "PBES1[%s]" % str(e)
@@ -169,8 +178,9 @@ def unwrap(p8_private_key, passphrase=None, max_iteration_count=None):
 
         if not found:
             try:
-                p8_private_key = PBES2.decrypt(p8_private_key, passphrase,
-                                               max_iteration_count=max_iteration_count)
+                p8_private_key = PBES2.decrypt(
+                    p8_private_key, passphrase, max_iteration_count=max_iteration_count
+                )
                 found = True
             except PbesError as e:
                 error_str += ",PBES2[%s]" % str(e)
@@ -182,8 +192,7 @@ def unwrap(p8_private_key, passphrase=None, max_iteration_count=None):
 
     pk_info = DerSequence().decode(p8_private_key, nr_elements=(2, 3, 4, 5))
     if len(pk_info) == 2 and not passphrase:
-        raise ValueError("Not a valid clear PKCS#8 structure "
-                         "(maybe it is encrypted?)")
+        raise ValueError("Not a valid clear PKCS#8 structure (maybe it is encrypted?)")
 
     # RFC5208, PKCS#8, version is v1(0)
     #
@@ -223,7 +232,7 @@ def unwrap(p8_private_key, passphrase=None, max_iteration_count=None):
         try:
             DerNull().decode(algo[1])
             algo_params = None
-        except:
+        except Exception:
             algo_params = algo[1]
 
     # PrivateKey ::= OCTET STRING

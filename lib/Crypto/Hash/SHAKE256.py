@@ -28,17 +28,26 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from Crypto.Util.py3compat import bord
 
-from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
-                                  VoidPointer, SmartPointer,
-                                  create_string_buffer,
-                                  get_raw_buffer, c_size_t,
-                                  c_uint8_ptr, c_ubyte)
+from __future__ import annotations
+
+from typing import Optional, Union
 
 from Crypto.Hash.keccak import _raw_keccak_lib
+from Crypto.Util._raw_api import (
+    SmartPointer,
+    VoidPointer,
+    c_size_t,
+    c_ubyte,
+    c_uint8_ptr,
+    create_string_buffer,
+    get_raw_buffer,
+)
 
-class SHAKE256_XOF(object):
+Buffer = Union[bytes, bytearray, memoryview]
+
+
+class SHAKE256_XOF:
     """A SHAKE256 hash object.
     Do not instantiate directly.
     Use the :func:`new` function.
@@ -48,25 +57,21 @@ class SHAKE256_XOF(object):
     """
 
     # ASN.1 Object ID
-    oid = "2.16.840.1.101.3.4.2.12"
+    oid: str = "2.16.840.1.101.3.4.2.12"
 
-    def __init__(self, data=None):
+    def __init__(self, data: Optional[Buffer] = None) -> None:
         state = VoidPointer()
-        result = _raw_keccak_lib.keccak_init(state.address_of(),
-                                             c_size_t(64),
-                                             c_ubyte(24))
+        result = _raw_keccak_lib.keccak_init(state.address_of(), c_size_t(64), c_ubyte(24))
         if result:
-            raise ValueError("Error %d while instantiating SHAKE256"
-                             % result)
-        self._state = SmartPointer(state.get(),
-                                   _raw_keccak_lib.keccak_destroy)
+            raise ValueError("Error %d while instantiating SHAKE256" % result)
+        self._state = SmartPointer(state.get(), _raw_keccak_lib.keccak_destroy)
         self._is_squeezing = False
         self._padding = 0x1F
 
         if data:
             self.update(data)
 
-    def update(self, data):
+    def update(self, data: Buffer) -> SHAKE256_XOF:
         """Continue hashing of a message by consuming the next chunk of data.
 
         Args:
@@ -76,15 +81,12 @@ class SHAKE256_XOF(object):
         if self._is_squeezing:
             raise TypeError("You cannot call 'update' after the first 'read'")
 
-        result = _raw_keccak_lib.keccak_absorb(self._state.get(),
-                                               c_uint8_ptr(data),
-                                               c_size_t(len(data)))
+        result = _raw_keccak_lib.keccak_absorb(self._state.get(), c_uint8_ptr(data), c_size_t(len(data)))
         if result:
-            raise ValueError("Error %d while updating SHAKE256 state"
-                             % result)
+            raise ValueError("Error %d while updating SHAKE256 state" % result)
         return self
 
-    def read(self, length):
+    def read(self, length: int) -> bytes:
         """
         Compute the next piece of XOF output.
 
@@ -101,17 +103,15 @@ class SHAKE256_XOF(object):
 
         self._is_squeezing = True
         bfr = create_string_buffer(length)
-        result = _raw_keccak_lib.keccak_squeeze(self._state.get(),
-                                                bfr,
-                                                c_size_t(length),
-                                                c_ubyte(self._padding))
+        result = _raw_keccak_lib.keccak_squeeze(
+            self._state.get(), bfr, c_size_t(length), c_ubyte(self._padding)
+        )
         if result:
-            raise ValueError("Error %d while extracting from SHAKE256"
-                             % result)
+            raise ValueError("Error %d while extracting from SHAKE256" % result)
 
         return get_raw_buffer(bfr)
 
-    def copy(self):
+    def copy(self) -> SHAKE256_XOF:
         """Return a copy ("clone") of the hash object.
 
         The copy will have the same internal state as the original hash
@@ -121,17 +121,16 @@ class SHAKE256_XOF(object):
         """
 
         clone = self.new()
-        result = _raw_keccak_lib.keccak_copy(self._state.get(),
-                                             clone._state.get())
+        result = _raw_keccak_lib.keccak_copy(self._state.get(), clone._state.get())
         if result:
             raise ValueError("Error %d while copying SHAKE256" % result)
         return clone
 
-    def new(self, data=None):
+    def new(self, data: Optional[Buffer] = None) -> SHAKE256_XOF:
         return type(self)(data=data)
 
 
-def new(data=None):
+def new(data: Optional[Buffer] = None) -> SHAKE256_XOF:
     """Return a fresh instance of a SHAKE256 object.
 
     Args:

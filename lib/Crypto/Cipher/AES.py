@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  Cipher/AES.py : AES
 #
@@ -20,29 +19,46 @@
 # SOFTWARE.
 # ===================================================================
 
+from __future__ import annotations
+
 import sys
+from typing import TYPE_CHECKING, Any, Dict, Literal, Optional, Tuple, Union, overload
 
 from Crypto.Cipher import _create_cipher
-from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
-                                  VoidPointer, SmartPointer,
-                                  c_size_t, c_uint8_ptr)
-
-from Crypto.Util import _cpu_features
 from Crypto.Random import get_random_bytes
+from Crypto.Util import _cpu_features
+from Crypto.Util._raw_api import SmartPointer, VoidPointer, c_size_t, c_uint8_ptr, load_pycryptodome_raw_lib
 
-MODE_ECB = 1        #: Electronic Code Book (:ref:`ecb_mode`)
-MODE_CBC = 2        #: Cipher-Block Chaining (:ref:`cbc_mode`)
-MODE_CFB = 3        #: Cipher Feedback (:ref:`cfb_mode`)
-MODE_OFB = 5        #: Output Feedback (:ref:`ofb_mode`)
-MODE_CTR = 6        #: Counter mode (:ref:`ctr_mode`)
-MODE_OPENPGP = 7    #: OpenPGP mode (:ref:`openpgp_mode`)
-MODE_CCM = 8        #: Counter with CBC-MAC (:ref:`ccm_mode`)
-MODE_EAX = 9        #: :ref:`eax_mode`
-MODE_SIV = 10       #: Synthetic Initialization Vector (:ref:`siv_mode`)
-MODE_GCM = 11       #: Galois Counter Mode (:ref:`gcm_mode`)
-MODE_OCB = 12       #: Offset Code Book (:ref:`ocb_mode`)
-MODE_KW = 13        #: Key Wrap (:ref:`kw_mode`)
-MODE_KWP = 14       #: Key Wrap with Padding (:ref:`kwp_mode`)
+if TYPE_CHECKING:
+    from Crypto.Cipher._mode_cbc import CbcMode
+    from Crypto.Cipher._mode_ccm import CcmMode
+    from Crypto.Cipher._mode_cfb import CfbMode
+    from Crypto.Cipher._mode_ctr import CtrMode
+    from Crypto.Cipher._mode_eax import EaxMode
+    from Crypto.Cipher._mode_ecb import EcbMode
+    from Crypto.Cipher._mode_gcm import GcmMode
+    from Crypto.Cipher._mode_kw import KWMode
+    from Crypto.Cipher._mode_kwp import KWPMode
+    from Crypto.Cipher._mode_ocb import OcbMode
+    from Crypto.Cipher._mode_ofb import OfbMode
+    from Crypto.Cipher._mode_openpgp import OpenPgpMode
+    from Crypto.Cipher._mode_siv import SivMode
+
+Buffer = Union[bytes, bytearray, memoryview]
+
+MODE_ECB: Literal[1] = 1  #: Electronic Code Book (:ref:`ecb_mode`)
+MODE_CBC: Literal[2] = 2  #: Cipher-Block Chaining (:ref:`cbc_mode`)
+MODE_CFB: Literal[3] = 3  #: Cipher Feedback (:ref:`cfb_mode`)
+MODE_OFB: Literal[5] = 5  #: Output Feedback (:ref:`ofb_mode`)
+MODE_CTR: Literal[6] = 6  #: Counter mode (:ref:`ctr_mode`)
+MODE_OPENPGP: Literal[7] = 7  #: OpenPGP mode (:ref:`openpgp_mode`)
+MODE_CCM: Literal[8] = 8  #: Counter with CBC-MAC (:ref:`ccm_mode`)
+MODE_EAX: Literal[9] = 9  #: :ref:`eax_mode`
+MODE_SIV: Literal[10] = 10  #: Synthetic Initialization Vector (:ref:`siv_mode`)
+MODE_GCM: Literal[11] = 11  #: Galois Counter Mode (:ref:`gcm_mode`)
+MODE_OCB: Literal[12] = 12  #: Offset Code Book (:ref:`ocb_mode`)
+MODE_KW: Literal[13] = 13  #: Key Wrap (:ref:`kw_mode`)
+MODE_KWP: Literal[14] = 14  #: Key Wrap with Padding (:ref:`kwp_mode`)
 
 _cproto = """
         int AES_start_operation(const uint8_t key[],
@@ -61,16 +77,15 @@ _cproto = """
 
 
 # Load portable AES
-_raw_aes_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_aes",
-                                         _cproto)
+_raw_aes_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_aes", _cproto)
 
 # Try to load AES with AES NI instructions
 try:
     _raw_aesni_lib = None
     if _cpu_features.have_aes_ni():
-        _raw_aesni_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_aesni",
-                                                   _cproto.replace("AES",
-                                                                   "AESNI"))
+        _raw_aesni_lib = load_pycryptodome_raw_lib(
+            "Crypto.Cipher._raw_aesni", _cproto.replace("AES", "AESNI")
+        )
 # _raw_aesni may not have been compiled in
 except OSError:
     pass
@@ -98,12 +113,9 @@ def _create_base_cipher(dict_parameters):
         stop_operation = _raw_aes_lib.AES_stop_operation
 
     cipher = VoidPointer()
-    result = start_operation(c_uint8_ptr(key),
-                             c_size_t(len(key)),
-                             cipher.address_of())
+    result = start_operation(c_uint8_ptr(key), c_size_t(len(key)), cipher.address_of())
     if result:
-        raise ValueError("Error %X while instantiating the AES cipher"
-                         % result)
+        raise ValueError("Error %X while instantiating the AES cipher" % result)
     return SmartPointer(cipher.get(), stop_operation)
 
 
@@ -125,7 +137,99 @@ def _derive_Poly1305_key_pair(key, nonce):
     return key[16:], s, nonce
 
 
-def new(key, mode, *args, **kwargs):
+@overload
+def new(key: Buffer, mode: Literal[1], use_aesni: bool = ...) -> EcbMode: ...
+
+
+@overload
+def new(key: Buffer, mode: Literal[2], iv: Optional[Buffer] = ..., use_aesni: bool = ...) -> CbcMode: ...
+
+
+@overload
+def new(key: Buffer, mode: Literal[2], IV: Optional[Buffer] = ..., use_aesni: bool = ...) -> CbcMode: ...
+
+
+@overload
+def new(
+    key: Buffer, mode: Literal[3], iv: Optional[Buffer] = ..., segment_size: int = ..., use_aesni: bool = ...
+) -> CfbMode: ...
+
+
+@overload
+def new(
+    key: Buffer, mode: Literal[3], IV: Optional[Buffer] = ..., segment_size: int = ..., use_aesni: bool = ...
+) -> CfbMode: ...
+
+
+@overload
+def new(key: Buffer, mode: Literal[5], iv: Optional[Buffer] = ..., use_aesni: bool = ...) -> OfbMode: ...
+
+
+@overload
+def new(key: Buffer, mode: Literal[5], IV: Optional[Buffer] = ..., use_aesni: bool = ...) -> OfbMode: ...
+
+
+@overload
+def new(
+    key: Buffer,
+    mode: Literal[6],
+    nonce: Optional[Buffer] = ...,
+    initial_value: Union[int, Buffer] = ...,
+    counter: Dict = ...,
+    use_aesni: bool = ...,
+) -> CtrMode: ...
+
+
+@overload
+def new(key: Buffer, mode: Literal[7], iv: Optional[Buffer] = ..., use_aesni: bool = ...) -> OpenPgpMode: ...
+
+
+@overload
+def new(key: Buffer, mode: Literal[7], IV: Optional[Buffer] = ..., use_aesni: bool = ...) -> OpenPgpMode: ...
+
+
+@overload
+def new(
+    key: Buffer,
+    mode: Literal[8],
+    nonce: Optional[Buffer] = ...,
+    mac_len: int = ...,
+    assoc_len: int = ...,
+    use_aesni: bool = ...,
+) -> CcmMode: ...
+
+
+@overload
+def new(
+    key: Buffer, mode: Literal[9], nonce: Optional[Buffer] = ..., mac_len: int = ..., use_aesni: bool = ...
+) -> EaxMode: ...
+
+
+@overload
+def new(key: Buffer, mode: Literal[10], nonce: Optional[Buffer] = ..., use_aesni: bool = ...) -> SivMode: ...
+
+
+@overload
+def new(
+    key: Buffer, mode: Literal[11], nonce: Optional[Buffer] = ..., mac_len: int = ..., use_aesni: bool = ...
+) -> GcmMode: ...
+
+
+@overload
+def new(
+    key: Buffer, mode: Literal[12], nonce: Optional[Buffer] = ..., mac_len: int = ..., use_aesni: bool = ...
+) -> OcbMode: ...
+
+
+@overload
+def new(key: Buffer, mode: Literal[13], use_aesni: bool = ...) -> KWMode: ...
+
+
+@overload
+def new(key: Buffer, mode: Literal[14], use_aesni: bool = ...) -> KWPMode: ...
+
+
+def new(key: Buffer, mode: int, *args: Any, **kwargs: Any) -> Any:
     """Create a new AES cipher.
 
     Args:
@@ -230,6 +334,6 @@ def new(key, mode, *args, **kwargs):
 
 
 # Size of a data block (in bytes)
-block_size = 16
+block_size: int = 16
 # Size of a key (in bytes)
-key_size = (16, 24, 32)
+key_size: Tuple[int, int, int] = (16, 24, 32)

@@ -28,209 +28,230 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-import abc
+# mypy: disable-error-code="empty-body"
 
-from Crypto.Util.py3compat import iter_range, bord, bchr, ABC
+from __future__ import annotations
+
+from abc import ABC
+from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar, Union
 
 from Crypto import Random
 
+if TYPE_CHECKING:
+    # Crypto.Math.Numbers.Integer is statically typed as IntegerBase,
+    # so type checkers must consider it instantiable.
+    _F = TypeVar("_F")
+
+    def abstractmethod(func: _F) -> _F:
+        return func
+else:
+    from abc import abstractmethod
+
+RandFunc = Callable[[int], bytes]
+
 
 class IntegerBase(ABC):
+    if TYPE_CHECKING:
+
+        def __init__(self, value: Union[IntegerBase, int]) -> None: ...
 
     # Conversions
-    @abc.abstractmethod
-    def __int__(self):
+    @abstractmethod
+    def __int__(self) -> int:
         pass
 
-    @abc.abstractmethod
-    def __str__(self):
+    @abstractmethod
+    def __str__(self) -> str:
         pass
 
-    @abc.abstractmethod
-    def __repr__(self):
+    @abstractmethod
+    def __repr__(self) -> str:
         pass
 
-    @abc.abstractmethod
-    def to_bytes(self, block_size=0, byteorder='big'):
+    @abstractmethod
+    def to_bytes(self, block_size: Optional[int] = 0, byteorder: str = "big") -> bytes:
         pass
 
     @staticmethod
-    @abc.abstractmethod
-    def from_bytes(byte_string, byteorder='big'):
+    @abstractmethod
+    def from_bytes(byte_string: Union[bytes, bytearray, memoryview], byteorder: str = "big") -> IntegerBase:
         pass
 
     # Relations
-    @abc.abstractmethod
-    def __eq__(self, term):
+    @abstractmethod
+    def __eq__(self, term: object) -> bool:
         pass
 
-    @abc.abstractmethod
-    def __ne__(self, term):
+    @abstractmethod
+    def __ne__(self, term: object) -> bool:
         pass
 
-    @abc.abstractmethod
-    def __lt__(self, term):
+    @abstractmethod
+    def __lt__(self, term: Union[IntegerBase, int]) -> bool:
         pass
 
-    @abc.abstractmethod
-    def __le__(self, term):
+    @abstractmethod
+    def __le__(self, term: Union[IntegerBase, int]) -> bool:
         pass
 
-    @abc.abstractmethod
-    def __gt__(self, term):
+    @abstractmethod
+    def __gt__(self, term: Union[IntegerBase, int]) -> bool:
         pass
 
-    @abc.abstractmethod
-    def __ge__(self, term):
+    @abstractmethod
+    def __ge__(self, term: Union[IntegerBase, int]) -> bool:
         pass
 
-    @abc.abstractmethod
-    def __nonzero__(self):
+    @abstractmethod
+    def __bool__(self):
         pass
-    __bool__ = __nonzero__
 
-    @abc.abstractmethod
-    def is_negative(self):
+    @abstractmethod
+    def is_negative(self) -> bool:
         pass
 
     # Arithmetic operations
-    @abc.abstractmethod
-    def __add__(self, term):
+    @abstractmethod
+    def __add__(self, term: Union[IntegerBase, int]) -> IntegerBase:
         pass
 
-    @abc.abstractmethod
-    def __sub__(self, term):
+    @abstractmethod
+    def __sub__(self, term: Union[IntegerBase, int]) -> IntegerBase:
         pass
 
-    @abc.abstractmethod
-    def __mul__(self, factor):
+    @abstractmethod
+    def __mul__(self, factor: Union[IntegerBase, int]) -> IntegerBase:
         pass
 
-    @abc.abstractmethod
-    def __floordiv__(self, divisor):
+    @abstractmethod
+    def __floordiv__(self, divisor: Union[IntegerBase, int]) -> IntegerBase:
         pass
 
-    @abc.abstractmethod
-    def __mod__(self, divisor):
+    @abstractmethod
+    def __mod__(self, divisor: Union[IntegerBase, int]) -> IntegerBase:
         pass
 
-    @abc.abstractmethod
-    def inplace_pow(self, exponent, modulus=None):
+    @abstractmethod
+    def inplace_pow(
+        self, exponent: Union[IntegerBase, int], modulus: Optional[Union[IntegerBase, int]] = None
+    ) -> IntegerBase:
         pass
 
-    @abc.abstractmethod
-    def __pow__(self, exponent, modulus=None):
+    @abstractmethod
+    def __pow__(
+        self, exponent: Union[IntegerBase, int], modulus: Optional[Union[IntegerBase, int]] = None
+    ) -> IntegerBase:
         pass
 
-    @abc.abstractmethod
-    def __abs__(self):
+    @abstractmethod
+    def __abs__(self) -> IntegerBase:
         pass
 
-    @abc.abstractmethod
-    def sqrt(self, modulus=None):
+    @abstractmethod
+    def sqrt(self, modulus: Optional[Union[IntegerBase, int]] = None) -> IntegerBase:
         pass
 
-    @abc.abstractmethod
-    def __iadd__(self, term):
+    @abstractmethod
+    def __iadd__(self, term: Union[IntegerBase, int]) -> IntegerBase:
         pass
 
-    @abc.abstractmethod
-    def __isub__(self, term):
+    @abstractmethod
+    def __isub__(self, term: Union[IntegerBase, int]) -> IntegerBase:
         pass
 
-    @abc.abstractmethod
-    def __imul__(self, term):
+    @abstractmethod
+    def __imul__(self, term: Union[IntegerBase, int]) -> IntegerBase:
         pass
 
-    @abc.abstractmethod
-    def __imod__(self, term):
+    @abstractmethod
+    def __imod__(self, term: Union[IntegerBase, int]) -> IntegerBase:
         pass
 
     # Boolean/bit operations
-    @abc.abstractmethod
-    def __and__(self, term):
+    @abstractmethod
+    def __and__(self, term: Union[IntegerBase, int]) -> IntegerBase:
         pass
 
-    @abc.abstractmethod
-    def __or__(self, term):
+    @abstractmethod
+    def __or__(self, term: Union[IntegerBase, int]) -> IntegerBase:
         pass
 
-    @abc.abstractmethod
-    def __rshift__(self, pos):
+    @abstractmethod
+    def __rshift__(self, pos: Union[IntegerBase, int]) -> IntegerBase:
         pass
 
-    @abc.abstractmethod
-    def __irshift__(self, pos):
+    @abstractmethod
+    def __irshift__(self, pos: Union[IntegerBase, int]) -> IntegerBase:
         pass
 
-    @abc.abstractmethod
-    def __lshift__(self, pos):
+    @abstractmethod
+    def __lshift__(self, pos: Union[IntegerBase, int]) -> IntegerBase:
         pass
 
-    @abc.abstractmethod
-    def __ilshift__(self, pos):
+    @abstractmethod
+    def __ilshift__(self, pos: Union[IntegerBase, int]) -> IntegerBase:
         pass
 
-    @abc.abstractmethod
-    def get_bit(self, n):
+    @abstractmethod
+    def get_bit(self, n: int) -> bool:
         pass
 
     # Extra
-    @abc.abstractmethod
-    def is_odd(self):
+    @abstractmethod
+    def is_odd(self) -> bool:
         pass
 
-    @abc.abstractmethod
-    def is_even(self):
+    @abstractmethod
+    def is_even(self) -> bool:
         pass
 
-    @abc.abstractmethod
-    def size_in_bits(self):
+    @abstractmethod
+    def size_in_bits(self) -> int:
         pass
 
-    @abc.abstractmethod
-    def size_in_bytes(self):
+    @abstractmethod
+    def size_in_bytes(self) -> int:
         pass
 
-    @abc.abstractmethod
-    def is_perfect_square(self):
+    @abstractmethod
+    def is_perfect_square(self) -> bool:
         pass
 
-    @abc.abstractmethod
-    def fail_if_divisible_by(self, small_prime):
+    @abstractmethod
+    def fail_if_divisible_by(self, small_prime: Union[IntegerBase, int]) -> None:
         pass
 
-    @abc.abstractmethod
-    def multiply_accumulate(self, a, b):
+    @abstractmethod
+    def multiply_accumulate(self, a: Union[IntegerBase, int], b: Union[IntegerBase, int]) -> IntegerBase:
         pass
 
-    @abc.abstractmethod
-    def set(self, source):
+    @abstractmethod
+    def set(self, source: Union[IntegerBase, int]) -> IntegerBase:
         pass
 
-    @abc.abstractmethod
-    def inplace_inverse(self, modulus):
+    @abstractmethod
+    def inplace_inverse(self, modulus: Union[IntegerBase, int]) -> IntegerBase:
         pass
 
-    @abc.abstractmethod
-    def inverse(self, modulus):
+    @abstractmethod
+    def inverse(self, modulus: Union[IntegerBase, int]) -> IntegerBase:
         pass
 
-    @abc.abstractmethod
-    def gcd(self, term):
+    @abstractmethod
+    def gcd(self, term: Union[IntegerBase, int]) -> IntegerBase:
         pass
 
-    @abc.abstractmethod
-    def lcm(self, term):
-        pass
-
-    @staticmethod
-    @abc.abstractmethod
-    def jacobi_symbol(a, n):
+    @abstractmethod
+    def lcm(self, term: Union[IntegerBase, int]) -> IntegerBase:
         pass
 
     @staticmethod
-    def _tonelli_shanks(n, p):
+    @abstractmethod
+    def jacobi_symbol(a: Union[IntegerBase, int], n: Union[IntegerBase, int]) -> IntegerBase:
+        pass
+
+    @staticmethod
+    def _tonelli_shanks(n: Any, p: Any) -> Any:
         """Tonelli-shanks algorithm for computing the square root
         of n modulo a prime p.
 
@@ -278,12 +299,12 @@ class IntegerBase(ABC):
         r = pow(n, (q + 1) // 2, p)
 
         while t != 1:
-            for i in iter_range(0, m):
+            for i in range(m):
                 if pow(t, 2**i, p) == 1:
                     break
             if i == m:
                 raise ValueError("Cannot compute square root of %d mod %d" % (n, p))
-            b = pow(c, 2**(m - i - 1), p)
+            b = pow(c, 2 ** (m - i - 1), p)
             m = i
             c = b**2 % p
             t = (t * b**2) % p
@@ -295,7 +316,13 @@ class IntegerBase(ABC):
         return r
 
     @classmethod
-    def random(cls, **kwargs):
+    def random(
+        cls,
+        *,
+        exact_bits: Optional[int] = None,
+        max_bits: Optional[int] = None,
+        randfunc: Optional[RandFunc] = None,
+    ) -> IntegerBase:
         """Generate a random natural integer of a certain size.
 
         :Keywords:
@@ -319,31 +346,36 @@ class IntegerBase(ABC):
         :Return: a Integer object
         """
 
-        exact_bits = kwargs.pop("exact_bits", None)
-        max_bits = kwargs.pop("max_bits", None)
-        randfunc = kwargs.pop("randfunc", None)
-
         if randfunc is None:
             randfunc = Random.new().read
 
-        if exact_bits is None and max_bits is None:
+        if exact_bits is not None:
+            if max_bits is not None:
+                raise ValueError("'exact_bits' and 'max_bits' are mutually exclusive")
+            bits = exact_bits
+        elif max_bits is not None:
+            bits = max_bits
+        else:
             raise ValueError("Either 'exact_bits' or 'max_bits' must be specified")
 
-        if exact_bits is not None and max_bits is not None:
-            raise ValueError("'exact_bits' and 'max_bits' are mutually exclusive")
-
-        bits = exact_bits or max_bits
         bytes_needed = ((bits - 1) // 8) + 1
         significant_bits_msb = 8 - (bytes_needed * 8 - bits)
-        msb = bord(randfunc(1)[0])
+        msb = randfunc(1)[0]
         if exact_bits is not None:
             msb |= 1 << (significant_bits_msb - 1)
         msb &= (1 << significant_bits_msb) - 1
 
-        return cls.from_bytes(bchr(msb) + randfunc(bytes_needed - 1))
+        return cls.from_bytes(bytes([msb]) + randfunc(bytes_needed - 1))
 
     @classmethod
-    def random_range(cls, **kwargs):
+    def random_range(
+        cls,
+        *,
+        min_inclusive: Optional[Union[IntegerBase, int]] = None,
+        max_inclusive: Optional[Union[IntegerBase, int]] = None,
+        max_exclusive: Optional[Union[IntegerBase, int]] = None,
+        randfunc: Optional[RandFunc] = None,
+    ) -> IntegerBase:
         """Generate a random integer within a given internal.
 
         :Keywords:
@@ -361,38 +393,29 @@ class IntegerBase(ABC):
             An Integer randomly taken in the given interval.
         """
 
-        min_inclusive = kwargs.pop("min_inclusive", None)
-        max_inclusive = kwargs.pop("max_inclusive", None)
-        max_exclusive = kwargs.pop("max_exclusive", None)
-        randfunc = kwargs.pop("randfunc", None)
-
-        if kwargs:
-            raise ValueError("Unknown keywords: " + str(kwargs.keys))
-        if None not in (max_inclusive, max_exclusive):
-            raise ValueError("max_inclusive and max_exclusive cannot be both"
-                         " specified")
+        if max_inclusive is not None and max_exclusive is not None:
+            raise ValueError("max_inclusive and max_exclusive cannot be both specified")
         if max_exclusive is not None:
             max_inclusive = max_exclusive - 1
-        if None in (min_inclusive, max_inclusive):
+        if min_inclusive is None or max_inclusive is None:
             raise ValueError("Missing keyword to identify the interval")
 
         if randfunc is None:
             randfunc = Random.new().read
 
-        norm_maximum = max_inclusive - min_inclusive
-        bits_needed = cls(norm_maximum).size_in_bits()
+        norm_maximum = cls(max_inclusive) - min_inclusive
+        bits_needed = norm_maximum.size_in_bits()
 
-        norm_candidate = -1
-        while not 0 <= norm_candidate <= norm_maximum:
-            norm_candidate = cls.random(
-                                    max_bits=bits_needed,
-                                    randfunc=randfunc
-                                    )
-        return norm_candidate + min_inclusive
+        while True:
+            norm_candidate = cls.random(max_bits=bits_needed, randfunc=randfunc)
+            if norm_candidate <= norm_maximum:
+                return norm_candidate + min_inclusive
 
     @staticmethod
-    @abc.abstractmethod
-    def _mult_modulo_bytes(term1, term2, modulus):
+    @abstractmethod
+    def _mult_modulo_bytes(
+        term1: Union[IntegerBase, int], term2: Union[IntegerBase, int], modulus: Union[IntegerBase, int]
+    ) -> bytes:
         """Multiply two integers, take the modulo, and encode as big endian.
         This specialized method is used for RSA decryption.
 
@@ -409,4 +432,3 @@ class IntegerBase(ABC):
             It is as long as the modulus would be, with zero padding
             on the left if needed.
         """
-        pass

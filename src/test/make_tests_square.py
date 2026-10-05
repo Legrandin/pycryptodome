@@ -1,6 +1,5 @@
 """Make unit test for addmul128() in multiply_32.c"""
 
-
 from common import counter, make_main, split64
 
 
@@ -14,22 +13,22 @@ def make_test(a):
     result_len = 2 * len(a)
 
     # Pad the output vector with as many padding zeroes as needed
-    for x in range(result_len - len(result)):
+    for _x in range(result_len - len(result)):
         result.append("0")
 
     # Fill output buffer with values that must be overwritten
-    t = [ "0xCCCCCCCCCCCCCCCCULL" ] * result_len
+    t = ["0xCCCCCCCCCCCCCCCCULL"] * result_len
 
     print("")
     print("void test_%d(void) {" % next(counter))
     print("    const uint64_t a[] = {" + ", ".join(a) + "};")
     print("    uint64_t t[] = {" + ", ".join(t) + ", 0xAAAAAAAAAAAAAAAAULL};")
-    print("    uint64_t scratchpad[%d];" %  (3*len(a)))
+    print("    uint64_t scratchpad[%d];" % (3 * len(a)))
     print("    const uint64_t expected_t[] = {" + ", ".join(result) + "};")
     print("")
     print("    square(t, scratchpad, a, %d);" % len(a))
     print("    assert(memcmp(t, expected_t, 8*%d) == 0);" % result_len)
-    #print '    printf("t[{0}]=0x%016lX\\n", t[{0}]);'.format(result_len)
+    # print '    printf("t[{0}]=0x%016lX\\n", t[{0}]);'.format(result_len)
     print("    assert(t[%d] == 0xAAAAAAAAAAAAAAAAULL);" % result_len)
     print("}")
     print("")

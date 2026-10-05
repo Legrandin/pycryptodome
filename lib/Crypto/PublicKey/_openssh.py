@@ -28,47 +28,49 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+from __future__ import annotations
+
 import struct
+from typing import Tuple
 
 from Crypto.Cipher import AES
 from Crypto.Hash import SHA512
 from Crypto.Protocol.KDF import _bcrypt_hash
 from Crypto.Util.strxor import strxor
-from Crypto.Util.py3compat import tostr, bchr, bord
 
 
-def read_int4(data):
+def read_int4(data: bytes) -> Tuple[int, bytes]:
     if len(data) < 4:
         raise ValueError("Insufficient data")
     value = struct.unpack(">I", data[:4])[0]
     return value, data[4:]
 
 
-def read_bytes(data):
+def read_bytes(data: bytes) -> Tuple[bytes, bytes]:
     size, data = read_int4(data)
     if len(data) < size:
         raise ValueError("Insufficient data (V)")
     return data[:size], data[size:]
 
 
-def read_string(data):
+def read_string(data: bytes) -> Tuple[str, bytes]:
     s, d = read_bytes(data)
-    return tostr(s), d
+    return s.decode("latin-1"), d
 
 
-def check_padding(pad):
+def check_padding(pad: bytes) -> None:
     for v, x in enumerate(pad):
-        if bord(x) != ((v + 1) & 0xFF):
+        if x != ((v + 1) & 0xFF):
             raise ValueError("Incorrect padding")
 
 
-def import_openssh_private_generic(data, password):
+def import_openssh_private_generic(data: bytes, password: bytes) -> Tuple[str, bytes]:
     # https://cvsweb.openbsd.org/cgi-bin/cvsweb/src/usr.bin/ssh/PROTOCOL.key?annotate=HEAD
     # https://github.com/openssh/openssh-portable/blob/master/sshkey.c
     # https://coolaj86.com/articles/the-openssh-private-key-format/
     # https://coolaj86.com/articles/the-ssh-public-key-format/
 
-    if not data.startswith(b'openssh-key-v1\x00'):
+    if not data.startswith(b"openssh-key-v1\x00"):
         raise ValueError("Incorrect magic value")
     data = data[15:]
 
@@ -80,7 +82,7 @@ def import_openssh_private_generic(data, password):
     if number_of_keys != 1:
         raise ValueError("We only handle 1 key at a time")
 
-    _, data = read_string(data)             # Public key
+    _, data = read_string(data)  # Public key
     encrypted, data = read_bytes(data)
     if data:
         raise ValueError("Too much data")
@@ -89,10 +91,10 @@ def import_openssh_private_generic(data, password):
         raise ValueError("Incorrect payload length")
 
     # Decrypt if necessary
-    if ciphername == 'none':
+    if ciphername == "none":
         decrypted = encrypted
     else:
-        if (ciphername, kdfname) != ('aes256-ctr', 'bcrypt'):
+        if (ciphername, kdfname) != ("aes256-ctr", "bcrypt"):
             raise ValueError("Unsupported encryption scheme %s/%s" % (ciphername, kdfname))
 
         salt, kdfoptions = read_bytes(kdfoptions)
@@ -118,12 +120,9 @@ def import_openssh_private_generic(data, password):
                 strxor(acc, out, output=acc)
             stripes.append(acc[:24])
 
-        result = b"".join([bchr(a)+bchr(b) for (a, b) in zip(*stripes)])
+        result = b"".join([bytes([a]) + bytes([b]) for (a, b) in zip(*stripes)])
 
-        cipher = AES.new(result[:32],
-                         AES.MODE_CTR,
-                         nonce=b"",
-                         initial_value=result[32:32+16])
+        cipher = AES.new(result[:32], AES.MODE_CTR, nonce=b"", initial_value=result[32 : 32 + 16])
         decrypted = cipher.decrypt(encrypted)
 
     checkint1, decrypted = read_int4(decrypted)

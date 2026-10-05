@@ -27,14 +27,14 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-import unittest
 from binascii import unhexlify
 
-from Crypto.PublicKey import ECC
-from Crypto.Signature import eddsa
+import pytest
+
 from Crypto.Hash import SHA512, SHAKE256
-from Crypto.SelfTest.st_common import list_test_cases
-from Crypto.SelfTest.loader import load_test_vectors_wycheproof
+from Crypto.PublicKey import ECC
+from Crypto.SelfTest.loader import load_test_vectors_wycheproof, wycheproof_id
+from Crypto.Signature import eddsa
 from Crypto.Util.number import bytes_to_long
 
 rfc8032_tv_str = (
@@ -48,7 +48,7 @@ rfc8032_tv_str = (
         "e5564300c360ac729086e2cc806e828a"
         "84877f1eb8e5d974d873e06522490155"
         "5fb8821590a33bacc61e39701cf9b46b"
-        "d25bf5f0595bbe24655141438e7a100b"
+        "d25bf5f0595bbe24655141438e7a100b",
     ),
     (
         "4ccd089b28ff96da9db6c346ec114e0f5b8a319f35aba624da8cf6ed4fb8a6fb",
@@ -59,7 +59,7 @@ rfc8032_tv_str = (
         "92a009a9f0d4cab8720e820b5f642540"
         "a2b27b5416503f8fb3762223ebdb69da"
         "085ac1e43e15996e458f3613d0f11d8c"
-        "387b2eaeb4302aeeb00d291612bb0c00"
+        "387b2eaeb4302aeeb00d291612bb0c00",
     ),
     (
         "c5aa8df43f9f837bedb7442f31dcb7b166d38535076f094b85ce3a2e0b4458f7",
@@ -70,7 +70,7 @@ rfc8032_tv_str = (
         "6291d657deec24024827e69c3abe01a3"
         "0ce548a284743a445e3680d7db5ac3ac"
         "18ff9b538d16f290ae67f760984dc659"
-        "4a7c15e9716ed28dc027beceea1ec40a"
+        "4a7c15e9716ed28dc027beceea1ec40a",
     ),
     (
         "f5e5767cf153319517630f226876b86c8160cc583bc013744c6bf255f5cc0ee5",
@@ -144,74 +144,64 @@ rfc8032_tv_str = (
         "0aab4c900501b3e24d7cdf4663326a3a"
         "87df5e4843b2cbdb67cbf6e460fec350"
         "aa5371b1508f9f4528ecea23c436d94b"
-        "5e8fcd4f681e30a6ac00a9704a188a03"
+        "5e8fcd4f681e30a6ac00a9704a188a03",
     ),
     # 7.2 Ed25519ctx
     (
-        "0305334e381af78f141cb666f6199f57"
-        "bc3495335a256a95bd2a55bf546663f6",
-        "dfc9425e4f968f7f0c29f0259cf5f9ae"
-        "d6851c2bb4ad8bfb860cfee0ab248292",
+        "0305334e381af78f141cb666f6199f57bc3495335a256a95bd2a55bf546663f6",
+        "dfc9425e4f968f7f0c29f0259cf5f9aed6851c2bb4ad8bfb860cfee0ab248292",
         "f726936d19c800494e3fdaff20b276a8",
         None,
         "666f6f",
         "55a4cc2f70a54e04288c5f4cd1e45a7b"
         "b520b36292911876cada7323198dd87a"
         "8b36950b95130022907a7fb7c4e9b2d5"
-        "f6cca685a587b4b21f4b888e4e7edb0d"
+        "f6cca685a587b4b21f4b888e4e7edb0d",
     ),
     (
-        "0305334e381af78f141cb666f6199f57"
-        "bc3495335a256a95bd2a55bf546663f6",
-        "dfc9425e4f968f7f0c29f0259cf5f9ae"
-        "d6851c2bb4ad8bfb860cfee0ab248292",
+        "0305334e381af78f141cb666f6199f57bc3495335a256a95bd2a55bf546663f6",
+        "dfc9425e4f968f7f0c29f0259cf5f9aed6851c2bb4ad8bfb860cfee0ab248292",
         "f726936d19c800494e3fdaff20b276a8",
         None,
         "626172",
         "fc60d5872fc46b3aa69f8b5b4351d580"
         "8f92bcc044606db097abab6dbcb1aee3"
         "216c48e8b3b66431b5b186d1d28f8ee1"
-        "5a5ca2df6668346291c2043d4eb3e90d"
+        "5a5ca2df6668346291c2043d4eb3e90d",
     ),
     (
-        "0305334e381af78f141cb666f6199f57"
-        "bc3495335a256a95bd2a55bf546663f6",
-        "dfc9425e4f968f7f0c29f0259cf5f9ae"
-        "d6851c2bb4ad8bfb860cfee0ab248292",
+        "0305334e381af78f141cb666f6199f57bc3495335a256a95bd2a55bf546663f6",
+        "dfc9425e4f968f7f0c29f0259cf5f9aed6851c2bb4ad8bfb860cfee0ab248292",
         "508e9e6882b979fea900f62adceaca35",
         None,
         "666f6f",
         "8b70c1cc8310e1de20ac53ce28ae6e72"
         "07f33c3295e03bb5c0732a1d20dc6490"
         "8922a8b052cf99b7c4fe107a5abb5b2c"
-        "4085ae75890d02df26269d8945f84b0b"
+        "4085ae75890d02df26269d8945f84b0b",
     ),
     (
-        "ab9c2853ce297ddab85c993b3ae14bca"
-        "d39b2c682beabc27d6d4eb20711d6560",
-        "0f1d1274943b91415889152e893d80e9"
-        "3275a1fc0b65fd71b4b0dda10ad7d772",
+        "ab9c2853ce297ddab85c993b3ae14bcad39b2c682beabc27d6d4eb20711d6560",
+        "0f1d1274943b91415889152e893d80e93275a1fc0b65fd71b4b0dda10ad7d772",
         "f726936d19c800494e3fdaff20b276a8",
         None,
         "666f6f",
         "21655b5f1aa965996b3f97b3c849eafb"
         "a922a0a62992f73b3d1b73106a84ad85"
         "e9b86a7b6005ea868337ff2d20a7f5fb"
-        "d4cd10b0be49a68da2b2e0dc0ad8960f"
+        "d4cd10b0be49a68da2b2e0dc0ad8960f",
     ),
     # 7.3 Ed25519ph
     (
-        "833fe62409237b9d62ec77587520911e"
-        "9a759cec1d19755b7da901b96dca3d42",
-        "ec172b93ad5e563bf4932c70e1245034"
-        "c35467ef2efd4d64ebf819683467e2bf",
+        "833fe62409237b9d62ec77587520911e9a759cec1d19755b7da901b96dca3d42",
+        "ec172b93ad5e563bf4932c70e1245034c35467ef2efd4d64ebf819683467e2bf",
         "616263",
         SHA512,
         "",
         "98a70222f0b8121aa9d30f813d683f80"
         "9e462b469c7ff87639499bb94e6dae41"
         "31f85042463c2a355a2003d062adf5aa"
-        "a10b8c61e636062aaad11c2a26083406"
+        "a10b8c61e636062aaad11c2a26083406",
     ),
     # 7.4 Ed448
     (
@@ -225,7 +215,7 @@ rfc8032_tv_str = (
         "533a37f6bbe457251f023c0d88f976ae2dfb504a843e34d2074fd823d41a591f"
         "2b233f034f628281f2fd7a22ddd47d7828c59bd0a21bfd3980ff0d2028d4b18a"
         "9df63e006c5d1c2d345b925d8dc00b4104852db99ac5c7cdda8530a113a0f4db"
-        "b61149f05a7363268c71d95808ff2e652600"
+        "b61149f05a7363268c71d95808ff2e652600",
     ),
     (
         "c4eab05d357007c632f3dbb48489924d552b08fe0c353a0d4a1f00acda2c463a"
@@ -368,7 +358,7 @@ rfc8032_tv_str = (
         "e301345a41a39a4d72fff8df69c98075a0cc082b802fc9b2b6bc503f926b65bd"
         "df7f4c8f1cb49f6396afc8a70abe6d8aef0db478d4c6b2970076c6a0484fe76d"
         "76b3a97625d79f1ce240e7c576750d295528286f719b413de9ada3e8eb78ed57"
-        "3603ce30d8bb761785dc30dbc320869e1a00"
+        "3603ce30d8bb761785dc30dbc320869e1a00",
     ),
     # 7.5 Ed448ph
     (
@@ -382,7 +372,7 @@ rfc8032_tv_str = (
         "822f6901f7480f3d5f562c592994d9693602875614483256505600bbc281ae38"
         "1f54d6bce2ea911574932f52a4e6cadd78769375ec3ffd1b801a0d9b3f4030cd"
         "433964b6457ea39476511214f97469b57dd32dbc560a9a94d00bff07620464a3"
-        "ad203df7dc7ce360c3cd3696d9d9fab90f00"
+        "ad203df7dc7ce360c3cd3696d9d9fab90f00",
     ),
     (
         "833fe62409237b9d62ec77587520911e9a759cec1d19755b7da901b96dca3d42"
@@ -405,12 +395,11 @@ for tv_str in rfc8032_tv_str:
     rfc8032_tv_bytes.append([unhexlify(i) if isinstance(i, str) else i for i in tv_str])
 
 
-class TestEdDSA(unittest.TestCase):
-
+class TestEdDSA:
     def test_sign(self):
         for sk, _, msg, hashmod, ctx, exp_signature in rfc8032_tv_bytes:
             key = eddsa.import_private_key(sk)
-            signer = eddsa.new(key, 'rfc8032', context=ctx)
+            signer = eddsa.new(key, "rfc8032", context=ctx)
             if hashmod is None:
                 # PureEdDSA
                 signature = signer.sign(msg)
@@ -418,12 +407,12 @@ class TestEdDSA(unittest.TestCase):
                 # HashEdDSA
                 hashobj = hashmod.new(msg)
                 signature = signer.sign(hashobj)
-            self.assertEqual(exp_signature, signature)
+            assert exp_signature == signature
 
     def test_verify(self):
         for _, pk, msg, hashmod, ctx, exp_signature in rfc8032_tv_bytes:
             key = eddsa.import_public_key(pk)
-            verifier = eddsa.new(key, 'rfc8032', context=ctx)
+            verifier = eddsa.new(key, "rfc8032", context=ctx)
             if hashmod is None:
                 # PureEdDSA
                 verifier.verify(msg, exp_signature)
@@ -433,41 +422,42 @@ class TestEdDSA(unittest.TestCase):
                 verifier.verify(hashobj, exp_signature)
 
     def test_double_sign_verify_ed25519(self):
-        msg_hash = SHA512.new(b'abc')
-        key = ECC.generate(curve='ed25519')
-        signer = eddsa.new(key, 'rfc8032')
-        verifier = eddsa.new(key, 'rfc8032')
+        msg_hash = SHA512.new(b"abc")
+        key = ECC.generate(curve="ed25519")
+        signer = eddsa.new(key, "rfc8032")
+        verifier = eddsa.new(key, "rfc8032")
 
         signature = signer.sign(msg_hash)
         signature2 = signer.sign(msg_hash)
-        self.assertEqual(signature, signature2)
+        assert signature == signature2
 
         verifier.verify(msg_hash, signature)
         verifier.verify(msg_hash, signature)
 
     def test_double_sign_verify_ed448(self):
-        msg_hash = SHAKE256.new(b'abc')
-        key = ECC.generate(curve='ed448')
-        signer = eddsa.new(key, 'rfc8032')
-        verifier = eddsa.new(key, 'rfc8032')
+        msg_hash = SHAKE256.new(b"abc")
+        key = ECC.generate(curve="ed448")
+        signer = eddsa.new(key, "rfc8032")
+        verifier = eddsa.new(key, "rfc8032")
 
         signature = signer.sign(msg_hash)
         signature2 = signer.sign(msg_hash)
-        self.assertEqual(signature, signature2)
+        assert signature == signature2
 
         verifier.verify(msg_hash, signature)
         verifier.verify(msg_hash, signature)
 
     def test_negative(self):
         key = ECC.generate(curve="ed25519")
-        self.assertRaises(ValueError, eddsa.new, key, 'rfc9999')
+        with pytest.raises(ValueError):
+            eddsa.new(key, "rfc9999")
 
         nist_key = ECC.generate(curve="p256")
-        self.assertRaises(ValueError, eddsa.new, nist_key, 'rfc8032')
+        with pytest.raises(ValueError):
+            eddsa.new(nist_key, "rfc8032")
 
 
-class TestExport_Ed25519(unittest.TestCase):
-
+class TestExport_Ed25519:
     def test_raw(self):
         key = ECC.generate(curve="Ed25519")
         x, y = key.pointQ.xy
@@ -475,16 +465,15 @@ class TestExport_Ed25519(unittest.TestCase):
         sign_x = raw[31] >> 7
         raw[31] &= 0x7F
         yt = bytes_to_long(raw[::-1])
-        self.assertEqual(y, yt)
-        self.assertEqual(x & 1, sign_x)
+        assert y == yt
+        assert x & 1 == sign_x
 
         key = ECC.construct(point_x=0, point_y=1, curve="Ed25519")
         out = key._export_eddsa_public()
-        self.assertEqual(b'\x01' + b'\x00' * 31, out)
+        assert out == b"\x01" + b"\x00" * 31
 
 
-class TestExport_Ed448(unittest.TestCase):
-
+class TestExport_Ed448:
     def test_raw(self):
         key = ECC.generate(curve="Ed448")
         x, y = key.pointQ.xy
@@ -492,87 +481,90 @@ class TestExport_Ed448(unittest.TestCase):
         sign_x = raw[56] >> 7
         raw[56] &= 0x7F
         yt = bytes_to_long(raw[::-1])
-        self.assertEqual(y, yt)
-        self.assertEqual(x & 1, sign_x)
+        assert y == yt
+        assert x & 1 == sign_x
 
         key = ECC.construct(point_x=0, point_y=1, curve="Ed448")
         out = key._export_eddsa_public()
-        self.assertEqual(b'\x01' + b'\x00' * 56, out)
+        assert out == b"\x01" + b"\x00" * 56
 
 
-class TestImport_Ed25519(unittest.TestCase):
-
+class TestImport_Ed25519:
     def test_raw(self):
         Px = 24407857220263921307776619664228778204996144802740950419837658238229122415920
         Py = 56480760040633817885061096979765646085062883740629155052073094891081309750690
-        encoded = b'\xa2\x05\xd6\x00\xe1 \xe1\xc0\xff\x96\xee?V\x8e\xba/\xd3\x89\x06\xd7\xc4c\xe8$\xc2d\xd7a1\xfa\xde|'
+        encoded = b"\xa2\x05\xd6\x00\xe1 \xe1\xc0\xff\x96\xee?V\x8e\xba/\xd3\x89\x06\xd7\xc4c\xe8$\xc2d\xd7a1\xfa\xde|"
         key = eddsa.import_public_key(encoded)
-        self.assertEqual(Py, key.pointQ.y)
-        self.assertEqual(Px, key.pointQ.x)
+        assert Py == key.pointQ.y
+        assert Px == key.pointQ.x
 
-        encoded = b'\x01' + b'\x00' * 31
+        encoded = b"\x01" + b"\x00" * 31
         key = eddsa.import_public_key(encoded)
-        self.assertEqual(1, key.pointQ.y)
-        self.assertEqual(0, key.pointQ.x)
+        assert key.pointQ.y == 1
+        assert key.pointQ.x == 0
 
 
-class TestImport_Ed448(unittest.TestCase):
-
+class TestImport_Ed448:
     def test_raw(self):
-        Px = 0x153f42025aba3b0daecaa5cd79458b3146c7c9378c16c17b4a59bc3561113d90c169045bc12966c3f93e140c2ca0a3acc33d9205b9daf9b1
-        Py = 0x38f5c0015d3dedd576c232810dd90373b5b1d631a12894c043b7be529cbae03ede177d8fa490b56131dbcb2465d2aba777ef839fc1719b25
-        encoded = unhexlify("259b71c19f83ef77a7abd26524cbdb31"
-                            "61b590a48f7d17de3ee0ba9c52beb743"
-                            "c09428a131d6b1b57303d90d8132c276"
-                            "d5ed3d5d01c0f53880")
+        Px = 0x153F42025ABA3B0DAECAA5CD79458B3146C7C9378C16C17B4A59BC3561113D90C169045BC12966C3F93E140C2CA0A3ACC33D9205B9DAF9B1
+        Py = 0x38F5C0015D3DEDD576C232810DD90373B5B1D631A12894C043B7BE529CBAE03EDE177D8FA490B56131DBCB2465D2ABA777EF839FC1719B25
+        encoded = unhexlify(
+            "259b71c19f83ef77a7abd26524cbdb31"
+            "61b590a48f7d17de3ee0ba9c52beb743"
+            "c09428a131d6b1b57303d90d8132c276"
+            "d5ed3d5d01c0f53880"
+        )
         key = eddsa.import_public_key(encoded)
-        self.assertEqual(Py, key.pointQ.y)
-        self.assertEqual(Px, key.pointQ.x)
+        assert Py == key.pointQ.y
+        assert Px == key.pointQ.x
 
-        encoded = b'\x01' + b'\x00' * 56
+        encoded = b"\x01" + b"\x00" * 56
         key = eddsa.import_public_key(encoded)
-        self.assertEqual(1, key.pointQ.y)
-        self.assertEqual(0, key.pointQ.x)
+        assert key.pointQ.y == 1
+        assert key.pointQ.x == 0
 
 
-class TestVectorsEdDSAWycheproof(unittest.TestCase):
+def _load_tests(filename):
 
-    def add_tests(self, filename):
+    def pk(group):
+        elem = group["key"]["pk"]
+        return unhexlify(elem)
 
-        def pk(group):
-            elem = group['key']['pk']
-            return unhexlify(elem)
+    def sk(group):
+        elem = group["key"]["sk"]
+        return unhexlify(elem)
 
-        def sk(group):
-            elem = group['key']['sk']
-            return unhexlify(elem)
+    result = load_test_vectors_wycheproof(
+        ("Signature", "wycheproof"),
+        filename,
+        "Wycheproof ECDSA signature (%s)" % filename,
+        group_tag={"pk": pk, "sk": sk},
+    )
+    return result
 
-        result = load_test_vectors_wycheproof(("Signature", "wycheproof"),
-                                              filename,
-                                              "Wycheproof ECDSA signature (%s)"
-                                              % filename,
-                                              group_tag={'pk': pk, 'sk': sk})
-        self.tv += result
 
-    def setUp(self):
-        self.tv = []
-        self.add_tests("eddsa_test.json")
-        self.add_tests("ed448_test.json")
+def load_wycheproof_vectors():
+    vectors = []
+    vectors += _load_tests("eddsa_test.json")
+    vectors += _load_tests("ed448_test.json")
+    return vectors
 
-    def test_sign(self, tv):
+
+class TestVectorsEdDSAWycheproof:
+    def check_sign(self, tv):
         if not tv.valid:
             return
 
         self._id = "Wycheproof EdDSA Sign Test #%d (%s, %s)" % (tv.id, tv.comment, tv.filename)
         key = eddsa.import_private_key(tv.sk)
-        signer = eddsa.new(key, 'rfc8032')
+        signer = eddsa.new(key, "rfc8032")
         signature = signer.sign(tv.msg)
-        self.assertEqual(signature, tv.sig)
+        assert signature == tv.sig
 
-    def test_verify(self, tv):
+    def check_verify(self, tv):
         self._id = "Wycheproof EdDSA Verify Test #%d (%s, %s)" % (tv.id, tv.comment, tv.filename)
         key = eddsa.import_public_key(tv.pk)
-        verifier = eddsa.new(key, 'rfc8032')
+        verifier = eddsa.new(key, "rfc8032")
         try:
             verifier.verify(tv.msg, tv.sig)
         except ValueError:
@@ -580,25 +572,7 @@ class TestVectorsEdDSAWycheproof(unittest.TestCase):
         else:
             assert tv.valid
 
-    def runTest(self):
-        for tv in self.tv:
-            self.test_sign(tv)
-            self.test_verify(tv)
-
-
-def get_tests(config={}):
-
-    tests = []
-    tests += list_test_cases(TestExport_Ed25519)
-    tests += list_test_cases(TestExport_Ed448)
-    tests += list_test_cases(TestImport_Ed25519)
-    tests += list_test_cases(TestImport_Ed448)
-    tests += list_test_cases(TestEdDSA)
-    tests += [TestVectorsEdDSAWycheproof()]
-    return tests
-
-
-if __name__ == '__main__':
-    def suite():
-        return unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+    @pytest.mark.parametrize("tv", load_wycheproof_vectors(), ids=wycheproof_id)
+    def test(self, tv):
+        self.check_sign(tv)
+        self.check_verify(tv)

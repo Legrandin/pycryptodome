@@ -26,74 +26,73 @@
 
 """Self-test suite for Crypto.Hash.KangarooTwelve"""
 
-import unittest
 from binascii import unhexlify
 
-from Crypto.SelfTest.st_common import list_test_cases
+import pytest
 
 from Crypto.Hash import KangarooTwelve as K12
-from Crypto.Util.py3compat import b, bchr
 
 
-class KangarooTwelveTest(unittest.TestCase):
-
+class TestKangarooTwelve:
     def test_length_encode(self):
-        self.assertEqual(K12._length_encode(0), b'\x00')
-        self.assertEqual(K12._length_encode(12), b'\x0C\x01')
-        self.assertEqual(K12._length_encode(65538), b'\x01\x00\x02\x03')
+        assert K12._length_encode(0) == b"\x00"
+        assert K12._length_encode(12) == b"\x0c\x01"
+        assert K12._length_encode(65538) == b"\x01\x00\x02\x03"
 
     def test_new_positive(self):
 
         xof1 = K12.new()
-        xof2 = K12.new(data=b("90"))
-        xof3 = K12.new().update(b("90"))
+        xof2 = K12.new(data=b"90")
+        xof3 = K12.new().update(b"90")
 
-        self.assertNotEqual(xof1.read(10), xof2.read(10))
+        assert xof1.read(10) != xof2.read(10)
         xof3.read(10)
-        self.assertEqual(xof2.read(10), xof3.read(10))
+        assert xof2.read(10) == xof3.read(10)
 
         xof1 = K12.new()
         ref = xof1.read(10)
-        xof2 = K12.new(custom=b(""))
-        xof3 = K12.new(custom=b("foo"))
+        xof2 = K12.new(custom=b"")
+        xof3 = K12.new(custom=b"foo")
 
-        self.assertEqual(ref, xof2.read(10))
-        self.assertNotEqual(ref, xof3.read(10))
+        assert ref == xof2.read(10)
+        assert ref != xof3.read(10)
 
-        xof1 = K12.new(custom=b("foo"))
-        xof2 = K12.new(custom=b("foo"), data=b("90"))
-        xof3 = K12.new(custom=b("foo")).update(b("90"))
+        xof1 = K12.new(custom=b"foo")
+        xof2 = K12.new(custom=b"foo", data=b"90")
+        xof3 = K12.new(custom=b"foo").update(b"90")
 
-        self.assertNotEqual(xof1.read(10), xof2.read(10))
+        assert xof1.read(10) != xof2.read(10)
         xof3.read(10)
-        self.assertEqual(xof2.read(10), xof3.read(10))
+        assert xof2.read(10) == xof3.read(10)
 
     def test_update(self):
-        pieces = [bchr(10) * 200, bchr(20) * 300]
+        pieces = [bytes([10]) * 200, bytes([20]) * 300]
         h = K12.new()
         h.update(pieces[0]).update(pieces[1])
         digest = h.read(10)
         h = K12.new()
         h.update(pieces[0] + pieces[1])
-        self.assertEqual(h.read(10), digest)
+        assert h.read(10) == digest
 
     def test_update_negative(self):
         h = K12.new()
-        self.assertRaises(TypeError, h.update, u"string")
+        with pytest.raises(TypeError):
+            h.update("string")
 
     def test_digest(self):
         h = K12.new()
         digest = h.read(90)
 
         # read returns a byte string of the right length
-        self.assertTrue(isinstance(digest, type(b("digest"))))
-        self.assertEqual(len(digest), 90)
+        assert isinstance(digest, bytes)
+        assert len(digest) == 90
 
     def test_update_after_read(self):
         mac = K12.new()
-        mac.update(b("rrrr"))
+        mac.update(b"rrrr")
         mac.read(90)
-        self.assertRaises(TypeError, mac.update, b("ttt"))
+        with pytest.raises(TypeError):
+            mac.update(b"ttt")
 
 
 def txt2bin(txt):
@@ -103,24 +102,23 @@ def txt2bin(txt):
 
 def ptn(n):
     res = bytearray(n)
-    pattern = b"".join([bchr(x) for x in range(0, 0xFB)])
+    pattern = b"".join([bytes([x]) for x in range(0xFB)])
     for base in range(0, n - 0xFB, 0xFB):
-        res[base:base + 0xFB] = pattern
+        res[base : base + 0xFB] = pattern
     remain = n % 0xFB
     if remain:
         base = (n // 0xFB) * 0xFB
         res[base:] = pattern[:remain]
-    assert(len(res) == n)
+    assert len(res) == n
     return res
 
 
 def chunked(source, size):
     for i in range(0, len(source), size):
-        yield source[i:i+size]
+        yield source[i : i + size]
 
 
-class KangarooTwelveTV(unittest.TestCase):
-
+class TestKangarooTwelveTV:
     # https://github.com/XKCP/XKCP/blob/master/tests/TestVectors/KangarooTwelve.txt
 
     def test_zero_1(self):
@@ -129,7 +127,7 @@ class KangarooTwelveTV(unittest.TestCase):
 
         btv = txt2bin(tv)
         res = K12.new().read(32)
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_zero_2(self):
         tv = """1A C2 D4 50 FC 3B 42 05 D1 9D A7 BF CA 1B 37 51
@@ -139,7 +137,7 @@ class KangarooTwelveTV(unittest.TestCase):
 
         btv = txt2bin(tv)
         res = K12.new().read(64)
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_zero_3(self):
         tv = """E8 DC 56 36 42 F7 22 8C 84 68 4C 89 84 05 D3 A8
@@ -147,7 +145,7 @@ class KangarooTwelveTV(unittest.TestCase):
 
         btv = txt2bin(tv)
         res = K12.new().read(10032)
-        self.assertEqual(res[-32:], btv)
+        assert res[-32:] == btv
 
     def test_ptn_1(self):
         tv = """2B DA 92 45 0E 8B 14 7F 8A 7C B6 29 E7 84 A0 58
@@ -155,7 +153,7 @@ class KangarooTwelveTV(unittest.TestCase):
 
         btv = txt2bin(tv)
         res = K12.new(data=ptn(1)).read(32)
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_ptn_17(self):
         tv = """6B F7 5F A2 23 91 98 DB 47 72 E3 64 78 F8 E1 9B
@@ -163,7 +161,7 @@ class KangarooTwelveTV(unittest.TestCase):
 
         btv = txt2bin(tv)
         res = K12.new(data=ptn(17)).read(32)
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_ptn_17_2(self):
         tv = """0C 31 5E BC DE DB F6 14 26 DE 7D CF 8F B7 25 D1
@@ -171,7 +169,7 @@ class KangarooTwelveTV(unittest.TestCase):
 
         btv = txt2bin(tv)
         res = K12.new(data=ptn(17**2)).read(32)
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_ptn_17_3(self):
         tv = """CB 55 2E 2E C7 7D 99 10 70 1D 57 8B 45 7D DF 77
@@ -179,7 +177,7 @@ class KangarooTwelveTV(unittest.TestCase):
 
         btv = txt2bin(tv)
         res = K12.new(data=ptn(17**3)).read(32)
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_ptn_17_4(self):
         tv = """87 01 04 5E 22 20 53 45 FF 4D DA 05 55 5C BB 5C
@@ -190,14 +188,14 @@ class KangarooTwelveTV(unittest.TestCase):
 
         # All at once
         res = K12.new(data=data).read(32)
-        self.assertEqual(res, btv)
+        assert res == btv
 
         # Byte by byte
         k12 = K12.new()
         for x in data:
-            k12.update(bchr(x))
+            k12.update(bytes([x]))
         res = k12.read(32)
-        self.assertEqual(res, btv)
+        assert res == btv
 
         # Chunks of various prime sizes
         for chunk_size in (13, 17, 19, 23, 31):
@@ -205,7 +203,7 @@ class KangarooTwelveTV(unittest.TestCase):
             for x in chunked(data, chunk_size):
                 k12.update(x)
             res = k12.read(32)
-            self.assertEqual(res, btv)
+            assert res == btv
 
     def test_ptn_17_5(self):
         tv = """84 4D 61 09 33 B1 B9 96 3C BD EB 5A E3 B6 B0 5C
@@ -216,14 +214,14 @@ class KangarooTwelveTV(unittest.TestCase):
 
         # All at once
         res = K12.new(data=data).read(32)
-        self.assertEqual(res, btv)
+        assert res == btv
 
         # Chunks
         k12 = K12.new()
         for chunk in chunked(data, 8192):
             k12.update(chunk)
         res = k12.read(32)
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_ptn_17_6(self):
         tv = """3C 39 07 82 A8 A4 E8 9F A6 36 7F 72 FE AA F1 32
@@ -234,7 +232,7 @@ class KangarooTwelveTV(unittest.TestCase):
 
         # All at once
         res = K12.new(data=data).read(32)
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_ptn_c_1(self):
         tv = """FA B6 58 DB 63 E9 4A 24 61 88 BF 7A F6 9A 13 30
@@ -245,7 +243,7 @@ class KangarooTwelveTV(unittest.TestCase):
 
         # All at once
         res = K12.new(custom=custom).read(32)
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_ptn_c_41(self):
         tv = """D8 48 C5 06 8C ED 73 6F 44 62 15 9B 98 67 FD 4C
@@ -255,8 +253,8 @@ class KangarooTwelveTV(unittest.TestCase):
         custom = ptn(41)
 
         # All at once
-        res = K12.new(data=b'\xFF', custom=custom).read(32)
-        self.assertEqual(res, btv)
+        res = K12.new(data=b"\xff", custom=custom).read(32)
+        assert res == btv
 
     def test_ptn_c_41_2(self):
         tv = """C3 89 E5 00 9A E5 71 20 85 4C 2E 8C 64 67 0A C0
@@ -266,8 +264,8 @@ class KangarooTwelveTV(unittest.TestCase):
         custom = ptn(41**2)
 
         # All at once
-        res = K12.new(data=b'\xFF' * 3, custom=custom).read(32)
-        self.assertEqual(res, btv)
+        res = K12.new(data=b"\xff" * 3, custom=custom).read(32)
+        assert res == btv
 
     def test_ptn_c_41_3(self):
         tv = """75 D2 F8 6A 2E 64 45 66 72 6B 4F BC FC 56 57 B9
@@ -277,8 +275,8 @@ class KangarooTwelveTV(unittest.TestCase):
         custom = ptn(41**3)
 
         # All at once
-        res = K12.new(data=b'\xFF' * 7, custom=custom).read(32)
-        self.assertEqual(res, btv)
+        res = K12.new(data=b"\xff" * 7, custom=custom).read(32)
+        assert res == btv
 
     # https://datatracker.ietf.org/doc/draft-irtf-cfrg-kangarootwelve/
 
@@ -290,7 +288,7 @@ class KangarooTwelveTV(unittest.TestCase):
 
         # All at once
         res = K12.new(data=ptn(8191)).read(32)
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_ptn_8192(self):
         tv = """48 F2 56 F6 77 2F 9E DF B6 A8 B6 61 EC 92 DC 93
@@ -300,7 +298,7 @@ class KangarooTwelveTV(unittest.TestCase):
 
         # All at once
         res = K12.new(data=ptn(8192)).read(32)
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_ptn_8192_8189(self):
         tv = """3E D1 2F 70 FB 05 DD B5 86 89 51 0A B3 E4 D2 3C
@@ -310,7 +308,7 @@ class KangarooTwelveTV(unittest.TestCase):
 
         # All at once
         res = K12.new(data=ptn(8192), custom=ptn(8189)).read(32)
-        self.assertEqual(res, btv)
+        assert res == btv
 
     def test_ptn_8192_8190(self):
         tv = """6A 7C 1B 6A 5C D0 D8 C9 CA 94 3A 4A 21 6C C6 46
@@ -320,7 +318,7 @@ class KangarooTwelveTV(unittest.TestCase):
 
         # All at once
         res = K12.new(data=ptn(8192), custom=ptn(8190)).read(32)
-        self.assertEqual(res, btv)
+        assert res == btv
 
     ###
 
@@ -328,8 +326,8 @@ class KangarooTwelveTV(unittest.TestCase):
         tv = "fd608f91d81904a9916e78a18f65c157a78d63f93d8f6367db0524526a5ea2bb"
 
         btv = txt2bin(tv)
-        res = K12.new(data=b'', custom=ptn(100)).read(32)
-        self.assertEqual(res, btv)
+        res = K12.new(data=b"", custom=ptn(100)).read(32)
+        assert res == btv
 
     def test_2(self):
         tv4 = "5a4ec9a649f81916d4ce1553492962f7868abf8dd1ceb2f0cb3682ea95cda6a6"
@@ -338,20 +336,20 @@ class KangarooTwelveTV(unittest.TestCase):
         tv1 = "33826990c09dc712ba7224f0d9be319e2720de95a4c1afbd2211507dae1c703a"
         tv0 = "9f4d3aba908ddc096e4d3a71da954f917b9752f05052b9d26d916a6fbc75bf3e"
 
-        res = K12.new(data=b'A' * (8192 - 4), custom=b'B').read(32)
-        self.assertEqual(res, txt2bin(tv4))
+        res = K12.new(data=b"A" * (8192 - 4), custom=b"B").read(32)
+        assert res == txt2bin(tv4)
 
-        res = K12.new(data=b'A' * (8192 - 3), custom=b'B').read(32)
-        self.assertEqual(res, txt2bin(tv3))
+        res = K12.new(data=b"A" * (8192 - 3), custom=b"B").read(32)
+        assert res == txt2bin(tv3)
 
-        res = K12.new(data=b'A' * (8192 - 2), custom=b'B').read(32)
-        self.assertEqual(res, txt2bin(tv2))
+        res = K12.new(data=b"A" * (8192 - 2), custom=b"B").read(32)
+        assert res == txt2bin(tv2)
 
-        res = K12.new(data=b'A' * (8192 - 1), custom=b'B').read(32)
-        self.assertEqual(res, txt2bin(tv1))
+        res = K12.new(data=b"A" * (8192 - 1), custom=b"B").read(32)
+        assert res == txt2bin(tv1)
 
-        res = K12.new(data=b'A' * (8192 - 0), custom=b'B').read(32)
-        self.assertEqual(res, txt2bin(tv0))
+        res = K12.new(data=b"A" * (8192 - 0), custom=b"B").read(32)
+        assert res == txt2bin(tv0)
 
     def test_3(self):
         # Empty message, but the customization string alone
@@ -365,21 +363,21 @@ class KangarooTwelveTV(unittest.TestCase):
         }
 
         for length, tv in tvs.items():
-            custom = b'B' * length
+            custom = b"B" * length
 
             res = K12.new(custom=custom).read(32)
-            self.assertEqual(res, txt2bin(tv))
+            assert res == txt2bin(tv)
 
-            res = K12.new(data=b'', custom=custom).read(32)
-            self.assertEqual(res, txt2bin(tv))
+            res = K12.new(data=b"", custom=custom).read(32)
+            assert res == txt2bin(tv)
 
-            res = K12.new(custom=custom).update(b'').read(32)
-            self.assertEqual(res, txt2bin(tv))
+            res = K12.new(custom=custom).update(b"").read(32)
+            assert res == txt2bin(tv)
 
     def test_mixed_leaves(self):
         # Mix partial and whole leaves across several update() calls
         data = ptn(8192 * 12 + 1000)
-        custom = b'C' * 20
+        custom = b"C" * 20
         ref = K12.new(data=data, custom=custom).read(32)
 
         chunk_lists = [
@@ -392,16 +390,16 @@ class KangarooTwelveTV(unittest.TestCase):
             h = K12.new(custom=custom)
             index = 0
             for size in chunks:
-                h.update(data[index:index + size])
+                h.update(data[index : index + size])
                 index += size
             h.update(data[index:])
-            self.assertEqual(h.read(32), ref)
+            assert h.read(32) == ref
 
         # Same as above, with memoryview and bytearray inputs
         h = K12.new(custom=custom)
-        h.update(memoryview(data)[:8192 * 7 + 3])
-        h.update(bytearray(data[8192 * 7 + 3:]))
-        self.assertEqual(h.read(32), ref)
+        h.update(memoryview(data)[: 8192 * 7 + 3])
+        h.update(bytearray(data[8192 * 7 + 3 :]))
+        assert h.read(32) == ref
 
     def test_hash_leaves(self):
         from Crypto.Hash import TurboSHAKE128
@@ -411,40 +409,42 @@ class KangarooTwelveTV(unittest.TestCase):
         K12._hash_leaves(memoryview(data), memoryview(cvs))
 
         for i in range(5):
-            leaf = data[i * 8192:(i + 1) * 8192]
+            leaf = data[i * 8192 : (i + 1) * 8192]
             cv = TurboSHAKE128.new(data=leaf, domain=0x0B).read(32)
-            self.assertEqual(cvs[i * 32:(i + 1) * 32], cv)
+            assert cvs[i * 32 : (i + 1) * 32] == cv
 
         # A range of leaves into a slice of a common buffer
         cvs2 = bytearray(32 * 5)
-        K12._hash_leaves(memoryview(data)[8192 * 2:8192 * 4],
-                         memoryview(cvs2)[32 * 2:32 * 4])
-        self.assertEqual(cvs2[32 * 2:32 * 4], cvs[32 * 2:32 * 4])
-        self.assertEqual(cvs2[:32 * 2], bytearray(32 * 2))
-        self.assertEqual(cvs2[32 * 4:], bytearray(32))
+        K12._hash_leaves(memoryview(data)[8192 * 2 : 8192 * 4], memoryview(cvs2)[32 * 2 : 32 * 4])
+        assert cvs2[32 * 2 : 32 * 4] == cvs[32 * 2 : 32 * 4]
+        assert cvs2[: 32 * 2] == bytearray(32 * 2)
+        assert cvs2[32 * 4 :] == bytearray(32)
 
 
-class KangarooTwelveThreads(unittest.TestCase):
-
+class TestKangarooTwelveThreads:
     def test_threads_negative(self):
         for threads in (1.0, "2", None, True):
-            self.assertRaises(TypeError, K12.new, threads=threads)
+            with pytest.raises(TypeError):
+                K12.new(threads=threads)
         for threads in (-1, -8):
-            self.assertRaises(ValueError, K12.new, threads=threads)
+            with pytest.raises(ValueError):
+                K12.new(threads=threads)
 
         xof = K12.new()
-        self.assertRaises(TypeError, xof.new, threads=2.0)
-        self.assertRaises(ValueError, xof.new, threads=-1)
+        with pytest.raises(TypeError):
+            xof.new(threads=2.0)
+        with pytest.raises(ValueError):
+            xof.new(threads=-1)
 
     def test_threads_all_cores(self):
         cores = K12._available_cores()
-        self.assertTrue(cores >= 1)
-        self.assertEqual(K12.new(threads=0)._threads, cores)
-        self.assertEqual(K12.new().new(threads=0)._threads, cores)
+        assert cores >= 1
+        assert K12.new(threads=0)._threads == cores
+        assert K12.new().new(threads=0)._threads == cores
 
         data = ptn(1024 * 1024 + 8192 * 3 + 5)
         ref = K12.new(data=data).read(32)
-        self.assertEqual(K12.new(data=data, threads=0).read(32), ref)
+        assert K12.new(data=data, threads=0).read(32) == ref
 
     def test_leaf_boundaries(self):
         # Let each thread hash even a single leaf
@@ -452,49 +452,43 @@ class KangarooTwelveThreads(unittest.TestCase):
         K12._MIN_LEAVES_PER_THREAD = 1
         try:
             data = ptn(8192 * 20 + 1)
-            for length in (8192 * 2 - 1, 8192 * 2, 8192 * 2 + 1,
-                           8192 * 3, 8192 * 9, 8192 * 9 + 1,
-                           8192 * 10 - 1, 8192 * 17, 8192 * 20 + 1):
-                ref = K12.new(data=data[:length], custom=b'C').read(32)
+            for length in (
+                8192 * 2 - 1,
+                8192 * 2,
+                8192 * 2 + 1,
+                8192 * 3,
+                8192 * 9,
+                8192 * 9 + 1,
+                8192 * 10 - 1,
+                8192 * 17,
+                8192 * 20 + 1,
+            ):
+                ref = K12.new(data=data[:length], custom=b"C").read(32)
                 for threads in range(2, 9):
-                    res = K12.new(data=data[:length], custom=b'C',
-                                  threads=threads).read(32)
-                    self.assertEqual(res, ref)
+                    res = K12.new(data=data[:length], custom=b"C", threads=threads).read(32)
+                    assert res == ref
 
-                    xof = K12.new(custom=b'C', threads=threads)
+                    xof = K12.new(custom=b"C", threads=threads)
                     xof.update(data[:100]).update(data[100:length])
-                    self.assertEqual(xof.read(32), ref)
+                    assert xof.read(32) == ref
         finally:
             K12._MIN_LEAVES_PER_THREAD = saved
 
     def test_long_random_chunks(self):
         import random
+
         rng = random.Random(42)
 
         data = ptn(3 * 1024 * 1024 + 4567)
         ref = K12.new(data=data).read(32)
 
         for threads in (0, 2, 3, 4, 8):
-            self.assertEqual(K12.new(data=data, threads=threads).read(32), ref)
+            assert K12.new(data=data, threads=threads).read(32) == ref
 
             xof = K12.new(threads=threads)
             index = 0
             while index < len(data):
                 size = rng.randint(1, 2 * 1024 * 1024)
-                xof.update(memoryview(data)[index:index + size])
+                xof.update(memoryview(data)[index : index + size])
                 index += size
-            self.assertEqual(xof.read(32), ref)
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(KangarooTwelveTest)
-    tests += list_test_cases(KangarooTwelveTV)
-    tests += list_test_cases(KangarooTwelveThreads)
-    return tests
-
-
-if __name__ == '__main__':
-    def suite():
-        return unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+            assert xof.read(32) == ref

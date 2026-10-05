@@ -28,10 +28,13 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+from __future__ import annotations
+
 import os
+from typing import List
 
 
-def pycryptodome_filename(dir_comps, filename):
+def pycryptodome_filename(dir_comps: List[str], filename: str) -> str:
     """Return the complete file name for the module
 
     dir_comps : list of string
@@ -51,4 +54,3 @@ def pycryptodome_filename(dir_comps, filename):
     root_lib = os.path.join(util_lib, "..")
 
     return os.path.join(root_lib, *dir_comps)
-

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/__init__.py: Self-test for PyCrypto
 #
@@ -24,14 +23,10 @@
 
 """Self tests
 
-These tests should perform quickly and can ideally be used every time an
-application runs.
+The tests are run with pytest, for instance with ``python -m Crypto.SelfTest``.
 """
 
 import sys
-import unittest
-from importlib import import_module
-from Crypto.Util.py3compat import StringIO
 
 
 class SelfTestError(Exception):
@@ -41,62 +36,59 @@ class SelfTestError(Exception):
         self.result = result
 
 
-def run(module=None, verbosity=0, stream=None, tests=None, config=None, **kwargs):
+# Load the plugin with our command line options; the tests may also be
+# installed in a read-only location, so do not write a cache
+_PYTEST_ARGS = ["-p", "Crypto.SelfTest.plugin", "-p", "no:cacheprovider"]
+
+
+def main(args=()):
+    """Run the self-tests with pytest, passing it the given command line arguments.
+
+    Return the pytest exit code.
+    """
+
+    try:
+        import pytest
+    except ImportError:
+        sys.stderr.write("The self-tests require pytest (pip install pytest)\n")
+        return 4
+
+    return pytest.main([*_PYTEST_ARGS, "--pyargs", __name__, *args])
+
+
+def run(module=None, verbosity=0, config=None):
     """Execute self-tests.
 
     This raises SelfTestError if any test is unsuccessful.
 
-    You may optionally pass in a sub-module of SelfTest if you only want to
-    perform some of the tests.  For example, the following would test only the
-    hash modules:
+    You may optionally pass in a sub-module of SelfTest (or its name) if you
+    only want to perform some of the tests.  For example, the following would
+    test only the hash modules:
 
-        Crypto.SelfTest.run(Crypto.SelfTest.Hash)
+        Crypto.SelfTest.run("Crypto.SelfTest.Hash")
 
     """
 
+    import pytest
+
     if config is None:
         config = {}
-    suite = unittest.TestSuite()
     if module is None:
-        if tests is None:
-            tests = get_tests(config=config)
-        suite.addTests(tests)
-    else:
-        if tests is None:
-            suite.addTests(module.get_tests(config=config))
-        else:
-            raise ValueError("'module' and 'tests' arguments are mutually exclusive")
-    if stream is None:
-        kwargs['stream'] = StringIO()
-    else:
-        kwargs['stream'] = stream
-    runner = unittest.TextTestRunner(verbosity=verbosity, **kwargs)
-    result = runner.run(suite)
-    if not result.wasSuccessful():
-        if stream is None:
-            sys.stderr.write(kwargs['stream'].getvalue())
-        raise SelfTestError("Self-test failed", result)
-    return result
+        module = __name__
+    elif not isinstance(module, str):
+        module = module.__name__
+    args = [*_PYTEST_ARGS, "--pyargs", module]
+    # Map the verbosity levels of unittest to pytest
+    if verbosity == 0:
+        args.append("-q")
+    elif verbosity > 1:
+        args.append("-" + "v" * (verbosity - 1))
+    if not config.get("slow_tests"):
+        args.append("--skip-slow-tests")
+    if config.get("wycheproof_warnings"):
+        args.append("--wycheproof-warnings")
 
-
-def get_tests(config={}):
-    tests = []
-
-    module_names = [
-        "Cipher", "Hash", "Protocol", "PublicKey", "Random",
-        "Util", "Signature", "IO", "Math",
-        ]
-
-    for name in module_names:
-        module = import_module("Crypto.SelfTest." + name)
-        tests += module.get_tests(config=config)
-
-    return tests
-
-
-if __name__ == '__main__':
-    def suite():
-        return unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
-
-# vim:set ts=4 sw=4 sts=4 expandtab:
+    exit_code = pytest.main(args)
+    if exit_code != 0:
+        raise SelfTestError("Self-test failed", exit_code)
+    return exit_code

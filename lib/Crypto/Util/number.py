@@ -24,17 +24,22 @@
 # ===================================================================
 #
 
+from __future__ import annotations
+
 import math
-import sys
 import struct
+import warnings
+from typing import Callable, List, Optional, Tuple, Union
+
 from Crypto import Random
-from Crypto.Util.py3compat import iter_range
+
+RNG = Callable[[int], bytes]
 
 # Backward compatibility
 _fastmath = None
 
 
-def ceil_div(n, d):
+def ceil_div(n: int, d: int) -> int:
     """Return ceil(n/d), that is, the smallest integer r such that r*d >= n"""
 
     if d == 0:
@@ -47,7 +52,7 @@ def ceil_div(n, d):
     return r
 
 
-def size (N):
+def size(N: int) -> int:
     """Returns the size of the number N in bits."""
 
     if N < 0:
@@ -55,7 +60,7 @@ def size (N):
     return N.bit_length()
 
 
-def getRandomInteger(N, randfunc=None):
+def getRandomInteger(N: int, randfunc: Optional[RNG] = None) -> int:
     """Return a random number at most N bits long.
 
     If :data:`randfunc` is omitted, then :meth:`Random.get_random_bytes` is used.
@@ -68,15 +73,16 @@ def getRandomInteger(N, randfunc=None):
     if randfunc is None:
         randfunc = Random.get_random_bytes
 
-    S = randfunc(N>>3)
+    S = randfunc(N >> 3)
     odd_bits = N % 8
     if odd_bits != 0:
-        rand_bits = ord(randfunc(1)) >> (8-odd_bits)
-        S = struct.pack('B', rand_bits) + S
+        rand_bits = ord(randfunc(1)) >> (8 - odd_bits)
+        S = struct.pack("B", rand_bits) + S
     value = bytes_to_long(S)
     return value
 
-def getRandomRange(a, b, randfunc=None):
+
+def getRandomRange(a: int, b: int, randfunc: Optional[RNG] = None) -> int:
     """Return a random number *n* so that *a <= n < b*.
 
     If :data:`randfunc` is omitted, then :meth:`Random.get_random_bytes` is used.
@@ -93,7 +99,8 @@ def getRandomRange(a, b, randfunc=None):
         value = getRandomInteger(bits, randfunc)
     return a + value
 
-def getRandomNBitInteger(N, randfunc=None):
+
+def getRandomNBitInteger(N: int, randfunc: Optional[RNG] = None) -> int:
     """Return a random number with exactly N-bits,
     i.e. a random number between 2**(N-1) and (2**N)-1.
 
@@ -104,66 +111,31 @@ def getRandomNBitInteger(N, randfunc=None):
         the future.
     """
 
-    value = getRandomInteger (N-1, randfunc)
-    value |= 2 ** (N-1)                # Ensure high bit is set
+    value = getRandomInteger(N - 1, randfunc)
+    value |= 2 ** (N - 1)  # Ensure high bit is set
     assert size(value) >= N
     return value
 
 
-if sys.version_info[:2] >= (3, 5):
-
-    GCD = math.gcd
-
-else:
-
-    def GCD(x,y):
-        """Greatest Common Denominator of :data:`x` and :data:`y`.
-        """
-
-        x = abs(x) ; y = abs(y)
-        while x > 0:
-            x, y = y % x, x
-        return y
+GCD = math.gcd
 
 
-if sys.version_info[:2] >= (3, 8):
+def inverse(u: int, v: int) -> int:
+    """The inverse of :data:`u` *mod* :data:`v`."""
 
-    def inverse(u, v):
-        """The inverse of :data:`u` *mod* :data:`v`."""
+    if v == 0:
+        raise ZeroDivisionError("Modulus cannot be zero")
+    if v < 0:
+        raise ValueError("Modulus cannot be negative")
 
-        if v == 0:
-            raise ZeroDivisionError("Modulus cannot be zero")
-        if v < 0:
-            raise ValueError("Modulus cannot be negative")
+    return pow(u, -1, v)
 
-        return pow(u, -1, v)
-
-else:
-
-    def inverse(u, v):
-        """The inverse of :data:`u` *mod* :data:`v`."""
-
-        if v == 0:
-            raise ZeroDivisionError("Modulus cannot be zero")
-        if v < 0:
-            raise ValueError("Modulus cannot be negative")
-
-        u3, v3 = u, v
-        u1, v1 = 1, 0
-        while v3 > 0:
-            q = u3 // v3
-            u1, v1 = v1, u1 - v1*q
-            u3, v3 = v3, u3 - v3*q
-        if u3 != 1:
-            raise ValueError("No inverse value can be computed")
-        while u1<0:
-            u1 = u1 + v
-        return u1
 
 # Given a number of bits to generate and a random generation function,
 # find a prime number of the appropriate size.
 
-def getPrime(N, randfunc=None):
+
+def getPrime(N: int, randfunc: Optional[RNG] = None) -> int:
     """Return a random N-bit prime number.
 
     N must be an integer larger than 1.
@@ -182,7 +154,7 @@ def getPrime(N, randfunc=None):
     return number
 
 
-def _rabinMillerTest(n, rounds, randfunc=None):
+def _rabinMillerTest(n: int, rounds: int, randfunc: Optional[RNG] = None) -> int:
     """_rabinMillerTest(n:long, rounds:int, randfunc:callable):int
     Tests if n is prime.
     Returns 0 when n is definitely composite.
@@ -208,18 +180,18 @@ def _rabinMillerTest(n, rounds, randfunc=None):
 
     tested = []
     # we need to do at most n-2 rounds.
-    for i in iter_range (min (rounds, n-2)):
+    for _i in range(min(rounds, n - 2)):
         # randomly choose a < n and make sure it hasn't been tested yet
-        a = getRandomRange (2, n, randfunc)
+        a = getRandomRange(2, n, randfunc)
         while a in tested:
-            a = getRandomRange (2, n, randfunc)
-        tested.append (a)
+            a = getRandomRange(2, n, randfunc)
+        tested.append(a)
         # do the rabin-miller test
-        z = pow (a, m, n) # (a**m) % n
+        z = pow(a, m, n)  # (a**m) % n
         if z == 1 or z == n_1:
             continue
         composite = 1
-        for r in iter_range(b):
+        for _r in range(b):
             z = (z * z) % n
             if z == 1:
                 return 0
@@ -230,7 +202,10 @@ def _rabinMillerTest(n, rounds, randfunc=None):
             return 0
     return 1
 
-def getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None):
+
+def getStrongPrime(
+    N: int, e: int = 0, false_positive_prob: float = 1e-6, randfunc: Optional[RNG] = None
+) -> int:
     r"""
     Return a random strong *N*-bit prime number.
     In this context, *p* is a strong prime if *p-1* and *p+1* have at
@@ -271,15 +246,10 @@ def getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None):
     if randfunc is None:
         randfunc = Random.get_random_bytes
 
-    # Use the accelerator if available
-    if _fastmath is not None:
-        return _fastmath.getStrongPrime(long(N), long(e), false_positive_prob,
-            randfunc)
-
     if (N < 512) or ((N % 128) != 0):
-        raise ValueError ("bits must be multiple of 128 and > 512")
+        raise ValueError("bits must be multiple of 128 and > 512")
 
-    rabin_miller_rounds = int(math.ceil(-math.log(false_positive_prob)/math.log(4)))
+    rabin_miller_rounds = math.ceil(-math.log(false_positive_prob) / math.log(4))
 
     # calculate range for X
     #   lower_bound = sqrt(2) * 2^{511 + 128*x}
@@ -287,22 +257,22 @@ def getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None):
     x = (N - 512) >> 7
     # We need to approximate the sqrt(2) in the lower_bound by an integer
     # expression because floating point math overflows with these numbers
-    lower_bound = (14142135623730950489 * (2 ** (511 + 128*x))) //  10000000000000000000
-    upper_bound = (1 << (512 + 128*x)) - 1
+    lower_bound = (14142135623730950489 * (2 ** (511 + 128 * x))) // 10000000000000000000
+    upper_bound = (1 << (512 + 128 * x)) - 1
     # Randomly choose X in calculated range
-    X = getRandomRange (lower_bound, upper_bound, randfunc)
+    X = getRandomRange(lower_bound, upper_bound, randfunc)
 
     # generate p1 and p2
     p = [0, 0]
     for i in (0, 1):
         # randomly choose 101-bit y
-        y = getRandomNBitInteger (101, randfunc)
+        y = getRandomNBitInteger(101, randfunc)
         # initialize the field for sieving
-        field = [0] * 5 * len (sieve_base)
+        field = [0] * 5 * len(sieve_base)
         # sieve the field
         for prime in sieve_base:
             offset = y % prime
-            for j in iter_range((prime - offset) % prime, len (field), prime):
+            for j in range((prime - offset) % prime, len(field), prime):
                 field[j] = 1
 
         # look for suitable p[i] starting at y
@@ -312,19 +282,18 @@ def getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None):
             if composite:
                 continue
             tmp = y + j
-            result = _rabinMillerTest (tmp, rabin_miller_rounds)
+            result = _rabinMillerTest(tmp, rabin_miller_rounds)
             if result > 0:
                 p[i] = tmp
                 break
         if result == 0:
-            raise RuntimeError ("Couln't find prime in field. "
-                                "Developer: Increase field_size")
+            raise RuntimeError("Couln't find prime in field. Developer: Increase field_size")
 
     # Calculate R
     #     R = (p2^{-1} mod p1) * p2 - (p1^{-1} mod p2) * p1
-    tmp1 = inverse (p[1], p[0]) * p[1]  # (p2^-1 mod p1)*p2
-    tmp2 = inverse (p[0], p[1]) * p[0]  # (p1^-1 mod p2)*p1
-    R = tmp1 - tmp2 # (p2^-1 mod p1)*p2 - (p1^-1 mod p2)*p1
+    tmp1 = inverse(p[1], p[0]) * p[1]  # (p2^-1 mod p1)*p2
+    tmp2 = inverse(p[0], p[1]) * p[0]  # (p1^-1 mod p2)*p1
+    R = tmp1 - tmp2  # (p2^-1 mod p1)*p2 - (p1^-1 mod p2)*p1
 
     # search for final prime number starting by Y0
     #    Y0 = X + (R - X mod p1p2)
@@ -343,26 +312,26 @@ def getStrongPrime(N, e=0, false_positive_prob=1e-6, randfunc=None):
         # the public exponent e
         if e and is_possible_prime:
             if e & 1:
-                if GCD(e, X-1) != 1:
+                if GCD(e, X - 1) != 1:
                     is_possible_prime = 0
             else:
-                if GCD(e, (X-1) // 2) != 1:
+                if GCD(e, (X - 1) // 2) != 1:
                     is_possible_prime = 0
 
         # do some Rabin-Miller-Tests
         if is_possible_prime:
-            result = _rabinMillerTest (X, rabin_miller_rounds)
+            result = _rabinMillerTest(X, rabin_miller_rounds)
             if result > 0:
                 break
         X += increment
-		# abort when X has more bits than requested
-		# TODO: maybe we shouldn't abort but rather start over.
+        # abort when X has more bits than requested
+        # TODO: maybe we shouldn't abort but rather start over.
         if X >= 1 << N:
-            raise RuntimeError ("Couln't find prime in field. "
-                                "Developer: Increase field_size")
+            raise RuntimeError("Couln't find prime in field. Developer: Increase field_size")
     return X
 
-def isPrime(N, false_positive_prob=1e-6, randfunc=None):
+
+def isPrime(N: int, false_positive_prob: float = 1e-6, randfunc: Optional[RNG] = None) -> bool:
     r"""Test if a number *N* is a prime.
 
     Args:
@@ -383,27 +352,23 @@ def isPrime(N, false_positive_prob=1e-6, randfunc=None):
     if randfunc is None:
         randfunc = Random.get_random_bytes
 
-    if _fastmath is not None:
-        return _fastmath.isPrime(long(N), false_positive_prob, randfunc)
-
     if N < 3 or N & 1 == 0:
         return N == 2
     for p in sieve_base:
-        if N == p:
+        if p == N:
             return True
         if N % p == 0:
             return False
 
-    rounds = int(math.ceil(-math.log(false_positive_prob)/math.log(4)))
+    rounds = math.ceil(-math.log(false_positive_prob) / math.log(4))
     return bool(_rabinMillerTest(N, rounds, randfunc))
 
 
 # Improved conversion functions contributed by Barry Warsaw, after
 # careful benchmarking
 
-import struct
 
-def long_to_bytes(n, blocksize=0):
+def long_to_bytes(n: int, blocksize: int = 0) -> bytes:
     """Convert a positive integer to a byte string using big endian encoding.
 
     If :data:`blocksize` is absent or zero, the byte string will
@@ -431,47 +396,47 @@ def long_to_bytes(n, blocksize=0):
     if n < 0 or blocksize < 0:
         raise ValueError("Values must be non-negative")
 
-    result = []
+    result: List[bytes] = []
     pack = struct.pack
 
     # Fill the first block independently from the value of n
     bsr = blocksize
     while bsr >= 8:
-        result.insert(0, pack('>Q', n & 0xFFFFFFFFFFFFFFFF))
+        result.insert(0, pack(">Q", n & 0xFFFFFFFFFFFFFFFF))
         n = n >> 64
         bsr -= 8
 
     while bsr >= 4:
-        result.insert(0, pack('>I', n & 0xFFFFFFFF))
+        result.insert(0, pack(">I", n & 0xFFFFFFFF))
         n = n >> 32
         bsr -= 4
 
     while bsr > 0:
-        result.insert(0, pack('>B', n & 0xFF))
+        result.insert(0, pack(">B", n & 0xFF))
         n = n >> 8
         bsr -= 1
 
     if n == 0:
         if len(result) == 0:
-            bresult = b'\x00'
+            bresult = b"\x00"
         else:
-            bresult = b''.join(result)
+            bresult = b"".join(result)
     else:
         # The encoded number exceeds the block size
         while n > 0:
-            result.insert(0, pack('>Q', n & 0xFFFFFFFFFFFFFFFF))
+            result.insert(0, pack(">Q", n & 0xFFFFFFFFFFFFFFFF))
             n = n >> 64
-        result[0] = result[0].lstrip(b'\x00')
-        bresult = b''.join(result)
+        result[0] = result[0].lstrip(b"\x00")
+        bresult = b"".join(result)
         # bresult has minimum length here
         if blocksize > 0:
             target_len = ((len(bresult) - 1) // blocksize + 1) * blocksize
-            bresult = b'\x00' * (target_len - len(bresult)) + bresult
+            bresult = b"\x00" * (target_len - len(bresult)) + bresult
 
     return bresult
 
 
-def bytes_to_long(s):
+def bytes_to_long(s: Union[bytes, bytearray, memoryview]) -> int:
     """Convert a byte string to a long integer (big endian).
 
     In Python 3.2+, use the native method instead::
@@ -489,30 +454,23 @@ def bytes_to_long(s):
 
     unpack = struct.unpack
 
-    # Up to Python 2.7.4, struct.unpack can't work with bytearrays nor
-    # memoryviews
-    if sys.version_info[0:3] < (2, 7, 4):
-        if isinstance(s, bytearray):
-            s = bytes(s)
-        elif isinstance(s, memoryview):
-            s = s.tobytes()
-
     length = len(s)
     if length % 4:
-        extra = (4 - length % 4)
-        s = b'\x00' * extra + s
+        extra = 4 - length % 4
+        s = b"\x00" * extra + s
         length = length + extra
     for i in range(0, length, 4):
-        acc = (acc << 32) + unpack('>I', s[i:i+4])[0]
+        acc = (acc << 32) + unpack(">I", s[i : i + 4])[0]
     return acc
 
 
 # For backwards compatibility...
-import warnings
-def long2str(n, blocksize=0):
+def long2str(n: int, blocksize: int = 0) -> bytes:
     warnings.warn("long2str() has been replaced by long_to_bytes()")
     return long_to_bytes(n, blocksize)
-def str2long(s):
+
+
+def str2long(s: bytes) -> int:
     warnings.warn("str2long() has been replaced by bytes_to_long()")
     return bytes_to_long(s)
 
@@ -520,7 +478,8 @@ def str2long(s):
 # The first 10000 primes used for checking primality.
 # This should be enough to eliminate most of the odd
 # numbers before needing to do a Rabin-Miller test at all.
-sieve_base = (
+# fmt: off
+sieve_base: Tuple[int, ...] = (
      2,      3,      5,      7,     11,     13,     17,     19,     23,     29,
     31,     37,     41,     43,     47,     53,     59,     61,     67,     71,
     73,     79,     83,     89,     97,    101,    103,    107,    109,    113,
@@ -1522,3 +1481,4 @@ sieve_base = (
 104549, 104551, 104561, 104579, 104593, 104597, 104623, 104639, 104651, 104659,
 104677, 104681, 104683, 104693, 104701, 104707, 104711, 104717, 104723, 104729,
 )
+# fmt: on

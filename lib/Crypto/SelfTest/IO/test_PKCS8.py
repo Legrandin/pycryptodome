@@ -33,19 +33,16 @@
 
 """Self-tests for Crypto.IO.PKCS8 module"""
 
-import unittest
 from binascii import unhexlify
 
-from Crypto.Util.py3compat import *
 from Crypto.IO import PKCS8
-
 from Crypto.Util.asn1 import DerNull
 
-oid_key = '1.2.840.113549.1.1.1'
+oid_key = "1.2.840.113549.1.1.1"
 
 # Original RSA key (in DER format)
 # hexdump -v -e '32/1 "%02x" "\n"' key.der
-clear_key="""
+clear_key = """
 308201ab020100025a00b94a7f7075ab9e79e8196f47be707781e80dd965cf16
 0c951a870b71783b6aaabbd550c0e65e5a3dfe15b8620009f6d7e5efec42a3f0
 6fe20faeebb0c356e79cdec6db4dd427e82d8ae4a5b90996227b8ba54ccfc4d2
@@ -66,7 +63,7 @@ c24f022d0ac334eb6cabf1933633db007b763227b0d9971a9ea36aca8b669ec9
 #
 # openssl pkcs8 -topk8 -inform DER -nocrypt -in key.der -outform DER -out keyp8.der
 # hexdump -v -e '32/1 "%02x" "\n"' keyp8.der
-wrapped_clear_key="""
+wrapped_clear_key = """
 308201c5020100300d06092a864886f70d0101010500048201af308201ab0201
 00025a00b94a7f7075ab9e79e8196f47be707781e80dd965cf160c951a870b71
 783b6aaabbd550c0e65e5a3dfe15b8620009f6d7e5efec42a3f06fe20faeebb0
@@ -102,12 +99,13 @@ wrapped_enc_keys = []
 # openssl pkcs8 -topk8 -passin pass:TestTest -inform DER -in key.der -outform DER -out keyenc.der -v2 des3
 # hexdump -v -e '32/1 "%02x" "\n"' keyenc.der
 #
-wrapped_enc_keys.append((
-'PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC',
-2048,
-"47EA7227D8B22E2F", # IV
-"E3F7A838AB911A4D", # Salt
-"""
+wrapped_enc_keys.append(
+    (
+        "PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC",
+        2048,
+        "47EA7227D8B22E2F",  # IV
+        "E3F7A838AB911A4D",  # Salt
+        """
 30820216304006092a864886f70d01050d3033301b06092a864886f70d01050c
 300e0408e3f7a838ab911a4d02020800301406082a864886f70d0307040847ea
 7227d8b22e2f048201d0ea388b374d2d0e4ceb7a5139f850fdff274884a6e6c0
@@ -125,19 +123,21 @@ f6fa48fc5aa4b75dd1c017ab79ac9d737233a6d668f5364ccf47786debd37334
 9c10c9e6efbe78430a61f71c89948aa32cdc3cc7338cf994147819ce7ab23450
 c8f7d9b94c3bb377d17a3fa204b601526317824b142ff6bc843fa7815ece89c0
 839573f234dac8d80cc571a045353d61db904a4398d8ef3df5ac
-"""
-))
+""",
+    )
+)
 
 #
 # openssl pkcs8 -topk8 -passin pass:TestTest -inform DER -in key.der -outform DER -out keyenc.der
 # hexdump -v -e '32/1 "%02x" "\n"' keyenc.der
 #
-wrapped_enc_keys.append((
-'skip encryption',                 # pbeWithMD5AndDES-CBC, only decoding is supported
--1,
-"",
-"",
-"""
+wrapped_enc_keys.append(
+    (
+        "skip encryption",  # pbeWithMD5AndDES-CBC, only decoding is supported
+        -1,
+        "",
+        "",
+        """
 308201f1301b06092a864886f70d010503300e0408f9b990c89af1d41b020208
 00048201d0c6267fe8592903891933d559e71a7ca68b2e39150f19daca0f7921
 52f97e249d72f670d5140e9150433310ed7c7ee51927693fd39884cb9551cea5
@@ -154,20 +154,22 @@ b4ca2e23442047606b9bc4b3bf65b432cb271bea4eb35dd3eb360d3be8612a87
 a50e96a2264490aeabdc07c6e78e5dbf4fe3388726d0e2a228346bf3c2907d68
 2a6276b22ae883fb30fa611f4e4193e7a08480fcd7db48308bacbd72bf4807aa
 11fd394859f97d22982f7fe890b2e2a0f7e7ffb693
-"""
-))
+""",
+    )
+)
 
 #
 # openssl pkcs8 -topk8 -passin pass:TestTest -inform DER -in key.der
 #   -outform DER -out keyenc.der -v1 PBE-SHA1-RC2-64
 # hexdump -v -e '32/1 "%02x" "\n"' keyenc.der
 #
-wrapped_enc_keys.append((
-'skip encryption',                 # pbeWithSHA1AndRC2-CBC, only decoding is supported
--1,
-"",
-"",
-"""
+wrapped_enc_keys.append(
+    (
+        "skip encryption",  # pbeWithSHA1AndRC2-CBC, only decoding is supported
+        -1,
+        "",
+        "",
+        """
 308201f1301b06092a864886f70d01050b300e04083ee943bdae185008020208
 00048201d0e4614d9371d3ff10ceabc2f6a7a13a0f449f9a714144e46518ea55
 e3e6f0cde24031d01ef1f37ec40081449ef01914faf45983dde0d2bc496712de
@@ -183,20 +185,22 @@ d3ec91847d1c67fd768a4b9cfb46572eccc83806601372b6fad0243f58f623b7
 b16e27ae528db28593af9adcfccbebb3b9e1f2af5cd5531b51968389caa6c091
 e7de1f1b96f0d258e54e540d961a7c0ef51fda45d6da5fddd33e9bbfd3a5f8d7
 d7ab2e971de495cddbc86d38444fee9f0ac097b00adaf7802dabe0cff5b43b45
-4f26b7b547016f89be52676866189911c53e2f2477"""
-))
+4f26b7b547016f89be52676866189911c53e2f2477""",
+    )
+)
 
 #
 # openssl pkcs8 -topk8 -passin pass:TestTest -inform DER -in key.der
 #   -outform DER -out keyenc.der -v1 PBE-MD5-RC2-64
 # hexdump -v -e '32/1 "%02x" "\n"' keyenc.der
 #
-wrapped_enc_keys.append((
-'skip encryption',                 # pbeWithMD5AndRC2-CBC, only decoding is supported
--1,
-"",
-"",
-"""
+wrapped_enc_keys.append(
+    (
+        "skip encryption",  # pbeWithMD5AndRC2-CBC, only decoding is supported
+        -1,
+        "",
+        "",
+        """
 308201f1301b06092a864886f70d010506300e0408f5cd2fee56d9b4b8020208
 00048201d086454942d6166a19d6b108465bd111e7080911f573d54b1369c676
 df28600e84936bfec04f91023ff16499e2e07178c340904f12ffa6886ab66228
@@ -212,20 +216,22 @@ ace874e77e045eb6d7c3faef0750792b29a068a6291f7275df1123fac5789c51
 b77d1db287b3a6264c466805be5a4fe85cfbca180699859280f2dd8e2c2c10b5
 7a7d2ac670c6039d41952fbb0e4f99b560ebe1d020e1b96d02403283819c00cc
 529c51f0b0101555e4c58002ba3c6e3c12e3fde1aec94382792e96d9666a2b33
-3dc397b22ecab67ee38a552fec29a1d4ff8719c748"""
-))
+3dc397b22ecab67ee38a552fec29a1d4ff8719c748""",
+    )
+)
 
 #
 # openssl pkcs8 -topk8 -passin pass:TestTest -inform DER -in key.der
 #   -outform DER -out keyenc.der -v1 PBE-SHA1-DES
 # hexdump -v -e '32/1 "%02x" "\n"' keyenc.der
 #
-wrapped_enc_keys.append((
-'skip encryption',                 # pbeWithSHA1AndDES-CBC, only decoding is supported
--1,
-"",
-"",
-"""
+wrapped_enc_keys.append(
+    (
+        "skip encryption",  # pbeWithSHA1AndDES-CBC, only decoding is supported
+        -1,
+        "",
+        "",
+        """
 308201f1301b06092a864886f70d01050a300e04089bacc9cf1e8f734e020208
 00048201d03e502f3ceafe8fd19ab2939576bfdded26d719b2441db1459688f5
 9673218b41ec1f739edf1e460bd927bc28470c87b2d4fc8ea02ba17b47a63c49
@@ -242,20 +248,22 @@ bc8bbf24f0c6bee6e63dbcb489b603d4c4a78ce45bf2eab1d5d10456c42a65a8
 3a606f4e4b9b46eb13b57f2624b651859d3d2d5192b45dbd5a2ead14ff20ca76
 48f321309aa56d8c0c4a192b580821cc6c70c75e6f19d1c5414da898ec4dd39d
 b0eb93d6ba387a80702dfd2db610757ba340f63230
-"""
-))
+""",
+    )
+)
 
 #
 # openssl pkcs8 -topk8 -passin pass:TestTest -inform DER -in key.der
 #   -outform DER -out keyenc.der -v2 aes128
 # hexdump -v -e '32/1 "%02x" "\n"' keyenc.der
 #
-wrapped_enc_keys.append((
-'PBKDF2WithHMAC-SHA1AndAES128-CBC',
-2048,
-"4F66EE5D3BCD531FE6EBF4B4E73016B8", # IV
-"479F25156176C53A", # Salt
-"""
+wrapped_enc_keys.append(
+    (
+        "PBKDF2WithHMAC-SHA1AndAES128-CBC",
+        2048,
+        "4F66EE5D3BCD531FE6EBF4B4E73016B8",  # IV
+        "479F25156176C53A",  # Salt
+        """
 3082021f304906092a864886f70d01050d303c301b06092a864886f70d01050c
 300e0408479f25156176c53a02020800301d060960864801650304010204104f
 66ee5d3bcd531fe6ebf4b4e73016b8048201d0e33cfa560423f589d097d21533
@@ -274,20 +282,22 @@ e550db606600993efccf6de0dfc2d2d70b5336a3b018fa415d6bdd59f5777118
 d740e082b4a3bbb8bafdd34a0b3c5f2f3c2aceccccdccd092b78994b845bfa61
 706c3b9df5165ed1dbcbf1244fe41fc9bf993f52f7658e2f87e1baaeacb0f562
 9d905c
-"""
-))
+""",
+    )
+)
 
 #
 # openssl pkcs8 -topk8 -passin pass:TestTest -inform DER -in key.der
 #   -outform DER -out keyenc.der -v2 aes192
 # hexdump -v -e '32/1 "%02x" "\n"' keyenc.der
 #
-wrapped_enc_keys.append((
-'PBKDF2WithHMAC-SHA1AndAES192-CBC',
-2048,
-"5CFC2A4FF7B63201A4A8A5B021148186", # IV
-"D718541C264944CE", # Salt
-"""
+wrapped_enc_keys.append(
+    (
+        "PBKDF2WithHMAC-SHA1AndAES192-CBC",
+        2048,
+        "5CFC2A4FF7B63201A4A8A5B021148186",  # IV
+        "D718541C264944CE",  # Salt
+        """
 3082021f304906092a864886f70d01050d303c301b06092a864886f70d01050c
 300e0408d718541c264944ce02020800301d060960864801650304011604105c
 fc2a4ff7b63201a4a8a5b021148186048201d08e74aaa21b8bcfb15b9790fe95
@@ -306,20 +316,22 @@ f2e4e1e87c1434affd5808563cddd376776dbbf790c6a40028f311a8b58dafa2
 0970ed34acd6e3e89d063987893b2b9570ddb8cc032b05a723bba9444933ebf3
 c624204be72f4190e0245197d0cb772bec933fd8442445f9a28bd042d5a3a1e9
 9a8a07
-"""
-))
+""",
+    )
+)
 
 #
 # openssl pkcs8 -topk8 -passin pass:TestTest -inform DER -in key.der
 #   -outform DER -out keyenc.der -v2 aes192
 # hexdump -v -e '32/1 "%02x" "\n"' keyenc.der
 #
-wrapped_enc_keys.append((
-'PBKDF2WithHMAC-SHA1AndAES256-CBC',
-2048,
-"323351F94462AC563E053A056252C2C4", # IV
-"02A6CD0D12E727B5", # Salt
-"""
+wrapped_enc_keys.append(
+    (
+        "PBKDF2WithHMAC-SHA1AndAES256-CBC",
+        2048,
+        "323351F94462AC563E053A056252C2C4",  # IV
+        "02A6CD0D12E727B5",  # Salt
+        """
 3082021f304906092a864886f70d01050d303c301b06092a864886f70d01050c
 300e040802a6cd0d12e727b502020800301d060960864801650304012a041032
 3351f94462ac563e053a056252c2c4048201d07f4ef1c7be21aae738a20c5632
@@ -338,8 +350,9 @@ b1582a0f10d515a20ee06cf768db9c977aa6fbdca7540d611ff953012d009dac
 e8abd059f8e8ffea637c9c7721f817aaf0bb23403e26a0ef0ff0e2037da67d41
 af728481f53443551a9bff4cea023164e9622b5441a309e1f4bff98e5bf76677
 8d7cd9
-"""
-))
+""",
+    )
+)
 
 # hexdump -v -e '32/1 "%02x" "\n"' botan_scrypt.der
 botan_scrypt = """
@@ -365,49 +378,46 @@ b21e25d2559447f53e20b90b2f20e72456d943561c4925aad6067a4c720afb3d
 996363f37032e10ac85afebb7cc1cbfc0e5d4c60a4c2
 """
 
+
 def txt2bin(inputs):
-    s = b('').join([b(x) for x in inputs if not (x in '\n\r\t ')])
+    s = b"".join([x.encode("latin-1") for x in inputs if x not in "\n\r\t "])
     return unhexlify(s)
+
 
 class Rng:
     def __init__(self, output):
-        self.output=output
-        self.idx=0
+        self.output = output
+        self.idx = 0
+
     def __call__(self, n):
-        output = self.output[self.idx:self.idx+n]
+        output = self.output[self.idx : self.idx + n]
         self.idx += n
         return output
 
-class PKCS8_Decrypt(unittest.TestCase):
 
-    def setUp(self):
+class TestPKCS8_Decrypt:
+    def setup_method(self):
         self.oid_key = oid_key
         self.clear_key = txt2bin(clear_key)
         self.wrapped_clear_key = txt2bin(wrapped_clear_key)
         self.wrapped_enc_keys = []
         for t in wrapped_enc_keys:
-            self.wrapped_enc_keys.append((
-                t[0],
-                t[1],
-                txt2bin(t[2]),
-                txt2bin(t[3]),
-                txt2bin(t[4])
-            ))
+            self.wrapped_enc_keys.append((t[0], t[1], txt2bin(t[2]), txt2bin(t[3]), txt2bin(t[4])))
 
     ### NO ENCRYTION
 
     def test1(self):
         """Verify unwrapping w/o encryption"""
-        res1, res2, res3 = PKCS8.unwrap(self.wrapped_clear_key)
-        self.assertEqual(res1, self.oid_key)
-        self.assertEqual(res2, self.clear_key)
+        res1, res2, _res3 = PKCS8.unwrap(self.wrapped_clear_key)
+        assert res1 == self.oid_key
+        assert res2 == self.clear_key
 
     def test2(self):
         """Verify wrapping w/o encryption"""
         wrapped = PKCS8.wrap(self.clear_key, self.oid_key)
-        res1, res2, res3 = PKCS8.unwrap(wrapped)
-        self.assertEqual(res1, self.oid_key)
-        self.assertEqual(res2, self.clear_key)
+        res1, res2, _res3 = PKCS8.unwrap(wrapped)
+        assert res1 == self.oid_key
+        assert res2 == self.clear_key
 
     ## ENCRYPTION
 
@@ -415,45 +425,32 @@ class PKCS8_Decrypt(unittest.TestCase):
         """Verify unwrapping with encryption"""
 
         for t in self.wrapped_enc_keys:
-            res1, res2, res3 = PKCS8.unwrap(t[4], b"TestTest")
-            self.assertEqual(res1, self.oid_key)
-            self.assertEqual(res2, self.clear_key)
+            res1, res2, _res3 = PKCS8.unwrap(t[4], b"TestTest")
+            assert res1 == self.oid_key
+            assert res2 == self.clear_key
 
     def test4(self):
         """Verify wrapping with encryption"""
 
         for t in self.wrapped_enc_keys:
-            if t[0] == 'skip encryption':
+            if t[0] == "skip encryption":
                 continue
-            rng = Rng(t[2]+t[3])
-            params = { 'iteration_count':t[1] }
+            rng = Rng(t[2] + t[3])
+            params = {"iteration_count": t[1]}
             wrapped = PKCS8.wrap(
-                    self.clear_key,
-                    self.oid_key,
-                    b("TestTest"),
-                    protection=t[0],
-                    prot_params=params,
-                    key_params=DerNull(),
-                    randfunc=rng)
-            self.assertEqual(wrapped, t[4])
+                self.clear_key,
+                self.oid_key,
+                b"TestTest",
+                protection=t[0],
+                prot_params=params,
+                key_params=DerNull(),
+                randfunc=rng,
+            )
+            assert wrapped == t[4]
 
     def test_import_botan_keys(self):
         botan_scrypt_der = txt2bin(botan_scrypt)
-        key1 = PKCS8.unwrap(botan_scrypt_der,
-                            b'your_password')
+        key1 = PKCS8.unwrap(botan_scrypt_der, b"your_password")
         botan_pbkdf2_der = txt2bin(botan_pbkdf2)
-        key2 = PKCS8.unwrap(botan_pbkdf2_der,
-                            b'your_password')
-        self.assertEqual(key1, key2)
-
-
-def get_tests(config={}):
-    from Crypto.SelfTest.st_common import list_test_cases
-    listTests = []
-    listTests += list_test_cases(PKCS8_Decrypt)
-    return listTests
-
-if __name__ == '__main__':
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
-
+        key2 = PKCS8.unwrap(botan_pbkdf2_der, b"your_password")
+        assert key1 == key2

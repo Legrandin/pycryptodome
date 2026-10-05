@@ -31,18 +31,32 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+from __future__ import annotations
+
 import re
+from typing import TYPE_CHECKING, Any, Callable, Optional, TypedDict
 
-from Crypto import Hash
-from Crypto import Random
-from Crypto.Util.asn1 import (
-            DerSequence, DerOctetString,
-            DerObjectId, DerInteger,
-            )
-
+from Crypto import Hash, Random
 from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad, unpad
 from Crypto.Protocol.KDF import PBKDF1, PBKDF2, scrypt
+from Crypto.Util.asn1 import (
+    DerInteger,
+    DerObjectId,
+    DerOctetString,
+    DerSequence,
+)
+from Crypto.Util.Padding import pad, unpad
+
+if TYPE_CHECKING:
+    from types import ModuleType
+
+
+class ProtParams(TypedDict, total=False):
+    iteration_count: int
+    salt_size: int
+    block_size: int
+    parallelization: int
+
 
 _OID_PBE_WITH_MD5_AND_DES_CBC = "1.2.840.113549.1.5.3"
 _OID_PBE_WITH_MD5_AND_RC2_CBC = "1.2.840.113549.1.5.6"
@@ -67,10 +81,12 @@ _OID_AES256_GCM = "2.16.840.1.101.3.4.1.46"
 #: Default maximum iteration count for PBKDF2 and scrypt cost parameter
 #: in PBES1/PBES2 decryption.  This guards against denial-of-service
 #: attacks where a crafted blob declares an astronomically high count.
-_DEFAULT_MAX_ITERATION_COUNT = 50000000
+_DEFAULT_MAX_ITERATION_COUNT: int = 50000000
+
 
 class PbesError(ValueError):
     pass
+
 
 # These are the ASN.1 definitions used by the PBES1/2 logic:
 #
@@ -127,7 +143,7 @@ class PbesError(ValueError):
 #   }
 
 
-class PBES1(object):
+class PBES1:
     """Deprecated encryption scheme with password-based key derivation
     (originally defined in PKCS#5 v1.5, but still present in `v2.0`__).
 
@@ -135,7 +151,7 @@ class PBES1(object):
     """
 
     @staticmethod
-    def decrypt(data, passphrase, max_iteration_count=None):
+    def decrypt(data: bytes, passphrase: bytes, max_iteration_count: Optional[int] = None) -> bytes:
         """Decrypt a piece of data using a passphrase and *PBES1*.
 
         The algorithm to use is automatically detected.
@@ -164,32 +180,38 @@ class PBES1(object):
 
         pbe_oid = DerObjectId().decode(encrypted_algorithm[0]).value
         cipher_params = {}
+        hashmod: ModuleType
+        module: ModuleType
         if pbe_oid == _OID_PBE_WITH_MD5_AND_DES_CBC:
             # PBE_MD5_DES_CBC
-            from Crypto.Hash import MD5
             from Crypto.Cipher import DES
+            from Crypto.Hash import MD5
+
             hashmod = MD5
             module = DES
         elif pbe_oid == _OID_PBE_WITH_MD5_AND_RC2_CBC:
             # PBE_MD5_RC2_CBC
-            from Crypto.Hash import MD5
             from Crypto.Cipher import ARC2
+            from Crypto.Hash import MD5
+
             hashmod = MD5
             module = ARC2
-            cipher_params['effective_keylen'] = 64
+            cipher_params["effective_keylen"] = 64
         elif pbe_oid == _OID_PBE_WITH_SHA1_AND_DES_CBC:
             # PBE_SHA1_DES_CBC
-            from Crypto.Hash import SHA1
             from Crypto.Cipher import DES
+            from Crypto.Hash import SHA1
+
             hashmod = SHA1
             module = DES
         elif pbe_oid == _OID_PBE_WITH_SHA1_AND_RC2_CBC:
             # PBE_SHA1_RC2_CBC
-            from Crypto.Hash import SHA1
             from Crypto.Cipher import ARC2
+            from Crypto.Hash import SHA1
+
             hashmod = SHA1
             module = ARC2
-            cipher_params['effective_keylen'] = 64
+            cipher_params["effective_keylen"] = 64
         else:
             raise PbesError("Unknown OID for PBES1")
 
@@ -212,14 +234,20 @@ class PBES1(object):
         return unpad(pt, cipher.block_size)
 
 
-class PBES2(object):
+class PBES2:
     """Encryption scheme with password-based key derivation
     (defined in `PKCS#5 v2.0`__).
 
     .. __: http://www.ietf.org/rfc/rfc2898.txt."""
 
     @staticmethod
-    def encrypt(data, passphrase, protection, prot_params=None, randfunc=None):
+    def encrypt(
+        data: bytes,
+        passphrase: bytes,
+        protection: str,
+        prot_params: Optional[ProtParams] = None,
+        randfunc: Optional[Callable[[int], bytes]] = None,
+    ) -> bytes:
         """Encrypt a piece of data using a passphrase and *PBES2*.
 
         :Parameters:
@@ -271,7 +299,7 @@ class PBES2(object):
         if randfunc is None:
             randfunc = Random.new().read
 
-        pattern = re.compile(r'^(PBKDF2WithHMAC-([0-9A-Z-]+)|scrypt)And([0-9A-Z-]+)$')
+        pattern = re.compile(r"^(PBKDF2WithHMAC-([0-9A-Z-]+)|scrypt)And([0-9A-Z-]+)$")
         res = pattern.match(protection)
         if res is None:
             raise ValueError("Unknown protection %s" % protection)
@@ -285,51 +313,53 @@ class PBES2(object):
             enc_algo = res.group(3)
 
         aead = False
-        if enc_algo == 'DES-EDE3-CBC':
+        module: ModuleType
+        if enc_algo == "DES-EDE3-CBC":
             from Crypto.Cipher import DES3
+
             key_size = 24
             module = DES3
             cipher_mode = DES3.MODE_CBC
             enc_oid = _OID_DES_EDE3_CBC
-            enc_param = {'iv': randfunc(8)}
-        elif enc_algo == 'AES128-CBC':
+            enc_param = {"iv": randfunc(8)}
+        elif enc_algo == "AES128-CBC":
             key_size = 16
             module = AES
             cipher_mode = AES.MODE_CBC
             enc_oid = _OID_AES128_CBC
-            enc_param = {'iv': randfunc(16)}
-        elif enc_algo == 'AES192-CBC':
+            enc_param = {"iv": randfunc(16)}
+        elif enc_algo == "AES192-CBC":
             key_size = 24
             module = AES
             cipher_mode = AES.MODE_CBC
             enc_oid = _OID_AES192_CBC
-            enc_param = {'iv': randfunc(16)}
-        elif enc_algo == 'AES256-CBC':
+            enc_param = {"iv": randfunc(16)}
+        elif enc_algo == "AES256-CBC":
             key_size = 32
             module = AES
             cipher_mode = AES.MODE_CBC
             enc_oid = _OID_AES256_CBC
-            enc_param = {'iv': randfunc(16)}
-        elif enc_algo == 'AES128-GCM':
+            enc_param = {"iv": randfunc(16)}
+        elif enc_algo == "AES128-GCM":
             key_size = 16
             module = AES
             cipher_mode = AES.MODE_GCM
             enc_oid = _OID_AES128_GCM
-            enc_param = {'nonce': randfunc(12)}
+            enc_param = {"nonce": randfunc(12)}
             aead = True
-        elif enc_algo == 'AES192-GCM':
+        elif enc_algo == "AES192-GCM":
             key_size = 24
             module = AES
             cipher_mode = AES.MODE_GCM
             enc_oid = _OID_AES192_GCM
-            enc_param = {'nonce': randfunc(12)}
+            enc_param = {"nonce": randfunc(12)}
             aead = True
-        elif enc_algo == 'AES256-GCM':
+        elif enc_algo == "AES256-GCM":
             key_size = 32
             module = AES
             cipher_mode = AES.MODE_GCM
             enc_oid = _OID_AES256_GCM
-            enc_param = {'nonce': randfunc(12)}
+            enc_param = {"nonce": randfunc(12)}
             aead = True
         else:
             raise ValueError("Unknown encryption mode '%s'" % enc_algo)
@@ -338,50 +368,41 @@ class PBES2(object):
         salt = randfunc(prot_params.get("salt_size", 8))
 
         # Derive key from password
-        if pbkdf == 'pbkdf2':
-
+        if pbkdf == "pbkdf2":
             count = prot_params.get("iteration_count", 1000)
-            digestmod = Hash.new(pbkdf2_hmac_algo)
+            digestmod: Any = Hash.new(pbkdf2_hmac_algo)
 
-            key = PBKDF2(passphrase,
-                         salt,
-                         key_size,
-                         count,
-                         hmac_hash_module=digestmod)
+            key = PBKDF2(passphrase, salt, key_size, count, hmac_hash_module=digestmod)
 
-            pbkdf2_params = DerSequence([
-                                DerOctetString(salt),
-                                DerInteger(count)
-                            ])
+            pbkdf2_params = DerSequence([DerOctetString(salt), DerInteger(count)])
 
-            if pbkdf2_hmac_algo != 'SHA1':
+            if pbkdf2_hmac_algo != "SHA1":
                 try:
-                    hmac_oid = Hash.HMAC.new(b'', digestmod=digestmod).oid
+                    hmac_oid = Hash.HMAC.new(b"", digestmod=digestmod).oid
                 except KeyError:
                     raise ValueError("No OID for HMAC hash algorithm")
                 pbkdf2_params.append(DerSequence([DerObjectId(hmac_oid)]))
 
-            kdf_info = DerSequence([
-                    DerObjectId(_OID_PBKDF2),   # PBKDF2
-                    pbkdf2_params
-            ])
+            kdf_info = DerSequence(
+                [
+                    DerObjectId(_OID_PBKDF2),  # PBKDF2
+                    pbkdf2_params,
+                ]
+            )
 
-        elif pbkdf == 'scrypt':
-
+        elif pbkdf == "scrypt":
             count = prot_params.get("iteration_count", 16384)
-            scrypt_r = prot_params.get('block_size', 8)
-            scrypt_p = prot_params.get('parallelization', 1)
-            key = scrypt(passphrase, salt, key_size,
-                         count, scrypt_r, scrypt_p)
-            kdf_info = DerSequence([
+            scrypt_r = prot_params.get("block_size", 8)
+            scrypt_p = prot_params.get("parallelization", 1)
+            key = scrypt(passphrase, salt, key_size, count, scrypt_r, scrypt_p)
+            kdf_info = DerSequence(
+                [
                     DerObjectId(_OID_SCRYPT),  # scrypt
-                    DerSequence([
-                        DerOctetString(salt),
-                        DerInteger(count),
-                        DerInteger(scrypt_r),
-                        DerInteger(scrypt_p)
-                    ])
-            ])
+                    DerSequence(
+                        [DerOctetString(salt), DerInteger(count), DerInteger(scrypt_r), DerInteger(scrypt_p)]
+                    ),
+                ]
+            )
 
         else:
             raise ValueError("Unknown KDF " + res.group(1))
@@ -393,27 +414,25 @@ class PBES2(object):
             encrypted_data = ct + tag
         else:
             encrypted_data = cipher.encrypt(pad(data, cipher.block_size))
-        enc_info = DerSequence([
-                DerObjectId(enc_oid),
-                DerOctetString(iv_nonce)
-        ])
+        enc_info = DerSequence([DerObjectId(enc_oid), DerOctetString(iv_nonce)])
 
         # Result
-        enc_private_key_info = DerSequence([
-            # encryptionAlgorithm
-            DerSequence([
-                DerObjectId(_OID_PBES2),
-                DerSequence([
-                    kdf_info,
-                    enc_info
-                ]),
-            ]),
-            DerOctetString(encrypted_data)
-        ])
+        enc_private_key_info = DerSequence(
+            [
+                # encryptionAlgorithm
+                DerSequence(
+                    [
+                        DerObjectId(_OID_PBES2),
+                        DerSequence([kdf_info, enc_info]),
+                    ]
+                ),
+                DerOctetString(encrypted_data),
+            ]
+        )
         return enc_private_key_info.encode()
 
     @staticmethod
-    def decrypt(data, passphrase, max_iteration_count=None):
+    def decrypt(data: bytes, passphrase: bytes, max_iteration_count: Optional[int] = None) -> bytes:
         """Decrypt a piece of data using a passphrase and *PBES2*.
 
         The algorithm to use is automatically detected.
@@ -455,7 +474,6 @@ class PBES2(object):
 
         # We only support PBKDF2 or scrypt
         if kdf_oid == _OID_PBKDF2:
-
             pbkdf2_params = DerSequence().decode(kdf_info[1], nr_elements=(2, 3, 4))
             salt = DerOctetString().decode(pbkdf2_params[0]).payload
             iteration_count = pbkdf2_params[1]
@@ -464,8 +482,7 @@ class PBES2(object):
                 raise PbesError(
                     "PBKDF2 iteration count too high (%d > %d). "
                     "Use the max_iteration_count parameter to increase "
-                    "the limit."
-                    % (iteration_count, max_iteration_count)
+                    "the limit." % (iteration_count, max_iteration_count)
                 )
 
             left = len(pbkdf2_params) - 2
@@ -488,18 +505,15 @@ class PBES2(object):
                 pbkdf2_prf_oid = DerObjectId().decode(pbkdf2_prf_algo_id[0]).value
 
         elif kdf_oid == _OID_SCRYPT:
-
             scrypt_params = DerSequence().decode(kdf_info[1], nr_elements=(4, 5))
             salt = DerOctetString().decode(scrypt_params[0]).payload
-            iteration_count, scrypt_r, scrypt_p = [scrypt_params[x]
-                                                   for x in (1, 2, 3)]
+            iteration_count, scrypt_r, scrypt_p = (scrypt_params[x] for x in (1, 2, 3))
 
             if max_iteration_count and iteration_count > max_iteration_count:
                 raise PbesError(
                     "scrypt cost parameter too high (%d > %d). "
                     "Use the max_iteration_count parameter to increase "
-                    "the limit."
-                    % (iteration_count, max_iteration_count)
+                    "the limit." % (iteration_count, max_iteration_count)
                 )
 
             if len(scrypt_params) > 4:
@@ -514,70 +528,68 @@ class PBES2(object):
         enc_oid = DerObjectId().decode(enc_info[0]).value
 
         aead = False
+        module: ModuleType
         if enc_oid == _OID_DES_EDE3_CBC:
             # DES_EDE3_CBC
             from Crypto.Cipher import DES3
+
             module = DES3
             cipher_mode = DES3.MODE_CBC
             key_size = 24
-            cipher_param = 'iv'
+            cipher_param = "iv"
         elif enc_oid == _OID_AES128_CBC:
             module = AES
             cipher_mode = AES.MODE_CBC
             key_size = 16
-            cipher_param = 'iv'
+            cipher_param = "iv"
         elif enc_oid == _OID_AES192_CBC:
             module = AES
             cipher_mode = AES.MODE_CBC
             key_size = 24
-            cipher_param = 'iv'
+            cipher_param = "iv"
         elif enc_oid == _OID_AES256_CBC:
             module = AES
             cipher_mode = AES.MODE_CBC
             key_size = 32
-            cipher_param = 'iv'
+            cipher_param = "iv"
         elif enc_oid == _OID_AES128_GCM:
             module = AES
             cipher_mode = AES.MODE_GCM
             key_size = 16
-            cipher_param = 'nonce'
+            cipher_param = "nonce"
             aead = True
         elif enc_oid == _OID_AES192_GCM:
             module = AES
             cipher_mode = AES.MODE_GCM
             key_size = 24
-            cipher_param = 'nonce'
+            cipher_param = "nonce"
             aead = True
         elif enc_oid == _OID_AES256_GCM:
             module = AES
             cipher_mode = AES.MODE_GCM
             key_size = 32
-            cipher_param = 'nonce'
+            cipher_param = "nonce"
             aead = True
         else:
-            raise PbesError("Unsupported PBES2 cipher " + enc_algo)
+            raise PbesError("Unsupported PBES2 cipher " + enc_oid)
 
         if kdf_key_length and kdf_key_length != key_size:
-            raise PbesError("Mismatch between PBES2 KDF parameters"
-                            " and selected cipher")
+            raise PbesError("Mismatch between PBES2 KDF parameters and selected cipher")
 
         iv_nonce = DerOctetString().decode(enc_info[1]).payload
 
         # Create cipher
         if kdf_oid == _OID_PBKDF2:
-
             try:
                 hmac_hash_module_oid = Hash.HMAC._hmac2hash_oid[pbkdf2_prf_oid]
             except KeyError:
                 raise PbesError("Unsupported HMAC %s" % pbkdf2_prf_oid)
-            hmac_hash_module = Hash.new(hmac_hash_module_oid)
+            hmac_hash_module: Any = Hash.new(hmac_hash_module_oid)
 
-            key = PBKDF2(passphrase, salt, key_size, iteration_count,
-                         hmac_hash_module=hmac_hash_module)
+            key = PBKDF2(passphrase, salt, key_size, iteration_count, hmac_hash_module=hmac_hash_module)
         else:
-            key = scrypt(passphrase, salt, key_size, iteration_count,
-                         scrypt_r, scrypt_p)
-        cipher = module.new(key, cipher_mode, **{cipher_param:iv_nonce})
+            key = scrypt(passphrase, salt, key_size, iteration_count, scrypt_r, scrypt_p)
+        cipher = module.new(key, cipher_mode, **{cipher_param: iv_nonce})
 
         # Decrypt data
         if len(encrypted_data) < cipher.block_size:
@@ -585,8 +597,7 @@ class PBES2(object):
 
         if aead:
             tag_len = cipher.block_size
-            pt = cipher.decrypt_and_verify(encrypted_data[:-tag_len],
-                                           encrypted_data[-tag_len:])
+            pt = cipher.decrypt_and_verify(encrypted_data[:-tag_len], encrypted_data[-tag_len:])
         else:
             pt_padded = cipher.decrypt(encrypted_data)
             pt = unpad(pt_padded, cipher.block_size)

@@ -1,6 +1,13 @@
+from __future__ import annotations
+
+from typing import Optional, Union
+
 from .TurboSHAKE128 import TurboSHAKE
 
-def new(**kwargs):
+Buffer = Union[bytes, bytearray, memoryview]
+
+
+def new(*, domain: int = 0x1F, data: Optional[Buffer] = None) -> TurboSHAKE:
     """Create a new TurboSHAKE256 object.
 
     Args:
@@ -14,9 +21,7 @@ def new(**kwargs):
     :Return: A :class:`TurboSHAKE` object
     """
 
-    domain_separation = kwargs.get('domain', 0x1F)
+    domain_separation = domain
     if not (0x01 <= domain_separation <= 0x7F):
-        raise ValueError("Incorrect domain separation value (%d)" %
-                         domain_separation)
-    data = kwargs.get('data')
+        raise ValueError("Incorrect domain separation value (%d)" % domain_separation)
     return TurboSHAKE(64, domain_separation, data=data)

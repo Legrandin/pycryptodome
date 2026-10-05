@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/Signature/__init__.py: Self-test for signature modules
 #
@@ -21,21 +20,3 @@
 # ===================================================================
 
 """Self-test for signature modules"""
-
-import unittest
-from . import test_pkcs1_15, test_pss, test_dss, test_eddsa
-
-
-def get_tests(config={}):
-    tests = []
-    tests += test_pkcs1_15.get_tests(config=config)
-    tests += test_pss.get_tests(config=config)
-    tests += test_dss.get_tests(config=config)
-    tests += test_eddsa.get_tests(config=config)
-    return tests
-
-
-if __name__ == '__main__':
-    def suite():
-        return unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  Cipher/ARC4.py : ARC4
 #
@@ -20,18 +19,33 @@
 # SOFTWARE.
 # ===================================================================
 
-from Crypto.Util._raw_api import (load_pycryptodome_raw_lib, VoidPointer,
-                                  create_string_buffer, get_raw_buffer,
-                                  SmartPointer, c_size_t, c_uint8_ptr)
+from __future__ import annotations
+
+from typing import Iterable, Union
+
+from Crypto.Util._raw_api import (
+    SmartPointer,
+    VoidPointer,
+    c_size_t,
+    c_uint8_ptr,
+    create_string_buffer,
+    get_raw_buffer,
+    load_pycryptodome_raw_lib,
+)
+
+Buffer = Union[bytes, bytearray, memoryview]
 
 
-_raw_arc4_lib = load_pycryptodome_raw_lib("Crypto.Cipher._ARC4", """
+_raw_arc4_lib = load_pycryptodome_raw_lib(
+    "Crypto.Cipher._ARC4",
+    """
                     int ARC4_stream_encrypt(void *rc4State, const uint8_t in[],
                                             uint8_t out[], size_t len);
                     int ARC4_stream_init(uint8_t *key, size_t keylen,
                                          void **pRc4State);
                     int ARC4_stream_destroy(void *rc4State);
-                    """)
+                    """,
+)
 
 
 class ARC4Cipher:
@@ -39,41 +53,30 @@ class ARC4Cipher:
     :func:`Crypto.Cipher.ARC4.new` instead.
     """
 
-    def __init__(self, key, *args, **kwargs):
+    def __init__(self, key: Buffer, drop: int = 0) -> None:
         """Initialize an ARC4 cipher object
 
         See also `new()` at the module level."""
 
-        if len(args) > 0:
-            ndrop = args[0]
-            args = args[1:]
-        else:
-            ndrop = kwargs.pop('drop', 0)
-
         if len(key) not in key_size:
-            raise ValueError("Incorrect ARC4 key length (%d bytes)" %
-                             len(key))
+            raise ValueError("Incorrect ARC4 key length (%d bytes)" % len(key))
 
-        self._state = VoidPointer()
-        result = _raw_arc4_lib.ARC4_stream_init(c_uint8_ptr(key),
-                                                c_size_t(len(key)),
-                                                self._state.address_of())
+        state = VoidPointer()
+        result = _raw_arc4_lib.ARC4_stream_init(c_uint8_ptr(key), c_size_t(len(key)), state.address_of())
         if result != 0:
-            raise ValueError("Error %d while creating the ARC4 cipher"
-                             % result)
-        self._state = SmartPointer(self._state.get(),
-                                   _raw_arc4_lib.ARC4_stream_destroy)
+            raise ValueError("Error %d while creating the ARC4 cipher" % result)
+        self._state = SmartPointer(state.get(), _raw_arc4_lib.ARC4_stream_destroy)
 
-        if ndrop > 0:
+        if drop > 0:
             # This is OK even if the cipher is used for decryption,
             # since encrypt and decrypt are actually the same thing
             # with ARC4.
-            self.encrypt(b'\x00' * ndrop)
+            self.encrypt(b"\x00" * drop)
 
         self.block_size = 1
         self.key_size = len(key)
 
-    def encrypt(self, plaintext):
+    def encrypt(self, plaintext: Buffer) -> bytes:
         """Encrypt a piece of data.
 
         :param plaintext: The data to encrypt, of any size.
@@ -83,15 +86,14 @@ class ARC4Cipher:
         """
 
         ciphertext = create_string_buffer(len(plaintext))
-        result = _raw_arc4_lib.ARC4_stream_encrypt(self._state.get(),
-                                                   c_uint8_ptr(plaintext),
-                                                   ciphertext,
-                                                   c_size_t(len(plaintext)))
+        result = _raw_arc4_lib.ARC4_stream_encrypt(
+            self._state.get(), c_uint8_ptr(plaintext), ciphertext, c_size_t(len(plaintext))
+        )
         if result:
             raise ValueError("Error %d while encrypting with RC4" % result)
         return get_raw_buffer(ciphertext)
 
-    def decrypt(self, ciphertext):
+    def decrypt(self, ciphertext: Buffer) -> bytes:
         """Decrypt a piece of data.
 
         :param ciphertext: The data to decrypt, of any size.
@@ -106,7 +108,7 @@ class ARC4Cipher:
             raise ValueError(str(e).replace("enc", "dec"))
 
 
-def new(key, *args, **kwargs):
+def new(key: Buffer, drop: int = 0) -> ARC4Cipher:
     """Create a new ARC4 cipher.
 
     :param key:
@@ -127,10 +129,10 @@ def new(key, *args, **kwargs):
 
     .. _3072: http://eprint.iacr.org/2002/067.pdf
     """
-    return ARC4Cipher(key, *args, **kwargs)
+    return ARC4Cipher(key, drop)
 
 
 # Size of a data block (in bytes)
-block_size = 1
+block_size: int = 1
 # Size of a key (in bytes)
-key_size = range(1, 256+1)
+key_size: Iterable[int] = range(1, 256 + 1)

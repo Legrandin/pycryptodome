@@ -33,17 +33,14 @@
 
 """Self-test suite for Crypto.Hash._Poly1305"""
 
-import json
-import unittest
-from binascii import unhexlify, hexlify
+from binascii import hexlify, unhexlify
 
-from .common import make_mac_tests
-from Crypto.SelfTest.st_common import list_test_cases
+import pytest
 
-from Crypto.Hash import Poly1305
 from Crypto.Cipher import AES, ChaCha20
-
-from Crypto.Util.py3compat import tobytes
+from Crypto.Hash import Poly1305
+from Crypto.SelfTest.Hash.common import make_mac_tests
+from Crypto.Util._bytes import tobytes
 from Crypto.Util.strxor import strxor_c
 
 # This is a list of (r+s keypair, data, result, description, keywords) tuples.
@@ -52,7 +49,7 @@ test_data_basic = [
         "85d6be7857556d337f4452fe42d506a80103808afb0db2fd4abff6af4149f51b",
         hexlify(b"Cryptographic Forum Research Group").decode(),
         "a8061dc1305136c6c22b8baf0c0127a9",
-        "RFC7539"
+        "RFC7539",
     ),
     (
         "746869732069732033322d62797465206b657920666f7220506f6c7931333035",
@@ -99,60 +96,62 @@ test_data_basic = [
     (
         "0000000000000000000000000000000036e5f6b5c5e06070f0efca96227a863e",
         hexlify(
-        b"Any submission t"
-        b"o the IETF inten"
-        b"ded by the Contr"
-        b"ibutor for publi"
-        b"cation as all or"
-        b" part of an IETF"
-        b" Internet-Draft "
-        b"or RFC and any s"
-        b"tatement made wi"
-        b"thin the context"
-        b" of an IETF acti"
-        b"vity is consider"
-        b"ed an \"IETF Cont"
-        b"ribution\". Such "
-        b"statements inclu"
-        b"de oral statemen"
-        b"ts in IETF sessi"
-        b"ons, as well as "
-        b"written and elec"
-        b"tronic communica"
-        b"tions made at an"
-        b"y time or place,"
-        b" which are addre"
-        b"ssed to").decode(),
+            b"Any submission t"
+            b"o the IETF inten"
+            b"ded by the Contr"
+            b"ibutor for publi"
+            b"cation as all or"
+            b" part of an IETF"
+            b" Internet-Draft "
+            b"or RFC and any s"
+            b"tatement made wi"
+            b"thin the context"
+            b" of an IETF acti"
+            b"vity is consider"
+            b'ed an "IETF Cont'
+            b'ribution". Such '
+            b"statements inclu"
+            b"de oral statemen"
+            b"ts in IETF sessi"
+            b"ons, as well as "
+            b"written and elec"
+            b"tronic communica"
+            b"tions made at an"
+            b"y time or place,"
+            b" which are addre"
+            b"ssed to"
+        ).decode(),
         "36e5f6b5c5e06070f0efca96227a863e",
         "RFC7539 A.3 #2",
     ),
     (
         "36e5f6b5c5e06070f0efca96227a863e00000000000000000000000000000000",
         hexlify(
-        b"Any submission t"
-        b"o the IETF inten"
-        b"ded by the Contr"
-        b"ibutor for publi"
-        b"cation as all or"
-        b" part of an IETF"
-        b" Internet-Draft "
-        b"or RFC and any s"
-        b"tatement made wi"
-        b"thin the context"
-        b" of an IETF acti"
-        b"vity is consider"
-        b"ed an \"IETF Cont"
-        b"ribution\". Such "
-        b"statements inclu"
-        b"de oral statemen"
-        b"ts in IETF sessi"
-        b"ons, as well as "
-        b"written and elec"
-        b"tronic communica"
-        b"tions made at an"
-        b"y time or place,"
-        b" which are addre"
-        b"ssed to").decode(),
+            b"Any submission t"
+            b"o the IETF inten"
+            b"ded by the Contr"
+            b"ibutor for publi"
+            b"cation as all or"
+            b" part of an IETF"
+            b" Internet-Draft "
+            b"or RFC and any s"
+            b"tatement made wi"
+            b"thin the context"
+            b" of an IETF acti"
+            b"vity is consider"
+            b'ed an "IETF Cont'
+            b'ribution". Such '
+            b"statements inclu"
+            b"de oral statemen"
+            b"ts in IETF sessi"
+            b"ons, as well as "
+            b"written and elec"
+            b"tronic communica"
+            b"tions made at an"
+            b"y time or place,"
+            b" which are addre"
+            b"ssed to"
+        ).decode(),
         "f3477e7cd95417af89a6b8794c310cf0",
         "RFC7539 A.3 #3",
     ),
@@ -200,8 +199,7 @@ test_data_basic = [
         "RFC7539 A.3 #9",
     ),
     (
-        "01 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00"
-        "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
+        "01 00 00 00 00 00 00 00 04 00 00 00 00 00 00 0000 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
         "E3 35 94 D7 50 5E 43 B9 00 00 00 00 00 00 00 00"
         "33 94 D7 50 5E 43 79 CD 01 00 00 00 00 00 00 00"
         "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00"
@@ -210,8 +208,7 @@ test_data_basic = [
         "RFC7539 A.3 #10",
     ),
     (
-        "01 00 00 00 00 00 00 00 04 00 00 00 00 00 00 00"
-        "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
+        "01 00 00 00 00 00 00 00 04 00 00 00 00 00 00 0000 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
         "E3 35 94 D7 50 5E 43 B9 00 00 00 00 00 00 00 00"
         "33 94 D7 50 5E 43 79 CD 01 00 00 00 00 00 00 00"
         "00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00",
@@ -227,22 +224,21 @@ test_data_aes = [
         "f3f6",
         "f4c633c3044fc145f84f335cb81953de",
         "http://cr.yp.to/mac/poly1305-20050329.pdf",
-        { 'cipher':AES, 'nonce':unhexlify("fb447350c4e868c52ac3275cf9d4327e") }
+        {"cipher": AES, "nonce": unhexlify("fb447350c4e868c52ac3275cf9d4327e")},
     ),
     (
         "75deaa25c09f208e1dc4ce6b5cad3fbfa0f3080000f46400d0c7e9076c834403",
         "",
         "dd3fab2251f11ac759f0887129cc2ee7",
         "http://cr.yp.to/mac/poly1305-20050329.pdf",
-        { 'cipher':AES, 'nonce':unhexlify("61ee09218d29b0aaed7e154a2c5509cc") }
+        {"cipher": AES, "nonce": unhexlify("61ee09218d29b0aaed7e154a2c5509cc")},
     ),
     (
         "6acb5f61a7176dd320c5c1eb2edcdc7448443d0bb0d21109c89a100b5ce2c208",
-        "663cea190ffb83d89593f3f476b6bc24"
-        "d7e679107ea26adb8caf6652d0656136",
+        "663cea190ffb83d89593f3f476b6bc24d7e679107ea26adb8caf6652d0656136",
         "0ee1c16bb73f0f4fd19881753c01cdbe",
         "http://cr.yp.to/mac/poly1305-20050329.pdf",
-        { 'cipher':AES, 'nonce':unhexlify("ae212a55399729595dea458bc621ff0e") }
+        {"cipher": AES, "nonce": unhexlify("ae212a55399729595dea458bc621ff0e")},
     ),
     (
         "e1a5668a4d5b66a5f68cc5424ed5982d12976a08c4426d0ce8a82407c4f48207",
@@ -252,7 +248,7 @@ test_data_aes = [
         "fa83e158c994d961c4cb21095c1bf9",
         "5154ad0d2cb26e01274fc51148491f1b",
         "http://cr.yp.to/mac/poly1305-20050329.pdf",
-        { 'cipher':AES, 'nonce':unhexlify("9ae831e743978d3a23527c7128149e3a") }
+        {"cipher": AES, "nonce": unhexlify("9ae831e743978d3a23527c7128149e3a")},
     ),
 ]
 
@@ -262,26 +258,24 @@ test_data_chacha20 = [
         "FF" * 15,
         "13cc5bbadc36b03a5163928f0bcb65aa",
         "RFC7539 A.4 #1",
-        { 'cipher':ChaCha20, 'nonce':unhexlify("00" * 12) }
+        {"cipher": ChaCha20, "nonce": unhexlify("00" * 12)},
     ),
     (
         "00" * 31 + "01",
         "FF" * 15,
         "0baf33c1d6df211bdd50a6767e98e00a",
         "RFC7539 A.4 #2",
-        { 'cipher':ChaCha20, 'nonce':unhexlify("00" * 11 + "02") }
+        {"cipher": ChaCha20, "nonce": unhexlify("00" * 11 + "02")},
     ),
     (
-        "1c 92 40 a5 eb 55 d3 8a f3 33 88 86 04 f6 b5 f0"
-        "47 39 17 c1 40 2b 80 09 9d ca 5c bc 20 70 75 c0",
+        "1c 92 40 a5 eb 55 d3 8a f3 33 88 86 04 f6 b5 f047 39 17 c1 40 2b 80 09 9d ca 5c bc 20 70 75 c0",
         "FF" * 15,
         "e8b4c6db226cd8939e65e02eebf834ce",
         "RFC7539 A.4 #3",
-        { 'cipher':ChaCha20, 'nonce':unhexlify("00" * 11 + "02") }
+        {"cipher": ChaCha20, "nonce": unhexlify("00" * 11 + "02")},
     ),
     (
-        "1c 92 40 a5 eb 55 d3 8a f3 33 88 86 04 f6 b5 f0"
-        "47 39 17 c1 40 2b 80 09 9d ca 5c bc 20 70 75 c0",
+        "1c 92 40 a5 eb 55 d3 8a f3 33 88 86 04 f6 b5 f047 39 17 c1 40 2b 80 09 9d ca 5c bc 20 70 75 c0",
         "f3 33 88 86 00 00 00 00 00 00 4e 91 00 00 00 00"
         "64 a0 86 15 75 86 1a f4 60 f0 62 c7 9b e6 43 bd"
         "5e 80 5c fd 34 5c f3 89 f1 08 67 0a c7 6c 8c b2"
@@ -303,41 +297,45 @@ test_data_chacha20 = [
         "0c 00 00 00 00 00 00 00 09 01 00 00 00 00 00 00",
         "ee ad 9d 67 89 0c bb 22 39 23 36 fe a1 85 1f 38",
         "RFC7539 A.5",
-        { 'cipher':ChaCha20, 'nonce':unhexlify("000000000102030405060708") }
+        {"cipher": ChaCha20, "nonce": unhexlify("000000000102030405060708")},
     ),
 ]
 
 
-class Poly1305Test_AES(unittest.TestCase):
-
-    key = b'\x11' * 32
+class TestPoly1305Test_AES:
+    key = b"\x11" * 32
 
     def test_new_positive(self):
 
-        data = b'r' * 100
+        data = b"r" * 100
 
         h1 = Poly1305.new(key=self.key, cipher=AES)
-        self.assertEqual(h1.digest_size, 16)
-        self.assertEqual(len(h1.nonce), 16)
+        assert h1.digest_size == 16
+        assert len(h1.nonce) == 16
         d1 = h1.update(data).digest()
-        self.assertEqual(len(d1), 16)
+        assert len(d1) == 16
 
         h2 = Poly1305.new(key=self.key, nonce=h1.nonce, data=data, cipher=AES)
         d2 = h2.digest()
-        self.assertEqual(h1.nonce, h2.nonce)
-        self.assertEqual(d1, d2)
+        assert h1.nonce == h2.nonce
+        assert d1 == d2
 
     def test_new_negative(self):
         from Crypto.Cipher import DES3
 
-        self.assertRaises(ValueError, Poly1305.new, key=self.key[:31], cipher=AES)
-        self.assertRaises(ValueError, Poly1305.new, key=self.key, cipher=DES3)
-        self.assertRaises(ValueError, Poly1305.new, key=self.key, nonce=b'1' * 15, cipher=AES)
-        self.assertRaises(TypeError, Poly1305.new, key=u"2" * 32, cipher=AES)
-        self.assertRaises(TypeError, Poly1305.new, key=self.key, data=u"2" * 100, cipher=AES)
+        with pytest.raises(ValueError):
+            Poly1305.new(key=self.key[:31], cipher=AES)
+        with pytest.raises(ValueError):
+            Poly1305.new(key=self.key, cipher=DES3)
+        with pytest.raises(ValueError):
+            Poly1305.new(key=self.key, nonce=b"1" * 15, cipher=AES)
+        with pytest.raises(TypeError):
+            Poly1305.new(key="2" * 32, cipher=AES)
+        with pytest.raises(TypeError):
+            Poly1305.new(key=self.key, data="2" * 100, cipher=AES)
 
     def test_update(self):
-        pieces = [b"\x0A" * 200, b"\x14" * 300]
+        pieces = [b"\x0a" * 200, b"\x14" * 300]
         h1 = Poly1305.new(key=self.key, cipher=AES)
         h1.update(pieces[0]).update(pieces[1])
         d1 = h1.digest()
@@ -345,28 +343,30 @@ class Poly1305Test_AES(unittest.TestCase):
         h2 = Poly1305.new(key=self.key, cipher=AES, nonce=h1.nonce)
         h2.update(pieces[0] + pieces[1])
         d2 = h2.digest()
-        self.assertEqual(d1, d2)
+        assert d1 == d2
 
     def test_update_negative(self):
         h = Poly1305.new(key=self.key, cipher=AES)
-        self.assertRaises(TypeError, h.update, u"string")
+        with pytest.raises(TypeError):
+            h.update("string")
 
     def test_digest(self):
         h = Poly1305.new(key=self.key, cipher=AES)
         digest = h.digest()
 
         # hexdigest does not change the state
-        self.assertEqual(h.digest(), digest)
+        assert h.digest() == digest
         # digest returns a byte string
-        self.assertTrue(isinstance(digest, type(b"digest")))
+        assert isinstance(digest, bytes)
 
     def test_update_after_digest(self):
-        msg=b"rrrrttt"
+        msg = b"rrrrttt"
 
         # Normally, update() cannot be done after digest()
         h = Poly1305.new(key=self.key, data=msg[:4], cipher=AES)
         h.digest()
-        self.assertRaises(TypeError, h.update, msg[4:])
+        with pytest.raises(TypeError):
+            h.update(msg[4:])
 
     def test_hex_digest(self):
         mac = Poly1305.new(key=self.key, cipher=AES)
@@ -374,24 +374,26 @@ class Poly1305Test_AES(unittest.TestCase):
         hexdigest = mac.hexdigest()
 
         # hexdigest is equivalent to digest
-        self.assertEqual(hexlify(digest), tobytes(hexdigest))
+        assert hexlify(digest) == tobytes(hexdigest)
         # hexdigest does not change the state
-        self.assertEqual(mac.hexdigest(), hexdigest)
+        assert mac.hexdigest() == hexdigest
         # hexdigest returns a string
-        self.assertTrue(isinstance(hexdigest, type("digest")))
+        assert isinstance(hexdigest, str)
 
     def test_verify(self):
         h = Poly1305.new(key=self.key, cipher=AES)
         mac = h.digest()
         h.verify(mac)
         wrong_mac = strxor_c(mac, 255)
-        self.assertRaises(ValueError, h.verify, wrong_mac)
+        with pytest.raises(ValueError):
+            h.verify(wrong_mac)
 
     def test_hexverify(self):
         h = Poly1305.new(key=self.key, cipher=AES)
         mac = h.hexdigest()
         h.hexverify(mac)
-        self.assertRaises(ValueError, h.hexverify, "4556")
+        with pytest.raises(ValueError):
+            h.hexverify("4556")
 
     def test_bytearray(self):
 
@@ -405,11 +407,11 @@ class Poly1305Test_AES(unittest.TestCase):
 
         h1 = Poly1305.new(key=self.key, data=data, cipher=AES, nonce=h0.nonce)
         h2 = Poly1305.new(key=key_ba, data=data_ba, cipher=AES, nonce=h0.nonce)
-        key_ba[:1] = b'\xFF'
-        data_ba[:1] = b'\xEE'
+        key_ba[:1] = b"\xff"
+        data_ba[:1] = b"\xee"
 
-        self.assertEqual(h1.digest(), d_ref)
-        self.assertEqual(h2.digest(), d_ref)
+        assert h1.digest() == d_ref
+        assert h2.digest() == d_ref
 
         # Data can be a bytearray (during operation)
         data_ba = bytearray(data)
@@ -418,9 +420,9 @@ class Poly1305Test_AES(unittest.TestCase):
         h2 = Poly1305.new(key=self.key, cipher=AES, nonce=h1.nonce)
         h1.update(data)
         h2.update(data_ba)
-        data_ba[:1] = b'\xFF'
+        data_ba[:1] = b"\xff"
 
-        self.assertEqual(h1.digest(), h2.digest())
+        assert h1.digest() == h2.digest()
 
     def test_memoryview(self):
 
@@ -433,19 +435,17 @@ class Poly1305Test_AES(unittest.TestCase):
             return memoryview(bytearray(data))
 
         for get_mv in (get_mv_ro, get_mv_rw):
-
             # Data and key can be a memoryview (during initialization)
             key_mv = get_mv(self.key)
             data_mv = get_mv(data)
 
             h1 = Poly1305.new(key=self.key, data=data, cipher=AES)
-            h2 = Poly1305.new(key=key_mv, data=data_mv, cipher=AES,
-                              nonce=h1.nonce)
+            h2 = Poly1305.new(key=key_mv, data=data_mv, cipher=AES, nonce=h1.nonce)
             if not data_mv.readonly:
-                data_mv[:1] = b'\xFF'
-                key_mv[:1] = b'\xFF'
+                data_mv[:1] = b"\xff"
+                key_mv[:1] = b"\xff"
 
-            self.assertEqual(h1.digest(), h2.digest())
+            assert h1.digest() == h2.digest()
 
             # Data can be a memoryview (during operation)
             data_mv = get_mv(data)
@@ -455,48 +455,45 @@ class Poly1305Test_AES(unittest.TestCase):
             h1.update(data)
             h2.update(data_mv)
             if not data_mv.readonly:
-                data_mv[:1] = b'\xFF'
+                data_mv[:1] = b"\xff"
 
-            self.assertEqual(h1.digest(), h2.digest())
+            assert h1.digest() == h2.digest()
 
 
-class Poly1305Test_ChaCha20(unittest.TestCase):
-
-    key = b'\x11' * 32
+class TestPoly1305Test_ChaCha20:
+    key = b"\x11" * 32
 
     def test_new_positive(self):
-        data = b'r' * 100
 
         h1 = Poly1305.new(key=self.key, cipher=ChaCha20)
-        self.assertEqual(h1.digest_size, 16)
-        self.assertEqual(len(h1.nonce), 12)
-        
-        h2 = Poly1305.new(key=self.key, cipher=ChaCha20, nonce = b'8' * 8)
-        self.assertEqual(len(h2.nonce), 8)
-        self.assertEqual(h2.nonce, b'8' * 8)
+        assert h1.digest_size == 16
+        assert len(h1.nonce) == 12
+
+        h2 = Poly1305.new(key=self.key, cipher=ChaCha20, nonce=b"8" * 8)
+        assert len(h2.nonce) == 8
+        assert h2.nonce == b"8" * 8
 
     def test_new_negative(self):
 
-        self.assertRaises(ValueError, Poly1305.new, key=self.key, nonce=b'1' * 7, cipher=ChaCha20)
+        with pytest.raises(ValueError):
+            Poly1305.new(key=self.key, nonce=b"1" * 7, cipher=ChaCha20)
 
 
 #
 # make_mac_tests() expect a new() function with signature new(key, data,
 # **kwargs), and we need to adapt Poly1305's, as it only uses keywords
 #
-class Poly1305_New(object):
-
+class Poly1305_New:
     @staticmethod
     def new(key, *data, **kwds):
         _kwds = dict(kwds)
         if len(data) == 1:
-            _kwds['data'] = data[0]
-        _kwds['key'] = key
+            _kwds["data"] = data[0]
+        _kwds["key"] = key
         return Poly1305.new(**_kwds)
 
 
-class Poly1305_Basic(object):
-
+class Poly1305_Basic:
     @staticmethod
     def new(key, *data, **kwds):
         from Crypto.Hash.Poly1305 import Poly1305_MAC
@@ -509,34 +506,23 @@ class Poly1305_Basic(object):
         return Poly1305_MAC(key[:16], key[16:], msg)
 
 
-class Poly1305AES_MC(unittest.TestCase):
-
-    def runTest(self):
+class TestPoly1305AES_MC:
+    def test(self):
         tag = unhexlify(b"fb447350c4e868c52ac3275cf9d4327e")
 
-        msg = b''
+        msg = b""
         for msg_len in range(5000 + 1):
             key = tag + strxor_c(tag, 0xFF)
             nonce = tag[::-1]
             if msg_len > 0:
-                msg = msg + tobytes(tag[0])
+                msg = msg + tag[:1]
             auth = Poly1305.new(key=key, nonce=nonce, cipher=AES, data=msg)
             tag = auth.digest()
 
         # Compare against output of original DJB's poly1305aes-20050218
-        self.assertEqual("CDFA436DDD629C7DC20E1128530BAED2", auth.hexdigest().upper())
+        assert auth.hexdigest().upper() == "CDFA436DDD629C7DC20E1128530BAED2"
 
 
-def get_tests(config={}):
-    tests = make_mac_tests(Poly1305_Basic, "Poly1305", test_data_basic)
-    tests += make_mac_tests(Poly1305_New, "Poly1305", test_data_aes)
-    tests += make_mac_tests(Poly1305_New, "Poly1305", test_data_chacha20)
-    tests += [ Poly1305AES_MC() ]
-    tests += list_test_cases(Poly1305Test_AES)
-    tests += list_test_cases(Poly1305Test_ChaCha20)
-    return tests
-
-
-if __name__ == '__main__':
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+TestVectorsBasic = make_mac_tests(Poly1305_Basic, "Poly1305", test_data_basic)
+TestVectorsAES = make_mac_tests(Poly1305_New, "Poly1305", test_data_aes)
+TestVectorsChaCha20 = make_mac_tests(Poly1305_New, "Poly1305", test_data_chacha20)

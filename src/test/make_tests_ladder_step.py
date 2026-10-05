@@ -1,30 +1,31 @@
 """Make unit test for curve25519_ladder_step() in curve25519.c"""
 
-from common import counter, make_main, split64, bin2int
-from hashlib import sha256
 import struct
+from hashlib import sha256
+
+from common import bin2int, counter, make_main, split64
 
 
 def ref(x2, z2, x3, z3, x1):
     mod = 2**255 - 19
 
-    x4 = (x2**2 - z2**2)**2
-    z4 = 4*x2*z2*(x2**2 + 486662*x2*z2 + z2**2)
-    x5 = 4*((x2*x3 - z2*z3)**2)
-    z5 = 4*((x2*z3 - z2*x3)**2)*x1
+    x4 = (x2**2 - z2**2) ** 2
+    z4 = 4 * x2 * z2 * (x2**2 + 486662 * x2 * z2 + z2**2)
+    x5 = 4 * ((x2 * x3 - z2 * z3) ** 2)
+    z5 = 4 * ((x2 * z3 - z2 * x3) ** 2) * x1
 
     return x4 % mod, z4 % mod, x5 % mod, z5 % mod
 
 
 def make_test_max():
 
-    v = ["0x%08X" % (2**26-1)] * 10
+    v = ["0x%08X" % (2**26 - 1)] * 10
 
     modulus = 2**255 - 19
     base = [0, 26, 51, 77, 102, 128, 153, 179, 204, 230]
     n = 0
     for i in range(10):
-        n += (2**26 - 1) * (2**(base[i]))
+        n += (2**26 - 1) * (2 ** (base[i]))
     n %= modulus
     x2_out, z2_out, x3_out, z3_out = ref(n, n, n, n, n)
 
@@ -153,7 +154,7 @@ def make_test(x2, z2, x3, z3, xp):
 
 
 def make_limb(seed):
-    result = bin2int(sha256(struct.pack(">I", seed)).digest()) & ((2**255)-1)
+    result = bin2int(sha256(struct.pack(">I", seed)).digest()) & ((2**255) - 1)
     return result
 
 
@@ -164,7 +165,9 @@ print("#include <stdio.h>")
 print("void convert_le25p5_to_le64(uint64_t out[4], const uint32_t in[10]);")
 print("void convert_le64_to_le25p5(uint32_t out[10], const uint64_t in[4]);")
 print("void reduce_25519_le64(uint64_t x[4]);")
-print("void curve25519_ladder_step(uint32_t x2[10], uint32_t z2[10], uint32_t x3[10], uint32_t z3[10], const uint32_t xp[10]);")
+print(
+    "void curve25519_ladder_step(uint32_t x2[10], uint32_t z2[10], uint32_t x3[10], uint32_t z3[10], const uint32_t xp[10]);"
+)
 
 make_test_max()
 make_test(0, 0, 0, 0, 0)

@@ -32,12 +32,21 @@
 OpenPGP mode.
 """
 
-__all__ = ['OpenPgpMode']
+from __future__ import annotations
 
-from Crypto.Util.py3compat import _copy_bytes
+from typing import TYPE_CHECKING, Union
+
+__all__ = ["OpenPgpMode"]
 from Crypto.Random import get_random_bytes
+from Crypto.Util._bytes import copy_bytes
 
-class OpenPgpMode(object):
+if TYPE_CHECKING:
+    from types import ModuleType
+
+Buffer = Union[bytes, bytearray, memoryview]
+
+
+class OpenPgpMode:
     """OpenPGP mode.
 
     This mode is a variant of CFB, and it is only used in PGP and
@@ -58,7 +67,7 @@ class OpenPgpMode(object):
     :undocumented: __init__
     """
 
-    def __init__(self, factory, key, iv, cipher_params):
+    def __init__(self, factory: ModuleType, key: Buffer, iv: Buffer, cipher_params: dict) -> None:
 
         #: The block size of the underlying cipher, in bytes.
         self.block_size = factory.block_size
@@ -67,13 +76,14 @@ class OpenPgpMode(object):
 
         # Instantiate a temporary cipher to process the IV
         IV_cipher = factory.new(
-                        key,
-                        factory.MODE_CFB,
-                        IV=b'\x00' * self.block_size,
-                        segment_size=self.block_size * 8,
-                        **cipher_params)
+            key,
+            factory.MODE_CFB,
+            IV=b"\x00" * self.block_size,
+            segment_size=self.block_size * 8,
+            **cipher_params,
+        )
 
-        iv = _copy_bytes(None, None, iv)
+        iv = copy_bytes(None, None, iv)
 
         # The cipher will be used for...
         if len(iv) == self.block_size:
@@ -86,21 +96,23 @@ class OpenPgpMode(object):
             # should not be used. (https://eprint.iacr.org/2005/033)
             iv = IV_cipher.decrypt(iv)[:-2]
         else:
-            raise ValueError("Length of IV must be %d or %d bytes"
-                             " for MODE_OPENPGP"
-                             % (self.block_size, self.block_size + 2))
+            raise ValueError(
+                "Length of IV must be %d or %d bytes"
+                " for MODE_OPENPGP" % (self.block_size, self.block_size + 2)
+            )
 
         self.iv = self.IV = iv
 
         # Instantiate the cipher for the real PGP data
         self._cipher = factory.new(
-                            key,
-                            factory.MODE_CFB,
-                            IV=self._encrypted_IV[-self.block_size:],
-                            segment_size=self.block_size * 8,
-                            **cipher_params)
+            key,
+            factory.MODE_CFB,
+            IV=self._encrypted_IV[-self.block_size :],
+            segment_size=self.block_size * 8,
+            **cipher_params,
+        )
 
-    def encrypt(self, plaintext):
+    def encrypt(self, plaintext: Buffer) -> bytes:
         """Encrypt data with the key and the parameters set at initialization.
 
         A cipher object is stateful: once you have encrypted a message
@@ -137,7 +149,7 @@ class OpenPgpMode(object):
             self._done_first_block = True
         return res
 
-    def decrypt(self, ciphertext):
+    def decrypt(self, ciphertext: Buffer) -> bytes:
         """Decrypt data with the key and the parameters set at initialization.
 
         A cipher object is stateful: once you have decrypted a message
@@ -190,7 +202,7 @@ def _create_openpgp_cipher(factory, **kwargs):
     iv = kwargs.pop("IV", None)
     IV = kwargs.pop("iv", None)
 
-    if (None, None) == (iv, IV):
+    if (iv, IV) == (None, None):
         iv = get_random_bytes(factory.block_size)
     if iv is not None:
         if IV is not None:

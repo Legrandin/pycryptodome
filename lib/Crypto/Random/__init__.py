@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  Random/__init__.py : PyCrypto random number generation
 #
@@ -20,38 +19,38 @@
 # SOFTWARE.
 # ===================================================================
 
-__all__ = ['new', 'get_random_bytes']
+from __future__ import annotations
+
+from typing import Any
+
+__all__ = ["new", "get_random_bytes"]
 
 from os import urandom
 
-class _UrandomRNG(object):
 
-    def read(self, n):
+class _UrandomRNG:
+    def read(self, n: int) -> bytes:
         """Return a random byte string of the desired size."""
         return urandom(n)
 
-    def flush(self):
+    def flush(self) -> None:
         """Method provided for backward compatibility only."""
-        pass
 
-    def reinit(self):
+    def reinit(self) -> None:
         """Method provided for backward compatibility only."""
-        pass
 
-    def close(self):
+    def close(self) -> None:
         """Method provided for backward compatibility only."""
-        pass
-        
 
-def new(*args, **kwargs):
+
+def new(*args: Any, **kwargs: Any) -> _UrandomRNG:
     """Return a file-like object that outputs cryptographically random bytes."""
     return _UrandomRNG()
 
 
-def atfork():
+def atfork() -> None:
     pass
 
 
 #: Function that returns a random byte string of the desired size.
 get_random_bytes = urandom
-

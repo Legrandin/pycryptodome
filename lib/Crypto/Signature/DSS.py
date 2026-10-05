@@ -31,24 +31,32 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from Crypto.Util.asn1 import DerSequence
-from Crypto.Util.number import long_to_bytes
-from Crypto.Math.Numbers import Integer
+from __future__ import annotations
+
+from typing import Callable, Optional, Protocol, Union
 
 from Crypto.Hash import HMAC
-from Crypto.PublicKey.ECC import EccKey
+from Crypto.Math.Numbers import Integer
 from Crypto.PublicKey.DSA import DsaKey
+from Crypto.PublicKey.ECC import EccKey
+from Crypto.Util.asn1 import DerSequence
+from Crypto.Util.number import long_to_bytes
 
-__all__ = ['DssSigScheme', 'new']
+
+class Hash(Protocol):
+    def digest(self) -> bytes: ...
 
 
-class DssSigScheme(object):
+__all__ = ["DssSigScheme", "new"]
+
+
+class DssSigScheme:
     """A (EC)DSA signature object.
     Do not instantiate directly.
     Use :func:`Crypto.Signature.DSS.new`.
     """
 
-    def __init__(self, key, encoding, order):
+    def __init__(self, key: Union[DsaKey, EccKey], encoding: str, order: Integer) -> None:
         """Create a new Digital Signature Standard (DSS) object.
 
         Do not instantiate this object directly,
@@ -62,7 +70,7 @@ class DssSigScheme(object):
         self._order_bits = self._order.size_in_bits()
         self._order_bytes = (self._order_bits - 1) // 8 + 1
 
-    def can_sign(self):
+    def can_sign(self) -> bool:
         """Return ``True`` if this signature object can be used
         for signing messages."""
 
@@ -74,7 +82,7 @@ class DssSigScheme(object):
     def _valid_hash(self, msg_hash):
         raise NotImplementedError("To be provided by subclasses")
 
-    def sign(self, msg_hash):
+    def sign(self, msg_hash: Hash) -> bytes:
         """Compute the DSA/ECDSA signature of a message.
 
         Args:
@@ -99,13 +107,12 @@ class DssSigScheme(object):
         nonce = self._compute_nonce(msg_hash)
 
         # Perform signature using the raw API
-        z = Integer.from_bytes(msg_hash.digest()[:self._order_bytes])
+        z = Integer.from_bytes(msg_hash.digest()[: self._order_bytes])
         sig_pair = self._key._sign(z, nonce)
 
         # Encode the signature into a single byte string
-        if self._encoding == 'binary':
-            output = b"".join([long_to_bytes(x, self._order_bytes)
-                               for x in sig_pair])
+        if self._encoding == "binary":
+            output = b"".join([long_to_bytes(x, self._order_bytes) for x in sig_pair])
         else:
             # Dss-sig  ::=  SEQUENCE  {
             #   r   INTEGER,
@@ -119,7 +126,7 @@ class DssSigScheme(object):
 
         return output
 
-    def verify(self, msg_hash, signature):
+    def verify(self, msg_hash: Hash, signature: bytes) -> bool:
         """Check if a certain (EC)DSA signature is authentic.
 
         Args:
@@ -138,12 +145,13 @@ class DssSigScheme(object):
         if not self._valid_hash(msg_hash):
             raise ValueError("Hash is not sufficiently strong")
 
-        if self._encoding == 'binary':
+        if self._encoding == "binary":
             if len(signature) != (2 * self._order_bytes):
                 raise ValueError("The signature is not authentic (length)")
-            r_prime, s_prime = [Integer.from_bytes(x)
-                                for x in (signature[:self._order_bytes],
-                                          signature[self._order_bytes:])]
+            r_prime, s_prime = (
+                Integer.from_bytes(x)
+                for x in (signature[: self._order_bytes], signature[self._order_bytes :])
+            )
         else:
             try:
                 der_seq = DerSequence().decode(signature, strict=True)
@@ -156,7 +164,7 @@ class DssSigScheme(object):
         if not (0 < r_prime < self._order) or not (0 < s_prime < self._order):
             raise ValueError("The signature is not authentic (d)")
 
-        z = Integer.from_bytes(msg_hash.digest()[:self._order_bytes])
+        z = Integer.from_bytes(msg_hash.digest()[: self._order_bytes])
         result = self._key._verify(z, (r_prime, s_prime))
         if not result:
             raise ValueError("The signature is not authentic")
@@ -167,8 +175,8 @@ class DssSigScheme(object):
 class DeterministicDsaSigScheme(DssSigScheme):
     # Also applicable to ECDSA
 
-    def __init__(self, key, encoding, order, private_key):
-        super(DeterministicDsaSigScheme, self).__init__(key, encoding, order)
+    def __init__(self, key: Union[DsaKey, EccKey], encoding: str, order: Integer, private_key: int) -> None:
+        super().__init__(key, encoding, order)
         self._private_key = private_key
 
     def _bits2int(self, bstr):
@@ -179,7 +187,7 @@ class DeterministicDsaSigScheme(DssSigScheme):
         b_len = len(bstr) * 8
         if b_len > q_len:
             # Only keep leftmost q_len bits
-            result >>= (b_len - q_len)
+            result >>= b_len - q_len
         return result
 
     def _int2octets(self, int_mod_q):
@@ -205,16 +213,15 @@ class DeterministicDsaSigScheme(DssSigScheme):
         # Step a
         h1 = mhash.digest()
         # Step b
-        mask_v = b'\x01' * mhash.digest_size
+        mask_v = b"\x01" * mhash.digest_size
         # Step c
-        nonce_k = b'\x00' * mhash.digest_size
+        nonce_k = b"\x00" * mhash.digest_size
 
-        for int_oct in (b'\x00', b'\x01'):
+        for int_oct in (b"\x00", b"\x01"):
             # Step d/f
-            nonce_k = HMAC.new(nonce_k,
-                               mask_v + int_oct +
-                               self._int2octets(self._private_key) +
-                               self._bits2octets(h1), mhash).digest()
+            nonce_k = HMAC.new(
+                nonce_k, mask_v + int_oct + self._int2octets(self._private_key) + self._bits2octets(h1), mhash
+            ).digest()
             # Step e/g
             mask_v = HMAC.new(nonce_k, mask_v, mhash).digest()
 
@@ -222,8 +229,7 @@ class DeterministicDsaSigScheme(DssSigScheme):
         while not (0 < nonce < self._order):
             # Step h.C (second part)
             if nonce != -1:
-                nonce_k = HMAC.new(nonce_k, mask_v + b'\x00',
-                                   mhash).digest()
+                nonce_k = HMAC.new(nonce_k, mask_v + b"\x00", mhash).digest()
                 mask_v = HMAC.new(nonce_k, mask_v, mhash).digest()
 
             # Step h.A
@@ -243,55 +249,53 @@ class DeterministicDsaSigScheme(DssSigScheme):
 
 
 class FipsDsaSigScheme(DssSigScheme):
-
     #: List of L (bit length of p) and N (bit length of q) combinations
     #: that are allowed by FIPS 186-3. The security level is provided in
     #: Table 2 of FIPS 800-57 (rev3).
     _fips_186_3_L_N = (
-                        (1024, 160),    # 80 bits  (SHA-1 or stronger)
-                        (2048, 224),    # 112 bits (SHA-224 or stronger)
-                        (2048, 256),    # 128 bits (SHA-256 or stronger)
-                        (3072, 256)     # 256 bits (SHA-512)
-                      )
+        (1024, 160),  # 80 bits  (SHA-1 or stronger)
+        (2048, 224),  # 112 bits (SHA-224 or stronger)
+        (2048, 256),  # 128 bits (SHA-256 or stronger)
+        (3072, 256),  # 256 bits (SHA-512)
+    )
 
-    def __init__(self, key, encoding, order, randfunc):
-        super(FipsDsaSigScheme, self).__init__(key, encoding, order)
+    def __init__(
+        self, key: DsaKey, encoding: str, order: Integer, randfunc: Optional[Callable[[int], bytes]]
+    ) -> None:
+        super().__init__(key, encoding, order)
         self._randfunc = randfunc
 
         L = Integer(key.p).size_in_bits()
         if (L, self._order_bits) not in self._fips_186_3_L_N:
-            error = ("L/N (%d, %d) is not compliant to FIPS 186-3"
-                     % (L, self._order_bits))
+            error = "L/N (%d, %d) is not compliant to FIPS 186-3" % (L, self._order_bits)
             raise ValueError(error)
 
     def _compute_nonce(self, msg_hash):
         # hash is not used
-        return Integer.random_range(min_inclusive=1,
-                                    max_exclusive=self._order,
-                                    randfunc=self._randfunc)
+        return Integer.random_range(min_inclusive=1, max_exclusive=self._order, randfunc=self._randfunc)
 
     def _valid_hash(self, msg_hash):
         """Verify that SHA-1, SHA-2 or SHA-3 are used"""
-        return (msg_hash.oid == "1.3.14.3.2.26" or
-                msg_hash.oid.startswith("2.16.840.1.101.3.4.2."))
+        return msg_hash.oid == "1.3.14.3.2.26" or msg_hash.oid.startswith("2.16.840.1.101.3.4.2.")
 
 
 class FipsEcDsaSigScheme(DssSigScheme):
-
-    def __init__(self, key, encoding, order, randfunc):
-        super(FipsEcDsaSigScheme, self).__init__(key, encoding, order)
+    def __init__(
+        self, key: EccKey, encoding: str, order: Integer, randfunc: Optional[Callable[[int], bytes]]
+    ) -> None:
+        super().__init__(key, encoding, order)
         self._randfunc = randfunc
 
     def _compute_nonce(self, msg_hash):
-        return Integer.random_range(min_inclusive=1,
-                                    max_exclusive=self._key._curve.order,
-                                    randfunc=self._randfunc)
+        return Integer.random_range(
+            min_inclusive=1, max_exclusive=self._key._curve.order, randfunc=self._randfunc
+        )
 
     def _valid_hash(self, msg_hash):
         """Verify that the strength of the hash matches or exceeds
         the strength of the EC. We fail if the hash is too weak."""
 
-        modulus_bits = self._key.pointQ.size_in_bits()
+        self._key.pointQ.size_in_bits()
 
         # SHS: SHA-2, SHA-3, truncated SHA-512
         sha224 = ("2.16.840.1.101.3.4.2.4", "2.16.840.1.101.3.4.2.7", "2.16.840.1.101.3.4.2.5")
@@ -307,7 +311,12 @@ class FipsEcDsaSigScheme(DssSigScheme):
         return result
 
 
-def new(key, mode, encoding='binary', randfunc=None):
+def new(
+    key: Union[DsaKey, EccKey],
+    mode: str,
+    encoding: str = "binary",
+    randfunc: Optional[Callable[[int], bytes]] = None,
+) -> Union[DeterministicDsaSigScheme, FipsDsaSigScheme, FipsEcDsaSigScheme]:
     """Create a signature object :class:`DssSigScheme` that
     can perform (EC)DSA signature or verification.
 
@@ -373,17 +382,17 @@ def new(key, mode, encoding='binary', randfunc=None):
     # Over time, such version will be superseded by (for instance)
     # FIPS 186-4 and it will be odd to have -3 as default.
 
-    if encoding not in ('binary', 'der'):
+    if encoding not in ("binary", "der"):
         raise ValueError("Unknown encoding '%s'" % encoding)
 
     if isinstance(key, EccKey):
         order = key._curve.order
-        private_key_attr = 'd'
+        private_key_attr = "d"
         if not key.curve.startswith("NIST"):
             raise ValueError("ECC key is not on a NIST P curve")
     elif isinstance(key, DsaKey):
         order = Integer(key.q)
-        private_key_attr = 'x'
+        private_key_attr = "x"
     else:
         raise ValueError("Unsupported key type " + str(type(key)))
 
@@ -392,9 +401,9 @@ def new(key, mode, encoding='binary', randfunc=None):
     else:
         private_key = None
 
-    if mode == 'deterministic-rfc6979':
+    if mode == "deterministic-rfc6979":
         return DeterministicDsaSigScheme(key, encoding, order, private_key)
-    elif mode == 'fips-186-3':
+    elif mode == "fips-186-3":
         if isinstance(key, EccKey):
             return FipsEcDsaSigScheme(key, encoding, order, randfunc)
         else:

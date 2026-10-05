@@ -33,17 +33,9 @@
 
 """Self-test for the custom modular multiplication"""
 
-import unittest
-
-from Crypto.SelfTest.st_common import list_test_cases
-
-from Crypto.Util.number import long_to_bytes, bytes_to_long
-
-from Crypto.Util._raw_api import (create_string_buffer,
-                                  get_raw_buffer,
-                                  c_size_t)
-
 from Crypto.Math._IntegerCustom import _raw_montgomery
+from Crypto.Util._raw_api import c_size_t, create_string_buffer, get_raw_buffer
+from Crypto.Util.number import bytes_to_long, long_to_bytes
 
 
 class ExceptionModulus(ValueError):
@@ -63,13 +55,7 @@ def monty_mult(term1, term2, modulus):
     term2_b = long_to_bytes(term2, numbers_len)
 
     out = create_string_buffer(numbers_len)
-    error = _raw_montgomery.monty_multiply(
-                out,
-                term1_b,
-                term2_b,
-                modulus_b,
-                c_size_t(numbers_len)
-                )
+    error = _raw_montgomery.monty_multiply(out, term1_b, term2_b, modulus_b, c_size_t(numbers_len))
 
     if error == 17:
         raise ExceptionModulus()
@@ -79,42 +65,29 @@ def monty_mult(term1, term2, modulus):
     return get_raw_buffer(out)
 
 
-modulus1 = 0xd66691b20071be4d66d4b71032b37fa007cfabf579fcb91e50bfc2753b3f0ce7be74e216aef7e26d4ae180bc20d7bd3ea88a6cbf6f87380e613c8979b5b043b200a8ff8856a3b12875e36e98a7569f3852d028e967551000b02c19e9fa52e83115b89309aabb1e1cf1e2cb6369d637d46775ce4523ea31f64ad2794cbc365dd8a35e007ed3b57695877fbf102dbeb8b3212491398e494314e93726926e1383f8abb5889bea954eb8c0ca1c62c8e9d83f41888095c5e645ed6d32515fe0c58c1368cad84694e18da43668c6f43e61d7c9bca633ddcda7aef5b79bc396d4a9f48e2a9abe0836cc455e435305357228e93d25aaed46b952defae0f57339bf26f5a9
+modulus1 = 0xD66691B20071BE4D66D4B71032B37FA007CFABF579FCB91E50BFC2753B3F0CE7BE74E216AEF7E26D4AE180BC20D7BD3EA88A6CBF6F87380E613C8979B5B043B200A8FF8856A3B12875E36E98A7569F3852D028E967551000B02C19E9FA52E83115B89309AABB1E1CF1E2CB6369D637D46775CE4523EA31F64AD2794CBC365DD8A35E007ED3B57695877FBF102DBEB8B3212491398E494314E93726926E1383F8ABB5889BEA954EB8C0CA1C62C8E9D83F41888095C5E645ED6D32515FE0C58C1368CAD84694E18DA43668C6F43E61D7C9BCA633DDCDA7AEF5B79BC396D4A9F48E2A9ABE0836CC455E435305357228E93D25AAED46B952DEFAE0F57339BF26F5A9
 
 
-class TestModMultiply(unittest.TestCase):
-
+class TestModMultiply:
     def test_small(self):
-        self.assertEqual(b"\x01", monty_mult(5, 6, 29))
+        assert monty_mult(5, 6, 29) == b"\x01"
 
     def test_large(self):
         numbers_len = (modulus1.bit_length() + 7) // 8
 
         t1 = modulus1 // 2
         t2 = modulus1 - 90
-        expect = b'\x00' * (numbers_len - 1) + b'\x2d'
-        self.assertEqual(expect, monty_mult(t1, t2, modulus1))
+        expect = b"\x00" * (numbers_len - 1) + b"\x2d"
+        assert expect == monty_mult(t1, t2, modulus1)
 
     def test_zero_term(self):
         numbers_len = (modulus1.bit_length() + 7) // 8
-        expect = b'\x00' * numbers_len
-        self.assertEqual(expect, monty_mult(0x100, 0, modulus1))
-        self.assertEqual(expect, monty_mult(0, 0x100, modulus1))
+        expect = b"\x00" * numbers_len
+        assert expect == monty_mult(0x100, 0, modulus1)
+        assert expect == monty_mult(0, 0x100, modulus1)
 
     def test_larger_term(self):
         t1 = 2**2047
-        expect_int = 0x8edf4071f78e3d7ba622cdbbbef74612e301d69186776ae6bf87ff38c320d9aebaa64889c2f67de2324e6bccd2b10ad89e91fd21ba4bb523904d033eff5e70e62f01a84f41fa90a4f248ef249b82e1d2729253fdfc2a3b5b740198123df8bfbf7057d03e15244ad5f26eb9a099763b5c5972121ec076b0bf899f59bd95f7cc129abddccf24217bce52ca0f3a44c9ccc504765dbb89734205f3ae6a8cc560494a60ea84b27d8e00fa24bdd5b4f1d4232edb61e47d3d984c1fa50a3820a2e580fbc3fc8bc11e99df53b9efadf5a40ac75d384e400905aa6f1d88950cd53b1c54dc2222115ad84a27260fa4d978155c1434c551de1ee7361a17a2f79d4388f78a5d
+        expect_int = 0x8EDF4071F78E3D7BA622CDBBBEF74612E301D69186776AE6BF87FF38C320D9AEBAA64889C2F67DE2324E6BCCD2B10AD89E91FD21BA4BB523904D033EFF5E70E62F01A84F41FA90A4F248EF249B82E1D2729253FDFC2A3B5B740198123DF8BFBF7057D03E15244AD5F26EB9A099763B5C5972121EC076B0BF899F59BD95F7CC129ABDDCCF24217BCE52CA0F3A44C9CCC504765DBB89734205F3AE6A8CC560494A60EA84B27D8E00FA24BDD5B4F1D4232EDB61E47D3D984C1FA50A3820A2E580FBC3FC8BC11E99DF53B9EFADF5A40AC75D384E400905AA6F1D88950CD53B1C54DC2222115AD84A27260FA4D978155C1434C551DE1EE7361A17A2F79D4388F78A5D
         res = bytes_to_long(monty_mult(t1, t1, modulus1))
-        self.assertEqual(res, expect_int)
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(TestModMultiply)
-    return tests
-
-
-if __name__ == '__main__':
-    def suite():
-        return unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+        assert res == expect_int

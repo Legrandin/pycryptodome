@@ -4,40 +4,30 @@
 .. image:: https://badge.fury.io/py/pycryptodome.svg
    :target: https://pypi.org/project/pycryptodome
 
-.. image:: https://badge.fury.io/py/pycryptodomex.svg
-   :target: https://pypi.org/project/pycryptodomex
-
 PyCryptodome
 ============
 
 PyCryptodome is a self-contained Python package of low-level
 cryptographic primitives.
 
-It supports Python 2.7, Python 3.8 and newer, and PyPy.
+It supports Python 3.8 and newer, and PyPy.
 
-The installation procedure depends on the package you want the library to be in.
-PyCryptodome can be used as:
+You install it with::
 
-#. **an almost drop-in replacement for the old PyCrypto library**.
-   You install it with::
+    pip install pycryptodome
 
-       pip install pycryptodome
+All modules are installed under the ``Crypto`` package.
 
-   In this case, all modules are installed under the ``Crypto`` package.
+PyCryptodome is an almost drop-in replacement for the old PyCrypto library.
+One must avoid having both PyCrypto and PyCryptodome installed
+at the same time, as they will interfere with each other.
 
-   One must avoid having both PyCrypto and PyCryptodome installed
-   at the same time, as they will interfere with each other.
-
-   This option is therefore recommended only when you are sure that
-   the whole application is deployed in a ``virtualenv``.
-
-#. **a library independent of the old PyCrypto**.
-   You install it with::
-
-       pip install pycryptodomex
-
-   In this case, all modules are installed under the ``Cryptodome`` package.
-   PyCrypto and PyCryptodome can coexist.
+.. note::
+    Up to version 3.x, the library was also released as the ``pycryptodomex``
+    project, installed under the ``Cryptodome`` package.
+    Starting with version 4.0, ``pycryptodomex`` is no longer released and
+    ``Crypto`` is the only package name.
+    To migrate, replace ``Cryptodome`` with ``Crypto`` in your imports.
 
 For faster public key operations in Unix, you should install `GMP`_ in your system.
 

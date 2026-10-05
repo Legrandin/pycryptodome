@@ -28,17 +28,18 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from ._IntegerNative import IntegerNative
-
-from Crypto.Util.number import long_to_bytes, bytes_to_long
-
-from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
-                                  create_string_buffer,
-                                  get_raw_buffer, backend,
-                                  c_size_t, c_ulonglong)
-
-
 from Crypto.Random.random import getrandbits
+from Crypto.Util._raw_api import (
+    backend,
+    c_size_t,
+    c_ulonglong,
+    create_string_buffer,
+    get_raw_buffer,
+    load_pycryptodome_raw_lib,
+)
+from Crypto.Util.number import bytes_to_long, long_to_bytes
+
+from ._IntegerNative import IntegerNative
 
 c_defs = """
 int monty_pow(uint8_t       *out,
@@ -61,12 +62,11 @@ implementation = {"library": "custom", "api": backend}
 
 
 class IntegerCustom(IntegerNative):
-
     @staticmethod
-    def from_bytes(byte_string, byteorder='big'):
-        if byteorder == 'big':
+    def from_bytes(byte_string, byteorder="big"):
+        if byteorder == "big":
             pass
-        elif byteorder == 'little':
+        elif byteorder == "little":
             byte_string = bytearray(byte_string)
             byte_string.reverse()
         else:
@@ -108,13 +108,8 @@ class IntegerCustom(IntegerNative):
         out = create_string_buffer(max_len)
 
         error = _raw_montgomery.monty_pow(
-                    out,
-                    base_b,
-                    exp_b,
-                    modulus_b,
-                    c_size_t(max_len),
-                    c_ulonglong(getrandbits(64))
-                    )
+            out, base_b, exp_b, modulus_b, c_size_t(max_len), c_ulonglong(getrandbits(64))
+        )
 
         if error:
             raise ValueError("monty_pow failed with error: %d" % error)
@@ -149,13 +144,7 @@ class IntegerCustom(IntegerNative):
         term2_b = long_to_bytes(term2, numbers_len)
         out = create_string_buffer(numbers_len)
 
-        error = _raw_montgomery.monty_multiply(
-                    out,
-                    term1_b,
-                    term2_b,
-                    modulus_b,
-                    c_size_t(numbers_len)
-                    )
+        error = _raw_montgomery.monty_multiply(out, term1_b, term2_b, modulus_b, c_size_t(numbers_len))
         if error:
             raise ValueError("monty_multiply failed with error: %d" % error)
 

@@ -29,7 +29,8 @@
 # ===================================================================
 
 import os
-from setuptools import setup, find_packages
+
+from setuptools import find_packages, setup
 
 project_name = "pycryptodome-test-vectors"
 project_dir = "pycryptodome_test_vectors"
@@ -43,9 +44,8 @@ longdesc = """
 This package contains an extensive set of test vectors
 to verify the PyCryptodome cryptographic library.
 
-PyCryptdome can be installed with either the ``pycryptodome``
-package (``Crypto`` namespace) or
-the ``pycryptodomex`` package (``Cryptodome`` namespace).
+PyCryptodome can be installed with the ``pycryptodome``
+package (``Crypto`` namespace).
 
 For more information, see the `homepage`_.
 
@@ -55,15 +55,15 @@ For more information, see the `homepage`_.
 setup(
     name=project_name,
     version=version_string,
-    description='Test vectors for PyCryptodome',
-    url='https://www.pycryptodome.org',
-    author='Helder Eijs',
+    description="Test vectors for PyCryptodome",
+    url="https://www.pycryptodome.org",
+    author="Helder Eijs",
     author_email="helderijs@gmail.com",
-    platforms='Posix; MacOS X; Windows',
+    platforms="Posix; MacOS X; Windows",
     zip_safe=False,
     packages=find_packages(),
     include_package_data=True,
     license="BSD, Apache",
     long_description=longdesc,
-    options={'bdist_wheel':{'universal':True}},
+    options={"bdist_wheel": {"universal": True}},
 )

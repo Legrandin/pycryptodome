@@ -28,16 +28,29 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+from __future__ import annotations
+
 import sys
+from typing import TYPE_CHECKING, Iterable, Union
 
 from Crypto.Cipher import _create_cipher
-from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
-                                  VoidPointer, SmartPointer, c_size_t,
-                                  c_uint8_ptr, c_uint)
+from Crypto.Util._raw_api import (
+    SmartPointer,
+    VoidPointer,
+    c_size_t,
+    c_uint,
+    c_uint8_ptr,
+    load_pycryptodome_raw_lib,
+)
+
+if TYPE_CHECKING:
+    from Crypto.Cipher._mode_ecb import EcbMode
+
+Buffer = Union[bytes, bytearray, memoryview]
 
 _raw_blowfish_lib = load_pycryptodome_raw_lib(
-        "Crypto.Cipher._raw_eksblowfish",
-        """
+    "Crypto.Cipher._raw_eksblowfish",
+    """
         int EKSBlowfish_start_operation(const uint8_t key[],
                                         size_t key_len,
                                         const uint8_t salt[16],
@@ -54,8 +67,8 @@ _raw_blowfish_lib = load_pycryptodome_raw_lib(
                                 uint8_t *out,
                                 size_t data_len);
         int EKSBlowfish_stop_operation(void *state);
-        """
-        )
+        """,
+)
 
 
 def _create_base_cipher(dict_parameters):
@@ -78,22 +91,23 @@ def _create_base_cipher(dict_parameters):
     stop_operation = _raw_blowfish_lib.EKSBlowfish_stop_operation
 
     void_p = VoidPointer()
-    result = start_operation(c_uint8_ptr(key),
-                             c_size_t(len(key)),
-                             c_uint8_ptr(salt),
-                             c_size_t(len(salt)),
-                             c_uint(cost),
-                             c_uint(int(invert)),
-                             void_p.address_of())
+    result = start_operation(
+        c_uint8_ptr(key),
+        c_size_t(len(key)),
+        c_uint8_ptr(salt),
+        c_size_t(len(salt)),
+        c_uint(cost),
+        c_uint(int(invert)),
+        void_p.address_of(),
+    )
     if result:
-        raise ValueError("Error %X while instantiating the EKSBlowfish cipher"
-                         % result)
+        raise ValueError("Error %X while instantiating the EKSBlowfish cipher" % result)
     return SmartPointer(void_p.get(), stop_operation)
 
 
-def new(key, mode, salt, cost, invert):
+def new(key: Buffer, mode: int, salt: Buffer, cost: int, invert: bool) -> EcbMode:
     """Create a new EKSBlowfish cipher
-    
+
     Args:
 
       key (bytes, bytearray, memoryview):
@@ -119,13 +133,13 @@ def new(key, mode, salt, cost, invert):
     :Return: an EKSBlowfish object
     """
 
-    kwargs = { 'salt':salt, 'cost':cost, 'invert':invert }
+    kwargs = {"salt": salt, "cost": cost, "invert": invert}
     return _create_cipher(sys.modules[__name__], key, mode, **kwargs)
 
 
-MODE_ECB = 1
+MODE_ECB: int = 1
 
 # Size of a data block (in bytes)
-block_size = 8
+block_size: int = 8
 # Size of a key (in bytes)
-key_size = range(0, 72 + 1)
+key_size: Iterable[int] = range(72 + 1)

@@ -1,19 +1,18 @@
 #!/usr/bin/env python3
 
 import time
-from Crypto.PublicKey import RSA
+
 from Crypto.Math import Numbers
 from Crypto.Math.Numbers import Integer
+from Crypto.PublicKey import RSA
+from Crypto.Util._raw_api import c_size_t, create_string_buffer, load_pycryptodome_raw_lib
 from Crypto.Util.number import long_to_bytes
-from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
-                                  create_string_buffer,
-                                  c_size_t)
 
 ITER = 100
 
 print(Numbers._implementation)
 
-rsa_pem="""-----BEGIN RSA PRIVATE KEY-----
+rsa_pem = """-----BEGIN RSA PRIVATE KEY-----
 MIIEpAIBAAKCAQEA1maRsgBxvk1m1LcQMrN/oAfPq/V5/LkeUL/CdTs/DOe+dOIW
 rvfibUrhgLwg170+qIpsv2+HOA5hPIl5tbBDsgCo/4hWo7EodeNumKdWnzhS0Cjp
 Z1UQALAsGen6UugxFbiTCaq7Hhzx4stjadY31Gd1zkUj6jH2StJ5TLw2XdijXgB+
@@ -59,10 +58,10 @@ SIZE = key.size_in_bytes()
 
 # -----------------------------------------------------------------
 start = time.time()
-for x in range(ITER):
-	result_cpython = pow(message, key.d, key.n)
+for _x in range(ITER):
+    result_cpython = pow(message, key.d, key.n)
 end = time.time()
-print("CPython =", end-start)
+print("CPython =", end - start)
 
 # -----------------------------------------------------------------
 base_b = long_to_bytes(message, SIZE)
@@ -72,16 +71,9 @@ out = create_string_buffer(SIZE)
 
 start = time.time()
 for _ in range(ITER):
-    _raw_montgomery.monty_pow(
-                base_b,
-                exp_b,
-                modulus_b,
-                out,
-                c_size_t(SIZE),
-                32
-                )
+    _raw_montgomery.monty_pow(base_b, exp_b, modulus_b, out, c_size_t(SIZE), 32)
 end = time.time()
-my_time = end-start
+my_time = end - start
 print("Custom modexp =", my_time)
 
 # -----------------------------------------------------------------
@@ -89,11 +81,11 @@ mg = Integer(message)
 md = Integer(key.d)
 mn = Integer(key.n)
 start = time.time()
-for x in range(ITER):
-	result_gmp = pow(mg, md, mn)
+for _x in range(ITER):
+    result_gmp = pow(mg, md, mn)
 end = time.time()
 gmp_time = end - start
 print("GMP =", gmp_time)
 
 # -----------------------------------------------------------------
-print("%.2f%%" % float((my_time/gmp_time-1)*100), "slower")
+print("%.2f%%" % float((my_time / gmp_time - 1) * 100), "slower")

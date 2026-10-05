@@ -28,26 +28,36 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from Crypto.Util.py3compat import bord, is_bytes, tobytes
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Optional, Union
+
+from Crypto.Util._raw_api import is_buffer
 
 from . import cSHAKE128
 from .cSHAKE128 import _encode_str, _right_encode
 
+if TYPE_CHECKING:
+    from types import ModuleType
 
-class TupleHash(object):
+Buffer = Union[bytes, bytearray, memoryview]
+
+
+class TupleHash:
     """A Tuple hash object.
     Do not instantiate directly.
     Use the :func:`new` function.
     """
 
-    def __init__(self, custom, cshake, digest_size):
+    def __init__(self, custom: Buffer, cshake: ModuleType, digest_size: int) -> None:
 
         self.digest_size = digest_size
 
-        self._cshake = cshake._new(b'', custom, b'TupleHash')
-        self._digest = None
+        self._cshake_module = cshake
+        self._cshake = cshake._new(b"", custom, b"TupleHash")
+        self._digest: Optional[bytes] = None
 
-    def update(self, *data):
+    def update(self, *data: Buffer) -> TupleHash:
         """Authenticate the next tuple of byte strings.
         TupleHash guarantees the logical separation between each byte string.
 
@@ -59,13 +69,13 @@ class TupleHash(object):
             raise TypeError("You cannot call 'update' after 'digest' or 'hexdigest'")
 
         for item in data:
-            if not is_bytes(item):
-                raise TypeError("You can only call 'update' on bytes" )
+            if not is_buffer(item):
+                raise TypeError("You can only call 'update' on bytes")
             self._cshake.update(_encode_str(item))
 
         return self
 
-    def digest(self):
+    def digest(self) -> bytes:
         """Return the **binary** (non-printable) digest of the tuple of byte strings.
 
         :return: The hash digest. Binary form.
@@ -78,27 +88,37 @@ class TupleHash(object):
 
         return self._digest
 
-    def hexdigest(self):
+    def hexdigest(self) -> str:
         """Return the **printable** digest of the tuple of byte strings.
 
         :return: The hash digest. Hexadecimal encoded.
         :rtype: string
         """
 
-        return "".join(["%02x" % bord(x) for x in tuple(self.digest())])
+        return "".join(["%02x" % x for x in tuple(self.digest())])
 
-    def new(self, **kwargs):
+    def new(
+        self, *, digest_bytes: Optional[int] = None, digest_bits: Optional[int] = None, custom: Buffer = b""
+    ) -> TupleHash:
         """Return a new instance of a TupleHash object.
         See :func:`new`.
         """
 
-        if "digest_bytes" not in kwargs and "digest_bits" not in kwargs:
-            kwargs["digest_bytes"] = self.digest_size
+        if digest_bytes is None and digest_bits is None:
+            digest_bytes = self.digest_size
 
-        return new(**kwargs)
+        # The same class implements both TupleHash128 and TupleHash256
+        if self._cshake_module is cSHAKE128:
+            factory = new
+        else:
+            from .TupleHash256 import new as factory
+
+        return factory(digest_bytes=digest_bytes, digest_bits=digest_bits, custom=custom)
 
 
-def new(**kwargs):
+def new(
+    *, digest_bytes: Optional[int] = None, digest_bits: Optional[int] = None, custom: Buffer = b""
+) -> TupleHash:
     """Create a new TupleHash128 object.
 
     Args:
@@ -116,21 +136,16 @@ def new(**kwargs):
     :Return: A :class:`TupleHash` object
     """
 
-    digest_bytes = kwargs.pop("digest_bytes", None)
-    digest_bits = kwargs.pop("digest_bits", None)
     if None not in (digest_bytes, digest_bits):
         raise TypeError("Only one digest parameter must be provided")
-    if (None, None) == (digest_bytes, digest_bits):
-        digest_bytes = 64
-    if digest_bytes is not None:
+    if digest_bits is None:
+        if digest_bytes is None:
+            digest_bytes = 64
         if digest_bytes < 8:
             raise ValueError("'digest_bytes' must be at least 8")
     else:
         if digest_bits < 64 or digest_bits % 8:
-            raise ValueError("'digest_bytes' must be at least 64 "
-                             "in steps of 8")
+            raise ValueError("'digest_bytes' must be at least 64 in steps of 8")
         digest_bytes = digest_bits // 8
-
-    custom = kwargs.pop("custom", b'')
 
     return TupleHash(custom, cSHAKE128, digest_bytes)

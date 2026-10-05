@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # ===================================================================
 # The contents of this file are dedicated to the public domain.  To
@@ -18,16 +17,26 @@
 # SOFTWARE.
 # ===================================================================
 
-from Crypto.Util.py3compat import bord
 
-from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
-                                  VoidPointer, SmartPointer,
-                                  create_string_buffer,
-                                  get_raw_buffer, c_size_t,
-                                  c_uint8_ptr)
+from __future__ import annotations
 
-_raw_sha512_lib = load_pycryptodome_raw_lib("Crypto.Hash._SHA512",
-                        """
+from typing import Optional, Union
+
+from Crypto.Util._raw_api import (
+    SmartPointer,
+    VoidPointer,
+    c_size_t,
+    c_uint8_ptr,
+    create_string_buffer,
+    get_raw_buffer,
+    load_pycryptodome_raw_lib,
+)
+
+Buffer = Union[bytes, bytearray, memoryview]
+
+_raw_sha512_lib = load_pycryptodome_raw_lib(
+    "Crypto.Hash._SHA512",
+    """
                         int SHA512_init(void **shaState,
                                         size_t digest_size);
                         int SHA512_destroy(void *shaState);
@@ -45,9 +54,11 @@ _raw_sha512_lib = load_pycryptodome_raw_lib("Crypto.Hash._SHA512",
                                             uint8_t *final_digest,
                                             size_t iterations,
                                             size_t digest_size);
-                        """)
+                        """,
+)
 
-class SHA512Hash(object):
+
+class SHA512Hash:
     """A SHA-512 hash object (possibly in its truncated version SHA-512/224 or
     SHA-512/256.
     Do not instantiate directly. Use the :func:`new` function.
@@ -64,9 +75,9 @@ class SHA512Hash(object):
     """
 
     # The internal block size of the hash algorithm in bytes.
-    block_size = 128
+    block_size: int = 128
 
-    def __init__(self, data, truncate):
+    def __init__(self, data: Optional[Buffer], truncate: Optional[str]) -> None:
         self._truncate = truncate
 
         if truncate is None:
@@ -82,31 +93,25 @@ class SHA512Hash(object):
             raise ValueError("Incorrect truncation length. It must be '224' or '256'.")
 
         state = VoidPointer()
-        result = _raw_sha512_lib.SHA512_init(state.address_of(),
-                                             c_size_t(self.digest_size))
+        result = _raw_sha512_lib.SHA512_init(state.address_of(), c_size_t(self.digest_size))
         if result:
-            raise ValueError("Error %d while instantiating SHA-512"
-                             % result)
-        self._state = SmartPointer(state.get(),
-                                   _raw_sha512_lib.SHA512_destroy)
+            raise ValueError("Error %d while instantiating SHA-512" % result)
+        self._state = SmartPointer(state.get(), _raw_sha512_lib.SHA512_destroy)
         if data:
             self.update(data)
 
-    def update(self, data):
+    def update(self, data: Buffer) -> None:
         """Continue hashing of a message by consuming the next chunk of data.
 
         Args:
             data (byte string/byte array/memoryview): The next chunk of the message being hashed.
         """
 
-        result = _raw_sha512_lib.SHA512_update(self._state.get(),
-                                               c_uint8_ptr(data),
-                                               c_size_t(len(data)))
+        result = _raw_sha512_lib.SHA512_update(self._state.get(), c_uint8_ptr(data), c_size_t(len(data)))
         if result:
-            raise ValueError("Error %d while hashing data with SHA512"
-                             % result)
+            raise ValueError("Error %d while hashing data with SHA512" % result)
 
-    def digest(self):
+    def digest(self) -> bytes:
         """Return the **binary** (non-printable) digest of the message that has been hashed so far.
 
         :return: The hash digest, computed over the data processed so far.
@@ -115,16 +120,13 @@ class SHA512Hash(object):
         """
 
         bfr = create_string_buffer(self.digest_size)
-        result = _raw_sha512_lib.SHA512_digest(self._state.get(),
-                                               bfr,
-                                               c_size_t(self.digest_size))
+        result = _raw_sha512_lib.SHA512_digest(self._state.get(), bfr, c_size_t(self.digest_size))
         if result:
-            raise ValueError("Error %d while making SHA512 digest"
-                             % result)
+            raise ValueError("Error %d while making SHA512 digest" % result)
 
         return get_raw_buffer(bfr)
 
-    def hexdigest(self):
+    def hexdigest(self) -> str:
         """Return the **printable** digest of the message that has been hashed so far.
 
         :return: The hash digest, computed over the data processed so far.
@@ -132,9 +134,9 @@ class SHA512Hash(object):
         :rtype: string
         """
 
-        return "".join(["%02x" % bord(x) for x in self.digest()])
+        return "".join(["%02x" % x for x in self.digest()])
 
-    def copy(self):
+    def copy(self) -> SHA512Hash:
         """Return a copy ("clone") of the hash object.
 
         The copy will have the same internal state as the original hash
@@ -146,19 +148,18 @@ class SHA512Hash(object):
         """
 
         clone = SHA512Hash(None, self._truncate)
-        result = _raw_sha512_lib.SHA512_copy(self._state.get(),
-                                             clone._state.get())
+        result = _raw_sha512_lib.SHA512_copy(self._state.get(), clone._state.get())
         if result:
             raise ValueError("Error %d while copying SHA512" % result)
         return clone
 
-    def new(self, data=None):
+    def new(self, data: Optional[Buffer] = None) -> SHA512Hash:
         """Create a fresh SHA-512 hash object."""
 
         return SHA512Hash(data, self._truncate)
 
 
-def new(data=None, truncate=None):
+def new(data: Optional[Buffer] = None, truncate: Optional[str] = None) -> SHA512Hash:
     """Create a new hash object.
 
     Args:
@@ -178,10 +179,10 @@ def new(data=None, truncate=None):
 
 
 # The size of the full SHA-512 hash in bytes.
-digest_size = 64
+digest_size: int = 64
 
 # The internal block size of the hash algorithm in bytes.
-block_size = 128
+block_size: int = 128
 
 
 def _pbkdf2_hmac_assist(inner, outer, first_digest, iterations):
@@ -189,14 +190,15 @@ def _pbkdf2_hmac_assist(inner, outer, first_digest, iterations):
 
     assert iterations > 0
 
-    bfr = create_string_buffer(len(first_digest));
+    bfr = create_string_buffer(len(first_digest))
     result = _raw_sha512_lib.SHA512_pbkdf2_hmac_assist(
-                    inner._state.get(),
-                    outer._state.get(),
-                    first_digest,
-                    bfr,
-                    c_size_t(iterations),
-                    c_size_t(len(first_digest)))
+        inner._state.get(),
+        outer._state.get(),
+        first_digest,
+        bfr,
+        c_size_t(iterations),
+        c_size_t(len(first_digest)),
+    )
 
     if result:
         raise ValueError("Error %d with PBKDF2-HMAC assist for SHA512" % result)

@@ -37,28 +37,28 @@ args = parser.parse_args()
 
 if args.curve == "p256":
     bits = 256
-    p = 0xffffffff00000001000000000000000000000000ffffffffffffffffffffffff
-    Gx = 0x6b17d1f2e12c4247f8bce6e563a440f277037d812deb33a0f4a13945d898c296
-    Gy = 0x4fe342e2fe1a7f9b8ee7eb4a7c0f9e162bce33576b315ececbb6406837bf51f5
+    p = 0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF
+    Gx = 0x6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296
+    Gy = 0x4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5
     msg = "Affine coordinates in Montgomery form"
 elif args.curve == "p384":
     bits = 384
-    p = 0xfffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffeffffffff0000000000000000ffffffff
-    Gx = 0xaa87ca22be8b05378eb1c71ef320ad746e1d3b628ba79b9859f741e082542a385502f25dbf55296c3a545e3872760aB7
-    Gy = 0x3617de4a96262c6f5d9e98bf9292dc29f8f41dbd289a147ce9da3113b5f0b8c00a60b1ce1d7e819d7a431d7c90ea0e5F
+    p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFF0000000000000000FFFFFFFF
+    Gx = 0xAA87CA22BE8B05378EB1C71EF320AD746E1D3B628BA79B9859F741E082542A385502F25DBF55296C3A545E3872760AB7
+    Gy = 0x3617DE4A96262C6F5D9E98BF9292DC29F8F41DBD289A147CE9DA3113B5F0B8C00A60B1CE1D7E819D7A431D7C90EA0E5F
     msg = "Affine coordinates in Montgomery form"
 elif args.curve == "p521":
     bits = 521
-    p = 0x000001ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
-    Gx = 0x000000c6858e06b70404e9cd9e3ecb662395b4429c648139053fb521f828af606b4d3dbaa14b5e77efe75928fe1dc127a2ffa8de3348b3c1856a429bf97e7e31c2e5bd66
-    Gy = 0x0000011839296a789a3bc0045c8a5fb42c7d1bd998f54449579b446817afbd17273e662c97ee72995ef42640c550b9013fad0761353c7086a272c24088be94769fd16650
+    p = 0x000001FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+    Gx = 0x000000C6858E06B70404E9CD9E3ECB662395B4429C648139053FB521F828AF606B4D3DBAA14B5E77EFE75928FE1DC127A2FFA8DE3348B3C1856A429BF97E7E31C2E5BD66
+    Gy = 0x0000011839296A789A3BC0045C8A5FB42C7D1BD998F54449579B446817AFBD17273E662C97EE72995EF42640C550B9013FAD0761353C7086A272C24088BE94769FD16650
     msg = "Affine coordinates in plain form (not Montgomery)"
 else:
     raise ValueError("Unsupported curve: " + args.curve)
 
 
-c_file = open(args.basename + ".c", "wt")
-h_file = open(args.basename + ".h", "wt")
+c_file = open(args.basename + ".c", "w")
+h_file = open(args.basename + ".h", "w")
 
 words = (bits + 63) // 64
 window_size = args.window_size
@@ -120,7 +120,7 @@ def get64(z, words):
 
     # Convert to Montgomery form, but only if it's not P521
     if words != 9:
-        R = 2**(words * 64)
+        R = 2 ** (words * 64)
         x = z * R % p
     else:
         x = z
@@ -140,24 +140,24 @@ for _ in range(points_per_table - 1):
     window.append(new_point)
 
 print(declaration.format(args.curve, n_tables, points_per_table, words), file=h_file)
-print(definition.format(args.curve, n_tables, window_size, points_per_table, msg,
-                    byte_size, words), file=c_file)
+print(
+    definition.format(args.curve, n_tables, window_size, points_per_table, msg, byte_size, words), file=c_file
+)
 
 for i in range(n_tables):
     print(" { /* Table #%u */" % i, file=c_file)
     for j, w in enumerate(window):
         endc = "" if (j == points_per_table - 1) else ","
-        print(point.format(j, get64(w[0], words), get64(w[1], words), endc),
-              file=c_file)
+        print(point.format(j, get64(w[0], words), get64(w[1], words), endc), file=c_file)
     endc = "" if (i == n_tables - 1) else ","
     print(" }%s" % endc, file=c_file)
 
     # Move from G to G*2^{w}
-    for j in range(window_size):
+    for _ in range(window_size):
         G = double(*G)
 
     # Update window
     for j in range(1, points_per_table):
-        window[j] = add(*window[j-1], *G)
+        window[j] = add(*window[j - 1], *G)
 
 print("};", file=c_file)

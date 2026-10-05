@@ -1,13 +1,12 @@
 """Make unit test for product() in modexp.c"""
 
-
 from common import counter, make_main, split64
 
 
 def make_test(a, b):
 
     # Turn a[], b[] and the result into arrays of 64-bit words
-    result = split64(a*b)
+    result = split64(a * b)
     a = split64(a)
     b = split64(b)
 
@@ -22,19 +21,19 @@ def make_test(a, b):
         result.append("0")
 
     # Fill output buffer with values that must be overwritten
-    t = [ "0xCCCCCCCCCCCCCCCCULL" ] * result_len
+    t = ["0xCCCCCCCCCCCCCCCCULL"] * result_len
 
     print("")
     print("void test_%d(void) {" % next(counter))
     print("    const uint64_t a[] = {" + ", ".join(a) + "};")
     print("    const uint64_t b[] = {" + ", ".join(b) + "};")
     print("    uint64_t t[] = {" + ", ".join(t) + ", 0xAAAAAAAAAAAAAAAAULL};")
-    print("    uint64_t scratchpad[%d];" % (3*len(a)))
+    print("    uint64_t scratchpad[%d];" % (3 * len(a)))
     print("    const uint64_t expected_t[] = {" + ", ".join(result) + "};")
     print("")
     print("    product(t, scratchpad, a, b, %d);" % len(a))
     print("    assert(memcmp(t, expected_t, 8*%d) == 0);" % result_len)
-    #print '    printf("t[{0}]=0x%016lX\\n", t[{0}]);'.format(result_len)
+    # print '    printf("t[{0}]=0x%016lX\\n", t[{0}]);'.format(result_len)
     print("    assert(t[%d] == 0xAAAAAAAAAAAAAAAAULL);" % result_len)
     print("}")
     print("")
@@ -51,8 +50,12 @@ make_test(0, 0)
 make_test(1, 0)
 make_test(27, 98)
 make_test(27832782374324, 78237487324872348723847234)
-make_test(0x786BF, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
-make_test(0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF,
-          0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF)
+make_test(
+    0x786BF, 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
+)
+make_test(
+    0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF,
+    0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF,
+)
 
 make_main()

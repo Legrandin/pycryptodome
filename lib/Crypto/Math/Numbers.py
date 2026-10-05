@@ -28,20 +28,31 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any, Dict
+
 __all__ = ["Integer"]
 
 import os
 
-try:
-    if os.getenv("PYCRYPTODOME_DISABLE_GMP"):
-        raise ImportError()
+_implementation: Dict[str, Any]
 
-    from Crypto.Math._IntegerGMP import IntegerGMP as Integer
-    from Crypto.Math._IntegerGMP import implementation as _implementation
-except (ImportError, OSError, AttributeError):
+if TYPE_CHECKING:
+    # The actual class is only known at runtime
+    from Crypto.Math._IntegerBase import IntegerBase as Integer
+else:
     try:
-        from Crypto.Math._IntegerCustom import IntegerCustom as Integer
-        from Crypto.Math._IntegerCustom import implementation as _implementation
-    except (ImportError, OSError):
-        from Crypto.Math._IntegerNative import IntegerNative as Integer
-        _implementation = {}
+        if os.getenv("PYCRYPTODOME_DISABLE_GMP"):
+            raise ImportError()
+
+        from Crypto.Math._IntegerGMP import IntegerGMP as Integer
+        from Crypto.Math._IntegerGMP import implementation as _implementation
+    except (ImportError, OSError, AttributeError):
+        try:
+            from Crypto.Math._IntegerCustom import IntegerCustom as Integer
+            from Crypto.Math._IntegerCustom import implementation as _implementation
+        except (ImportError, OSError):
+            from Crypto.Math._IntegerNative import IntegerNative as Integer
+
+            _implementation = {}

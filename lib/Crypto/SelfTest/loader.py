@@ -28,18 +28,17 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+import binascii
+import errno
+import json
 import os
 import re
-import json
-import errno
-import binascii
 import warnings
 from binascii import unhexlify
-from Crypto.Util.py3compat import FileNotFoundError
-
 
 try:
     import pycryptodome_test_vectors  # type: ignore
+
     test_vectors_available = True
 except ImportError:
     test_vectors_available = False
@@ -57,7 +56,7 @@ def _load_tests(dir_comps, file_in, description, conversions):
     line_number = 0
     results = []
 
-    class TestVector(object):
+    class TestVector:
         def __init__(self, description, count):
             self.desc = description
             self.count = count
@@ -77,7 +76,7 @@ def _load_tests(dir_comps, file_in, description, conversions):
         line = line.strip()
 
         # Skip comments and empty lines
-        if line.startswith('#') or not line:
+        if line.startswith("#") or not line:
             new_group = True
             continue
 
@@ -156,9 +155,7 @@ def load_test_vectors(dir_comps, file_name, description, conversions):
 
     try:
         if not test_vectors_available:
-            raise FileNotFoundError(errno.ENOENT,
-                                    os.strerror(errno.ENOENT),
-                                    file_name)
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), file_name)
 
         description = "%s test (%s)" % (description, file_name)
 
@@ -168,22 +165,17 @@ def load_test_vectors(dir_comps, file_name, description, conversions):
             results = _load_tests(dir_comps, file_in, description, conversions)
 
     except FileNotFoundError:
-        warnings.warn("Warning: skipping extended tests for " + description,
-                      UserWarning,
-                      stacklevel=2)
+        warnings.warn("Warning: skipping extended tests for " + description, UserWarning, stacklevel=2)
 
     return results
 
 
-def load_test_vectors_wycheproof(dir_comps, file_name, description,
-                                 root_tag={}, group_tag={}, unit_tag={}):
+def load_test_vectors_wycheproof(dir_comps, file_name, description, root_tag={}, group_tag={}, unit_tag={}):
 
     result = []
     try:
         if not test_vectors_available:
-            raise FileNotFoundError(errno.ENOENT,
-                                    os.strerror(errno.ENOENT),
-                                    file_name)
+            raise FileNotFoundError(errno.ENOENT, os.strerror(errno.ENOENT), file_name)
 
         init_dir = os.path.dirname(pycryptodome_test_vectors.__file__)
         full_file_name = os.path.join(os.path.join(init_dir, *dir_comps), file_name)
@@ -191,33 +183,43 @@ def load_test_vectors_wycheproof(dir_comps, file_name, description,
             tv_tree = json.load(file_in)
 
     except FileNotFoundError:
-        warnings.warn("Warning: skipping extended tests for " + description,
-                      UserWarning,
-                      stacklevel=2)
+        warnings.warn("Warning: skipping extended tests for " + description, UserWarning, stacklevel=2)
         return result
 
-    class TestVector(object):
+    class TestVector:
         pass
 
     # Unique attributes that will be converted from
     # hexadecimal to binary, unless the attribute is
     # listed in the unit_tag dict
-    unit_attr_hex = {'key', 'iv', 'aad', 'msg', 'ct', 'tag', 'label',
-                     'ikm', 'salt', 'info', 'okm', 'sig', 'public',
-                     'shared'}
+    unit_attr_hex = {
+        "key",
+        "iv",
+        "aad",
+        "msg",
+        "ct",
+        "tag",
+        "label",
+        "ikm",
+        "salt",
+        "info",
+        "okm",
+        "sig",
+        "public",
+        "shared",
+    }
     unit_attr_hex -= set(unit_tag.keys())
 
     common_root = {}
     for k, v in root_tag.items():
         common_root[k] = v(tv_tree)
 
-    for group in tv_tree['testGroups']:
-
+    for group in tv_tree["testGroups"]:
         common_group = {}
         for k, v in group_tag.items():
             common_group[k] = v(group)
 
-        for test in group['tests']:
+        for test in group["tests"]:
             tv = TestVector()
 
             for k, v in common_root.items():
@@ -225,22 +227,24 @@ def load_test_vectors_wycheproof(dir_comps, file_name, description,
             for k, v in common_group.items():
                 setattr(tv, k, v)
 
-            tv.id = test['tcId']
-            tv.comment = test['comment']
+            tv.id = test["tcId"]
+            tv.comment = test["comment"]
             for attr in unit_attr_hex:
                 if attr in test:
                     try:
                         setattr(tv, attr, unhexlify(test[attr]))
                     except binascii.Error:
-                        raise ValueError("Error decoding attribute '%s' (tcId=%s, file %s)" % (attr, tv.id, file_name))
+                        raise ValueError(
+                            "Error decoding attribute '%s' (tcId=%s, file %s)" % (attr, tv.id, file_name)
+                        )
             tv.filename = file_name
 
             for k, v in unit_tag.items():
                 setattr(tv, k, v(test))
 
-            tv.valid = test['result'] != "invalid"
-            tv.warning = test['result'] == "acceptable"
-            tv.flags = test.get('flags')
+            tv.valid = test["result"] != "invalid"
+            tv.warning = test["result"] == "acceptable"
+            tv.flags = test.get("flags")
 
             tv.filename = file_name
 
@@ -248,3 +252,11 @@ def load_test_vectors_wycheproof(dir_comps, file_name, description,
 
     return result
 
+
+def wycheproof_id(tv):
+    """Return the pytest ID of a Wycheproof test vector (e.g. 'aes_gcm-12')"""
+
+    name = tv.filename
+    if name.endswith("_test.json"):
+        name = name[: -len("_test.json")]
+    return "%s-%d" % (name, tv.id)

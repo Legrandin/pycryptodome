@@ -1,6 +1,6 @@
 # ===================================================================
 #
-# Copyright (c) 2018, Helder Eijs <helderijs@gmail.com>
+# Copyright (c) 2026, Legrandin <helderijs@gmail.com>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -28,22 +28,32 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+"""Internal helpers for handling byte sequences."""
+
 from __future__ import annotations
 
-from Crypto.Util._raw_api import load_pycryptodome_raw_lib
+from typing import Optional, Union
 
-_raw_cpuid_lib = load_pycryptodome_raw_lib(
-    "Crypto.Util._cpuid_c",
-    """
-                                           int have_aes_ni(void);
-                                           int have_clmul(void);
-                                           """,
-)
+Buffer = Union[bytes, bytearray, memoryview]
 
 
-def have_aes_ni() -> int:
-    return _raw_cpuid_lib.have_aes_ni()
+def tobytes(s: Union[str, Buffer], encoding: str = "latin-1") -> bytes:
+    """Return an immutable byte string out of a text string
+    (encoded with ``encoding``), a byte string, a bytearray or a memoryview."""
+
+    if isinstance(s, bytes):
+        return s
+    elif isinstance(s, str):
+        return s.encode(encoding)
+    elif isinstance(s, (bytearray, memoryview)):
+        return bytes(s)
+    raise TypeError("Expected a string or a bytes-like object, not %s" % type(s).__name__)
 
 
-def have_clmul() -> int:
-    return _raw_cpuid_lib.have_clmul()
+def copy_bytes(start: Optional[int], end: Optional[int], seq: Buffer) -> bytes:
+    """Return an immutable copy of the slice ``[start:end]`` of
+    a byte string, a bytearray or a memoryview."""
+
+    if isinstance(seq, bytes):
+        return seq[start:end]
+    return bytes(seq[start:end])

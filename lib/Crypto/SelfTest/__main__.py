@@ -20,24 +20,15 @@
 # SOFTWARE.
 # ===================================================================
 
-from __future__ import print_function
+"""Run the PyCryptodome self-tests with pytest.
+
+All command line arguments are passed to pytest, for instance::
+
+    python -m Crypto.SelfTest --skip-slow-tests -k AES
+"""
 
 import sys
 
-from Crypto import SelfTest
+from Crypto.SelfTest import main
 
-slow_tests = not ("--skip-slow-tests" in sys.argv)
-if not slow_tests:
-    print("Skipping slow tests")
-
-wycheproof_warnings = "--wycheproof-warnings" in sys.argv
-if wycheproof_warnings:
-    print("Printing Wycheproof warnings")
-
-if "-v" in sys.argv:
-    verbosity=2
-else:
-    verbosity=1
-
-config = {'slow_tests': slow_tests, 'wycheproof_warnings': wycheproof_warnings}
-SelfTest.run(stream=sys.stdout, verbosity=verbosity, config=config)
+sys.exit(main(sys.argv[1:]))

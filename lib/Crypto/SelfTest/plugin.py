@@ -1,6 +1,6 @@
 # ===================================================================
 #
-# Copyright (c) 2018, Helder Eijs <helderijs@gmail.com>
+# Copyright (c) 2026, Legrandin <helderijs@gmail.com>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -28,22 +28,32 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from __future__ import annotations
+"""pytest plugin for the PyCryptodome self-tests (command line options and markers)"""
 
-from Crypto.Util._raw_api import load_pycryptodome_raw_lib
+import pytest
 
-_raw_cpuid_lib = load_pycryptodome_raw_lib(
-    "Crypto.Util._cpuid_c",
-    """
-                                           int have_aes_ni(void);
-                                           int have_clmul(void);
-                                           """,
-)
+from Crypto.SelfTest import st_common
+
+pytest.register_assert_rewrite("Crypto.SelfTest.Cipher.common", "Crypto.SelfTest.Hash.common")
 
 
-def have_aes_ni() -> int:
-    return _raw_cpuid_lib.have_aes_ni()
+def pytest_addoption(parser):
+    group = parser.getgroup("pycryptodome")
+    group.addoption("--skip-slow-tests", action="store_true", help="Skip slow tests")
+    group.addoption(
+        "--wycheproof-warnings", action="store_true", help="Report Wycheproof test vectors with warnings"
+    )
 
 
-def have_clmul() -> int:
-    return _raw_cpuid_lib.have_clmul()
+def pytest_configure(config):
+    config.addinivalue_line("markers", "slow: slow test, deselected with --skip-slow-tests")
+    st_common.options["wycheproof_warnings"] = config.getoption("wycheproof_warnings")
+
+
+def pytest_collection_modifyitems(config, items):
+    if not config.getoption("skip_slow_tests"):
+        return
+    deselected = [item for item in items if item.get_closest_marker("slow")]
+    if deselected:
+        config.hook.pytest_deselected(items=deselected)
+        items[:] = [item for item in items if not item.get_closest_marker("slow")]

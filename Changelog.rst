@@ -1,6 +1,32 @@
 Changelog
 =========
 
+4.0.0 (under development)
+++++++++++++++++++++++++++
+
+Breaking changes
+----------------
+* Remove support for Python 2.7. The minimum supported version is now Python 3.8.
+* The ``pycryptodomex`` package (``Cryptodome`` namespace) is no longer released.
+  The library is only available as ``pycryptodome``, under the ``Crypto`` namespace.
+* The self-tests are now run by ``pytest``, which must be installed for
+  ``python -m Crypto.SelfTest`` to work.
+* Remove the ``test`` command of ``setup.py``. Install the package
+  (e.g. with ``pip install -e .``) and run ``python -m Crypto.SelfTest`` instead.
+
+Resolved issues
+---------------
+* ElGamal key objects could not be compared for equality.
+* Comparing an RSA, DSA or ElGamal key with an object of a different type now
+  returns ``False`` instead of raising ``AttributeError``.
+* The legacy ``can_decrypt()`` method of PKCS#1 ciphers raised ``AttributeError``
+  and not a boolean.
+* The ``update()`` method for SIV encryption objects now returns the cipher object,
+  like for other AEAD modes.
+* Fixed the method ``new()`` of KMAC256 and TupleHash256 objects:
+  it created a KMAC128 or TupleHash128 object instead (for KMAC, also accepting
+  keys shorter than the 32 bytes required for KMAC256).
+
 3.24.0 (4 October 2026)
 ++++++++++++++++++++++++++
 

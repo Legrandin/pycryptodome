@@ -24,35 +24,47 @@
 # SOFTWARE.
 # ===================================================================
 
-from __future__ import print_function
 
-import binascii
+from __future__ import annotations
 
-from Crypto.Util.py3compat import bord, bchr
+from typing import Dict, List
 
-binary = {0: '0000', 1: '0001', 2: '0010', 3: '0011', 4: '0100', 5: '0101',
-          6: '0110', 7: '0111', 8: '1000', 9: '1001', 10: '1010', 11: '1011',
-          12: '1100', 13: '1101', 14: '1110', 15: '1111'}
+binary: Dict[int, str] = {
+    0: "0000",
+    1: "0001",
+    2: "0010",
+    3: "0011",
+    4: "0100",
+    5: "0101",
+    6: "0110",
+    7: "0111",
+    8: "1000",
+    9: "1001",
+    10: "1010",
+    11: "1011",
+    12: "1100",
+    13: "1101",
+    14: "1110",
+    15: "1111",
+}
 
 
-def _key2bin(s):
+def _key2bin(s: bytes) -> str:
     "Convert a key into a string of binary digits"
-    kl = map(lambda x: bord(x), s)
-    kl = map(lambda x: binary[x >> 4] + binary[x & 15], kl)
-    return ''.join(kl)
+    return "".join(binary[x >> 4] + binary[x & 15] for x in s)
 
 
-def _extract(key, start, length):
-    """Extract a bitstring(2.x)/bytestring(2.x) from a string of binary digits, and return its
+def _extract(key: str, start: int, length: int) -> int:
+    """Extract a bitstring from a string of binary digits, and return its
     numeric value."""
 
     result = 0
-    for y in key[start:start+length]:
+    for y in key[start : start + length]:
         result = result * 2 + ord(y) - 48
     return result
 
 
-def key_to_english(key):
+def key_to_english(key: bytes) -> str:
     """Transform an arbitrary key into a string containing English words.
 
     Example::
@@ -69,25 +81,25 @@ def key_to_english(key):
     """
 
     if len(key) % 8 != 0:
-        raise ValueError('The length of the key must be a multiple of 8.')
+        raise ValueError("The length of the key must be a multiple of 8.")
 
-    english = ''
+    english = ""
     for index in range(0, len(key), 8):  # Loop over 8-byte subkeys
-        subkey = key[index:index + 8]
+        subkey = key[index : index + 8]
         # Compute the parity of the key
         skbin = _key2bin(subkey)
         p = 0
         for i in range(0, 64, 2):
             p = p + _extract(skbin, i, 2)
         # Append parity bits to the subkey
-        skbin = _key2bin(subkey + bchr((p << 6) & 255))
+        skbin = _key2bin(subkey + bytes([(p << 6) & 255]))
         for i in range(0, 64, 11):
-            english = english + wordlist[_extract(skbin, i, 11)] + ' '
+            english = english + wordlist[_extract(skbin, i, 11)] + " "
 
     return english.strip()
 
 
-def english_to_key(s):
+def english_to_key(s: str) -> bytes:
     """Transform a string into a corresponding key.
 
     Example::
@@ -104,17 +116,17 @@ def english_to_key(s):
     """
 
     L = s.upper().split()
-    key = b''
+    key = b""
     for index in range(0, len(L), 6):
-        sublist = L[index:index + 6]
+        sublist = L[index : index + 6]
         char = 9 * [0]
         bits = 0
-        for i in sublist:
-            index = wordlist.index(i)
+        for word in sublist:
+            index = wordlist.index(word)
             shift = (8 - (bits + 11) % 8) % 8
             y = index << shift
-            cl, cc, cr = (y >> 16), (y >> 8) & 0xff, y & 0xff
-            if (shift > 5):
+            cl, cc, cr = (y >> 16), (y >> 8) & 0xFF, y & 0xFF
+            if shift > 5:
                 char[bits >> 3] = char[bits >> 3] | cl
                 char[(bits >> 3) + 1] = char[(bits >> 3) + 1] | cc
                 char[(bits >> 3) + 2] = char[(bits >> 3) + 2] | cr
@@ -125,9 +137,9 @@ def english_to_key(s):
                 char[bits >> 3] = char[bits >> 3] | cr
             bits = bits + 11
 
-        subkey = b''
+        subkey = b""
         for y in char:
-            subkey = subkey + bchr(y)
+            subkey = subkey + bytes([y])
 
         # Check the parity of the resulting key
         skbin = _key2bin(subkey)
@@ -140,7 +152,8 @@ def english_to_key(s):
     return key
 
 
-wordlist = [
+# fmt: off
+wordlist: List[str] = [
    "A", "ABE", "ACE", "ACT", "AD", "ADA", "ADD",
    "AGO", "AID", "AIM", "AIR", "ALL", "ALP", "AM", "AMY", "AN", "ANA",
    "AND", "ANN", "ANT", "ANY", "APE", "APS", "APT", "ARC", "ARE", "ARK",
@@ -384,3 +397,4 @@ wordlist = [
    "WORE", "WORK", "WORM", "WORN", "WOVE", "WRIT", "WYNN", "YALE",
    "YANG", "YANK", "YARD", "YARN", "YAWL", "YAWN", "YEAH", "YEAR",
    "YELL", "YOGA", "YOKE" ]
+# fmt: on

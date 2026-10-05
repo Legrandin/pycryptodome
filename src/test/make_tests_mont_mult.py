@@ -1,18 +1,20 @@
 """Make unit test for mont_mult() and mont_mult_generic() in mont.c"""
 
-from common import counter, make_main, split64, inverse, bin2int
-from hashlib import sha256
 import struct
+from hashlib import sha256
+
+from common import bin2int, counter, inverse, make_main, split64
+
 
 def make_test(a, b, modulus, use_mont=True):
 
-    assert(0 <= a < modulus)
-    assert(0 <= b < modulus)
-    assert(modulus & 1)
+    assert 0 <= a < modulus
+    assert 0 <= b < modulus
+    assert modulus & 1
 
     R = 1
     nw = 0
-    B = 1<<64
+    B = 1 << 64
     while modulus >= R:
         R <<= 64
         nw += 1
@@ -20,15 +22,15 @@ def make_test(a, b, modulus, use_mont=True):
     if not use_mont:
         R = 1
 
-    n0 = modulus & (B-1)
+    n0 = modulus & (B - 1)
     m0 = -inverse(n0, B) % B
-    assert(0 < m0 < B)
+    assert 0 < m0 < B
 
-    a_m = (a*R) % modulus
-    b_m = (b*R) % modulus
+    a_m = (a * R) % modulus
+    b_m = (b * R) % modulus
 
     # What we expect the function to compute
-    result_m = (a*b*R) % modulus
+    result_m = (a * b * R) % modulus
 
     # Turn data into arrays of 64-bit words
     a_m_s = split64(a_m)
@@ -54,8 +56,8 @@ def make_test(a, b, modulus, use_mont=True):
         print("    const uint64_t b[] = {" + ", ".join(b_m_s) + "};")
         print("    const uint64_t n[] = {" + ", ".join(modulus_s) + "};")
         print("    const uint64_t expected[] = {" + ", ".join(result_m_s) + "};")
-        print("    uint64_t out[%d];" % (nw+1))
-        print("    uint64_t scratch[%d];" % (7*nw))
+        print("    uint64_t out[%d];" % (nw + 1))
+        print("    uint64_t scratch[%d];" % (7 * nw))
         print("")
         print("    memset(out, 0xAA, sizeof out);")
         print("    mont_mult_generic(out, a, b, n, %dUL, scratch, %d);" % (m0, nw))
@@ -71,10 +73,10 @@ def make_test(a, b, modulus, use_mont=True):
     print("    const uint64_t b[] = {" + ", ".join(b_m_s) + "};")
     print("    const uint8_t modulus[] = {" + ", ".join(modulus_b) + "};")
     print("    const uint64_t expected[] = {" + ", ".join(result_m_s) + "};")
-    print("    uint64_t out[%d];" % (nw+1))
+    print("    uint64_t out[%d];" % (nw + 1))
     print("    MontContext *ctx;")
     print("    int res;")
-    print("    uint64_t scratch[%d];" % (7*nw))
+    print("    uint64_t scratch[%d];" % (7 * nw))
     print("")
     print()
     print("    res = mont_context_init(&ctx, modulus, sizeof modulus);")
@@ -89,29 +91,34 @@ def make_test(a, b, modulus, use_mont=True):
     print("")
 
 
-
 print("#include <assert.h>")
 print("#include <string.h>")
 print("#include <stdint.h>")
 print("#include <stdio.h>")
 print('#include "mont.h"')
 print("")
-print("void mont_mult_generic(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *t, size_t nw);")
+print(
+    "void mont_mult_generic(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, uint64_t m0, uint64_t *t, size_t nw);"
+)
 
 p256 = 115792089210356248762697446949407573530086143415290314195533631308867097853951
 p384 = 39402006196394479212279040100143613805079739270465446667948293404245721771496870329047266088258938001861606973112319
-p521 = 0x000001ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff
+p521 = 0x000001FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
 
 make_test(2, 3, 255)
 make_test(2, 240, 255)
 make_test(189, 240, 255)
 make_test(189, 240, 32984723984723984723847)
 make_test(189000000, 7878787878, 32984723984723984723847)
-make_test(1890000003439483948394839843434, 78787878780003984834673498384734, 3298472398472398472384798743287438734875384758435834539400000033988787)
+make_test(
+    1890000003439483948394839843434,
+    78787878780003984834673498384734,
+    3298472398472398472384798743287438734875384758435834539400000033988787,
+)
 
 for x in range(100):
-    modulus_len = x//10 + 5 # 40 bit .. 112 bits
-    modulus = bin2int(sha256(b"modulus" + struct.pack(">I", x)).digest()[:-modulus_len]) |  1
+    modulus_len = x // 10 + 5  # 40 bit .. 112 bits
+    modulus = bin2int(sha256(b"modulus" + struct.pack(">I", x)).digest()[:-modulus_len]) | 1
     a = bin2int(sha256(b"a" + struct.pack(">I", x)).digest()) % modulus
     b = bin2int(sha256(b"b" + struct.pack(">I", x)).digest()) % modulus
     make_test(a, b, modulus)

@@ -28,11 +28,19 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+from __future__ import annotations
+
+from typing import Optional, Union
+
 from . import cSHAKE256
 from .TupleHash128 import TupleHash
 
+Buffer = Union[bytes, bytearray, memoryview]
 
-def new(**kwargs):
+
+def new(
+    *, digest_bytes: Optional[int] = None, digest_bits: Optional[int] = None, custom: Buffer = b""
+) -> TupleHash:
     """Create a new TupleHash256 object.
 
     Args:
@@ -50,21 +58,16 @@ def new(**kwargs):
     :Return: A :class:`TupleHash` object
     """
 
-    digest_bytes = kwargs.pop("digest_bytes", None)
-    digest_bits = kwargs.pop("digest_bits", None)
     if None not in (digest_bytes, digest_bits):
         raise TypeError("Only one digest parameter must be provided")
-    if (None, None) == (digest_bytes, digest_bits):
-        digest_bytes = 64
-    if digest_bytes is not None:
+    if digest_bits is None:
+        if digest_bytes is None:
+            digest_bytes = 64
         if digest_bytes < 8:
             raise ValueError("'digest_bytes' must be at least 8")
     else:
         if digest_bits < 64 or digest_bits % 8:
-            raise ValueError("'digest_bytes' must be at least 64 "
-                             "in steps of 8")
+            raise ValueError("'digest_bytes' must be at least 64 in steps of 8")
         digest_bytes = digest_bits // 8
-
-    custom = kwargs.pop("custom", b'')
 
     return TupleHash(custom, cSHAKE256, digest_bytes)

@@ -28,8 +28,13 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from Crypto.Util._raw_api import c_size_t
+from __future__ import annotations
+
+from typing import Optional, Union
+
 from Crypto.Hash.cSHAKE128 import cSHAKE_XOF
+
+Buffer = Union[bytes, bytearray, memoryview]
 
 
 def _new(data, custom, function):
@@ -37,7 +42,7 @@ def _new(data, custom, function):
     return cSHAKE_XOF(data, custom, 512, function)
 
 
-def new(data=None, custom=None):
+def new(data: Optional[Buffer] = None, custom: Optional[Buffer] = None) -> cSHAKE_XOF:
     """Return a fresh instance of a cSHAKE256 object.
 
     Args:
@@ -53,4 +58,4 @@ def new(data=None, custom=None):
     """
 
     # Use Keccak[512]
-    return cSHAKE_XOF(data, custom, 512, b'')
+    return cSHAKE_XOF(data, custom, 512, b"")

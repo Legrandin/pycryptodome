@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # ===================================================================
 # The contents of this file are dedicated to the public domain.  To
@@ -23,4 +22,4 @@
 
 """Deprecated alias for `Crypto.Hash.RIPEMD160`"""
 
-from Crypto.Hash.RIPEMD160 import new, block_size, digest_size
+from Crypto.Hash.RIPEMD160 import block_size, digest_size, new

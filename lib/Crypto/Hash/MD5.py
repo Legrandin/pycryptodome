@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 # ===================================================================
 # The contents of this file are dedicated to the public domain.  To
@@ -18,16 +17,26 @@
 # SOFTWARE.
 # ===================================================================
 
-from Crypto.Util.py3compat import *
 
-from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
-                                  VoidPointer, SmartPointer,
-                                  create_string_buffer,
-                                  get_raw_buffer, c_size_t,
-                                  c_uint8_ptr)
+from __future__ import annotations
 
-_raw_md5_lib = load_pycryptodome_raw_lib("Crypto.Hash._MD5",
-                        """
+from typing import Optional, Union
+
+from Crypto.Util._raw_api import (
+    SmartPointer,
+    VoidPointer,
+    c_size_t,
+    c_uint8_ptr,
+    create_string_buffer,
+    get_raw_buffer,
+    load_pycryptodome_raw_lib,
+)
+
+Buffer = Union[bytes, bytearray, memoryview]
+
+_raw_md5_lib = load_pycryptodome_raw_lib(
+    "Crypto.Hash._MD5",
+    """
                         #define MD5_DIGEST_SIZE 16
 
                         int MD5_init(void **shaState);
@@ -44,9 +53,11 @@ _raw_md5_lib = load_pycryptodome_raw_lib("Crypto.Hash._MD5",
                                             const uint8_t first_digest[MD5_DIGEST_SIZE],
                                             uint8_t final_digest[MD5_DIGEST_SIZE],
                                             size_t iterations);
-                        """)
+                        """,
+)
 
-class MD5Hash(object):
+
+class MD5Hash:
     """A MD5 hash object.
     Do not instantiate directly.
     Use the :func:`new` function.
@@ -63,38 +74,33 @@ class MD5Hash(object):
     """
 
     # The size of the resulting hash in bytes.
-    digest_size = 16
+    digest_size: int = 16
     # The internal block size of the hash algorithm in bytes.
-    block_size = 64
+    block_size: int = 64
     # ASN.1 Object ID
-    oid = "1.2.840.113549.2.5"
+    oid: str = "1.2.840.113549.2.5"
 
-    def __init__(self, data=None):
+    def __init__(self, data: Optional[Buffer] = None) -> None:
         state = VoidPointer()
         result = _raw_md5_lib.MD5_init(state.address_of())
         if result:
-            raise ValueError("Error %d while instantiating MD5"
-                             % result)
-        self._state = SmartPointer(state.get(),
-                                   _raw_md5_lib.MD5_destroy)
+            raise ValueError("Error %d while instantiating MD5" % result)
+        self._state = SmartPointer(state.get(), _raw_md5_lib.MD5_destroy)
         if data:
             self.update(data)
 
-    def update(self, data):
+    def update(self, data: Buffer) -> None:
         """Continue hashing of a message by consuming the next chunk of data.
 
         Args:
             data (byte string/byte array/memoryview): The next chunk of the message being hashed.
         """
 
-        result = _raw_md5_lib.MD5_update(self._state.get(),
-                                         c_uint8_ptr(data),
-                                         c_size_t(len(data)))
+        result = _raw_md5_lib.MD5_update(self._state.get(), c_uint8_ptr(data), c_size_t(len(data)))
         if result:
-            raise ValueError("Error %d while instantiating MD5"
-                             % result)
+            raise ValueError("Error %d while instantiating MD5" % result)
 
-    def digest(self):
+    def digest(self) -> bytes:
         """Return the **binary** (non-printable) digest of the message that has been hashed so far.
 
         :return: The hash digest, computed over the data processed so far.
@@ -103,15 +109,13 @@ class MD5Hash(object):
         """
 
         bfr = create_string_buffer(self.digest_size)
-        result = _raw_md5_lib.MD5_digest(self._state.get(),
-                                           bfr)
+        result = _raw_md5_lib.MD5_digest(self._state.get(), bfr)
         if result:
-            raise ValueError("Error %d while instantiating MD5"
-                             % result)
+            raise ValueError("Error %d while instantiating MD5" % result)
 
         return get_raw_buffer(bfr)
 
-    def hexdigest(self):
+    def hexdigest(self) -> str:
         """Return the **printable** digest of the message that has been hashed so far.
 
         :return: The hash digest, computed over the data processed so far.
@@ -119,9 +123,9 @@ class MD5Hash(object):
         :rtype: string
         """
 
-        return "".join(["%02x" % bord(x) for x in self.digest()])
+        return "".join(["%02x" % x for x in self.digest()])
 
-    def copy(self):
+    def copy(self) -> MD5Hash:
         """Return a copy ("clone") of the hash object.
 
         The copy will have the same internal state as the original hash
@@ -133,19 +137,18 @@ class MD5Hash(object):
         """
 
         clone = MD5Hash()
-        result = _raw_md5_lib.MD5_copy(self._state.get(),
-                                         clone._state.get())
+        result = _raw_md5_lib.MD5_copy(self._state.get(), clone._state.get())
         if result:
             raise ValueError("Error %d while copying MD5" % result)
         return clone
 
-    def new(self, data=None):
+    def new(self, data: Optional[Buffer] = None) -> MD5Hash:
         """Create a fresh SHA-1 hash object."""
 
         return MD5Hash(data)
 
 
-def new(data=None):
+def new(data: Optional[Buffer] = None) -> MD5Hash:
     """Create a new hash object.
 
     :parameter data:
@@ -157,11 +160,12 @@ def new(data=None):
     """
     return MD5Hash().new(data)
 
+
 # The size of the resulting hash in bytes.
-digest_size = 16
+digest_size: int = 16
 
 # The internal block size of the hash algorithm in bytes.
-block_size = 64
+block_size: int = 64
 
 
 def _pbkdf2_hmac_assist(inner, outer, first_digest, iterations):
@@ -170,13 +174,10 @@ def _pbkdf2_hmac_assist(inner, outer, first_digest, iterations):
     assert len(first_digest) == digest_size
     assert iterations > 0
 
-    bfr = create_string_buffer(digest_size);
+    bfr = create_string_buffer(digest_size)
     result = _raw_md5_lib.MD5_pbkdf2_hmac_assist(
-                    inner._state.get(),
-                    outer._state.get(),
-                    first_digest,
-                    bfr,
-                    c_size_t(iterations))
+        inner._state.get(), outer._state.get(), first_digest, bfr, c_size_t(iterations)
+    )
 
     if result:
         raise ValueError("Error %d with PBKDF2-HMAC assis for MD5" % result)

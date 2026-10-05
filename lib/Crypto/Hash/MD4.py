@@ -43,17 +43,25 @@ This algorithm is insecure. Do not use it for new designs.
 .. _RFC1320: http://tools.ietf.org/html/rfc1320
 """
 
-from Crypto.Util.py3compat import bord
+from __future__ import annotations
 
-from Crypto.Util._raw_api import (load_pycryptodome_raw_lib,
-                                  VoidPointer, SmartPointer,
-                                  create_string_buffer,
-                                  get_raw_buffer, c_size_t,
-                                  c_uint8_ptr)
+from typing import Optional, Union
+
+from Crypto.Util._raw_api import (
+    SmartPointer,
+    VoidPointer,
+    c_size_t,
+    c_uint8_ptr,
+    create_string_buffer,
+    get_raw_buffer,
+    load_pycryptodome_raw_lib,
+)
+
+Buffer = Union[bytes, bytearray, memoryview]
 
 _raw_md4_lib = load_pycryptodome_raw_lib(
-                        "Crypto.Hash._MD4",
-                        """
+    "Crypto.Hash._MD4",
+    """
                         int md4_init(void **shaState);
                         int md4_destroy(void *shaState);
                         int md4_update(void *hs,
@@ -62,32 +70,30 @@ _raw_md4_lib = load_pycryptodome_raw_lib(
                         int md4_digest(const void *shaState,
                                           uint8_t digest[20]);
                         int md4_copy(const void *src, void *dst);
-                        """)
+                        """,
+)
 
 
-class MD4Hash(object):
-    """Class that implements an MD4 hash
-    """
+class MD4Hash:
+    """Class that implements an MD4 hash"""
 
     #: The size of the resulting hash in bytes.
-    digest_size = 16
+    digest_size: int = 16
     #: The internal block size of the hash algorithm in bytes.
-    block_size = 64
+    block_size: int = 64
     #: ASN.1 Object ID
-    oid = "1.2.840.113549.2.4"
+    oid: str = "1.2.840.113549.2.4"
 
-    def __init__(self, data=None):
+    def __init__(self, data: Optional[Buffer] = None) -> None:
         state = VoidPointer()
         result = _raw_md4_lib.md4_init(state.address_of())
         if result:
-            raise ValueError("Error %d while instantiating MD4"
-                             % result)
-        self._state = SmartPointer(state.get(),
-                                   _raw_md4_lib.md4_destroy)
+            raise ValueError("Error %d while instantiating MD4" % result)
+        self._state = SmartPointer(state.get(), _raw_md4_lib.md4_destroy)
         if data:
             self.update(data)
 
-    def update(self, data):
+    def update(self, data: Buffer) -> None:
         """Continue hashing of a message by consuming the next chunk of data.
 
         Repeated calls are equivalent to a single call with the concatenation
@@ -104,14 +110,11 @@ class MD4Hash(object):
             The next chunk of the message being hashed.
         """
 
-        result = _raw_md4_lib.md4_update(self._state.get(),
-                                         c_uint8_ptr(data),
-                                         c_size_t(len(data)))
+        result = _raw_md4_lib.md4_update(self._state.get(), c_uint8_ptr(data), c_size_t(len(data)))
         if result:
-            raise ValueError("Error %d while instantiating MD4"
-                             % result)
+            raise ValueError("Error %d while instantiating MD4" % result)
 
-    def digest(self):
+    def digest(self) -> bytes:
         """Return the **binary** (non-printable) digest of the message that
         has been hashed so far.
 
@@ -123,15 +126,13 @@ class MD4Hash(object):
         """
 
         bfr = create_string_buffer(self.digest_size)
-        result = _raw_md4_lib.md4_digest(self._state.get(),
-                                         bfr)
+        result = _raw_md4_lib.md4_digest(self._state.get(), bfr)
         if result:
-            raise ValueError("Error %d while instantiating MD4"
-                             % result)
+            raise ValueError("Error %d while instantiating MD4" % result)
 
         return get_raw_buffer(bfr)
 
-    def hexdigest(self):
+    def hexdigest(self) -> str:
         """Return the **printable** digest of the message that has been
         hashed so far.
 
@@ -141,9 +142,9 @@ class MD4Hash(object):
          hexadecimal ASCII digits.
         """
 
-        return "".join(["%02x" % bord(x) for x in self.digest()])
+        return "".join(["%02x" % x for x in self.digest()])
 
-    def copy(self):
+    def copy(self) -> MD4Hash:
         """Return a copy ("clone") of the hash object.
 
         The copy will have the same internal state as the original hash
@@ -155,17 +156,16 @@ class MD4Hash(object):
         """
 
         clone = MD4Hash()
-        result = _raw_md4_lib.md4_copy(self._state.get(),
-                                       clone._state.get())
+        result = _raw_md4_lib.md4_copy(self._state.get(), clone._state.get())
         if result:
             raise ValueError("Error %d while copying MD4" % result)
         return clone
 
-    def new(self, data=None):
+    def new(self, data: Optional[Buffer] = None) -> MD4Hash:
         return MD4Hash(data)
 
 
-def new(data=None):
+def new(data: Optional[Buffer] = None) -> MD4Hash:
     """Return a fresh instance of the hash object.
 
     :Parameters:
@@ -178,8 +178,9 @@ def new(data=None):
     """
     return MD4Hash().new(data)
 
+
 #: The size of the resulting hash in bytes.
-digest_size = MD4Hash.digest_size
+digest_size: int = MD4Hash.digest_size
 
 #: The internal block size of the hash algorithm in bytes.
-block_size = MD4Hash.block_size
+block_size: int = MD4Hash.block_size

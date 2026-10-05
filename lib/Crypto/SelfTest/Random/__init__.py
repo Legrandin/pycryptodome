@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 #
 #  SelfTest/Random/__init__.py: Self-test for random number generation modules
 #
@@ -25,15 +24,3 @@
 """Self-test for random number generators"""
 
 __revision__ = "$Id$"
-
-def get_tests(config={}):
-    tests = []
-    from Crypto.SelfTest.Random import test_random;         tests += test_random.get_tests(config=config)
-    return tests
-
-if __name__ == '__main__':
-    import unittest
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
-
-# vim:set ts=4 sw=4 sts=4 expandtab:

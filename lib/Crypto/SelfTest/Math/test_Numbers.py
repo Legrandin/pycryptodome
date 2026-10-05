@@ -33,19 +33,27 @@
 
 """Self-test for Math.Numbers"""
 
-import sys
-import unittest
-
-from Crypto.SelfTest.st_common import list_test_cases
-
-from Crypto.Util.py3compat import *
+import pytest
 
 from Crypto.Math._IntegerNative import IntegerNative
 
+try:
+    from Crypto.Math._IntegerGMP import IntegerGMP
 
-class TestIntegerBase(unittest.TestCase):
+    _gmp_error = None
+except (ImportError, OSError) as e:
+    _gmp_error = e
 
-    def setUp(self):
+try:
+    from Crypto.Math._IntegerCustom import IntegerCustom
+
+    _custom_error = None
+except (ImportError, OSError) as e:
+    _custom_error = e
+
+
+class IntegerTests:
+    def setup_method(self):
         raise NotImplementedError("To be implemented")
 
     def Integers(self, *arg):
@@ -57,293 +65,309 @@ class TestIntegerBase(unittest.TestCase):
         v1 = Integer(23)
         v2 = Integer(v1)
         v3 = Integer(-9)
-        self.assertRaises(ValueError, Integer, 1.0)
+        with pytest.raises(ValueError):
+            Integer(1.0)
 
         v4 = Integer(10**10)
-        v5 = Integer(-10**10)
+        v5 = Integer(-(10**10))
 
         v6 = Integer(0xFFFF)
         v7 = Integer(0xFFFFFFFF)
         v8 = Integer(0xFFFFFFFFFFFFFFFF)
 
-        self.assertEqual(v1, v1)
-        self.assertEqual(v1, 23)
-        self.assertEqual(v1, v2)
-        self.assertEqual(v3, -9)
-        self.assertEqual(v4, 10 ** 10)
-        self.assertEqual(v5, -10 ** 10)
-        self.assertEqual(v6, 0xFFFF)
-        self.assertEqual(v7, 0xFFFFFFFF)
-        self.assertEqual(v8, 0xFFFFFFFFFFFFFFFF)
+        assert v1 == v1
+        assert v1 == 23
+        assert v1 == v2
+        assert v3 == -9
+        assert v4 == 10**10
+        assert v5 == -(10**10)
+        assert v6 == 0xFFFF
+        assert v7 == 0xFFFFFFFF
+        assert v8 == 0xFFFFFFFFFFFFFFFF
 
-        self.assertFalse(v1 == v4)
+        assert not (v1 == v4)  # noqa: SIM201 (tests __eq__)
 
         # Init and comparison between Integer's
         v6 = Integer(v1)
-        self.assertEqual(v1, v6)
+        assert v1 == v6
 
-        self.assertFalse(Integer(0) == None)
+        assert not (Integer(0) == None)  # noqa: E711, SIM201 (tests __eq__)
 
     def test_conversion_to_int(self):
-        v1, v2 = self.Integers(-23, 2 ** 1000)
-        self.assertEqual(int(v1), -23)
-        self.assertEqual(int(v2), 2 ** 1000)
+        v1, v2 = self.Integers(-23, 2**1000)
+        assert int(v1) == -23
+        assert int(v2) == 2**1000
 
     def test_equality_with_ints(self):
-        v1, v2, v3 = self.Integers(23, -89, 2 ** 1000)
-        self.assertTrue(v1 == 23)
-        self.assertTrue(v2 == -89)
-        self.assertFalse(v1 == 24)
-        self.assertTrue(v3 == 2 ** 1000)
+        v1, v2, v3 = self.Integers(23, -89, 2**1000)
+        assert v1 == 23
+        assert v2 == -89
+        assert not (v1 == 24)  # noqa: SIM201 (tests __eq__)
+        assert v3 == 2**1000
 
     def test_conversion_to_str(self):
-        v1, v2, v3, v4 = self.Integers(20, 0, -20, 2 ** 1000)
-        self.assertTrue(str(v1) == "20")
-        self.assertTrue(str(v2) == "0")
-        self.assertTrue(str(v3) == "-20")
-        self.assertTrue(str(v4) == "10715086071862673209484250490600018105614048117055336074437503883703510511249361224931983788156958581275946729175531468251871452856923140435984577574698574803934567774824230985421074605062371141877954182153046474983581941267398767559165543946077062914571196477686542167660429831652624386837205668069376")
+        v1, v2, v3, v4 = self.Integers(20, 0, -20, 2**1000)
+        assert str(v1) == "20"
+        assert str(v2) == "0"
+        assert str(v3) == "-20"
+        assert (
+            str(v4)
+            == "10715086071862673209484250490600018105614048117055336074437503883703510511249361224931983788156958581275946729175531468251871452856923140435984577574698574803934567774824230985421074605062371141877954182153046474983581941267398767559165543946077062914571196477686542167660429831652624386837205668069376"
+        )
 
     def test_repr(self):
         v1, v2 = self.Integers(-1, 2**80)
-        self.assertEqual(repr(v1), "Integer(-1)")
-        self.assertEqual(repr(v2), "Integer(1208925819614629174706176)")
+        assert repr(v1) == "Integer(-1)"
+        assert repr(v2) == "Integer(1208925819614629174706176)"
 
     def test_conversion_to_bytes(self):
         Integer = self.Integer
 
         v0 = Integer(0)
-        self.assertEqual(b"\x00", v0.to_bytes())
+        assert v0.to_bytes() == b"\x00"
 
         v1 = Integer(0x17)
-        self.assertEqual(b"\x17", v1.to_bytes())
+        assert v1.to_bytes() == b"\x17"
 
         v2 = Integer(0xFFFE)
-        self.assertEqual(b"\xFF\xFE", v2.to_bytes())
-        self.assertEqual(b"\x00\xFF\xFE", v2.to_bytes(3))
-        self.assertRaises(ValueError, v2.to_bytes, 1)
+        assert v2.to_bytes() == b"\xff\xfe"
+        assert v2.to_bytes(3) == b"\x00\xff\xfe"
+        with pytest.raises(ValueError):
+            v2.to_bytes(1)
 
-        self.assertEqual(b"\xFE\xFF", v2.to_bytes(byteorder='little'))
-        self.assertEqual(b"\xFE\xFF\x00", v2.to_bytes(3, byteorder='little'))
+        assert v2.to_bytes(byteorder="little") == b"\xfe\xff"
+        assert v2.to_bytes(3, byteorder="little") == b"\xfe\xff\x00"
 
         v3 = Integer(0xFF00AABBCCDDEE1122)
-        self.assertEqual(b"\xFF\x00\xAA\xBB\xCC\xDD\xEE\x11\x22", v3.to_bytes())
-        self.assertEqual(b"\x22\x11\xEE\xDD\xCC\xBB\xAA\x00\xFF",
-                         v3.to_bytes(byteorder='little'))
-        self.assertEqual(b"\x00\xFF\x00\xAA\xBB\xCC\xDD\xEE\x11\x22",
-                         v3.to_bytes(10))
-        self.assertEqual(b"\x22\x11\xEE\xDD\xCC\xBB\xAA\x00\xFF\x00",
-                         v3.to_bytes(10, byteorder='little'))
-        self.assertRaises(ValueError, v3.to_bytes, 8)
+        assert v3.to_bytes() == b"\xff\x00\xaa\xbb\xcc\xdd\xee\x11\x22"
+        assert v3.to_bytes(byteorder="little") == b"\x22\x11\xee\xdd\xcc\xbb\xaa\x00\xff"
+        assert v3.to_bytes(10) == b"\x00\xff\x00\xaa\xbb\xcc\xdd\xee\x11\x22"
+        assert v3.to_bytes(10, byteorder="little") == b"\x22\x11\xee\xdd\xcc\xbb\xaa\x00\xff\x00"
+        with pytest.raises(ValueError):
+            v3.to_bytes(8)
 
         v4 = Integer(-90)
-        self.assertRaises(ValueError, v4.to_bytes)
-        self.assertRaises(ValueError, v4.to_bytes, byteorder='bittle')
+        with pytest.raises(ValueError):
+            v4.to_bytes()
+        with pytest.raises(ValueError):
+            v4.to_bytes(byteorder="bittle")
 
     def test_conversion_from_bytes(self):
         Integer = self.Integer
 
         v1 = Integer.from_bytes(b"\x00")
-        self.assertTrue(isinstance(v1, Integer))
-        self.assertEqual(0, v1)
+        assert isinstance(v1, Integer)
+        assert v1 == 0
 
         v2 = Integer.from_bytes(b"\x00\x01")
-        self.assertEqual(1, v2)
+        assert v2 == 1
 
-        v3 = Integer.from_bytes(b"\xFF\xFF")
-        self.assertEqual(0xFFFF, v3)
+        v3 = Integer.from_bytes(b"\xff\xff")
+        assert v3 == 0xFFFF
 
-        v4 = Integer.from_bytes(b"\x00\x01", 'big')
-        self.assertEqual(1, v4)
+        v4 = Integer.from_bytes(b"\x00\x01", "big")
+        assert v4 == 1
 
-        v5 = Integer.from_bytes(b"\x00\x01", byteorder='big')
-        self.assertEqual(1, v5)
+        v5 = Integer.from_bytes(b"\x00\x01", byteorder="big")
+        assert v5 == 1
 
-        v6 = Integer.from_bytes(b"\x00\x01", byteorder='little')
-        self.assertEqual(0x0100, v6)
+        v6 = Integer.from_bytes(b"\x00\x01", byteorder="little")
+        assert v6 == 0x0100
 
-        self.assertRaises(ValueError, Integer.from_bytes, b'\x09', 'bittle')
+        with pytest.raises(ValueError):
+            Integer.from_bytes(b"\x09", "bittle")
 
     def test_inequality(self):
         # Test Integer!=Integer and Integer!=int
         v1, v2, v3, v4 = self.Integers(89, 89, 90, -8)
-        self.assertTrue(v1 != v3)
-        self.assertTrue(v1 != 90)
-        self.assertFalse(v1 != v2)
-        self.assertFalse(v1 != 89)
-        self.assertTrue(v1 != v4)
-        self.assertTrue(v4 != v1)
-        self.assertTrue(self.Integer(0) != None)
+        assert v1 != v3
+        assert v1 != 90
+        assert not (v1 != v2)  # noqa: SIM202 (tests __ne__)
+        assert not (v1 != 89)  # noqa: SIM202 (tests __ne__)
+        assert v1 != v4
+        assert v4 != v1
+        assert self.Integer(0) != None  # noqa: E711 (tests __ne__)
 
     def test_less_than(self):
         # Test Integer<Integer and Integer<int
-        v1, v2, v3, v4, v5 = self.Integers(13, 13, 14, -8, 2 ** 10)
-        self.assertTrue(v1 < v3)
-        self.assertTrue(v1 < 14)
-        self.assertFalse(v1 < v2)
-        self.assertFalse(v1 < 13)
-        self.assertTrue(v4 < v1)
-        self.assertFalse(v1 < v4)
-        self.assertTrue(v1 < v5)
-        self.assertFalse(v5 < v1)
+        v1, v2, v3, v4, v5 = self.Integers(13, 13, 14, -8, 2**10)
+        assert v1 < v3
+        assert v1 < 14
+        assert not (v1 < v2)
+        assert not (v1 < 13)
+        assert v4 < v1
+        assert not (v1 < v4)
+        assert v1 < v5
+        assert not (v5 < v1)
 
     def test_less_than_or_equal(self):
         # Test Integer<=Integer and Integer<=int
-        v1, v2, v3, v4, v5 = self.Integers(13, 13, 14, -4, 2 ** 10)
-        self.assertTrue(v1 <= v1)
-        self.assertTrue(v1 <= 13)
-        self.assertTrue(v1 <= v2)
-        self.assertTrue(v1 <= 14)
-        self.assertTrue(v1 <= v3)
-        self.assertFalse(v1 <= v4)
-        self.assertTrue(v1 <= v5)
-        self.assertFalse(v5 <= v1)
+        v1, v2, v3, v4, v5 = self.Integers(13, 13, 14, -4, 2**10)
+        assert v1 <= v1
+        assert v1 <= 13
+        assert v1 <= v2
+        assert v1 <= 14
+        assert v1 <= v3
+        assert not (v1 <= v4)
+        assert v1 <= v5
+        assert not (v5 <= v1)
 
     def test_more_than(self):
         # Test Integer>Integer and Integer>int
-        v1, v2, v3, v4, v5 = self.Integers(13, 13, 14, -8, 2 ** 10)
-        self.assertTrue(v3 > v1)
-        self.assertTrue(v3 > 13)
-        self.assertFalse(v1 > v1)
-        self.assertFalse(v1 > v2)
-        self.assertFalse(v1 > 13)
-        self.assertTrue(v1 > v4)
-        self.assertFalse(v4 > v1)
-        self.assertTrue(v5 > v1)
-        self.assertFalse(v1 > v5)
+        v1, v2, v3, v4, v5 = self.Integers(13, 13, 14, -8, 2**10)
+        assert v3 > v1
+        assert v3 > 13
+        assert not (v1 > v1)
+        assert not (v1 > v2)
+        assert not (v1 > 13)
+        assert v1 > v4
+        assert not (v4 > v1)
+        assert v5 > v1
+        assert not (v1 > v5)
 
     def test_more_than_or_equal(self):
         # Test Integer>=Integer and Integer>=int
         v1, v2, v3, v4 = self.Integers(13, 13, 14, -4)
-        self.assertTrue(v3 >= v1)
-        self.assertTrue(v3 >= 13)
-        self.assertTrue(v1 >= v2)
-        self.assertTrue(v1 >= v1)
-        self.assertTrue(v1 >= 13)
-        self.assertFalse(v4 >= v1)
+        assert v3 >= v1
+        assert v3 >= 13
+        assert v1 >= v2
+        assert v1 >= v1
+        assert v1 >= 13
+        assert not (v4 >= v1)
 
     def test_bool(self):
-        v1, v2, v3, v4 = self.Integers(0, 10, -9, 2 ** 10)
-        self.assertFalse(v1)
-        self.assertFalse(bool(v1))
-        self.assertTrue(v2)
-        self.assertTrue(bool(v2))
-        self.assertTrue(v3)
-        self.assertTrue(v4)
+        v1, v2, v3, v4 = self.Integers(0, 10, -9, 2**10)
+        assert not v1
+        assert not bool(v1)
+        assert v2
+        assert bool(v2)
+        assert v3
+        assert v4
 
     def test_is_negative(self):
-        v1, v2, v3, v4, v5 = self.Integers(-3 ** 100, -3, 0, 3, 3**100)
-        self.assertTrue(v1.is_negative())
-        self.assertTrue(v2.is_negative())
-        self.assertFalse(v4.is_negative())
-        self.assertFalse(v5.is_negative())
+        v1, v2, _v3, v4, v5 = self.Integers(-(3**100), -3, 0, 3, 3**100)
+        assert v1.is_negative()
+        assert v2.is_negative()
+        assert not v4.is_negative()
+        assert not v5.is_negative()
 
     def test_addition(self):
         # Test Integer+Integer and Integer+int
         v1, v2, v3 = self.Integers(7, 90, -7)
-        self.assertTrue(isinstance(v1 + v2, self.Integer))
-        self.assertEqual(v1 + v2, 97)
-        self.assertEqual(v1 + 90, 97)
-        self.assertEqual(v1 + v3, 0)
-        self.assertEqual(v1 + (-7), 0)
-        self.assertEqual(v1 + 2 ** 10, 2 ** 10 + 7)
+        assert isinstance(v1 + v2, self.Integer)
+        assert v1 + v2 == 97
+        assert v1 + 90 == 97
+        assert v1 + v3 == 0
+        assert v1 + (-7) == 0
+        assert v1 + 2**10 == 2**10 + 7
 
     def test_subtraction(self):
         # Test Integer-Integer and Integer-int
         v1, v2, v3 = self.Integers(7, 90, -7)
-        self.assertTrue(isinstance(v1 - v2, self.Integer))
-        self.assertEqual(v2 - v1, 83)
-        self.assertEqual(v2 - 7, 83)
-        self.assertEqual(v2 - v3, 97)
-        self.assertEqual(v1 - (-7), 14)
-        self.assertEqual(v1 - 2 ** 10, 7 - 2 ** 10)
+        assert isinstance(v1 - v2, self.Integer)
+        assert v2 - v1 == 83
+        assert v2 - 7 == 83
+        assert v2 - v3 == 97
+        assert v1 - (-7) == 14
+        assert v1 - 2**10 == 7 - 2**10
 
     def test_multiplication(self):
         # Test Integer-Integer and Integer-int
-        v1, v2, v3, v4 = self.Integers(4, 5, -2, 2 ** 10)
-        self.assertTrue(isinstance(v1 * v2, self.Integer))
-        self.assertEqual(v1 * v2, 20)
-        self.assertEqual(v1 * 5, 20)
-        self.assertEqual(v1 * -2, -8)
-        self.assertEqual(v1 * 2 ** 10, 4 * (2 ** 10))
+        v1, v2, _v3, _v4 = self.Integers(4, 5, -2, 2**10)
+        assert isinstance(v1 * v2, self.Integer)
+        assert v1 * v2 == 20
+        assert v1 * 5 == 20
+        assert v1 * -2 == -8
+        assert v1 * 2**10 == 4 * (2**10)
 
     def test_floor_div(self):
-        v1, v2, v3 = self.Integers(3, 8, 2 ** 80)
-        self.assertTrue(isinstance(v1 // v2, self.Integer))
-        self.assertEqual(v2 // v1, 2)
-        self.assertEqual(v2 // 3, 2)
-        self.assertEqual(v2 // -3, -3)
-        self.assertEqual(v3 // 2 ** 79, 2)
-        self.assertRaises(ZeroDivisionError, lambda: v1 // 0)
+        v1, v2, v3 = self.Integers(3, 8, 2**80)
+        assert isinstance(v1 // v2, self.Integer)
+        assert v2 // v1 == 2
+        assert v2 // 3 == 2
+        assert v2 // -3 == -3
+        assert v3 // 2**79 == 2
+        with pytest.raises(ZeroDivisionError):
+            v1 // 0
 
     def test_remainder(self):
         # Test Integer%Integer and Integer%int
         v1, v2, v3 = self.Integers(23, 5, -4)
-        self.assertTrue(isinstance(v1 % v2, self.Integer))
-        self.assertEqual(v1 % v2, 3)
-        self.assertEqual(v1 % 5, 3)
-        self.assertEqual(v3 % 5, 1)
-        self.assertEqual(v1 % 2 ** 10, 23)
-        self.assertRaises(ZeroDivisionError, lambda: v1 % 0)
-        self.assertRaises(ValueError, lambda: v1 % -6)
+        assert isinstance(v1 % v2, self.Integer)
+        assert v1 % v2 == 3
+        assert v1 % 5 == 3
+        assert v3 % 5 == 1
+        assert v1 % 2**10 == 23
+        with pytest.raises(ZeroDivisionError):
+            v1 % 0
+        with pytest.raises(ValueError):
+            v1 % -6
 
     def test_simple_exponentiation(self):
         v1, v2, v3 = self.Integers(4, 3, -2)
-        self.assertTrue(isinstance(v1 ** v2, self.Integer))
-        self.assertEqual(v1 ** v2, 64)
-        self.assertEqual(pow(v1, v2), 64)
-        self.assertEqual(v1 ** 3, 64)
-        self.assertEqual(pow(v1, 3), 64)
-        self.assertEqual(v3 ** 2, 4)
-        self.assertEqual(v3 ** 3, -8)
+        assert isinstance(v1**v2, self.Integer)
+        assert v1**v2 == 64
+        assert pow(v1, v2) == 64
+        assert v1**3 == 64
+        assert pow(v1, 3) == 64
+        assert v3**2 == 4
+        assert v3**3 == -8
 
-        self.assertRaises(ValueError, pow, v1, -3)
+        with pytest.raises(ValueError):
+            pow(v1, -3)
 
     def test_modular_exponentiation(self):
         v1, v2, v3 = self.Integers(23, 5, 17)
 
-        self.assertTrue(isinstance(pow(v1, v2, v3), self.Integer))
-        self.assertEqual(pow(v1, v2, v3), 7)
-        self.assertEqual(pow(v1, 5,  v3), 7)
-        self.assertEqual(pow(v1, v2, 17), 7)
-        self.assertEqual(pow(v1, 5,  17), 7)
-        self.assertEqual(pow(v1, 0,  17), 1)
-        self.assertEqual(pow(v1, 1,  2 ** 80), 23)
-        self.assertEqual(pow(v1, 2 ** 80,  89298), 17689)
+        assert isinstance(pow(v1, v2, v3), self.Integer)
+        assert pow(v1, v2, v3) == 7
+        assert pow(v1, 5, v3) == 7
+        assert pow(v1, v2, 17) == 7
+        assert pow(v1, 5, 17) == 7
+        assert pow(v1, 0, 17) == 1
+        assert pow(v1, 1, 2**80) == 23
+        assert pow(v1, 2**80, 89298) == 17689
 
-        self.assertRaises(ZeroDivisionError, pow, v1, 5, 0)
-        self.assertRaises(ValueError, pow, v1, 5, -4)
-        self.assertRaises(ValueError, pow, v1, -3, 8)
+        with pytest.raises(ZeroDivisionError):
+            pow(v1, 5, 0)
+        with pytest.raises(ValueError):
+            pow(v1, 5, -4)
+        with pytest.raises(ValueError):
+            pow(v1, -3, 8)
 
     def test_inplace_exponentiation(self):
         v1 = self.Integer(4)
         v1.inplace_pow(2)
-        self.assertEqual(v1, 16)
+        assert v1 == 16
 
         v1 = self.Integer(4)
         v1.inplace_pow(2, 15)
-        self.assertEqual(v1, 1)
+        assert v1 == 1
 
     def test_abs(self):
-        v1, v2, v3, v4, v5 = self.Integers(-2 ** 100, -2, 0, 2, 2 ** 100)
-        self.assertEqual(abs(v1), 2 ** 100)
-        self.assertEqual(abs(v2), 2)
-        self.assertEqual(abs(v3), 0)
-        self.assertEqual(abs(v4), 2)
-        self.assertEqual(abs(v5), 2 ** 100)
+        v1, v2, v3, v4, v5 = self.Integers(-(2**100), -2, 0, 2, 2**100)
+        assert abs(v1) == 2**100
+        assert abs(v2) == 2
+        assert abs(v3) == 0
+        assert abs(v4) == 2
+        assert abs(v5) == 2**100
 
     def test_sqrt(self):
         v1, v2, v3, v4 = self.Integers(-2, 0, 49, 10**100)
 
-        self.assertRaises(ValueError, v1.sqrt)
-        self.assertEqual(v2.sqrt(), 0)
-        self.assertEqual(v3.sqrt(), 7)
-        self.assertEqual(v4.sqrt(), 10**50)
+        with pytest.raises(ValueError):
+            v1.sqrt()
+        assert v2.sqrt() == 0
+        assert v3.sqrt() == 7
+        assert v4.sqrt() == 10**50
 
     def test_sqrt_module(self):
 
         # Invalid modulus (non positive)
-        self.assertRaises(ValueError, self.Integer(5).sqrt, 0)
-        self.assertRaises(ValueError, self.Integer(5).sqrt, -1)
+        with pytest.raises(ValueError):
+            self.Integer(5).sqrt(0)
+        with pytest.raises(ValueError):
+            self.Integer(5).sqrt(-1)
 
         # Simple cases
         assert self.Integer(0).sqrt(5) == 0
@@ -351,16 +375,18 @@ class TestIntegerBase(unittest.TestCase):
 
         # Test with all quadratic residues in several fields
         for p in (11, 13, 17, 19, 23, 29, 31, 37, 41, 43, 47, 53):
-            for i in range(0, p):
+            for i in range(p):
                 square = i**2 % p
                 res = self.Integer(square).sqrt(p)
                 assert res in (i, p - i)
 
         # 2 is a non-quadratic reside in Z_11
-        self.assertRaises(ValueError, self.Integer(2).sqrt, 11)
+        with pytest.raises(ValueError):
+            self.Integer(2).sqrt(11)
 
         # 10 is not a prime
-        self.assertRaises(ValueError, self.Integer(4).sqrt, 10)
+        with pytest.raises(ValueError):
+            self.Integer(4).sqrt(10)
 
         # 5 is square residue of 4 and 7
         assert self.Integer(5 - 11).sqrt(11) in (4, 7)
@@ -370,198 +396,223 @@ class TestIntegerBase(unittest.TestCase):
         v1, v2 = self.Integers(10, 20)
 
         v1 += v2
-        self.assertEqual(v1, 30)
+        assert v1 == 30
         v1 += 10
-        self.assertEqual(v1, 40)
+        assert v1 == 40
         v1 += -1
-        self.assertEqual(v1, 39)
-        v1 += 2 ** 1000
-        self.assertEqual(v1, 39 + 2 ** 1000)
+        assert v1 == 39
+        v1 += 2**1000
+        assert v1 == 39 + 2**1000
 
     def test_in_place_sub(self):
         v1, v2 = self.Integers(10, 20)
 
         v1 -= v2
-        self.assertEqual(v1, -10)
+        assert v1 == -10
         v1 -= -100
-        self.assertEqual(v1, 90)
+        assert v1 == 90
         v1 -= 90000
-        self.assertEqual(v1, -89910)
+        assert v1 == -89910
         v1 -= -100000
-        self.assertEqual(v1, 10090)
+        assert v1 == 10090
 
     def test_in_place_mul(self):
         v1, v2 = self.Integers(3, 5)
 
         v1 *= v2
-        self.assertEqual(v1, 15)
+        assert v1 == 15
         v1 *= 2
-        self.assertEqual(v1, 30)
+        assert v1 == 30
         v1 *= -2
-        self.assertEqual(v1, -60)
-        v1 *= 2 ** 1000
-        self.assertEqual(v1, -60 * (2 ** 1000))
+        assert v1 == -60
+        v1 *= 2**1000
+        assert v1 == -60 * (2**1000)
 
     def test_in_place_modulus(self):
         v1, v2 = self.Integers(20, 7)
 
         v1 %= v2
-        self.assertEqual(v1, 6)
-        v1 %= 2 ** 1000
-        self.assertEqual(v1, 6)
+        assert v1 == 6
+        v1 %= 2**1000
+        assert v1 == 6
         v1 %= 2
-        self.assertEqual(v1, 0)
+        assert v1 == 0
+
         def t():
             v3 = self.Integer(9)
             v3 %= 0
-        self.assertRaises(ZeroDivisionError, t)
+
+        with pytest.raises(ZeroDivisionError):
+            t()
 
     def test_and(self):
         v1, v2, v3 = self.Integers(0xF4, 0x31, -0xF)
-        self.assertTrue(isinstance(v1 & v2, self.Integer))
-        self.assertEqual(v1 & v2, 0x30)
-        self.assertEqual(v1 & 0x31, 0x30)
-        self.assertEqual(v1 & v3, 0xF0)
-        self.assertEqual(v1 & -0xF, 0xF0)
-        self.assertEqual(v3 & -0xF, -0xF)
-        self.assertEqual(v2 & (2 ** 1000 + 0x31), 0x31)
+        assert isinstance(v1 & v2, self.Integer)
+        assert v1 & v2 == 0x30
+        assert v1 & 0x31 == 0x30
+        assert v1 & v3 == 0xF0
+        assert v1 & -0xF == 0xF0
+        assert v3 & -0xF == -0xF
+        assert v2 & (2**1000 + 0x31) == 0x31
 
     def test_or(self):
         v1, v2, v3 = self.Integers(0x40, 0x82, -0xF)
-        self.assertTrue(isinstance(v1 | v2, self.Integer))
-        self.assertEqual(v1 | v2, 0xC2)
-        self.assertEqual(v1 | 0x82, 0xC2)
-        self.assertEqual(v2 | v3, -0xD)
-        self.assertEqual(v2 | 2 ** 1000, 2 ** 1000 + 0x82)
+        assert isinstance(v1 | v2, self.Integer)
+        assert v1 | v2 == 0xC2
+        assert v1 | 0x82 == 0xC2
+        assert v2 | v3 == -0xD
+        assert v2 | 2**1000 == 2**1000 + 0x82
 
     def test_right_shift(self):
         v1, v2, v3 = self.Integers(0x10, 1, -0x10)
-        self.assertEqual(v1 >> 0, v1)
-        self.assertTrue(isinstance(v1 >> v2, self.Integer))
-        self.assertEqual(v1 >> v2, 0x08)
-        self.assertEqual(v1 >> 1, 0x08)
-        self.assertRaises(ValueError, lambda: v1 >> -1)
-        self.assertEqual(v1 >> (2 ** 1000), 0)
+        assert v1 >> 0 == v1
+        assert isinstance(v1 >> v2, self.Integer)
+        assert v1 >> v2 == 0x08
+        assert v1 >> 1 == 0x08
+        with pytest.raises(ValueError):
+            v1 >> -1
+        assert v1 >> (2**1000) == 0
 
-        self.assertEqual(v3 >> 1, -0x08)
-        self.assertEqual(v3 >> (2 ** 1000), -1)
+        assert v3 >> 1 == -0x08
+        assert v3 >> (2**1000) == -1
 
     def test_in_place_right_shift(self):
         v1, v2, v3 = self.Integers(0x10, 1, -0x10)
         v1 >>= 0
-        self.assertEqual(v1, 0x10)
+        assert v1 == 0x10
         v1 >>= 1
-        self.assertEqual(v1, 0x08)
+        assert v1 == 0x08
         v1 >>= v2
-        self.assertEqual(v1, 0x04)
+        assert v1 == 0x04
         v3 >>= 1
-        self.assertEqual(v3, -0x08)
-        def l():
+        assert v3 == -0x08
+
+        def shift_by_negative():
             v4 = self.Integer(0x90)
             v4 >>= -1
-        self.assertRaises(ValueError, l)
+
+        with pytest.raises(ValueError):
+            shift_by_negative()
+
         def m1():
             v4 = self.Integer(0x90)
-            v4 >>= 2 ** 1000
+            v4 >>= 2**1000
             return v4
-        self.assertEqual(0, m1())
+
+        assert m1() == 0
+
         def m2():
             v4 = self.Integer(-1)
-            v4 >>= 2 ** 1000
+            v4 >>= 2**1000
             return v4
-        self.assertEqual(-1, m2())
+
+        assert m2() == -1
 
     def _test_left_shift(self):
         v1, v2, v3 = self.Integers(0x10, 1, -0x10)
-        self.assertEqual(v1 << 0, v1)
-        self.assertTrue(isinstance(v1 << v2, self.Integer))
-        self.assertEqual(v1 << v2, 0x20)
-        self.assertEqual(v1 << 1, 0x20)
-        self.assertEqual(v3 << 1, -0x20)
-        self.assertRaises(ValueError, lambda: v1 << -1)
-        self.assertRaises(ValueError, lambda: v1 << (2 ** 1000))
+        assert v1 << 0 == v1
+        assert isinstance(v1 << v2, self.Integer)
+        assert v1 << v2 == 0x20
+        assert v1 << 1 == 0x20
+        assert v3 << 1 == -0x20
+        with pytest.raises(ValueError):
+            v1 << -1
+        with pytest.raises(ValueError):
+            v1 << (2**1000)
 
     def test_in_place_left_shift(self):
         v1, v2, v3 = self.Integers(0x10, 1, -0x10)
         v1 <<= 0
-        self.assertEqual(v1, 0x10)
+        assert v1 == 0x10
         v1 <<= 1
-        self.assertEqual(v1, 0x20)
+        assert v1 == 0x20
         v1 <<= v2
-        self.assertEqual(v1, 0x40)
+        assert v1 == 0x40
         v3 <<= 1
-        self.assertEqual(v3, -0x20)
-        def l():
+        assert v3 == -0x20
+
+        def shift_by_negative():
             v4 = self.Integer(0x90)
             v4 <<= -1
-        self.assertRaises(ValueError, l)
+
+        with pytest.raises(ValueError):
+            shift_by_negative()
+
         def m():
             v4 = self.Integer(0x90)
-            v4 <<= 2 ** 1000
-        self.assertRaises(ValueError, m)
+            v4 <<= 2**1000
 
+        with pytest.raises(ValueError):
+            m()
 
     def test_get_bit(self):
         v1, v2, v3 = self.Integers(0x102, -3, 1)
-        self.assertEqual(v1.get_bit(0), 0)
-        self.assertEqual(v1.get_bit(1), 1)
-        self.assertEqual(v1.get_bit(v3), 1)
-        self.assertEqual(v1.get_bit(8), 1)
-        self.assertEqual(v1.get_bit(9), 0)
+        assert v1.get_bit(0) == 0
+        assert v1.get_bit(1) == 1
+        assert v1.get_bit(v3) == 1
+        assert v1.get_bit(8) == 1
+        assert v1.get_bit(9) == 0
 
-        self.assertRaises(ValueError, v1.get_bit, -1)
-        self.assertEqual(v1.get_bit(2 ** 1000), 0)
+        with pytest.raises(ValueError):
+            v1.get_bit(-1)
+        assert v1.get_bit(2**1000) == 0
 
-        self.assertRaises(ValueError, v2.get_bit, -1)
-        self.assertRaises(ValueError, v2.get_bit, 0)
-        self.assertRaises(ValueError, v2.get_bit, 1)
-        self.assertRaises(ValueError, v2.get_bit, 2 * 1000)
+        with pytest.raises(ValueError):
+            v2.get_bit(-1)
+        with pytest.raises(ValueError):
+            v2.get_bit(0)
+        with pytest.raises(ValueError):
+            v2.get_bit(1)
+        with pytest.raises(ValueError):
+            v2.get_bit(2 * 1000)
 
     def test_odd_even(self):
         v1, v2, v3, v4, v5 = self.Integers(0, 4, 17, -4, -17)
 
-        self.assertTrue(v1.is_even())
-        self.assertTrue(v2.is_even())
-        self.assertFalse(v3.is_even())
-        self.assertTrue(v4.is_even())
-        self.assertFalse(v5.is_even())
+        assert v1.is_even()
+        assert v2.is_even()
+        assert not v3.is_even()
+        assert v4.is_even()
+        assert not v5.is_even()
 
-        self.assertFalse(v1.is_odd())
-        self.assertFalse(v2.is_odd())
-        self.assertTrue(v3.is_odd())
-        self.assertFalse(v4.is_odd())
-        self.assertTrue(v5.is_odd())
+        assert not v1.is_odd()
+        assert not v2.is_odd()
+        assert v3.is_odd()
+        assert not v4.is_odd()
+        assert v5.is_odd()
 
     def test_size_in_bits(self):
         v1, v2, v3, v4 = self.Integers(0, 1, 0x100, -90)
-        self.assertEqual(v1.size_in_bits(), 1)
-        self.assertEqual(v2.size_in_bits(), 1)
-        self.assertEqual(v3.size_in_bits(), 9)
-        self.assertRaises(ValueError, v4.size_in_bits)
+        assert v1.size_in_bits() == 1
+        assert v2.size_in_bits() == 1
+        assert v3.size_in_bits() == 9
+        with pytest.raises(ValueError):
+            v4.size_in_bits()
 
     def test_size_in_bytes(self):
         v1, v2, v3, v4, v5, v6 = self.Integers(0, 1, 0xFF, 0x1FF, 0x10000, -9)
-        self.assertEqual(v1.size_in_bytes(), 1)
-        self.assertEqual(v2.size_in_bytes(), 1)
-        self.assertEqual(v3.size_in_bytes(), 1)
-        self.assertEqual(v4.size_in_bytes(), 2)
-        self.assertEqual(v5.size_in_bytes(), 3)
-        self.assertRaises(ValueError, v6.size_in_bits)
+        assert v1.size_in_bytes() == 1
+        assert v2.size_in_bytes() == 1
+        assert v3.size_in_bytes() == 1
+        assert v4.size_in_bytes() == 2
+        assert v5.size_in_bytes() == 3
+        with pytest.raises(ValueError):
+            v6.size_in_bits()
 
     def test_perfect_square(self):
 
-        self.assertFalse(self.Integer(-9).is_perfect_square())
-        self.assertTrue(self.Integer(0).is_perfect_square())
-        self.assertTrue(self.Integer(1).is_perfect_square())
-        self.assertFalse(self.Integer(2).is_perfect_square())
-        self.assertFalse(self.Integer(3).is_perfect_square())
-        self.assertTrue(self.Integer(4).is_perfect_square())
-        self.assertTrue(self.Integer(39*39).is_perfect_square())
-        self.assertFalse(self.Integer(39*39+1).is_perfect_square())
+        assert not self.Integer(-9).is_perfect_square()
+        assert self.Integer(0).is_perfect_square()
+        assert self.Integer(1).is_perfect_square()
+        assert not self.Integer(2).is_perfect_square()
+        assert not self.Integer(3).is_perfect_square()
+        assert self.Integer(4).is_perfect_square()
+        assert self.Integer(39 * 39).is_perfect_square()
+        assert not self.Integer(39 * 39 + 1).is_perfect_square()
 
         for x in range(100, 1000):
-            self.assertFalse(self.Integer(x**2+1).is_perfect_square())
-            self.assertTrue(self.Integer(x**2).is_perfect_square())
+            assert not self.Integer(x**2 + 1).is_perfect_square()
+            assert self.Integer(x**2).is_perfect_square()
 
     def test_fail_if_divisible_by(self):
         v1, v2, v3 = self.Integers(12, -12, 4)
@@ -569,80 +620,86 @@ class TestIntegerBase(unittest.TestCase):
         # No failure expected
         v1.fail_if_divisible_by(7)
         v2.fail_if_divisible_by(7)
-        v2.fail_if_divisible_by(2 ** 80)
+        v2.fail_if_divisible_by(2**80)
 
         # Failure expected
-        self.assertRaises(ValueError, v1.fail_if_divisible_by, 4)
-        self.assertRaises(ValueError, v1.fail_if_divisible_by, v3)
+        with pytest.raises(ValueError):
+            v1.fail_if_divisible_by(4)
+        with pytest.raises(ValueError):
+            v1.fail_if_divisible_by(v3)
 
     def test_multiply_accumulate(self):
         v1, v2, v3 = self.Integers(4, 3, 2)
         v1.multiply_accumulate(v2, v3)
-        self.assertEqual(v1, 10)
+        assert v1 == 10
         v1.multiply_accumulate(v2, 2)
-        self.assertEqual(v1, 16)
+        assert v1 == 16
         v1.multiply_accumulate(3, v3)
-        self.assertEqual(v1, 22)
+        assert v1 == 22
         v1.multiply_accumulate(1, -2)
-        self.assertEqual(v1, 20)
+        assert v1 == 20
         v1.multiply_accumulate(-2, 1)
-        self.assertEqual(v1, 18)
-        v1.multiply_accumulate(1, 2 ** 1000)
-        self.assertEqual(v1, 18 + 2 ** 1000)
-        v1.multiply_accumulate(2 ** 1000, 1)
-        self.assertEqual(v1, 18 + 2 ** 1001)
+        assert v1 == 18
+        v1.multiply_accumulate(1, 2**1000)
+        assert v1 == 18 + 2**1000
+        v1.multiply_accumulate(2**1000, 1)
+        assert v1 == 18 + 2**1001
 
     def test_set(self):
         v1, v2 = self.Integers(3, 6)
         v1.set(v2)
-        self.assertEqual(v1, 6)
+        assert v1 == 6
         v1.set(9)
-        self.assertEqual(v1, 9)
+        assert v1 == 9
         v1.set(-2)
-        self.assertEqual(v1, -2)
-        v1.set(2 ** 1000)
-        self.assertEqual(v1, 2 ** 1000)
+        assert v1 == -2
+        v1.set(2**1000)
+        assert v1 == 2**1000
 
     def test_inverse(self):
         v1, v2, v3, v4, v5, v6 = self.Integers(2, 5, -3, 0, 723872, 3433)
 
-        self.assertTrue(isinstance(v1.inverse(v2), self.Integer))
-        self.assertEqual(v1.inverse(v2), 3)
-        self.assertEqual(v1.inverse(5), 3)
-        self.assertEqual(v3.inverse(5), 3)
-        self.assertEqual(v5.inverse(92929921), 58610507)
-        self.assertEqual(v6.inverse(9912), 5353)
+        assert isinstance(v1.inverse(v2), self.Integer)
+        assert v1.inverse(v2) == 3
+        assert v1.inverse(5) == 3
+        assert v3.inverse(5) == 3
+        assert v5.inverse(92929921) == 58610507
+        assert v6.inverse(9912) == 5353
 
-        self.assertRaises(ValueError, v2.inverse, 10)
-        self.assertRaises(ValueError, v1.inverse, -3)
-        self.assertRaises(ValueError, v4.inverse, 10)
-        self.assertRaises(ZeroDivisionError, v2.inverse, 0)
+        with pytest.raises(ValueError):
+            v2.inverse(10)
+        with pytest.raises(ValueError):
+            v1.inverse(-3)
+        with pytest.raises(ValueError):
+            v4.inverse(10)
+        with pytest.raises(ZeroDivisionError):
+            v2.inverse(0)
 
     def test_inplace_inverse(self):
         v1, v2 = self.Integers(2, 5)
 
         v1.inplace_inverse(v2)
-        self.assertEqual(v1, 3)
+        assert v1 == 3
 
     def test_gcd(self):
         v1, v2, v3, v4 = self.Integers(6, 10, 17, -2)
-        self.assertTrue(isinstance(v1.gcd(v2), self.Integer))
-        self.assertEqual(v1.gcd(v2), 2)
-        self.assertEqual(v1.gcd(10), 2)
-        self.assertEqual(v1.gcd(v3), 1)
-        self.assertEqual(v1.gcd(-2), 2)
-        self.assertEqual(v4.gcd(6), 2)
+        assert isinstance(v1.gcd(v2), self.Integer)
+        assert v1.gcd(v2) == 2
+        assert v1.gcd(10) == 2
+        assert v1.gcd(v3) == 1
+        assert v1.gcd(-2) == 2
+        assert v4.gcd(6) == 2
 
     def test_lcm(self):
         v1, v2, v3, v4, v5 = self.Integers(6, 10, 17, -2, 0)
-        self.assertTrue(isinstance(v1.lcm(v2), self.Integer))
-        self.assertEqual(v1.lcm(v2), 30)
-        self.assertEqual(v1.lcm(10), 30)
-        self.assertEqual(v1.lcm(v3), 102)
-        self.assertEqual(v1.lcm(-2), 6)
-        self.assertEqual(v4.lcm(6), 6)
-        self.assertEqual(v1.lcm(0), 0)
-        self.assertEqual(v5.lcm(0), 0)
+        assert isinstance(v1.lcm(v2), self.Integer)
+        assert v1.lcm(v2) == 30
+        assert v1.lcm(10) == 30
+        assert v1.lcm(v3) == 102
+        assert v1.lcm(-2) == 6
+        assert v4.lcm(6) == 6
+        assert v1.lcm(0) == 0
+        assert v5.lcm(0) == 0
 
     def test_jacobi_symbol(self):
 
@@ -653,35 +710,43 @@ class TestIntegerBase(unittest.TestCase):
             (5, 21, 1),
             (610, 987, -1),
             (1001, 9907, -1),
-            (5, 3439601197, -1)
-            )
+            (5, 3439601197, -1),
+        )
 
         js = self.Integer.jacobi_symbol
 
         # Jacobi symbol is always 1 for k==1 or n==1
         for k in range(1, 30):
-            self.assertEqual(js(k, 1), 1)
+            assert js(k, 1) == 1
         for n in range(1, 30, 2):
-            self.assertEqual(js(1, n), 1)
+            assert js(1, n) == 1
 
         # Fail if n is not positive odd
-        self.assertRaises(ValueError, js, 6, -2)
-        self.assertRaises(ValueError, js, 6, -1)
-        self.assertRaises(ValueError, js, 6, 0)
-        self.assertRaises(ValueError, js, 0, 0)
-        self.assertRaises(ValueError, js, 6, 2)
-        self.assertRaises(ValueError, js, 6, 4)
-        self.assertRaises(ValueError, js, 6, 6)
-        self.assertRaises(ValueError, js, 6, 8)
+        with pytest.raises(ValueError):
+            js(6, -2)
+        with pytest.raises(ValueError):
+            js(6, -1)
+        with pytest.raises(ValueError):
+            js(6, 0)
+        with pytest.raises(ValueError):
+            js(0, 0)
+        with pytest.raises(ValueError):
+            js(6, 2)
+        with pytest.raises(ValueError):
+            js(6, 4)
+        with pytest.raises(ValueError):
+            js(6, 6)
+        with pytest.raises(ValueError):
+            js(6, 8)
 
         for tv in data:
-            self.assertEqual(js(tv[0], tv[1]), tv[2])
-            self.assertEqual(js(self.Integer(tv[0]), tv[1]), tv[2])
-            self.assertEqual(js(tv[0], self.Integer(tv[1])), tv[2])
+            assert js(tv[0], tv[1]) == tv[2]
+            assert js(self.Integer(tv[0]), tv[1]) == tv[2]
+            assert js(tv[0], self.Integer(tv[1])) == tv[2]
 
     def test_jacobi_symbol_wikipedia(self):
-
-		# Test vectors from https://en.wikipedia.org/wiki/Jacobi_symbol
+        # Test vectors from https://en.wikipedia.org/wiki/Jacobi_symbol
+        # fmt: off
         tv = [
             (3, [(1, 1), (2, -1), (3, 0), (4, 1), (5, -1), (6, 0), (7, 1), (8, -1), (9, 0), (10, 1), (11, -1), (12, 0), (13, 1), (14, -1), (15, 0), (16, 1), (17, -1), (18, 0), (19, 1), (20, -1), (21, 0), (22, 1), (23, -1), (24, 0), (25, 1), (26, -1), (27, 0), (28, 1), (29, -1), (30, 0)]),
             (5, [(1, 1), (2, -1), (3, -1), (4, 1), (5, 0), (6, 1), (7, -1), (8, -1), (9, 1), (10, 0), (11, 1), (12, -1), (13, -1), (14, 1), (15, 0), (16, 1), (17, -1), (18, -1), (19, 1), (20, 0), (21, 1), (22, -1), (23, -1), (24, 1), (25, 0), (26, 1), (27, -1), (28, -1), (29, 1), (30, 0)]),
@@ -698,65 +763,79 @@ class TestIntegerBase(unittest.TestCase):
             (27, [(1, 1), (2, -1), (3, 0), (4, 1), (5, -1), (6, 0), (7, 1), (8, -1), (9, 0), (10, 1), (11, -1), (12, 0), (13, 1), (14, -1), (15, 0), (16, 1), (17, -1), (18, 0), (19, 1), (20, -1), (21, 0), (22, 1), (23, -1), (24, 0), (25, 1), (26, -1), (27, 0), (28, 1), (29, -1), (30, 0)]),
             (29, [(1, 1), (2, -1), (3, -1), (4, 1), (5, 1), (6, 1), (7, 1), (8, -1), (9, 1), (10, -1), (11, -1), (12, -1), (13, 1), (14, -1), (15, -1), (16, 1), (17, -1), (18, -1), (19, -1), (20, 1), (21, -1), (22, 1), (23, 1), (24, 1), (25, 1), (26, -1), (27, -1), (28, 1), (29, 0), (30, 1)]),
             ]
+        # fmt: on
 
         js = self.Integer.jacobi_symbol
 
         for n, kj in tv:
             for k, j in kj:
-                self.assertEqual(js(k, n), j)
+                assert js(k, n) == j
 
     def test_hex(self):
-        v1, = self.Integers(0x10)
-        self.assertEqual(hex(v1), "0x10")
+        (v1,) = self.Integers(0x10)
+        assert hex(v1) == "0x10"
 
     def test_mult_modulo_bytes(self):
         modmult = self.Integer._mult_modulo_bytes
 
         res = modmult(4, 5, 19)
-        self.assertEqual(res, b'\x01')
+        assert res == b"\x01"
 
         res = modmult(4 - 19, 5, 19)
-        self.assertEqual(res, b'\x01')
+        assert res == b"\x01"
 
         res = modmult(4, 5 - 19, 19)
-        self.assertEqual(res, b'\x01')
+        assert res == b"\x01"
 
         res = modmult(4 + 19, 5, 19)
-        self.assertEqual(res, b'\x01')
+        assert res == b"\x01"
 
         res = modmult(4, 5 + 19, 19)
-        self.assertEqual(res, b'\x01')
+        assert res == b"\x01"
 
-        modulus = 2**512 - 1    # 64 bytes
+        modulus = 2**512 - 1  # 64 bytes
         t1 = 13**100
         t2 = 17**100
         expect = b"\xfa\xb2\x11\x87\xc3(y\x07\xf8\xf1n\xdepq\x0b\xca\xf3\xd3B,\xef\xf2\xfbf\xcc)\x8dZ*\x95\x98r\x96\xa8\xd5\xc3}\xe2q:\xa2'z\xf48\xde%\xef\t\x07\xbc\xc4[C\x8bUE2\x90\xef\x81\xaa:\x08"
-        self.assertEqual(expect, modmult(t1, t2, modulus))
+        assert expect == modmult(t1, t2, modulus)
 
-        self.assertRaises(ZeroDivisionError, modmult, 4, 5, 0)
-        self.assertRaises(ValueError, modmult, 4, 5, -1)
-        self.assertRaises(ValueError, modmult, 4, 5, 4)
+        with pytest.raises(ZeroDivisionError):
+            modmult(4, 5, 0)
+        with pytest.raises(ValueError):
+            modmult(4, 5, -1)
+        with pytest.raises(ValueError):
+            modmult(4, 5, 4)
 
 
-class TestIntegerInt(TestIntegerBase):
-
-    def setUp(self):
+class TestIntegerInt(IntegerTests):
+    def setup_method(self):
         self.Integer = IntegerNative
 
 
-class testIntegerRandom(unittest.TestCase):
+@pytest.mark.skipif(_gmp_error is not None, reason="GMP not available (%s)" % _gmp_error)
+class TestIntegerGMP(IntegerTests):
+    def setup_method(self):
+        self.Integer = IntegerGMP
 
+
+@pytest.mark.skipif(_custom_error is not None, reason="custom modexp not available (%s)" % _custom_error)
+class TestIntegerCustomModexp(IntegerTests):
+    def setup_method(self):
+        self.Integer = IntegerCustom
+
+
+class TestIntegerRandom:
     def test_random_exact_bits(self):
 
         for _ in range(1000):
             a = IntegerNative.random(exact_bits=8)
-            self.assertFalse(a < 128)
-            self.assertFalse(a >= 256)
+            assert not (a < 128)
+            assert not (a >= 256)
 
         for bits_value in range(1024, 1024 + 8):
             a = IntegerNative.random(exact_bits=bits_value)
-            self.assertFalse(a < 2**(bits_value - 1))
-            self.assertFalse(a >= 2**bits_value)
+            assert not (a < 2 ** (bits_value - 1))
+            assert not (a >= 2**bits_value)
 
     def test_random_max_bits(self):
 
@@ -764,75 +843,40 @@ class testIntegerRandom(unittest.TestCase):
         for _ in range(1000):
             a = IntegerNative.random(max_bits=8)
             flag = flag or a < 128
-            self.assertFalse(a>=256)
-        self.assertTrue(flag)
+            assert not (a >= 256)
+        assert flag
 
         for bits_value in range(1024, 1024 + 8):
             a = IntegerNative.random(max_bits=bits_value)
-            self.assertFalse(a >= 2**bits_value)
+            assert not (a >= 2**bits_value)
 
     def test_random_bits_custom_rng(self):
 
-        class CustomRNG(object):
+        class CustomRNG:
             def __init__(self):
                 self.counter = 0
 
             def __call__(self, size):
                 self.counter += size
-                return bchr(0) * size
+                return bytes([0]) * size
 
         custom_rng = CustomRNG()
-        a = IntegerNative.random(exact_bits=32, randfunc=custom_rng)
-        self.assertEqual(custom_rng.counter, 4)
+        IntegerNative.random(exact_bits=32, randfunc=custom_rng)
+        assert custom_rng.counter == 4
 
     def test_random_range(self):
 
         func = IntegerNative.random_range
 
-        for x in range(200):
+        for _x in range(200):
             a = func(min_inclusive=1, max_inclusive=15)
-            self.assertTrue(1 <= a <= 15)
+            assert 1 <= a <= 15
 
-        for x in range(200):
+        for _x in range(200):
             a = func(min_inclusive=1, max_exclusive=15)
-            self.assertTrue(1 <= a < 15)
+            assert 1 <= a < 15
 
-        self.assertRaises(ValueError, func, min_inclusive=1, max_inclusive=2,
-                                            max_exclusive=3)
-        self.assertRaises(ValueError, func, max_inclusive=2, max_exclusive=3)
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(TestIntegerInt)
-
-    try:
-        from Crypto.Math._IntegerGMP import IntegerGMP
-
-        class TestIntegerGMP(TestIntegerBase):
-            def setUp(self):
-                self.Integer = IntegerGMP
-
-        tests += list_test_cases(TestIntegerGMP)
-    except (ImportError, OSError) as e:
-        if sys.platform == "win32":
-            sys.stdout.write("Skipping GMP tests on Windows\n")
-        else:
-            sys.stdout.write("Skipping GMP tests (%s)\n" % str(e) )
-
-    try:
-        from Crypto.Math._IntegerCustom import IntegerCustom
-
-        class TestIntegerCustomModexp(TestIntegerBase):
-            def setUp(self):
-                self.Integer = IntegerCustom
-
-        tests += list_test_cases(TestIntegerCustomModexp)
-    except (ImportError, OSError) as e:
-        sys.stdout.write("Skipping custom modexp tests (%s)\n" % str(e) )
-
-    tests += list_test_cases(testIntegerRandom)
-    return tests
-
-if __name__ == '__main__':
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+        with pytest.raises(ValueError):
+            func(min_inclusive=1, max_inclusive=2, max_exclusive=3)
+        with pytest.raises(ValueError):
+            func(max_inclusive=2, max_exclusive=3)

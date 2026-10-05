@@ -28,29 +28,47 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
+from __future__ import annotations
+
 from binascii import unhexlify
+from typing import TYPE_CHECKING, Optional, Union
 
-from Crypto.Util.py3compat import bord, tobytes, is_bytes
 from Crypto.Random import get_random_bytes
+from Crypto.Util._bytes import tobytes
+from Crypto.Util._raw_api import is_buffer
 
-from . import cSHAKE128, SHA3_256
+from . import SHA3_256, cSHAKE128
 from .cSHAKE128 import _bytepad, _encode_str, _right_encode
 
+if TYPE_CHECKING:
+    from types import ModuleType
 
-class KMAC_Hash(object):
+Buffer = Union[bytes, bytearray, memoryview]
+
+
+class KMAC_Hash:
     """A KMAC hash object.
     Do not instantiate directly.
     Use the :func:`new` function.
     """
 
-    def __init__(self, data, key, mac_len, custom,
-                 oid_variant, cshake, rate):
+    def __init__(
+        self,
+        data: Optional[Buffer],
+        key: Buffer,
+        mac_len: int,
+        custom: Buffer,
+        oid_variant: str,
+        cshake: ModuleType,
+        rate: int,
+    ) -> None:
 
         # See https://tools.ietf.org/html/rfc8702
         self.oid = "2.16.840.1.101.3.4.2." + oid_variant
         self.digest_size = mac_len
 
-        self._mac = None
+        self._mac: Optional[bytes] = None
+        self._cshake_module = cshake
 
         partial_newX = _bytepad(_encode_str(tobytes(key)), rate)
         self._cshake = cshake._new(partial_newX, custom, b"KMAC")
@@ -58,7 +76,7 @@ class KMAC_Hash(object):
         if data:
             self._cshake.update(data)
 
-    def update(self, data):
+    def update(self, data: Buffer) -> KMAC_Hash:
         """Authenticate the next chunk of message.
 
         Args:
@@ -72,7 +90,7 @@ class KMAC_Hash(object):
         self._cshake.update(data)
         return self
 
-    def digest(self):
+    def digest(self) -> bytes:
         """Return the **binary** (non-printable) MAC tag of the message.
 
         :return: The MAC tag. Binary form.
@@ -85,16 +103,16 @@ class KMAC_Hash(object):
 
         return self._mac
 
-    def hexdigest(self):
+    def hexdigest(self) -> str:
         """Return the **printable** MAC tag of the message.
 
         :return: The MAC tag. Hexadecimal encoded.
         :rtype: string
         """
 
-        return "".join(["%02x" % bord(x) for x in tuple(self.digest())])
+        return "".join(["%02x" % x for x in tuple(self.digest())])
 
-    def verify(self, mac_tag):
+    def verify(self, mac_tag: Buffer) -> None:
         """Verify that a given **binary** MAC (computed by another party)
         is valid.
 
@@ -114,7 +132,7 @@ class KMAC_Hash(object):
         if mac1.digest() != mac2.digest():
             raise ValueError("MAC check failed")
 
-    def hexverify(self, hex_mac_tag):
+    def hexverify(self, hex_mac_tag: str) -> None:
         """Verify that a given **printable** MAC (computed by another party)
         is valid.
 
@@ -128,18 +146,31 @@ class KMAC_Hash(object):
 
         self.verify(unhexlify(tobytes(hex_mac_tag)))
 
-    def new(self, **kwargs):
+    def new(
+        self,
+        *,
+        key: Buffer,
+        data: Optional[Buffer] = None,
+        mac_len: Optional[int] = None,
+        custom: Buffer = b"",
+    ) -> KMAC_Hash:
         """Return a new instance of a KMAC hash object.
         See :func:`new`.
         """
 
-        if "mac_len" not in kwargs:
-            kwargs["mac_len"] = self.digest_size
+        if mac_len is None:
+            mac_len = self.digest_size
 
-        return new(**kwargs)
+        # The same class implements both KMAC128 and KMAC256
+        if self._cshake_module is cSHAKE128:
+            factory = new
+        else:
+            from .KMAC256 import new as factory
+
+        return factory(key=key, data=data, mac_len=mac_len, custom=custom)
 
 
-def new(**kwargs):
+def new(*, key: Buffer, data: Optional[Buffer] = None, mac_len: int = 64, custom: Buffer = b"") -> KMAC_Hash:
     """Create a new KMAC128 object.
 
     Args:
@@ -159,21 +190,12 @@ def new(**kwargs):
         A :class:`KMAC_Hash` hash object
     """
 
-    key = kwargs.pop("key", None)
-    if not is_bytes(key):
+    if not is_buffer(key):
         raise TypeError("You must pass a key to KMAC128")
     if len(key) < 16:
         raise ValueError("The key must be at least 128 bits long (16 bytes)")
 
-    data = kwargs.pop("data", None)
-
-    mac_len = kwargs.pop("mac_len", 64)
     if mac_len < 8:
         raise ValueError("'mac_len' must be 8 bytes or more")
-
-    custom = kwargs.pop("custom", b"")
-
-    if kwargs:
-        raise TypeError("Unknown parameters: " + str(kwargs))
 
     return KMAC_Hash(data, key, mac_len, custom, "19", cSHAKE128, 168)

@@ -32,20 +32,3 @@
 # ===================================================================
 
 """Self-test for Math"""
-
-def get_tests(config={}):
-    tests = []
-    from Crypto.SelfTest.Math import test_Numbers
-    from Crypto.SelfTest.Math import test_Primality
-    from Crypto.SelfTest.Math import test_modexp
-    from Crypto.SelfTest.Math import test_modmult
-    tests += test_Numbers.get_tests(config=config)
-    tests += test_Primality.get_tests(config=config)
-    tests += test_modexp.get_tests(config=config)
-    tests += test_modmult.get_tests(config=config)
-    return tests
-
-if __name__ == '__main__':
-    import unittest
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')

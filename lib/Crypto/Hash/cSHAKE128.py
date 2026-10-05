@@ -28,38 +28,46 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-from Crypto.Util.py3compat import bchr, concat_buffers
 
-from Crypto.Util._raw_api import (VoidPointer, SmartPointer,
-                                  create_string_buffer,
-                                  get_raw_buffer, c_size_t,
-                                  c_uint8_ptr, c_ubyte)
+from __future__ import annotations
 
-from Crypto.Util.number import long_to_bytes
+from typing import Optional, Union
 
 from Crypto.Hash.keccak import _raw_keccak_lib
+from Crypto.Util._raw_api import (
+    SmartPointer,
+    VoidPointer,
+    c_size_t,
+    c_ubyte,
+    c_uint8_ptr,
+    create_string_buffer,
+    get_raw_buffer,
+)
+from Crypto.Util.number import long_to_bytes
+
+Buffer = Union[bytes, bytearray, memoryview]
 
 
 def _left_encode(x):
     """Left encode function as defined in NIST SP 800-185"""
 
-    assert (x < (1 << 2040) and x >= 0)
+    assert x < (1 << 2040) and x >= 0
 
     # Get number of bytes needed to represent this integer.
     num = 1 if x == 0 else (x.bit_length() + 7) // 8
 
-    return bchr(num) + long_to_bytes(x)
+    return bytes([num]) + long_to_bytes(x)
 
 
 def _right_encode(x):
     """Right encode function as defined in NIST SP 800-185"""
 
-    assert (x < (1 << 2040) and x >= 0)
+    assert x < (1 << 2040) and x >= 0
 
     # Get number of bytes needed to represent this integer.
     num = 1 if x == 0 else (x.bit_length() + 7) // 8
 
-    return long_to_bytes(x) + bchr(num)
+    return long_to_bytes(x) + bytes([num])
 
 
 def _encode_str(x):
@@ -69,46 +77,44 @@ def _encode_str(x):
     if bitlen >= (1 << 2040):
         raise ValueError("String too large to encode in cSHAKE")
 
-    return concat_buffers(_left_encode(bitlen), x)
+    return _left_encode(bitlen) + x
 
 
 def _bytepad(x, length):
     """Zero pad byte string as defined in NIST SP 800-185"""
 
-    to_pad = concat_buffers(_left_encode(length), x)
+    to_pad = _left_encode(length) + x
 
     # Note: this implementation works with byte aligned strings,
     # hence no additional bit padding is needed at this point.
     npad = (length - len(to_pad) % length) % length
 
-    return to_pad + b'\x00' * npad
+    return to_pad + b"\x00" * npad
 
 
-class cSHAKE_XOF(object):
+class cSHAKE_XOF:
     """A cSHAKE hash object.
     Do not instantiate directly.
     Use the :func:`new` function.
     """
 
-    def __init__(self, data, custom, capacity, function):
+    def __init__(
+        self, data: Optional[Buffer], custom: Optional[Buffer], capacity: int, function: bytes
+    ) -> None:
         state = VoidPointer()
 
         if custom or function:
             prefix_unpad = _encode_str(function) + _encode_str(custom)
-            prefix = _bytepad(prefix_unpad, (1600 - capacity)//8)
+            prefix = _bytepad(prefix_unpad, (1600 - capacity) // 8)
             self._padding = 0x04
         else:
             prefix = None
             self._padding = 0x1F  # for SHAKE
 
-        result = _raw_keccak_lib.keccak_init(state.address_of(),
-                                             c_size_t(capacity//8),
-                                             c_ubyte(24))
+        result = _raw_keccak_lib.keccak_init(state.address_of(), c_size_t(capacity // 8), c_ubyte(24))
         if result:
-            raise ValueError("Error %d while instantiating cSHAKE"
-                             % result)
-        self._state = SmartPointer(state.get(),
-                                   _raw_keccak_lib.keccak_destroy)
+            raise ValueError("Error %d while instantiating cSHAKE" % result)
+        self._state = SmartPointer(state.get(), _raw_keccak_lib.keccak_destroy)
         self._is_squeezing = False
 
         if prefix:
@@ -117,7 +123,7 @@ class cSHAKE_XOF(object):
         if data:
             self.update(data)
 
-    def update(self, data):
+    def update(self, data: Buffer) -> cSHAKE_XOF:
         """Continue hashing of a message by consuming the next chunk of data.
 
         Args:
@@ -127,15 +133,12 @@ class cSHAKE_XOF(object):
         if self._is_squeezing:
             raise TypeError("You cannot call 'update' after the first 'read'")
 
-        result = _raw_keccak_lib.keccak_absorb(self._state.get(),
-                                               c_uint8_ptr(data),
-                                               c_size_t(len(data)))
+        result = _raw_keccak_lib.keccak_absorb(self._state.get(), c_uint8_ptr(data), c_size_t(len(data)))
         if result:
-            raise ValueError("Error %d while updating %s state"
-                             % (result, self.name))
+            raise ValueError("Error %d while updating cSHAKE state" % result)
         return self
 
-    def read(self, length):
+    def read(self, length: int) -> bytes:
         """
         Compute the next piece of XOF output.
 
@@ -152,13 +155,11 @@ class cSHAKE_XOF(object):
 
         self._is_squeezing = True
         bfr = create_string_buffer(length)
-        result = _raw_keccak_lib.keccak_squeeze(self._state.get(),
-                                                bfr,
-                                                c_size_t(length),
-                                                c_ubyte(self._padding))
+        result = _raw_keccak_lib.keccak_squeeze(
+            self._state.get(), bfr, c_size_t(length), c_ubyte(self._padding)
+        )
         if result:
-            raise ValueError("Error %d while extracting from %s"
-                             % (result, self.name))
+            raise ValueError("Error %d while extracting from cSHAKE" % result)
 
         return get_raw_buffer(bfr)
 
@@ -168,7 +169,7 @@ def _new(data, custom, function):
     return cSHAKE_XOF(data, custom, 256, function)
 
 
-def new(data=None, custom=None):
+def new(data: Optional[Buffer] = None, custom: Optional[Buffer] = None) -> cSHAKE_XOF:
     """Return a fresh instance of a cSHAKE128 object.
 
     Args:
@@ -184,4 +185,4 @@ def new(data=None, custom=None):
     """
 
     # Use Keccak[256]
-    return cSHAKE_XOF(data, custom, 256, b'')
+    return cSHAKE_XOF(data, custom, 256, b"")

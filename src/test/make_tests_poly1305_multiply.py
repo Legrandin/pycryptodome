@@ -1,15 +1,15 @@
 """Make unit test for poly1305_multiply()"""
 
 import struct
-from hashlib import sha1
 from binascii import unhexlify
+from hashlib import sha1
 
 from common import counter, make_main, split32
 
 
 def make_test(term, secret):
 
-    assert term < 2**(32*5)
+    assert term < 2 ** (32 * 5)
     assert len(secret) == 16
 
     # Several bits in the secret must be cleared
@@ -41,16 +41,16 @@ def make_test(term, secret):
     print("    uint8_t secret[16] = {" + ",".join([str(x) for x in secret]) + "};")
     print("    uint32_t r[4], rr[4];")
     print("    uint32_t h[5] = {" + ",".join(h_split) + "};")
-    print("    int match;");
+    print("    int match;")
     for x in range(n_results):
         y = ",".join(all_results[x])
-        print("    uint32_t expected_h_%d[5] = { %s };" % (x+1, y))
+        print("    uint32_t expected_h_%d[5] = { %s };" % (x + 1, y))
     print("")
     print("    poly1305_load_r(r, rr, secret);")
     print("    poly1305_multiply(h, r, rr);")
     print("    match = !0;")
     for x in range(n_results):
-        print("    match = match && memcmp(h, expected_h_%d, sizeof(h));" % (x+1))
+        print("    match = match && memcmp(h, expected_h_%d, sizeof(h));" % (x + 1))
     print("    assert(match == 0);")
     print("}")
     print("")
@@ -73,20 +73,20 @@ make_test(0, b"X" * 16)
 make_test(78923723423432, b"\x00" * 16)
 
 make_test(1, b"\x01" + b"\x00" * 15)
-for x in range(0,129,32):
+for x in range(0, 129, 32):
     make_test(2**x, b"\x01" + b"\x00" * 15)
-make_test(1, b"\x00"*12 + b'\x04' + b'\x00'*3)
+make_test(1, b"\x00" * 12 + b"\x04" + b"\x00" * 3)
 
 make_test(p, b"\x01" + b"\x00" * 15)
 
-make_test(2**(32*5)-1, b'\xFF'*16)
+make_test(2 ** (32 * 5) - 1, b"\xff" * 16)
 
 for i in range(100):
-    prng = sha1(struct.pack('<II', 0, i)).digest()
+    prng = sha1(struct.pack("<II", 0, i)).digest()
     h = 0
     for piece in range(5):
-        h = (h << 32) + struct.unpack('<I', prng[piece*4:(piece+1)*4])[0]
-    secret = sha1(struct.pack('<II', 1, i)).digest()[:16]
+        h = (h << 32) + struct.unpack("<I", prng[piece * 4 : (piece + 1) * 4])[0]
+    secret = sha1(struct.pack("<II", 1, i)).digest()[:16]
     make_test(h, secret)
 
 make_test(2**128, unhexlify("746869032069730030322d0278746500"))

@@ -30,122 +30,102 @@
 
 """Self-test suite for Crypto.Hash.SHAKE128 and SHAKE256"""
 
-import unittest
-from binascii import hexlify, unhexlify
-
-from Crypto.SelfTest.loader import load_test_vectors
-from Crypto.SelfTest.st_common import list_test_cases
+import pytest
 
 from Crypto.Hash import SHAKE128, SHAKE256
-from Crypto.Util.py3compat import b, bchr, bord, tobytes
+from Crypto.SelfTest.loader import load_test_vectors
+from Crypto.Util._bytes import tobytes
 
-class SHAKETest(unittest.TestCase):
 
+class SHAKETest:
     def test_new_positive(self):
 
         xof1 = self.shake.new()
-        xof2 = self.shake.new(data=b("90"))
-        xof3 = self.shake.new().update(b("90"))
+        xof2 = self.shake.new(data=b"90")
+        xof3 = self.shake.new().update(b"90")
 
-        self.assertNotEqual(xof1.read(10), xof2.read(10))
+        assert xof1.read(10) != xof2.read(10)
         xof3.read(10)
-        self.assertEqual(xof2.read(10), xof3.read(10))
+        assert xof2.read(10) == xof3.read(10)
 
     def test_update(self):
-        pieces = [bchr(10) * 200, bchr(20) * 300]
+        pieces = [bytes([10]) * 200, bytes([20]) * 300]
         h = self.shake.new()
         h.update(pieces[0]).update(pieces[1])
         digest = h.read(10)
         h = self.shake.new()
         h.update(pieces[0] + pieces[1])
-        self.assertEqual(h.read(10), digest)
+        assert h.read(10) == digest
 
     def test_update_negative(self):
         h = self.shake.new()
-        self.assertRaises(TypeError, h.update, u"string")
+        with pytest.raises(TypeError):
+            h.update("string")
 
     def test_digest(self):
         h = self.shake.new()
         digest = h.read(90)
 
         # read returns a byte string of the right length
-        self.assertTrue(isinstance(digest, type(b("digest"))))
-        self.assertEqual(len(digest), 90)
+        assert isinstance(digest, bytes)
+        assert len(digest) == 90
 
     def test_update_after_read(self):
         mac = self.shake.new()
-        mac.update(b("rrrr"))
+        mac.update(b"rrrr")
         mac.read(90)
-        self.assertRaises(TypeError, mac.update, b("ttt"))
+        with pytest.raises(TypeError):
+            mac.update(b"ttt")
 
     def test_copy(self):
         mac = self.shake.new()
-        mac.update(b("rrrr"))
+        mac.update(b"rrrr")
         mac2 = mac.copy()
         x1 = mac.read(90)
         x2 = mac2.read(90)
-        self.assertEqual(x1, x2)
+        assert x1 == x2
 
 
-class SHAKE128Test(SHAKETest):
-        shake = SHAKE128
+class TestSHAKE128(SHAKETest):
+    shake = SHAKE128
 
 
-class SHAKE256Test(SHAKETest):
-        shake = SHAKE256
+class TestSHAKE256(SHAKETest):
+    shake = SHAKE256
 
 
-class SHAKEVectors(unittest.TestCase):
-    pass
+test_vectors_128 = (
+    load_test_vectors(
+        ("Hash", "SHA3"), "ShortMsgKAT_SHAKE128.txt", "Short Messages KAT SHAKE128", {"len": lambda x: int(x)}
+    )
+    or []
+)
 
 
-test_vectors_128 = load_test_vectors(("Hash", "SHA3"),
-                               "ShortMsgKAT_SHAKE128.txt",
-                               "Short Messages KAT SHAKE128",
-                               { "len" : lambda x: int(x) } ) or []
+test_vectors_256 = (
+    load_test_vectors(
+        ("Hash", "SHA3"), "ShortMsgKAT_SHAKE256.txt", "Short Messages KAT SHAKE256", {"len": lambda x: int(x)}
+    )
+    or []
+)
 
-for idx, tv in enumerate(test_vectors_128):
-    if tv.len == 0:
-        data = b("")
-    else:
-        data = tobytes(tv.msg)
 
-    def new_test(self, data=data, result=tv.md):
+def _vectors(test_vectors):
+    return [
+        pytest.param(b"" if tv.len == 0 else tobytes(tv.msg), tv.md, id=str(idx))
+        for idx, tv in enumerate(test_vectors)
+    ]
+
+
+class TestSHAKEVectors:
+    @pytest.mark.parametrize("data, result", _vectors(test_vectors_128))
+    def test_128(self, data, result):
         hobj = SHAKE128.new(data=data)
         digest = hobj.read(len(result))
-        self.assertEqual(digest, result)
+        assert digest == result
 
-    setattr(SHAKEVectors, "test_128_%d" % idx, new_test)
-
-
-test_vectors_256 = load_test_vectors(("Hash", "SHA3"),
-                               "ShortMsgKAT_SHAKE256.txt",
-                               "Short Messages KAT SHAKE256",
-                               { "len" : lambda x: int(x) } ) or []
-
-for idx, tv in enumerate(test_vectors_256):
-    if tv.len == 0:
-        data = b("")
-    else:
-        data = tobytes(tv.msg)
-
-    def new_test(self, data=data, result=tv.md):
+    @pytest.mark.parametrize("data, result", _vectors(test_vectors_256))
+    def test_256(self, data, result):
         hobj = SHAKE256.new(data=data)
         digest = hobj.read(len(result))
-        self.assertEqual(digest, result)
-
-    setattr(SHAKEVectors, "test_256_%d" % idx, new_test)
-
-
-def get_tests(config={}):
-    tests = []
-    tests += list_test_cases(SHAKE128Test)
-    tests += list_test_cases(SHAKE256Test)
-    tests += list_test_cases(SHAKEVectors)
-    return tests
-
-
-if __name__ == '__main__':
-    import unittest
-    suite = lambda: unittest.TestSuite(get_tests())
-    unittest.main(defaultTest='suite')
+        assert digest == result
