@@ -23,7 +23,7 @@
 
 """Self-tests for (some of) Crypto.Util.number"""
 
-import unittest
+import pytest
 
 from Crypto.Util import number
 from Crypto.Util.number import long_to_bytes
@@ -37,103 +37,109 @@ class MyError(Exception):
 # if any inputs cause a test failure, we'll be able to tell which ones.
 
 
-class MiscTests(unittest.TestCase):
+class TestMisc:
     def test_ceil_div(self):
         """Util.number.ceil_div"""
-        self.assertRaises(TypeError, number.ceil_div, "1", 1)
-        self.assertRaises(ZeroDivisionError, number.ceil_div, 1, 0)
-        self.assertRaises(ZeroDivisionError, number.ceil_div, -1, 0)
+        with pytest.raises(TypeError):
+            number.ceil_div("1", 1)
+        with pytest.raises(ZeroDivisionError):
+            number.ceil_div(1, 0)
+        with pytest.raises(ZeroDivisionError):
+            number.ceil_div(-1, 0)
 
         # b = 1
-        self.assertEqual(0, number.ceil_div(0, 1))
-        self.assertEqual(1, number.ceil_div(1, 1))
-        self.assertEqual(2, number.ceil_div(2, 1))
-        self.assertEqual(3, number.ceil_div(3, 1))
+        assert number.ceil_div(0, 1) == 0
+        assert number.ceil_div(1, 1) == 1
+        assert number.ceil_div(2, 1) == 2
+        assert number.ceil_div(3, 1) == 3
 
         # b = 2
-        self.assertEqual(0, number.ceil_div(0, 2))
-        self.assertEqual(1, number.ceil_div(1, 2))
-        self.assertEqual(1, number.ceil_div(2, 2))
-        self.assertEqual(2, number.ceil_div(3, 2))
-        self.assertEqual(2, number.ceil_div(4, 2))
-        self.assertEqual(3, number.ceil_div(5, 2))
+        assert number.ceil_div(0, 2) == 0
+        assert number.ceil_div(1, 2) == 1
+        assert number.ceil_div(2, 2) == 1
+        assert number.ceil_div(3, 2) == 2
+        assert number.ceil_div(4, 2) == 2
+        assert number.ceil_div(5, 2) == 3
 
         # b = 3
-        self.assertEqual(0, number.ceil_div(0, 3))
-        self.assertEqual(1, number.ceil_div(1, 3))
-        self.assertEqual(1, number.ceil_div(2, 3))
-        self.assertEqual(1, number.ceil_div(3, 3))
-        self.assertEqual(2, number.ceil_div(4, 3))
-        self.assertEqual(2, number.ceil_div(5, 3))
-        self.assertEqual(2, number.ceil_div(6, 3))
-        self.assertEqual(3, number.ceil_div(7, 3))
+        assert number.ceil_div(0, 3) == 0
+        assert number.ceil_div(1, 3) == 1
+        assert number.ceil_div(2, 3) == 1
+        assert number.ceil_div(3, 3) == 1
+        assert number.ceil_div(4, 3) == 2
+        assert number.ceil_div(5, 3) == 2
+        assert number.ceil_div(6, 3) == 2
+        assert number.ceil_div(7, 3) == 3
 
         # b = 4
-        self.assertEqual(0, number.ceil_div(0, 4))
-        self.assertEqual(1, number.ceil_div(1, 4))
-        self.assertEqual(1, number.ceil_div(2, 4))
-        self.assertEqual(1, number.ceil_div(3, 4))
-        self.assertEqual(1, number.ceil_div(4, 4))
-        self.assertEqual(2, number.ceil_div(5, 4))
-        self.assertEqual(2, number.ceil_div(6, 4))
-        self.assertEqual(2, number.ceil_div(7, 4))
-        self.assertEqual(2, number.ceil_div(8, 4))
-        self.assertEqual(3, number.ceil_div(9, 4))
+        assert number.ceil_div(0, 4) == 0
+        assert number.ceil_div(1, 4) == 1
+        assert number.ceil_div(2, 4) == 1
+        assert number.ceil_div(3, 4) == 1
+        assert number.ceil_div(4, 4) == 1
+        assert number.ceil_div(5, 4) == 2
+        assert number.ceil_div(6, 4) == 2
+        assert number.ceil_div(7, 4) == 2
+        assert number.ceil_div(8, 4) == 2
+        assert number.ceil_div(9, 4) == 3
 
     def test_getPrime(self):
         """Util.number.getPrime"""
-        self.assertRaises(ValueError, number.getPrime, -100)
-        self.assertRaises(ValueError, number.getPrime, 0)
-        self.assertRaises(ValueError, number.getPrime, 1)
+        with pytest.raises(ValueError):
+            number.getPrime(-100)
+        with pytest.raises(ValueError):
+            number.getPrime(0)
+        with pytest.raises(ValueError):
+            number.getPrime(1)
 
         bits = 4
         for _i in range(100):
             x = number.getPrime(bits)
-            self.assertEqual(x >= (1 << bits - 1), 1)
-            self.assertEqual(x < (1 << bits), 1)
+            assert (x >= (1 << bits - 1)) == 1
+            assert (x < (1 << bits)) == 1
 
         bits = 512
         x = number.getPrime(bits)
-        self.assertNotEqual(x % 2, 0)
-        self.assertEqual(x >= (1 << bits - 1), 1)
-        self.assertEqual(x < (1 << bits), 1)
+        assert x % 2 != 0
+        assert (x >= (1 << bits - 1)) == 1
+        assert (x < (1 << bits)) == 1
 
     def test_getStrongPrime(self):
         """Util.number.getStrongPrime"""
-        self.assertRaises(ValueError, number.getStrongPrime, 256)
-        self.assertRaises(ValueError, number.getStrongPrime, 513)
+        with pytest.raises(ValueError):
+            number.getStrongPrime(256)
+        with pytest.raises(ValueError):
+            number.getStrongPrime(513)
         bits = 512
         x = number.getStrongPrime(bits)
-        self.assertNotEqual(x % 2, 0)
-        self.assertEqual(x > (1 << bits - 1) - 1, 1)
-        self.assertEqual(x < (1 << bits), 1)
+        assert x % 2 != 0
+        assert (x > (1 << bits - 1) - 1) == 1
+        assert (x < (1 << bits)) == 1
         e = 2**16 + 1
         x = number.getStrongPrime(bits, e)
-        self.assertEqual(number.GCD(x - 1, e), 1)
-        self.assertNotEqual(x % 2, 0)
-        self.assertEqual(x > (1 << bits - 1) - 1, 1)
-        self.assertEqual(x < (1 << bits), 1)
+        assert number.GCD(x - 1, e) == 1
+        assert x % 2 != 0
+        assert (x > (1 << bits - 1) - 1) == 1
+        assert (x < (1 << bits)) == 1
         e = 2**16 + 2
         x = number.getStrongPrime(bits, e)
-        self.assertEqual(number.GCD((x - 1) >> 1, e), 1)
-        self.assertNotEqual(x % 2, 0)
-        self.assertEqual(x > (1 << bits - 1) - 1, 1)
-        self.assertEqual(x < (1 << bits), 1)
+        assert number.GCD((x - 1) >> 1, e) == 1
+        assert x % 2 != 0
+        assert (x > (1 << bits - 1) - 1) == 1
+        assert (x < (1 << bits)) == 1
 
     def test_isPrime(self):
         """Util.number.isPrime"""
-        self.assertEqual(number.isPrime(-3), False)  # Regression test: negative numbers should not be prime
-        self.assertEqual(number.isPrime(-2), False)  # Regression test: negative numbers should not be prime
-        self.assertEqual(
-            number.isPrime(1), False
-        )  # Regression test: isPrime(1) caused some versions of PyCrypto to crash.
-        self.assertEqual(number.isPrime(2), True)
-        self.assertEqual(number.isPrime(3), True)
-        self.assertEqual(number.isPrime(4), False)
-        self.assertEqual(number.isPrime(2**1279 - 1), True)
-        self.assertEqual(
-            number.isPrime(-(2**1279 - 1)), False
-        )  # Regression test: negative numbers should not be prime
+        assert number.isPrime(-3) is False  # Regression test: negative numbers should not be prime
+        assert number.isPrime(-2) is False  # Regression test: negative numbers should not be prime
+        # Regression test: isPrime(1) caused some versions of PyCrypto to crash.
+        assert number.isPrime(1) is False
+        assert number.isPrime(2) is True
+        assert number.isPrime(3) is True
+        assert number.isPrime(4) is False
+        assert number.isPrime(2**1279 - 1) is True
+        # Regression test: negative numbers should not be prime
+        assert number.isPrime(-(2**1279 - 1)) is False
         # test some known gmp pseudo-primes taken from
         # http://www.trnicely.net/misc/mpzspsp.html
         for composite in (
@@ -150,43 +156,45 @@ class MiscTests(unittest.TestCase):
             4186358431 * 8372716861,
             1576820467 * 3153640933,
         ):
-            self.assertEqual(number.isPrime(int(composite)), False)
+            assert number.isPrime(int(composite)) is False
 
     def test_size(self):
-        self.assertEqual(number.size(2), 2)
-        self.assertEqual(number.size(3), 2)
-        self.assertEqual(number.size(0xA2), 8)
-        self.assertEqual(number.size(0xA2BA40), 8 * 3)
-        self.assertEqual(
+        assert number.size(2) == 2
+        assert number.size(3) == 2
+        assert number.size(0xA2) == 8
+        assert number.size(0xA2BA40) == 8 * 3
+        assert (
             number.size(
                 0xA2BA40EE07E3B2BD2F02CE227F36A195024486E49C19CB41BBBDFBBA98B22B0E577C2EEAFFA20D883A76E65E394C69D4B3C05A1E8FADDA27EDB2A42BC000FE888B9B32C22D15ADD0CD76B3E7936E19955B220DD17D4EA904B1EC102B2E4DE7751222AA99151024C7CB41CC5EA21D00EEB41F7C800834D2C6E06BCE3BCE7EA9A5
-            ),
-            1024,
+            )
+            == 1024
         )
-        self.assertRaises(ValueError, number.size, -1)
+        with pytest.raises(ValueError):
+            number.size(-1)
 
 
-class LongTests(unittest.TestCase):
+class TestLong:
     def test1(self):
-        self.assertEqual(long_to_bytes(0), b"\x00")
-        self.assertEqual(long_to_bytes(1), b"\x01")
-        self.assertEqual(long_to_bytes(0x100), b"\x01\x00")
-        self.assertEqual(long_to_bytes(0xFF00000000), b"\xff\x00\x00\x00\x00")
-        self.assertEqual(long_to_bytes(0xFF00000000), b"\xff\x00\x00\x00\x00")
-        self.assertEqual(long_to_bytes(0x1122334455667788), b"\x11\x22\x33\x44\x55\x66\x77\x88")
-        self.assertEqual(long_to_bytes(0x112233445566778899), b"\x11\x22\x33\x44\x55\x66\x77\x88\x99")
+        assert long_to_bytes(0) == b"\x00"
+        assert long_to_bytes(1) == b"\x01"
+        assert long_to_bytes(0x100) == b"\x01\x00"
+        assert long_to_bytes(0xFF00000000) == b"\xff\x00\x00\x00\x00"
+        assert long_to_bytes(0xFF00000000) == b"\xff\x00\x00\x00\x00"
+        assert long_to_bytes(0x1122334455667788) == b"\x11\x22\x33\x44\x55\x66\x77\x88"
+        assert long_to_bytes(0x112233445566778899) == b"\x11\x22\x33\x44\x55\x66\x77\x88\x99"
 
     def test2(self):
-        self.assertEqual(long_to_bytes(0, 1), b"\x00")
-        self.assertEqual(long_to_bytes(0, 2), b"\x00\x00")
-        self.assertEqual(long_to_bytes(1, 3), b"\x00\x00\x01")
-        self.assertEqual(long_to_bytes(65535, 2), b"\xff\xff")
-        self.assertEqual(long_to_bytes(65536, 2), b"\x00\x01\x00\x00")
-        self.assertEqual(long_to_bytes(0x100, 1), b"\x01\x00")
-        self.assertEqual(long_to_bytes(0xFF00000001, 6), b"\x00\xff\x00\x00\x00\x01")
-        self.assertEqual(long_to_bytes(0xFF00000001, 8), b"\x00\x00\x00\xff\x00\x00\x00\x01")
-        self.assertEqual(long_to_bytes(0xFF00000001, 10), b"\x00\x00\x00\x00\x00\xff\x00\x00\x00\x01")
-        self.assertEqual(long_to_bytes(0xFF00000001, 11), b"\x00\x00\x00\x00\x00\x00\xff\x00\x00\x00\x01")
+        assert long_to_bytes(0, 1) == b"\x00"
+        assert long_to_bytes(0, 2) == b"\x00\x00"
+        assert long_to_bytes(1, 3) == b"\x00\x00\x01"
+        assert long_to_bytes(65535, 2) == b"\xff\xff"
+        assert long_to_bytes(65536, 2) == b"\x00\x01\x00\x00"
+        assert long_to_bytes(0x100, 1) == b"\x01\x00"
+        assert long_to_bytes(0xFF00000001, 6) == b"\x00\xff\x00\x00\x00\x01"
+        assert long_to_bytes(0xFF00000001, 8) == b"\x00\x00\x00\xff\x00\x00\x00\x01"
+        assert long_to_bytes(0xFF00000001, 10) == b"\x00\x00\x00\x00\x00\xff\x00\x00\x00\x01"
+        assert long_to_bytes(0xFF00000001, 11) == b"\x00\x00\x00\x00\x00\x00\xff\x00\x00\x00\x01"
 
     def test_err1(self):
-        self.assertRaises(ValueError, long_to_bytes, -1)
+        with pytest.raises(ValueError):
+            long_to_bytes(-1)

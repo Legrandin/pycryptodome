@@ -23,11 +23,11 @@
 
 """Self-tests for Crypto.Util.Counter"""
 
-import unittest
+import pytest
 
 
-class CounterTests(unittest.TestCase):
-    def setUp(self):
+class TestCounter:
+    def setup_method(self):
         global Counter
         from Crypto.Util import Counter
 
@@ -42,7 +42,8 @@ class CounterTests(unittest.TestCase):
 
     def test_nbits(self):
         Counter.new(nbits=128)
-        self.assertRaises(ValueError, Counter.new, 129)
+        with pytest.raises(ValueError):
+            Counter.new(129)
 
     def test_prefix(self):
         Counter.new(128, prefix=b"xx")
@@ -52,4 +53,5 @@ class CounterTests(unittest.TestCase):
 
     def test_iv(self):
         Counter.new(128, initial_value=2)
-        self.assertRaises(ValueError, Counter.new, 16, initial_value=0x1FFFF)
+        with pytest.raises(ValueError):
+            Counter.new(16, initial_value=0x1FFFF)

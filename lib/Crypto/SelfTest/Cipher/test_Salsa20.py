@@ -23,7 +23,7 @@
 
 """Self-test suite for Crypto.Cipher.Salsa20"""
 
-import unittest
+import pytest
 
 from Crypto.Cipher import Salsa20
 from Crypto.SelfTest.Cipher.common import make_stream_tests
@@ -200,33 +200,36 @@ test_data = [
 ]
 
 
-class KeyLength(unittest.TestCase):
-    def runTest(self):
+class TestKeyLength:
+    def test(self):
 
         nonce = bytes([0]) * 8
         for key_length in (15, 30, 33):
             key = bytes([1]) * key_length
-            self.assertRaises(ValueError, Salsa20.new, key, nonce)
+            with pytest.raises(ValueError):
+                Salsa20.new(key, nonce)
 
 
-class NonceTests(unittest.TestCase):
+class TestNonce:
     def test_invalid_nonce_length(self):
         key = bytes([1]) * 16
-        self.assertRaises(ValueError, Salsa20.new, key, bytes([0]) * 7)
-        self.assertRaises(ValueError, Salsa20.new, key, bytes([0]) * 9)
+        with pytest.raises(ValueError):
+            Salsa20.new(key, bytes([0]) * 7)
+        with pytest.raises(ValueError):
+            Salsa20.new(key, bytes([0]) * 9)
 
     def test_default_nonce(self):
 
         cipher1 = Salsa20.new(bytes([1]) * 16)
         cipher2 = Salsa20.new(bytes([1]) * 16)
-        self.assertEqual(len(cipher1.nonce), 8)
-        self.assertNotEqual(cipher1.nonce, cipher2.nonce)
+        assert len(cipher1.nonce) == 8
+        assert cipher1.nonce != cipher2.nonce
 
 
-class ByteArrayTest(unittest.TestCase):
+class TestByteArray:
     """Verify we can encrypt or decrypt bytearrays"""
 
-    def runTest(self):
+    def test(self):
 
         data = b"0123"
         key = b"9" * 32
@@ -245,8 +248,8 @@ class ByteArrayTest(unittest.TestCase):
         nonce_ba[:1] = b"\xff"
         ct_test = cipher2.encrypt(data_ba)
 
-        self.assertEqual(ct, ct_test)
-        self.assertEqual(cipher1.nonce, cipher2.nonce)
+        assert ct == ct_test
+        assert cipher1.nonce == cipher2.nonce
 
         # Decryption
         key_ba = bytearray(key)
@@ -258,13 +261,13 @@ class ByteArrayTest(unittest.TestCase):
         nonce_ba[:1] = b"\xff"
         pt_test = cipher3.decrypt(ct_ba)
 
-        self.assertEqual(data, pt_test)
+        assert data == pt_test
 
 
-class MemoryviewTest(unittest.TestCase):
+class TestMemoryview:
     """Verify we can encrypt or decrypt bytearrays"""
 
-    def runTest(self):
+    def test(self):
 
         data = b"0123"
         key = b"9" * 32
@@ -283,8 +286,8 @@ class MemoryviewTest(unittest.TestCase):
         nonce_mv[:1] = b"\xff"
         ct_test = cipher2.encrypt(data_mv)
 
-        self.assertEqual(ct, ct_test)
-        self.assertEqual(cipher1.nonce, cipher2.nonce)
+        assert ct == ct_test
+        assert cipher1.nonce == cipher2.nonce
 
         # Decryption
         key_mv = memoryview(bytearray(key))
@@ -296,11 +299,11 @@ class MemoryviewTest(unittest.TestCase):
         nonce_mv[:1] = b"\xff"
         pt_test = cipher3.decrypt(ct_mv)
 
-        self.assertEqual(data, pt_test)
+        assert data == pt_test
 
 
-class TestOutput(unittest.TestCase):
-    def runTest(self):
+class TestOutput:
+    def test(self):
         # Encrypt/Decrypt data and test output parameter
 
         key = b"4" * 32
@@ -313,36 +316,40 @@ class TestOutput(unittest.TestCase):
         output = bytearray(len(pt))
         cipher = Salsa20.new(key=key, nonce=nonce)
         res = cipher.encrypt(pt, output=output)
-        self.assertEqual(ct, output)
-        self.assertEqual(res, None)
+        assert ct == output
+        assert res is None
 
         cipher = Salsa20.new(key=key, nonce=nonce)
         res = cipher.decrypt(ct, output=output)
-        self.assertEqual(pt, output)
-        self.assertEqual(res, None)
+        assert pt == output
+        assert res is None
 
         output = memoryview(bytearray(len(pt)))
         cipher = Salsa20.new(key=key, nonce=nonce)
         cipher.encrypt(pt, output=output)
-        self.assertEqual(ct, output)
+        assert ct == output
 
         cipher = Salsa20.new(key=key, nonce=nonce)
         cipher.decrypt(ct, output=output)
-        self.assertEqual(pt, output)
+        assert pt == output
 
         cipher = Salsa20.new(key=key, nonce=nonce)
-        self.assertRaises(TypeError, cipher.encrypt, pt, output=b"0" * len(pt))
+        with pytest.raises(TypeError):
+            cipher.encrypt(pt, output=b"0" * len(pt))
 
         cipher = Salsa20.new(key=key, nonce=nonce)
-        self.assertRaises(TypeError, cipher.decrypt, ct, output=b"0" * len(ct))
+        with pytest.raises(TypeError):
+            cipher.decrypt(ct, output=b"0" * len(ct))
 
         shorter_output = bytearray(len(pt) - 1)
 
         cipher = Salsa20.new(key=key, nonce=nonce)
-        self.assertRaises(ValueError, cipher.encrypt, pt, output=shorter_output)
+        with pytest.raises(ValueError):
+            cipher.encrypt(pt, output=shorter_output)
 
         cipher = Salsa20.new(key=key, nonce=nonce)
-        self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
+        with pytest.raises(ValueError):
+            cipher.decrypt(ct, output=shorter_output)
 
 
 TestVectors = make_stream_tests(Salsa20, "Salsa20", test_data)

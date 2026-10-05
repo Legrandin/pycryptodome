@@ -33,7 +33,7 @@
 
 """Self-test for Math.Numbers"""
 
-import unittest
+import pytest
 
 # test_probable_prime() is not imported by name, otherwise pytest would collect it as a test
 from Crypto.Math import Primality
@@ -47,7 +47,7 @@ from Crypto.Math.Primality import (
 )
 
 
-class TestPrimality(unittest.TestCase):
+class TestPrimality:
     primes = (
         1,
         2,
@@ -83,19 +83,21 @@ class TestPrimality(unittest.TestCase):
 
     def test_miller_rabin(self):
         for prime in self.primes:
-            self.assertEqual(miller_rabin_test(prime, 3), PROBABLY_PRIME)
+            assert miller_rabin_test(prime, 3) == PROBABLY_PRIME
         for composite in self.composites:
-            self.assertEqual(miller_rabin_test(composite, 3), COMPOSITE)
-        self.assertRaises(ValueError, miller_rabin_test, -1, 3)
+            assert miller_rabin_test(composite, 3) == COMPOSITE
+        with pytest.raises(ValueError):
+            miller_rabin_test(-1, 3)
 
     def test_lucas(self):
         for prime in self.primes:
             res = lucas_test(prime)
-            self.assertEqual(res, PROBABLY_PRIME)
+            assert res == PROBABLY_PRIME
         for composite in self.composites:
             res = lucas_test(composite)
-            self.assertEqual(res, COMPOSITE)
-        self.assertRaises(ValueError, lucas_test, -1)
+            assert res == COMPOSITE
+        with pytest.raises(ValueError):
+            lucas_test(-1)
 
     def test_is_prime(self):
         primes = (
@@ -105,7 +107,7 @@ class TestPrimality(unittest.TestCase):
             2**521 - 1,
         )
         for p in primes:
-            self.assertEqual(Primality.test_probable_prime(p), PROBABLY_PRIME)
+            assert Primality.test_probable_prime(p) == PROBABLY_PRIME
 
         not_primes = (
             4754868377601046732119933839981363081972014948522510826417784001,
@@ -113,17 +115,17 @@ class TestPrimality(unittest.TestCase):
             260849323075371835669784094383812120359260783810157225730623388382401,
         )
         for np in not_primes:
-            self.assertEqual(Primality.test_probable_prime(np), COMPOSITE)
+            assert Primality.test_probable_prime(np) == COMPOSITE
 
         from Crypto.Util.number import sieve_base
 
         for p in sieve_base[:100]:
             res = Primality.test_probable_prime(p)
-            self.assertEqual(res, PROBABLY_PRIME)
+            assert res == PROBABLY_PRIME
 
     def test_generate_prime_bit_size(self):
         p = generate_probable_prime(exact_bits=512)
-        self.assertEqual(p.size_in_bits(), 512)
+        assert p.size_in_bits() == 512
 
     def test_generate_prime_filter(self):
         def ending_with_one(number):
@@ -131,8 +133,8 @@ class TestPrimality(unittest.TestCase):
 
         for _x in range(20):
             q = generate_probable_prime(exact_bits=160, prime_filter=ending_with_one)
-            self.assertEqual(q % 10, 1)
+            assert q % 10 == 1
 
     def test_generate_safe_prime(self):
         p = generate_probable_safe_prime(exact_bits=161)
-        self.assertEqual(p.size_in_bits(), 161)
+        assert p.size_in_bits() == 161

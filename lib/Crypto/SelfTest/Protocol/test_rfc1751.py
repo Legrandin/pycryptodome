@@ -26,7 +26,6 @@
 __revision__ = "$Id$"
 
 import binascii
-import unittest
 
 from Crypto.Util import RFC1751
 
@@ -37,20 +36,20 @@ test_data = [
 ]
 
 
-class RFC1751Test_k2e(unittest.TestCase):
-    def runTest(self):
+class TestRFC1751Test_k2e:
+    def test(self):
         "Check converting keys to English"
         for key, words in test_data:
             key = binascii.a2b_hex(key.encode("latin-1"))
-            self.assertEqual(RFC1751.key_to_english(key), words)
+            assert RFC1751.key_to_english(key) == words
 
 
-class RFC1751Test_e2k(unittest.TestCase):
-    def runTest(self):
+class TestRFC1751Test_e2k:
+    def test(self):
         "Check converting English strings to keys"
         for key, words in test_data:
             key = binascii.a2b_hex(key.encode("latin-1"))
-            self.assertEqual(RFC1751.english_to_key(words), key)
+            assert RFC1751.english_to_key(words) == key
 
 
 # class RFC1751Test

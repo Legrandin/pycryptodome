@@ -23,8 +23,9 @@
 
 """Self-test suite for Crypto.Cipher.ARC4"""
 
-import unittest
 from binascii import unhexlify
+
+import pytest
 
 from Crypto.Cipher import ARC4
 from Crypto.SelfTest.Cipher.common import make_stream_tests
@@ -65,7 +66,7 @@ test_data = [
 ]
 
 
-class RFC6229_Tests(unittest.TestCase):
+class TestRFC6229:
     # Test vectors from RFC 6229. Each test vector is a tuple with two items:
     # the ARC4 key and a dictionary. The dictionary has keystream offsets as keys
     # and the 16-byte keystream starting at the relevant offset as value.
@@ -402,55 +403,60 @@ class RFC6229_Tests(unittest.TestCase):
         ),
     ]
 
-    def test_keystream(self):
-        for tv in self.rfc6229_data:
-            key = unhexlify(tv[0].encode("latin-1"))
-            cipher = ARC4.new(key)
-            count = 0
-            for offset in range(0, 4096 + 1, 16):
-                ct = cipher.encrypt(b"\x00" * 16)
-                expected = tv[1].get(offset)
-                if expected:
-                    expected = unhexlify(expected.replace(" ", "").encode("latin-1"))
-                    self.assertEqual(ct, expected)
-                    count += 1
-            self.assertEqual(count, len(tv[1]))
+    @pytest.mark.parametrize("tv", rfc6229_data)
+    def test_keystream(self, tv):
+        key = unhexlify(tv[0].encode("latin-1"))
+        cipher = ARC4.new(key)
+        count = 0
+        for offset in range(0, 4096 + 1, 16):
+            ct = cipher.encrypt(b"\x00" * 16)
+            expected = tv[1].get(offset)
+            if expected:
+                expected = unhexlify(expected.replace(" ", "").encode("latin-1"))
+                assert ct == expected
+                count += 1
+        assert count == len(tv[1])
 
 
-class Drop_Tests(unittest.TestCase):
+class TestDrop:
     key = b"\xaa" * 16
     data = b"\x00" * 5000
 
-    def setUp(self):
+    def setup_method(self):
         self.cipher = ARC4.new(self.key)
 
     def test_drop256_encrypt(self):
         cipher_drop = ARC4.new(self.key, 256)
         ct_drop = cipher_drop.encrypt(self.data[:16])
         ct = self.cipher.encrypt(self.data)[256 : 256 + 16]
-        self.assertEqual(ct_drop, ct)
+        assert ct_drop == ct
 
     def test_drop256_decrypt(self):
         cipher_drop = ARC4.new(self.key, 256)
         pt_drop = cipher_drop.decrypt(self.data[:16])
         pt = self.cipher.decrypt(self.data)[256 : 256 + 16]
-        self.assertEqual(pt_drop, pt)
+        assert pt_drop == pt
 
     def test_drop_keyword(self):
         ct1 = ARC4.new(self.key, 256).encrypt(self.data[:16])
         ct2 = ARC4.new(self.key, drop=256).encrypt(self.data[:16])
-        self.assertEqual(ct1, ct2)
+        assert ct1 == ct2
 
     def test_unknown_parameters(self):
-        self.assertRaises(TypeError, ARC4.new, self.key, drp=256)
-        self.assertRaises(TypeError, ARC4.new, self.key, 256, 1)
-        self.assertRaises(TypeError, ARC4.new, self.key, 256, drop=512)
+        with pytest.raises(TypeError):
+            ARC4.new(self.key, drp=256)
+        with pytest.raises(TypeError):
+            ARC4.new(self.key, 256, 1)
+        with pytest.raises(TypeError):
+            ARC4.new(self.key, 256, drop=512)
 
 
-class KeyLength(unittest.TestCase):
-    def runTest(self):
-        self.assertRaises(ValueError, ARC4.new, b"")
-        self.assertRaises(ValueError, ARC4.new, b"\x00" * 257)
+class TestKeyLength:
+    def test(self):
+        with pytest.raises(ValueError):
+            ARC4.new(b"")
+        with pytest.raises(ValueError):
+            ARC4.new(b"\x00" * 257)
 
 
 TestVectors = make_stream_tests(ARC4, "ARC4", test_data)

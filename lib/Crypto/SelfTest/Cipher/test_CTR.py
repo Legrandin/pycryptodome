@@ -28,8 +28,9 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-import unittest
 from binascii import hexlify, unhexlify
+
+import pytest
 
 from Crypto.Cipher import AES, DES3
 from Crypto.Hash import SHA256, SHAKE128
@@ -41,7 +42,7 @@ def get_tag_random(tag, length):
     return SHAKE128.new(data=tobytes(tag)).read(length)
 
 
-class CtrTests(unittest.TestCase):
+class TestCtr:
     key_128 = get_tag_random("key_128", 16)
     key_192 = get_tag_random("key_192", 24)
     nonce_32 = get_tag_random("nonce_32", 4)
@@ -56,7 +57,7 @@ class CtrTests(unittest.TestCase):
 
         cipher = AES.new(self.key_128, AES.MODE_CTR, counter=self.ctr_128)
         pt2 = cipher.decrypt(ct)
-        self.assertEqual(pt, pt2)
+        assert pt == pt2
 
     def test_loopback_64(self):
         cipher = DES3.new(self.key_192, DES3.MODE_CTR, counter=self.ctr_64)
@@ -65,56 +66,57 @@ class CtrTests(unittest.TestCase):
 
         cipher = DES3.new(self.key_192, DES3.MODE_CTR, counter=self.ctr_64)
         pt2 = cipher.decrypt(ct)
-        self.assertEqual(pt, pt2)
+        assert pt == pt2
 
     def test_invalid_counter_parameter(self):
         # Counter object is required for ciphers with short block size
-        self.assertRaises(TypeError, DES3.new, self.key_192, AES.MODE_CTR)
+        with pytest.raises(TypeError):
+            DES3.new(self.key_192, AES.MODE_CTR)
         # Positional arguments are not allowed (Counter must be passed as
         # keyword)
-        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CTR, self.ctr_128)
+        with pytest.raises(TypeError):
+            AES.new(self.key_128, AES.MODE_CTR, self.ctr_128)
 
     def test_nonce_attribute(self):
         # Nonce attribute is the prefix passed to Counter (DES3)
         cipher = DES3.new(self.key_192, DES3.MODE_CTR, counter=self.ctr_64)
-        self.assertEqual(cipher.nonce, self.nonce_32)
+        assert cipher.nonce == self.nonce_32
 
         # Nonce attribute is the prefix passed to Counter (AES)
         cipher = AES.new(self.key_128, AES.MODE_CTR, counter=self.ctr_128)
-        self.assertEqual(cipher.nonce, self.nonce_64)
+        assert cipher.nonce == self.nonce_64
 
         # Nonce attribute is not defined if suffix is used in Counter
         counter = Counter.new(64, prefix=self.nonce_32, suffix=self.nonce_32)
         cipher = AES.new(self.key_128, AES.MODE_CTR, counter=counter)
-        self.assertFalse(hasattr(cipher, "nonce"))
+        assert not hasattr(cipher, "nonce")
 
     def test_nonce_parameter(self):
         # Nonce parameter becomes nonce attribute
         cipher1 = AES.new(self.key_128, AES.MODE_CTR, nonce=self.nonce_64)
-        self.assertEqual(cipher1.nonce, self.nonce_64)
+        assert cipher1.nonce == self.nonce_64
 
         counter = Counter.new(64, prefix=self.nonce_64, initial_value=0)
         cipher2 = AES.new(self.key_128, AES.MODE_CTR, counter=counter)
-        self.assertEqual(cipher1.nonce, cipher2.nonce)
+        assert cipher1.nonce == cipher2.nonce
 
         pt = get_tag_random("plaintext", 65536)
-        self.assertEqual(cipher1.encrypt(pt), cipher2.encrypt(pt))
+        assert cipher1.encrypt(pt) == cipher2.encrypt(pt)
 
         # Nonce is implicitly created (for AES) when no parameters are passed
         nonce1 = AES.new(self.key_128, AES.MODE_CTR).nonce
         nonce2 = AES.new(self.key_128, AES.MODE_CTR).nonce
-        self.assertNotEqual(nonce1, nonce2)
-        self.assertEqual(len(nonce1), 8)
+        assert nonce1 != nonce2
+        assert len(nonce1) == 8
 
         # Nonce can be zero-length
         cipher = AES.new(self.key_128, AES.MODE_CTR, nonce=b"")
-        self.assertEqual(b"", cipher.nonce)
+        assert cipher.nonce == b""
         cipher.encrypt(b"0" * 300)
 
         # Nonce and Counter are mutually exclusive
-        self.assertRaises(
-            TypeError, AES.new, self.key_128, AES.MODE_CTR, counter=self.ctr_128, nonce=self.nonce_64
-        )
+        with pytest.raises(TypeError):
+            AES.new(self.key_128, AES.MODE_CTR, counter=self.ctr_128, nonce=self.nonce_64)
 
     def test_initial_value_parameter(self):
         # Test with nonce parameter
@@ -122,19 +124,18 @@ class CtrTests(unittest.TestCase):
         counter = Counter.new(64, prefix=self.nonce_64, initial_value=0xFFFF)
         cipher2 = AES.new(self.key_128, AES.MODE_CTR, counter=counter)
         pt = get_tag_random("plaintext", 65536)
-        self.assertEqual(cipher1.encrypt(pt), cipher2.encrypt(pt))
+        assert cipher1.encrypt(pt) == cipher2.encrypt(pt)
 
         # Test without nonce parameter
         cipher1 = AES.new(self.key_128, AES.MODE_CTR, initial_value=0xFFFF)
         counter = Counter.new(64, prefix=cipher1.nonce, initial_value=0xFFFF)
         cipher2 = AES.new(self.key_128, AES.MODE_CTR, counter=counter)
         pt = get_tag_random("plaintext", 65536)
-        self.assertEqual(cipher1.encrypt(pt), cipher2.encrypt(pt))
+        assert cipher1.encrypt(pt) == cipher2.encrypt(pt)
 
         # Initial_value and Counter are mutually exclusive
-        self.assertRaises(
-            TypeError, AES.new, self.key_128, AES.MODE_CTR, counter=self.ctr_128, initial_value=0
-        )
+        with pytest.raises(TypeError):
+            AES.new(self.key_128, AES.MODE_CTR, counter=self.ctr_128, initial_value=0)
 
     def test_initial_value_bytes_parameter(self):
         # Same result as when passing an integer
@@ -143,31 +144,33 @@ class CtrTests(unittest.TestCase):
         )
         cipher2 = AES.new(self.key_128, AES.MODE_CTR, nonce=self.nonce_64, initial_value=0xFFFF)
         pt = get_tag_random("plaintext", 65536)
-        self.assertEqual(cipher1.encrypt(pt), cipher2.encrypt(pt))
+        assert cipher1.encrypt(pt) == cipher2.encrypt(pt)
 
         # Fail if the iv is too large
-        self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_CTR, initial_value=b"5" * 17)
-        self.assertRaises(
-            ValueError, AES.new, self.key_128, AES.MODE_CTR, nonce=self.nonce_64, initial_value=b"5" * 9
-        )
+        with pytest.raises(ValueError):
+            AES.new(self.key_128, AES.MODE_CTR, initial_value=b"5" * 17)
+        with pytest.raises(ValueError):
+            AES.new(self.key_128, AES.MODE_CTR, nonce=self.nonce_64, initial_value=b"5" * 9)
 
         # Fail if the iv is too short
-        self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_CTR, initial_value=b"5" * 15)
-        self.assertRaises(
-            ValueError, AES.new, self.key_128, AES.MODE_CTR, nonce=self.nonce_64, initial_value=b"5" * 7
-        )
+        with pytest.raises(ValueError):
+            AES.new(self.key_128, AES.MODE_CTR, initial_value=b"5" * 15)
+        with pytest.raises(ValueError):
+            AES.new(self.key_128, AES.MODE_CTR, nonce=self.nonce_64, initial_value=b"5" * 7)
 
     def test_iv_with_matching_length(self):
-        self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_CTR, counter=Counter.new(120))
-        self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_CTR, counter=Counter.new(136))
+        with pytest.raises(ValueError):
+            AES.new(self.key_128, AES.MODE_CTR, counter=Counter.new(120))
+        with pytest.raises(ValueError):
+            AES.new(self.key_128, AES.MODE_CTR, counter=Counter.new(136))
 
     def test_block_size_128(self):
         cipher = AES.new(self.key_128, AES.MODE_CTR, counter=self.ctr_128)
-        self.assertEqual(cipher.block_size, AES.block_size)
+        assert cipher.block_size == AES.block_size
 
     def test_block_size_64(self):
         cipher = DES3.new(self.key_192, DES3.MODE_CTR, counter=self.ctr_64)
-        self.assertEqual(cipher.block_size, DES3.block_size)
+        assert cipher.block_size == DES3.block_size
 
     def test_unaligned_data_128(self):
         plaintexts = [b"7777777"] * 100
@@ -175,28 +178,30 @@ class CtrTests(unittest.TestCase):
         cipher = AES.new(self.key_128, AES.MODE_CTR, counter=self.ctr_128)
         ciphertexts = [cipher.encrypt(x) for x in plaintexts]
         cipher = AES.new(self.key_128, AES.MODE_CTR, counter=self.ctr_128)
-        self.assertEqual(b"".join(ciphertexts), cipher.encrypt(b"".join(plaintexts)))
+        assert b"".join(ciphertexts) == cipher.encrypt(b"".join(plaintexts))
 
         cipher = AES.new(self.key_128, AES.MODE_CTR, counter=self.ctr_128)
         ciphertexts = [cipher.encrypt(x) for x in plaintexts]
         cipher = AES.new(self.key_128, AES.MODE_CTR, counter=self.ctr_128)
-        self.assertEqual(b"".join(ciphertexts), cipher.encrypt(b"".join(plaintexts)))
+        assert b"".join(ciphertexts) == cipher.encrypt(b"".join(plaintexts))
 
     def test_unaligned_data_64(self):
         plaintexts = [b"7777777"] * 100
         cipher = DES3.new(self.key_192, AES.MODE_CTR, counter=self.ctr_64)
         ciphertexts = [cipher.encrypt(x) for x in plaintexts]
         cipher = DES3.new(self.key_192, AES.MODE_CTR, counter=self.ctr_64)
-        self.assertEqual(b"".join(ciphertexts), cipher.encrypt(b"".join(plaintexts)))
+        assert b"".join(ciphertexts) == cipher.encrypt(b"".join(plaintexts))
 
         cipher = DES3.new(self.key_192, AES.MODE_CTR, counter=self.ctr_64)
         ciphertexts = [cipher.encrypt(x) for x in plaintexts]
         cipher = DES3.new(self.key_192, AES.MODE_CTR, counter=self.ctr_64)
-        self.assertEqual(b"".join(ciphertexts), cipher.encrypt(b"".join(plaintexts)))
+        assert b"".join(ciphertexts) == cipher.encrypt(b"".join(plaintexts))
 
     def test_unknown_parameters(self):
-        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CTR, 7, counter=self.ctr_128)
-        self.assertRaises(TypeError, AES.new, self.key_128, AES.MODE_CTR, counter=self.ctr_128, unknown=7)
+        with pytest.raises(TypeError):
+            AES.new(self.key_128, AES.MODE_CTR, 7, counter=self.ctr_128)
+        with pytest.raises(TypeError):
+            AES.new(self.key_128, AES.MODE_CTR, counter=self.ctr_128, unknown=7)
         # But some are only known by the base cipher (e.g. use_aesni consumed by the AES module)
         AES.new(self.key_128, AES.MODE_CTR, counter=self.ctr_128, use_aesni=False)
 
@@ -204,16 +209,18 @@ class CtrTests(unittest.TestCase):
         for func in "encrypt", "decrypt":
             cipher = AES.new(self.key_128, AES.MODE_CTR, counter=self.ctr_128)
             result = getattr(cipher, func)(b"")
-            self.assertEqual(result, b"")
+            assert result == b""
 
     def test_either_encrypt_or_decrypt(self):
         cipher = AES.new(self.key_128, AES.MODE_CTR, counter=self.ctr_128)
         cipher.encrypt(b"")
-        self.assertRaises(TypeError, cipher.decrypt, b"")
+        with pytest.raises(TypeError):
+            cipher.decrypt(b"")
 
         cipher = AES.new(self.key_128, AES.MODE_CTR, counter=self.ctr_128)
         cipher.decrypt(b"")
-        self.assertRaises(TypeError, cipher.encrypt, b"")
+        with pytest.raises(TypeError):
+            cipher.encrypt(b"")
 
     def test_wrap_around(self):
         # Counter is only 8 bits, so we can only encrypt/decrypt 256 blocks (=4096 bytes)
@@ -222,17 +229,21 @@ class CtrTests(unittest.TestCase):
 
         cipher = AES.new(self.key_128, AES.MODE_CTR, counter=counter)
         cipher.encrypt(b"9" * max_bytes)
-        self.assertRaises(OverflowError, cipher.encrypt, b"9")
+        with pytest.raises(OverflowError):
+            cipher.encrypt(b"9")
 
         cipher = AES.new(self.key_128, AES.MODE_CTR, counter=counter)
-        self.assertRaises(OverflowError, cipher.encrypt, b"9" * (max_bytes + 1))
+        with pytest.raises(OverflowError):
+            cipher.encrypt(b"9" * (max_bytes + 1))
 
         cipher = AES.new(self.key_128, AES.MODE_CTR, counter=counter)
         cipher.decrypt(b"9" * max_bytes)
-        self.assertRaises(OverflowError, cipher.decrypt, b"9")
+        with pytest.raises(OverflowError):
+            cipher.decrypt(b"9")
 
         cipher = AES.new(self.key_128, AES.MODE_CTR, counter=counter)
-        self.assertRaises(OverflowError, cipher.decrypt, b"9" * (max_bytes + 1))
+        with pytest.raises(OverflowError):
+            cipher.decrypt(b"9" * (max_bytes + 1))
 
     def test_bytearray(self):
         data = b"1" * 16
@@ -247,8 +258,8 @@ class CtrTests(unittest.TestCase):
         )
         ref2 = cipher2.encrypt(bytearray(data))
 
-        self.assertEqual(ref1, ref2)
-        self.assertEqual(cipher1.nonce, cipher2.nonce)
+        assert ref1 == ref2
+        assert cipher1.nonce == cipher2.nonce
 
         # Decrypt
         cipher3 = AES.new(self.key_128, AES.MODE_CTR, nonce=self.nonce_64, initial_value=iv)
@@ -259,13 +270,13 @@ class CtrTests(unittest.TestCase):
         )
         ref4 = cipher4.decrypt(bytearray(data))
 
-        self.assertEqual(ref3, ref4)
+        assert ref3 == ref4
 
     def test_very_long_data(self):
         cipher = AES.new(b"A" * 32, AES.MODE_CTR, nonce=b"")
         ct = cipher.encrypt(b"B" * 1000000)
         digest = SHA256.new(ct).hexdigest()
-        self.assertEqual(digest, "96204fc470476561a3a8f3b6fe6d24be85c87510b638142d1d0fb90989f8a6a6")
+        assert digest == "96204fc470476561a3a8f3b6fe6d24be85c87510b638142d1d0fb90989f8a6a6"
 
     def test_output_param(self):
 
@@ -276,13 +287,13 @@ class CtrTests(unittest.TestCase):
         output = bytearray(128)
         cipher = AES.new(b"4" * 16, AES.MODE_CTR, nonce=self.nonce_64)
         res = cipher.encrypt(pt, output=output)
-        self.assertEqual(ct, output)
-        self.assertEqual(res, None)
+        assert ct == output
+        assert res is None
 
         cipher = AES.new(b"4" * 16, AES.MODE_CTR, nonce=self.nonce_64)
         res = cipher.decrypt(ct, output=output)
-        self.assertEqual(pt, output)
-        self.assertEqual(res, None)
+        assert pt == output
+        assert res is None
 
     def test_output_param_memoryview(self):
 
@@ -293,11 +304,11 @@ class CtrTests(unittest.TestCase):
         output = memoryview(bytearray(128))
         cipher = AES.new(b"4" * 16, AES.MODE_CTR, nonce=self.nonce_64)
         cipher.encrypt(pt, output=output)
-        self.assertEqual(ct, output)
+        assert ct == output
 
         cipher = AES.new(b"4" * 16, AES.MODE_CTR, nonce=self.nonce_64)
         cipher.decrypt(ct, output=output)
-        self.assertEqual(pt, output)
+        assert pt == output
 
     def test_output_param_neg(self):
         LEN_PT = 128
@@ -307,19 +318,23 @@ class CtrTests(unittest.TestCase):
         ct = cipher.encrypt(pt)
 
         cipher = AES.new(b"4" * 16, AES.MODE_CTR, nonce=self.nonce_64)
-        self.assertRaises(TypeError, cipher.encrypt, pt, output=b"0" * LEN_PT)
+        with pytest.raises(TypeError):
+            cipher.encrypt(pt, output=b"0" * LEN_PT)
 
         cipher = AES.new(b"4" * 16, AES.MODE_CTR, nonce=self.nonce_64)
-        self.assertRaises(TypeError, cipher.decrypt, ct, output=b"0" * LEN_PT)
+        with pytest.raises(TypeError):
+            cipher.decrypt(ct, output=b"0" * LEN_PT)
 
         shorter_output = bytearray(LEN_PT - 1)
         cipher = AES.new(b"4" * 16, AES.MODE_CTR, nonce=self.nonce_64)
-        self.assertRaises(ValueError, cipher.encrypt, pt, output=shorter_output)
+        with pytest.raises(ValueError):
+            cipher.encrypt(pt, output=shorter_output)
         cipher = AES.new(b"4" * 16, AES.MODE_CTR, nonce=self.nonce_64)
-        self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
+        with pytest.raises(ValueError):
+            cipher.decrypt(ct, output=shorter_output)
 
 
-class SP800TestVectors(unittest.TestCase):
+class TestSP800TestVectors:
     """Class exercising the CTR test vectors found in Section F.5
     of NIST SP 800-38A"""
 
@@ -346,9 +361,9 @@ class SP800TestVectors(unittest.TestCase):
         ciphertext = unhexlify(ciphertext)
 
         cipher = AES.new(key, AES.MODE_CTR, counter=counter)
-        self.assertEqual(cipher.encrypt(plaintext), ciphertext)
+        assert cipher.encrypt(plaintext) == ciphertext
         cipher = AES.new(key, AES.MODE_CTR, counter=counter)
-        self.assertEqual(cipher.decrypt(ciphertext), plaintext)
+        assert cipher.decrypt(ciphertext) == plaintext
 
     def test_aes_192(self):
         plaintext = (
@@ -373,9 +388,9 @@ class SP800TestVectors(unittest.TestCase):
         ciphertext = unhexlify(ciphertext)
 
         cipher = AES.new(key, AES.MODE_CTR, counter=counter)
-        self.assertEqual(cipher.encrypt(plaintext), ciphertext)
+        assert cipher.encrypt(plaintext) == ciphertext
         cipher = AES.new(key, AES.MODE_CTR, counter=counter)
-        self.assertEqual(cipher.decrypt(ciphertext), plaintext)
+        assert cipher.decrypt(ciphertext) == plaintext
 
     def test_aes_256(self):
         plaintext = (
@@ -399,12 +414,12 @@ class SP800TestVectors(unittest.TestCase):
         ciphertext = unhexlify(ciphertext)
 
         cipher = AES.new(key, AES.MODE_CTR, counter=counter)
-        self.assertEqual(cipher.encrypt(plaintext), ciphertext)
+        assert cipher.encrypt(plaintext) == ciphertext
         cipher = AES.new(key, AES.MODE_CTR, counter=counter)
-        self.assertEqual(cipher.decrypt(ciphertext), plaintext)
+        assert cipher.decrypt(ciphertext) == plaintext
 
 
-class RFC3686TestVectors(unittest.TestCase):
+class TestRFC3686TestVectors:
     # Each item is a test vector with:
     # - plaintext
     # - ciphertext
@@ -471,9 +486,9 @@ class RFC3686TestVectors(unittest.TestCase):
     for tv in data:
         bindata.append([unhexlify(x) for x in tv])
 
-    def runTest(self):
+    def test(self):
         for pt, ct, key, prefix in self.bindata:
             counter = Counter.new(32, prefix=prefix)
             cipher = AES.new(key, AES.MODE_CTR, counter=counter)
             result = cipher.encrypt(pt)
-            self.assertEqual(hexlify(ct), hexlify(result))
+            assert hexlify(ct) == hexlify(result)

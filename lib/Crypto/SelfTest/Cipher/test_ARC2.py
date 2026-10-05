@@ -23,7 +23,7 @@
 
 """Self-test suite for Crypto.Cipher.ARC2"""
 
-import unittest
+import pytest
 
 from Crypto.Cipher import ARC2
 from Crypto.SelfTest.Cipher.common import make_block_tests
@@ -102,27 +102,32 @@ test_data = [
 ]
 
 
-class BufferOverflowTest(unittest.TestCase):
+class TestBufferOverflow:
     # Test a buffer overflow found in older versions of PyCrypto
 
-    def runTest(self):
+    def test(self):
         """ARC2 with keylength > 128"""
         key = b"x" * 16384
-        self.assertRaises(ValueError, ARC2.new, key, ARC2.MODE_ECB)
+        with pytest.raises(ValueError):
+            ARC2.new(key, ARC2.MODE_ECB)
 
 
-class KeyLength(unittest.TestCase):
-    def runTest(self):
+class TestKeyLength:
+    def test(self):
         ARC2.new(b"\x00" * 16, ARC2.MODE_ECB, effective_keylen=40)
-        self.assertRaises(ValueError, ARC2.new, bytes([0]) * 4, ARC2.MODE_ECB)
-        self.assertRaises(ValueError, ARC2.new, bytes([0]) * 129, ARC2.MODE_ECB)
+        with pytest.raises(ValueError):
+            ARC2.new(bytes([0]) * 4, ARC2.MODE_ECB)
+        with pytest.raises(ValueError):
+            ARC2.new(bytes([0]) * 129, ARC2.MODE_ECB)
 
-        self.assertRaises(ValueError, ARC2.new, bytes([0]) * 16, ARC2.MODE_ECB, effective_keylen=39)
-        self.assertRaises(ValueError, ARC2.new, bytes([0]) * 16, ARC2.MODE_ECB, effective_keylen=1025)
+        with pytest.raises(ValueError):
+            ARC2.new(bytes([0]) * 16, ARC2.MODE_ECB, effective_keylen=39)
+        with pytest.raises(ValueError):
+            ARC2.new(bytes([0]) * 16, ARC2.MODE_ECB, effective_keylen=1025)
 
 
-class TestOutput(unittest.TestCase):
-    def runTest(self):
+class TestOutput:
+    def test(self):
         # Encrypt/Decrypt data and test output parameter
 
         cipher = ARC2.new(b"4" * 16, ARC2.MODE_ECB)
@@ -132,26 +137,30 @@ class TestOutput(unittest.TestCase):
 
         output = bytearray(16)
         res = cipher.encrypt(pt, output=output)
-        self.assertEqual(ct, output)
-        self.assertEqual(res, None)
+        assert ct == output
+        assert res is None
 
         res = cipher.decrypt(ct, output=output)
-        self.assertEqual(pt, output)
-        self.assertEqual(res, None)
+        assert pt == output
+        assert res is None
 
         output = memoryview(bytearray(16))
         cipher.encrypt(pt, output=output)
-        self.assertEqual(ct, output)
+        assert ct == output
 
         cipher.decrypt(ct, output=output)
-        self.assertEqual(pt, output)
+        assert pt == output
 
-        self.assertRaises(TypeError, cipher.encrypt, pt, output=b"0" * 16)
-        self.assertRaises(TypeError, cipher.decrypt, ct, output=b"0" * 16)
+        with pytest.raises(TypeError):
+            cipher.encrypt(pt, output=b"0" * 16)
+        with pytest.raises(TypeError):
+            cipher.decrypt(ct, output=b"0" * 16)
 
         shorter_output = bytearray(7)
-        self.assertRaises(ValueError, cipher.encrypt, pt, output=shorter_output)
-        self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
+        with pytest.raises(ValueError):
+            cipher.encrypt(pt, output=shorter_output)
+        with pytest.raises(ValueError):
+            cipher.decrypt(ct, output=shorter_output)
 
 
 TestVectors = make_block_tests(ARC2, "ARC2", test_data)

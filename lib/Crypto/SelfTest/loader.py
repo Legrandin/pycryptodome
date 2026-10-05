@@ -251,3 +251,12 @@ def load_test_vectors_wycheproof(dir_comps, file_name, description, root_tag={},
             result.append(tv)
 
     return result
+
+
+def wycheproof_id(tv):
+    """Return the pytest ID of a Wycheproof test vector (e.g. 'aes_gcm-12')"""
+
+    name = tv.filename
+    if name.endswith("_test.json"):
+        name = name[: -len("_test.json")]
+    return "%s-%d" % (name, tv.id)

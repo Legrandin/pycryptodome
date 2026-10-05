@@ -25,7 +25,13 @@ Contribute and support
       pip install -e .
       python -m Crypto.SelfTest --skip-slow-tests
 
-  Any argument is passed on to pytest, for instance ``-k AES`` to only run the AES tests.
+  The option ``--skip-slow-tests`` skips the tests marked as ``slow``
+  (mostly the larger sets of test vectors) for a faster turnaround.
+  Run ``python -m Crypto.SelfTest`` without it to execute the complete suite,
+  as the CI does, before submitting your change. If you add a test that takes
+  long to run, mark it with ``@pytest.mark.slow``.
+
+  Any other argument is passed on to pytest, for instance ``-k AES`` to only run the AES tests.
 - If your change breaks backward compatibility, highlight it and include
   a justification.
 - Ensure that your code complies to `PEP8`_ and `PEP257`_.

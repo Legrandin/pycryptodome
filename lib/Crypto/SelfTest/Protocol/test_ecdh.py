@@ -1,7 +1,8 @@
 import base64
 import re
-import unittest
 from binascii import hexlify, unhexlify
+
+import pytest
 
 from Crypto.Hash import SHA256
 from Crypto.Protocol import DH
@@ -13,12 +14,7 @@ from Crypto.Protocol.DH import (
     key_agreement,
 )
 from Crypto.PublicKey import ECC
-from Crypto.SelfTest.loader import load_test_vectors, load_test_vectors_wycheproof
-
-
-class FIPS_ECDH_Tests_KAT(unittest.TestCase):
-    pass
-
+from Crypto.SelfTest.loader import load_test_vectors, load_test_vectors_wycheproof, wycheproof_id
 
 test_vectors_verify = (
     load_test_vectors(
@@ -36,69 +32,104 @@ test_vectors_verify = (
     or []
 )
 
-for idx, tv in enumerate(test_vectors_verify):
-    # Stand-alone header with curve name
-    if isinstance(tv, str):
-        res = re.match(r"\[([A-Za-z0-9-]+)\]", tv)
-        assert res
-        curve_name = res.group(1)
-        continue
 
-    public_key = ECC.construct(curve=curve_name, point_x=tv.qcavsx, point_y=tv.qcavsy)
+def _load_kat_vectors():
+    params = []
+    for idx, tv in enumerate(test_vectors_verify):
+        # Stand-alone header with curve name
+        if isinstance(tv, str):
+            res = re.match(r"\[([A-Za-z0-9-]+)\]", tv)
+            assert res
+            curve_name = res.group(1)
+            continue
 
-    private_key = ECC.construct(curve=curve_name, d=tv.diut)
+        public_key = ECC.construct(curve=curve_name, point_x=tv.qcavsx, point_y=tv.qcavsy)
+        private_key = ECC.construct(curve=curve_name, d=tv.diut)
+        params.append(pytest.param(public_key, private_key, tv.ziut, id="%s-%d" % (curve_name, idx)))
+    return params
 
-    exp_response = tv.ziut
 
-    def ecdh_test(self, public_key=public_key, private_key=private_key, exp_response=exp_response):
+class TestFIPS_ECDH_Tests_KAT:
+    @pytest.mark.parametrize("public_key, private_key, exp_response", _load_kat_vectors())
+    def test_verify_positive(self, public_key, private_key, exp_response):
         z = key_agreement(static_pub=public_key, static_priv=private_key, kdf=lambda x: x)
-        self.assertEqual(z, exp_response)
-
-    def ecdh_test_rev(self, public_key=public_key, private_key=private_key, exp_response=exp_response):
-        z = key_agreement(static_pub=public_key, static_priv=private_key, kdf=lambda x: x)
-        self.assertEqual(z, exp_response)
-
-    setattr(FIPS_ECDH_Tests_KAT, "test_verify_positive_%d" % idx, ecdh_test)
-    if idx == 1:
-        setattr(FIPS_ECDH_Tests_KAT, "test_verify_positive_rev_%d" % idx, ecdh_test_rev)
+        assert z == exp_response
 
 
-class TestVectorsECDHWycheproof(unittest.TestCase):
+def _load_tests_ecdh(filename):
+
+    def curve(g):
+        return g["curve"]
+
+    def private(u):
+        return int(u["private"], 16)
+
+    result = load_test_vectors_wycheproof(
+        ("Protocol", "wycheproof"),
+        filename,
+        "Wycheproof ECDH (%s)" % filename,
+        group_tag={"curve": curve},
+        unit_tag={"private": private},
+    )
+    return result
+
+
+def _load_tests_hex(filename):
+
+    def encoding(g):
+        return g["type"]
+
+    def private(u):
+        return unhexlify(u["private"])
+
+    result = load_test_vectors_wycheproof(
+        ("Protocol", "wycheproof"),
+        filename,
+        "Wycheproof ECDH (%s)" % filename,
+        group_tag={"encoding": encoding},
+        unit_tag={"private": private},
+    )
+    return result
+
+
+def _load_tests_ascii(filename):
+
+    def encoding(g):
+        return g["type"]
+
+    def public(u):
+        return u["public"]
+
+    def private(u):
+        return u["private"]
+
+    result = load_test_vectors_wycheproof(
+        ("Protocol", "wycheproof"),
+        filename,
+        "Wycheproof ECDH (%s)" % filename,
+        group_tag={"encoding": encoding},
+        unit_tag={"public": public, "private": private},
+    )
+    return result
+
+
+def load_wycheproof_vectors_ecdh():
+    vectors = []
+
+    vectors += _load_tests_ecdh("ecdh_secp224r1_ecpoint_test.json")
+    vectors += _load_tests_ecdh("ecdh_secp256r1_ecpoint_test.json")
+    vectors += _load_tests_ecdh("ecdh_secp384r1_ecpoint_test.json")
+    vectors += _load_tests_ecdh("ecdh_secp521r1_ecpoint_test.json")
+
+    vectors += _load_tests_ecdh("ecdh_secp224r1_test.json")
+    vectors += _load_tests_ecdh("ecdh_secp256r1_test.json")
+    vectors += _load_tests_ecdh("ecdh_secp384r1_test.json")
+    vectors += _load_tests_ecdh("ecdh_secp521r1_test.json")
+    return vectors
+
+
+class TestVectorsECDHWycheproof:
     desc = "Wycheproof ECDH tests"
-
-    def add_tests(self, filename):
-
-        def curve(g):
-            return g["curve"]
-
-        def private(u):
-            return int(u["private"], 16)
-
-        result = load_test_vectors_wycheproof(
-            ("Protocol", "wycheproof"),
-            filename,
-            "Wycheproof ECDH (%s)" % filename,
-            group_tag={"curve": curve},
-            unit_tag={"private": private},
-        )
-        self.tv += result
-
-    def setUp(self):
-        self.tv = []
-        self.desc = None
-
-        self.add_tests("ecdh_secp224r1_ecpoint_test.json")
-        self.add_tests("ecdh_secp256r1_ecpoint_test.json")
-        self.add_tests("ecdh_secp384r1_ecpoint_test.json")
-        self.add_tests("ecdh_secp521r1_ecpoint_test.json")
-
-        self.add_tests("ecdh_secp224r1_test.json")
-        self.add_tests("ecdh_secp256r1_test.json")
-        self.add_tests("ecdh_secp384r1_test.json")
-        self.add_tests("ecdh_secp521r1_test.json")
-
-    def shortDescription(self):
-        return self.desc
 
     def check_verify(self, tv):
 
@@ -124,16 +155,15 @@ class TestVectorsECDHWycheproof(unittest.TestCase):
             assert not tv.valid
             assert "incompatible curve" in str(e)
         else:
-            self.assertEqual(z, tv.shared)
+            assert z == tv.shared
             assert tv.valid
 
-    def runTest(self):
-        for tv in self.tv:
-            self.desc = "Wycheproof ECDH Verify Test #%d (%s, %s)" % (tv.id, tv.comment, tv.filename)
-            self.check_verify(tv)
+    @pytest.mark.parametrize("tv", load_wycheproof_vectors_ecdh(), ids=wycheproof_id)
+    def test(self, tv):
+        self.check_verify(tv)
 
 
-class ECDH_Tests(unittest.TestCase):
+class TestECDH:
     static_priv = ECC.import_key(
         "-----BEGIN PRIVATE KEY-----\nMIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQg9VHFVKh2a1aVFifH\n+BiyNaRa2kttEg3165Ye/dJxJ7KhRANCAARImIEXro5ZOcyWU2mq/+d79FEZXtTA\nbKkz1aICQXihQdCMzRNbeNtC9LFLzhu1slRKJ2xsDAlw9r6w6vwtkRzr\n-----END PRIVATE KEY-----"
     )
@@ -153,7 +183,7 @@ class ECDH_Tests(unittest.TestCase):
         # C(0, 2s)
         kdf = lambda x: SHA256.new(x).digest()
         z = key_agreement(kdf=kdf, static_pub=self.static_pub, static_priv=self.static_priv)
-        self.assertEqual(hexlify(z), b"3960a1101d1193cbaffef4cc7202ebff783c22c6d2e0d5d530ffc66dc197ea9c")
+        assert hexlify(z) == b"3960a1101d1193cbaffef4cc7202ebff783c22c6d2e0d5d530ffc66dc197ea9c"
 
     def test_2(self):
         # C(2e, 2s)
@@ -165,7 +195,7 @@ class ECDH_Tests(unittest.TestCase):
             eph_pub=self.eph_pub,
             eph_priv=self.eph_priv,
         )
-        self.assertEqual(hexlify(z), b"7447b733d40c8fab2c633b3dc61e4a8c742f3a6af7e16fb0cc486f5bdb5d6ba2")
+        assert hexlify(z) == b"7447b733d40c8fab2c633b3dc61e4a8c742f3a6af7e16fb0cc486f5bdb5d6ba2"
 
     def test_3(self):
         # C(1e, 2s)
@@ -173,7 +203,7 @@ class ECDH_Tests(unittest.TestCase):
         z = key_agreement(
             kdf=kdf, static_pub=self.static_pub, static_priv=self.static_priv, eph_priv=self.eph_priv
         )
-        self.assertEqual(hexlify(z), b"9e977ae45f33bf67f285d064d83e6632bcafe3a7d33fe571233bab4794ace759")
+        assert hexlify(z) == b"9e977ae45f33bf67f285d064d83e6632bcafe3a7d33fe571233bab4794ace759"
 
     def test_4(self):
         # C(1e, 2s)
@@ -181,70 +211,67 @@ class ECDH_Tests(unittest.TestCase):
         z = key_agreement(
             kdf=kdf, static_pub=self.static_pub, static_priv=self.static_priv, eph_pub=self.eph_pub
         )
-        self.assertEqual(hexlify(z), b"c9532df6aa7e9dbe5fe85da31ee25ff19c179c88691ec4b8328cc2036dcdadf2")
+        assert hexlify(z) == b"c9532df6aa7e9dbe5fe85da31ee25ff19c179c88691ec4b8328cc2036dcdadf2"
 
     def test_5(self):
         # C(2e, 1s) is not supported
         kdf = lambda x: SHA256.new(x).digest()
-        self.assertRaises(
-            ValueError,
-            key_agreement,
-            kdf=kdf,
-            static_priv=self.static_priv,
-            eph_pub=self.eph_pub,
-            eph_priv=self.eph_priv,
-        )
+        with pytest.raises(ValueError):
+            key_agreement(
+                kdf=kdf,
+                static_priv=self.static_priv,
+                eph_pub=self.eph_pub,
+                eph_priv=self.eph_priv,
+            )
 
     def test_6(self):
         # C(2e, 1s) is not supported
         kdf = lambda x: SHA256.new(x).digest()
-        self.assertRaises(
-            ValueError,
-            key_agreement,
-            kdf=kdf,
-            static_pub=self.static_pub,
-            eph_pub=self.eph_pub,
-            eph_priv=self.eph_priv,
-        )
+        with pytest.raises(ValueError):
+            key_agreement(
+                kdf=kdf,
+                static_pub=self.static_pub,
+                eph_pub=self.eph_pub,
+                eph_priv=self.eph_priv,
+            )
 
     def test_7(self):
         # C(2e, 0)
         kdf = lambda x: SHA256.new(x).digest()
         z = key_agreement(kdf=kdf, eph_pub=self.eph_pub, eph_priv=self.eph_priv)
-        self.assertEqual(hexlify(z), b"feb257ebe063078b1391aac07913283d7b642ad7df61b46dfc9cd6f420bb896a")
+        assert hexlify(z) == b"feb257ebe063078b1391aac07913283d7b642ad7df61b46dfc9cd6f420bb896a"
 
     def test_8(self):
         # C(1e, 1s)
         kdf = lambda x: SHA256.new(x).digest()
         z = key_agreement(kdf=kdf, static_priv=self.static_priv, eph_pub=self.eph_pub)
-        self.assertEqual(hexlify(z), b"ee4dc995117476ed57fd17ff0ed44e9f0466d46b929443bc0db9380317583b04")
+        assert hexlify(z) == b"ee4dc995117476ed57fd17ff0ed44e9f0466d46b929443bc0db9380317583b04"
 
     def test_9(self):
         # C(1e, 1s)
         kdf = lambda x: SHA256.new(x).digest()
         z = key_agreement(kdf=kdf, static_pub=self.static_pub, eph_priv=self.eph_priv)
-        self.assertEqual(hexlify(z), b"2351cc2014f7c40468fa072b5d30f706eeaeef7507311cd8e59bab3b43f03c51")
+        assert hexlify(z) == b"2351cc2014f7c40468fa072b5d30f706eeaeef7507311cd8e59bab3b43f03c51"
 
     def test_10(self):
         # No private (local) keys
         kdf = lambda x: SHA256.new(x).digest()
-        self.assertRaises(
-            ValueError, key_agreement, kdf=kdf, static_pub=self.static_pub, eph_pub=self.eph_pub
-        )
+        with pytest.raises(ValueError):
+            key_agreement(kdf=kdf, static_pub=self.static_pub, eph_pub=self.eph_pub)
 
     def test_11(self):
         # No public (peer) keys
         kdf = lambda x: SHA256.new(x).digest()
-        self.assertRaises(
-            ValueError, key_agreement, kdf=kdf, static_priv=self.static_priv, eph_priv=self.eph_priv
-        )
+        with pytest.raises(ValueError):
+            key_agreement(kdf=kdf, static_priv=self.static_priv, eph_priv=self.eph_priv)
 
     def test_12(self):
         # failure if kdf is missing
-        self.assertRaises(TypeError, key_agreement, static_pub=self.static_pub, static_priv=self.static_priv)
+        with pytest.raises(TypeError):
+            key_agreement(static_pub=self.static_pub, static_priv=self.static_priv)
 
 
-class X25519_Tests(unittest.TestCase):
+class TestX25519:
     def test_rfc7748_1(self):
         tvs = (
             (
@@ -263,7 +290,7 @@ class X25519_Tests(unittest.TestCase):
             priv_key = DH.import_x25519_private_key(unhexlify(tv1))
             pub_key = DH.import_x25519_public_key(unhexlify(tv2))
             result = key_agreement(static_pub=pub_key, static_priv=priv_key, kdf=lambda x: x)
-            self.assertEqual(result, unhexlify(tv3))
+            assert result == unhexlify(tv3)
 
     def test_rfc7748_2(self):
         k = unhexlify("0900000000000000000000000000000000000000000000000000000000000000")
@@ -271,9 +298,7 @@ class X25519_Tests(unittest.TestCase):
         priv_key = DH.import_x25519_private_key(k)
         pub_key = DH.import_x25519_public_key(k)
         result = key_agreement(static_pub=pub_key, static_priv=priv_key, kdf=lambda x: x)
-        self.assertEqual(
-            result, unhexlify("422c8e7a6227d7bca1350b3e2bb7279f7897b87bb6854b783c60e80311ae3079")
-        )
+        assert result == unhexlify("422c8e7a6227d7bca1350b3e2bb7279f7897b87bb6854b783c60e80311ae3079")
 
         for _ in range(999):
             priv_key = DH.import_x25519_private_key(result)
@@ -281,9 +306,7 @@ class X25519_Tests(unittest.TestCase):
             k = result
             result = key_agreement(static_pub=pub_key, static_priv=priv_key, kdf=lambda x: x)
 
-        self.assertEqual(
-            result, unhexlify("684cf59ba83309552800ef566f2f4d3c1c3887c49360e3875f2eb94d99532c51")
-        )
+        assert result == unhexlify("684cf59ba83309552800ef566f2f4d3c1c3887c49360e3875f2eb94d99532c51")
 
     def test_rfc7748_3(self):
         tv1 = "77076d0a7318a57d3c16c17251b26645df4c2f87ebc0992ab177fba51db92c2a"
@@ -300,8 +323,8 @@ class X25519_Tests(unittest.TestCase):
 
         result1 = key_agreement(static_pub=alice_pub_key, static_priv=bob_priv_key, kdf=lambda x: x)
         result2 = key_agreement(static_pub=bob_pub_key, static_priv=alice_priv_key, kdf=lambda x: x)
-        self.assertEqual(result1, secret)
-        self.assertEqual(result2, secret)
+        assert result1 == secret
+        assert result2 == secret
 
     def test_weak(self):
 
@@ -325,10 +348,11 @@ class X25519_Tests(unittest.TestCase):
         )
 
         for x in weak_keys:
-            self.assertRaises(ValueError, DH.import_x25519_public_key, unhexlify(x))
+            with pytest.raises(ValueError):
+                DH.import_x25519_public_key(unhexlify(x))
 
 
-class X448_Tests(unittest.TestCase):
+class TestX448:
     def test_rfc7748_1(self):
         tvs = (
             (
@@ -347,7 +371,7 @@ class X448_Tests(unittest.TestCase):
             priv_key = DH.import_x448_private_key(unhexlify(tv1))
             pub_key = DH.import_x448_public_key(unhexlify(tv2))
             result = key_agreement(static_pub=pub_key, static_priv=priv_key, kdf=lambda x: x)
-            self.assertEqual(result, unhexlify(tv3))
+            assert result == unhexlify(tv3)
 
     def test_rfc7748_2(self):
         k = unhexlify(
@@ -357,11 +381,8 @@ class X448_Tests(unittest.TestCase):
         priv_key = DH.import_x448_private_key(k)
         pub_key = DH.import_x448_public_key(k)
         result = key_agreement(static_pub=pub_key, static_priv=priv_key, kdf=lambda x: x)
-        self.assertEqual(
-            result,
-            unhexlify(
-                "3f482c8a9f19b01e6c46ee9711d9dc14fd4bf67af30765c2ae2b846a4d23a8cd0db897086239492caf350b51f833868b9bc2b3bca9cf4113"
-            ),
+        assert result == unhexlify(
+            "3f482c8a9f19b01e6c46ee9711d9dc14fd4bf67af30765c2ae2b846a4d23a8cd0db897086239492caf350b51f833868b9bc2b3bca9cf4113"
         )
 
         for _ in range(999):
@@ -370,11 +391,8 @@ class X448_Tests(unittest.TestCase):
             k = result
             result = key_agreement(static_pub=pub_key, static_priv=priv_key, kdf=lambda x: x)
 
-        self.assertEqual(
-            result,
-            unhexlify(
-                "aa3b4749d55b9daf1e5b00288826c467274ce3ebbdd5c17b975e09d4af6c67cf10d087202db88286e2b79fceea3ec353ef54faa26e219f38"
-            ),
+        assert result == unhexlify(
+            "aa3b4749d55b9daf1e5b00288826c467274ce3ebbdd5c17b975e09d4af6c67cf10d087202db88286e2b79fceea3ec353ef54faa26e219f38"
         )
 
     def test_rfc7748_3(self):
@@ -392,8 +410,8 @@ class X448_Tests(unittest.TestCase):
 
         result1 = key_agreement(static_pub=alice_pub_key, static_priv=bob_priv_key, kdf=lambda x: x)
         result2 = key_agreement(static_pub=bob_pub_key, static_priv=alice_priv_key, kdf=lambda x: x)
-        self.assertEqual(result1, secret)
-        self.assertEqual(result2, secret)
+        assert result1 == secret
+        assert result2 == secret
 
     def test_weak(self):
 
@@ -406,60 +424,22 @@ class X448_Tests(unittest.TestCase):
         )
 
         for x in weak_keys:
-            self.assertRaises(ValueError, DH.import_x448_public_key, unhexlify(x))
+            with pytest.raises(ValueError):
+                DH.import_x448_public_key(unhexlify(x))
 
 
-class TestVectorsX25519Wycheproof(unittest.TestCase):
+def load_wycheproof_vectors_x25519():
+    vectors = []
+
+    vectors += _load_tests_hex("x25519_test.json")
+    vectors += _load_tests_hex("x25519_asn_test.json")
+    vectors += _load_tests_ascii("x25519_pem_test.json")
+    vectors += _load_tests_ascii("x25519_jwk_test.json")
+    return vectors
+
+
+class TestVectorsX25519Wycheproof:
     desc = "Wycheproof X25519 tests"
-
-    def add_tests_hex(self, filename):
-
-        def encoding(g):
-            return g["type"]
-
-        def private(u):
-            return unhexlify(u["private"])
-
-        result = load_test_vectors_wycheproof(
-            ("Protocol", "wycheproof"),
-            filename,
-            "Wycheproof ECDH (%s)" % filename,
-            group_tag={"encoding": encoding},
-            unit_tag={"private": private},
-        )
-        self.tv += result
-
-    def add_tests_ascii(self, filename):
-
-        def encoding(g):
-            return g["type"]
-
-        def public(u):
-            return u["public"]
-
-        def private(u):
-            return u["private"]
-
-        result = load_test_vectors_wycheproof(
-            ("Protocol", "wycheproof"),
-            filename,
-            "Wycheproof ECDH (%s)" % filename,
-            group_tag={"encoding": encoding},
-            unit_tag={"public": public, "private": private},
-        )
-        self.tv += result
-
-    def setUp(self):
-        self.tv = []
-        self.desc = None
-
-        self.add_tests_hex("x25519_test.json")
-        self.add_tests_hex("x25519_asn_test.json")
-        self.add_tests_ascii("x25519_pem_test.json")
-        self.add_tests_ascii("x25519_jwk_test.json")
-
-    def shortDescription(self):
-        return self.desc
 
     def check_verify(self, tv):
 
@@ -534,66 +514,26 @@ class TestVectorsX25519Wycheproof(unittest.TestCase):
             assert not tv.valid
             assert "incompatible curve" in str(e)
         else:
-            self.assertEqual(z, tv.shared)
+            assert z == tv.shared
             assert tv.valid
 
-    def runTest(self):
-        for tv in self.tv:
-            self.desc = "Wycheproof XECDH Verify Test #%d (%s, %s)" % (tv.id, tv.comment, tv.filename)
-            self.check_verify(tv)
+    @pytest.mark.parametrize("tv", load_wycheproof_vectors_x25519(), ids=wycheproof_id)
+    def test(self, tv):
+        self.check_verify(tv)
 
 
-class TestVectorsX448Wycheproof(unittest.TestCase):
+def load_wycheproof_vectors_x448():
+    vectors = []
+
+    vectors += _load_tests_hex("x448_test.json")
+    vectors += _load_tests_hex("x448_asn_test.json")
+    vectors += _load_tests_ascii("x448_pem_test.json")
+    vectors += _load_tests_ascii("x448_jwk_test.json")
+    return vectors
+
+
+class TestVectorsX448Wycheproof:
     desc = "Wycheproof X448 tests"
-
-    def add_tests_hex(self, filename):
-
-        def encoding(g):
-            return g["type"]
-
-        def private(u):
-            return unhexlify(u["private"])
-
-        result = load_test_vectors_wycheproof(
-            ("Protocol", "wycheproof"),
-            filename,
-            "Wycheproof ECDH (%s)" % filename,
-            group_tag={"encoding": encoding},
-            unit_tag={"private": private},
-        )
-        self.tv += result
-
-    def add_tests_ascii(self, filename):
-
-        def encoding(g):
-            return g["type"]
-
-        def public(u):
-            return u["public"]
-
-        def private(u):
-            return u["private"]
-
-        result = load_test_vectors_wycheproof(
-            ("Protocol", "wycheproof"),
-            filename,
-            "Wycheproof ECDH (%s)" % filename,
-            group_tag={"encoding": encoding},
-            unit_tag={"public": public, "private": private},
-        )
-        self.tv += result
-
-    def setUp(self):
-        self.tv = []
-        self.desc = None
-
-        self.add_tests_hex("x448_test.json")
-        self.add_tests_hex("x448_asn_test.json")
-        self.add_tests_ascii("x448_pem_test.json")
-        self.add_tests_ascii("x448_jwk_test.json")
-
-    def shortDescription(self):
-        return self.desc
 
     def check_verify(self, tv):
 
@@ -674,10 +614,9 @@ class TestVectorsX448Wycheproof(unittest.TestCase):
             assert not tv.valid
             assert "incompatible curve" in str(e)
         else:
-            self.assertEqual(z, tv.shared)
+            assert z == tv.shared
             assert tv.valid
 
-    def runTest(self):
-        for tv in self.tv:
-            self.desc = "Wycheproof XECDH Verify Test #%d (%s, %s)" % (tv.id, tv.comment, tv.filename)
-            self.check_verify(tv)
+    @pytest.mark.parametrize("tv", load_wycheproof_vectors_x448(), ids=wycheproof_id)
+    def test(self, tv):
+        self.check_verify(tv)

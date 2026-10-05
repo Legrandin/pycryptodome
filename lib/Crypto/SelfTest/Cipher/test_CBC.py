@@ -28,7 +28,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-import unittest
 from binascii import unhexlify
 
 import pytest
@@ -57,7 +56,7 @@ class BlockChainingTests:
 
         cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
         pt2 = cipher.decrypt(ct)
-        self.assertEqual(pt, pt2)
+        assert pt == pt2
 
     def test_loopback_64(self):
         cipher = DES3.new(self.key_192, self.des3_mode, self.iv_64)
@@ -66,7 +65,7 @@ class BlockChainingTests:
 
         cipher = DES3.new(self.key_192, self.des3_mode, self.iv_64)
         pt2 = cipher.decrypt(ct)
-        self.assertEqual(pt, pt2)
+        assert pt == pt2
 
     def test_iv(self):
         # If not passed, the iv is created randomly
@@ -74,68 +73,79 @@ class BlockChainingTests:
         iv1 = cipher.iv
         cipher = AES.new(self.key_128, self.aes_mode)
         iv2 = cipher.iv
-        self.assertNotEqual(iv1, iv2)
-        self.assertEqual(len(iv1), 16)
+        assert iv1 != iv2
+        assert len(iv1) == 16
 
         # IV can be passed in uppercase or lowercase
         cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
         ct = cipher.encrypt(self.data_128)
 
         cipher = AES.new(self.key_128, self.aes_mode, iv=self.iv_128)
-        self.assertEqual(ct, cipher.encrypt(self.data_128))
+        assert ct == cipher.encrypt(self.data_128)
 
         cipher = AES.new(self.key_128, self.aes_mode, IV=self.iv_128)
-        self.assertEqual(ct, cipher.encrypt(self.data_128))
+        assert ct == cipher.encrypt(self.data_128)
 
     def test_iv_must_be_bytes(self):
-        self.assertRaises(TypeError, AES.new, self.key_128, self.aes_mode, iv="test1234567890-*")
+        with pytest.raises(TypeError):
+            AES.new(self.key_128, self.aes_mode, iv="test1234567890-*")
 
     def test_only_one_iv(self):
         # Only one IV/iv keyword allowed
-        self.assertRaises(TypeError, AES.new, self.key_128, self.aes_mode, iv=self.iv_128, IV=self.iv_128)
+        with pytest.raises(TypeError):
+            AES.new(self.key_128, self.aes_mode, iv=self.iv_128, IV=self.iv_128)
 
     def test_iv_with_matching_length(self):
-        self.assertRaises(ValueError, AES.new, self.key_128, self.aes_mode, b"")
-        self.assertRaises(ValueError, AES.new, self.key_128, self.aes_mode, self.iv_128[:15])
-        self.assertRaises(ValueError, AES.new, self.key_128, self.aes_mode, self.iv_128 + b"0")
+        with pytest.raises(ValueError):
+            AES.new(self.key_128, self.aes_mode, b"")
+        with pytest.raises(ValueError):
+            AES.new(self.key_128, self.aes_mode, self.iv_128[:15])
+        with pytest.raises(ValueError):
+            AES.new(self.key_128, self.aes_mode, self.iv_128 + b"0")
 
     def test_block_size_128(self):
         cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
-        self.assertEqual(cipher.block_size, AES.block_size)
+        assert cipher.block_size == AES.block_size
 
     def test_block_size_64(self):
         cipher = DES3.new(self.key_192, self.des3_mode, self.iv_64)
-        self.assertEqual(cipher.block_size, DES3.block_size)
+        assert cipher.block_size == DES3.block_size
 
     def test_unaligned_data_128(self):
         cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
         for wrong_length in range(1, 16):
-            self.assertRaises(ValueError, cipher.encrypt, b"5" * wrong_length)
+            with pytest.raises(ValueError):
+                cipher.encrypt(b"5" * wrong_length)
 
         cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
         for wrong_length in range(1, 16):
-            self.assertRaises(ValueError, cipher.decrypt, b"5" * wrong_length)
+            with pytest.raises(ValueError):
+                cipher.decrypt(b"5" * wrong_length)
 
     def test_unaligned_data_64(self):
         cipher = DES3.new(self.key_192, self.des3_mode, self.iv_64)
         for wrong_length in range(1, 8):
-            self.assertRaises(ValueError, cipher.encrypt, b"5" * wrong_length)
+            with pytest.raises(ValueError):
+                cipher.encrypt(b"5" * wrong_length)
 
         cipher = DES3.new(self.key_192, self.des3_mode, self.iv_64)
         for wrong_length in range(1, 8):
-            self.assertRaises(ValueError, cipher.decrypt, b"5" * wrong_length)
+            with pytest.raises(ValueError):
+                cipher.decrypt(b"5" * wrong_length)
 
     def test_IV_iv_attributes(self):
         data = get_tag_random("data", 16 * 100)
         for func in "encrypt", "decrypt":
             cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
             getattr(cipher, func)(data)
-            self.assertEqual(cipher.iv, self.iv_128)
-            self.assertEqual(cipher.IV, self.iv_128)
+            assert cipher.iv == self.iv_128
+            assert self.iv_128 == cipher.IV
 
     def test_unknown_parameters(self):
-        self.assertRaises(TypeError, AES.new, self.key_128, self.aes_mode, self.iv_128, 7)
-        self.assertRaises(TypeError, AES.new, self.key_128, self.aes_mode, iv=self.iv_128, unknown=7)
+        with pytest.raises(TypeError):
+            AES.new(self.key_128, self.aes_mode, self.iv_128, 7)
+        with pytest.raises(TypeError):
+            AES.new(self.key_128, self.aes_mode, iv=self.iv_128, unknown=7)
         # But some are only known by the base cipher (e.g. use_aesni consumed by the AES module)
         AES.new(self.key_128, self.aes_mode, iv=self.iv_128, use_aesni=False)
 
@@ -143,23 +153,27 @@ class BlockChainingTests:
         for func in "encrypt", "decrypt":
             cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
             result = getattr(cipher, func)(b"")
-            self.assertEqual(result, b"")
+            assert result == b""
 
     def test_either_encrypt_or_decrypt(self):
         cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
         cipher.encrypt(b"")
-        self.assertRaises(TypeError, cipher.decrypt, b"")
+        with pytest.raises(TypeError):
+            cipher.decrypt(b"")
 
         cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
         cipher.decrypt(b"")
-        self.assertRaises(TypeError, cipher.encrypt, b"")
+        with pytest.raises(TypeError):
+            cipher.encrypt(b"")
 
     def test_data_must_be_bytes(self):
         cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
-        self.assertRaises(TypeError, cipher.encrypt, "test1234567890-*")
+        with pytest.raises(TypeError):
+            cipher.encrypt("test1234567890-*")
 
         cipher = AES.new(self.key_128, self.aes_mode, self.iv_128)
-        self.assertRaises(TypeError, cipher.decrypt, "test1234567890-*")
+        with pytest.raises(TypeError):
+            cipher.decrypt("test1234567890-*")
 
     def test_bytearray(self):
         data = b"1" * 128
@@ -177,8 +191,8 @@ class BlockChainingTests:
         iv_ba[:3] = b"\xff\xff\xff"
         ref2 = cipher2.encrypt(data_ba)
 
-        self.assertEqual(ref1, ref2)
-        self.assertEqual(cipher1.iv, cipher2.iv)
+        assert ref1 == ref2
+        assert cipher1.iv == cipher2.iv
 
         # Decrypt
         key_ba = bytearray(self.key_128)
@@ -192,7 +206,7 @@ class BlockChainingTests:
         iv_ba[:3] = b"\xff\xff\xff"
         ref4 = cipher4.decrypt(data_ba)
 
-        self.assertEqual(ref3, ref4)
+        assert ref3 == ref4
 
     def test_memoryview(self):
         data = b"1" * 128
@@ -210,8 +224,8 @@ class BlockChainingTests:
         iv_mv[:3] = b"\xff\xff\xff"
         ref2 = cipher2.encrypt(data_mv)
 
-        self.assertEqual(ref1, ref2)
-        self.assertEqual(cipher1.iv, cipher2.iv)
+        assert ref1 == ref2
+        assert cipher1.iv == cipher2.iv
 
         # Decrypt
         key_mv = memoryview(bytearray(self.key_128))
@@ -225,7 +239,7 @@ class BlockChainingTests:
         iv_mv[:3] = b"\xff\xff\xff"
         ref4 = cipher4.decrypt(data_mv)
 
-        self.assertEqual(ref3, ref4)
+        assert ref3 == ref4
 
     def test_output_param(self):
 
@@ -236,13 +250,13 @@ class BlockChainingTests:
         output = bytearray(128)
         cipher = AES.new(b"4" * 16, self.aes_mode, iv=self.iv_128)
         res = cipher.encrypt(pt, output=output)
-        self.assertEqual(ct, output)
-        self.assertEqual(res, None)
+        assert ct == output
+        assert res is None
 
         cipher = AES.new(b"4" * 16, self.aes_mode, iv=self.iv_128)
         res = cipher.decrypt(ct, output=output)
-        self.assertEqual(pt, output)
-        self.assertEqual(res, None)
+        assert pt == output
+        assert res is None
 
     def test_output_param_same_buffer(self):
 
@@ -253,14 +267,14 @@ class BlockChainingTests:
         pt_ba = bytearray(pt)
         cipher = AES.new(b"4" * 16, self.aes_mode, iv=self.iv_128)
         res = cipher.encrypt(pt_ba, output=pt_ba)
-        self.assertEqual(ct, pt_ba)
-        self.assertEqual(res, None)
+        assert ct == pt_ba
+        assert res is None
 
         ct_ba = bytearray(ct)
         cipher = AES.new(b"4" * 16, self.aes_mode, iv=self.iv_128)
         res = cipher.decrypt(ct_ba, output=ct_ba)
-        self.assertEqual(pt, ct_ba)
-        self.assertEqual(res, None)
+        assert pt == ct_ba
+        assert res is None
 
     def test_output_param_memoryview(self):
 
@@ -271,11 +285,11 @@ class BlockChainingTests:
         output = memoryview(bytearray(128))
         cipher = AES.new(b"4" * 16, self.aes_mode, iv=self.iv_128)
         cipher.encrypt(pt, output=output)
-        self.assertEqual(ct, output)
+        assert ct == output
 
         cipher = AES.new(b"4" * 16, self.aes_mode, iv=self.iv_128)
         cipher.decrypt(ct, output=output)
-        self.assertEqual(pt, output)
+        assert pt == output
 
     def test_output_param_neg(self):
         LEN_PT = 128
@@ -285,19 +299,23 @@ class BlockChainingTests:
         ct = cipher.encrypt(pt)
 
         cipher = AES.new(b"4" * 16, self.aes_mode, iv=self.iv_128)
-        self.assertRaises(TypeError, cipher.encrypt, pt, output=b"0" * LEN_PT)
+        with pytest.raises(TypeError):
+            cipher.encrypt(pt, output=b"0" * LEN_PT)
 
         cipher = AES.new(b"4" * 16, self.aes_mode, iv=self.iv_128)
-        self.assertRaises(TypeError, cipher.decrypt, ct, output=b"0" * LEN_PT)
+        with pytest.raises(TypeError):
+            cipher.decrypt(ct, output=b"0" * LEN_PT)
 
         shorter_output = bytearray(LEN_PT - 1)
         cipher = AES.new(b"4" * 16, self.aes_mode, iv=self.iv_128)
-        self.assertRaises(ValueError, cipher.encrypt, pt, output=shorter_output)
+        with pytest.raises(ValueError):
+            cipher.encrypt(pt, output=shorter_output)
         cipher = AES.new(b"4" * 16, self.aes_mode, iv=self.iv_128)
-        self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
+        with pytest.raises(ValueError):
+            cipher.decrypt(ct, output=shorter_output)
 
 
-class CbcTests(BlockChainingTests, unittest.TestCase):
+class TestCbc(BlockChainingTests):
     aes_mode = AES.MODE_CBC
     des3_mode = DES3.MODE_CBC
 
@@ -318,13 +336,11 @@ class NistBlockChainingVectors:
                 direction = tv
                 continue
 
-            self.description = tv.desc
-
             cipher = AES.new(tv.key, self.aes_mode, tv.iv)
             if direction == "[ENCRYPT]":
-                self.assertEqual(cipher.encrypt(tv.plaintext), tv.ciphertext)
+                assert cipher.encrypt(tv.plaintext) == tv.ciphertext
             elif direction == "[DECRYPT]":
-                self.assertEqual(cipher.decrypt(tv.ciphertext), tv.plaintext)
+                assert cipher.decrypt(tv.ciphertext) == tv.plaintext
             else:
                 raise AssertionError()
 
@@ -343,8 +359,6 @@ class NistBlockChainingVectors:
             if isinstance(tv, str):
                 direction = tv
                 continue
-
-            self.description = tv.desc
             cipher = AES.new(tv.key, self.aes_mode, tv.iv)
 
             if direction == "[ENCRYPT]":
@@ -352,13 +366,13 @@ class NistBlockChainingVectors:
                 for _count in range(1000):
                     cts.append(cipher.encrypt(tv.plaintext))
                     tv.plaintext = cts[-2]
-                self.assertEqual(cts[-1], tv.ciphertext)
+                assert cts[-1] == tv.ciphertext
             elif direction == "[DECRYPT]":
                 pts = [tv.iv]
                 for _count in range(1000):
                     pts.append(cipher.decrypt(tv.ciphertext))
                     tv.ciphertext = pts[-2]
-                self.assertEqual(pts[-1], tv.plaintext)
+                assert pts[-1] == tv.plaintext
             else:
                 raise AssertionError()
 
@@ -376,8 +390,6 @@ class NistBlockChainingVectors:
             if isinstance(tv, str):
                 direction = tv
                 continue
-
-            self.description = tv.desc
             if hasattr(tv, "keys"):
                 cipher = DES.new(tv.keys, self.des_mode, tv.iv)
             else:
@@ -388,21 +400,14 @@ class NistBlockChainingVectors:
                 cipher = DES3.new(key, self.des3_mode, tv.iv)
 
             if direction == "[ENCRYPT]":
-                self.assertEqual(cipher.encrypt(tv.plaintext), tv.ciphertext)
+                assert cipher.encrypt(tv.plaintext) == tv.ciphertext
             elif direction == "[DECRYPT]":
-                self.assertEqual(cipher.decrypt(tv.ciphertext), tv.plaintext)
+                assert cipher.decrypt(tv.ciphertext) == tv.plaintext
             else:
                 raise AssertionError()
 
 
-@pytest.mark.slow
-class NistCbcVectors(NistBlockChainingVectors, unittest.TestCase):
-    aes_mode = AES.MODE_CBC
-    des_mode = DES.MODE_CBC
-    des3_mode = DES3.MODE_CBC
-
-
-# Create one test method per file
+# NIST test vector files
 nist_aes_kat_mmt_files = (
     # KAT
     "CBCGFSbox128.rsp",
@@ -422,26 +427,12 @@ nist_aes_kat_mmt_files = (
     "CBCMMT192.rsp",
     "CBCMMT256.rsp",
 )
+
 nist_aes_mct_files = (
     "CBCMCT128.rsp",
     "CBCMCT192.rsp",
     "CBCMCT256.rsp",
 )
-
-for file_name in nist_aes_kat_mmt_files:
-
-    def new_func(self, file_name=file_name):
-        self._do_kat_aes_test(file_name)
-
-    setattr(NistCbcVectors, "test_AES_" + file_name, new_func)
-
-for file_name in nist_aes_mct_files:
-
-    def new_func(self, file_name=file_name):
-        self._do_mct_aes_test(file_name)
-
-    setattr(NistCbcVectors, "test_AES_" + file_name, new_func)
-del file_name, new_func
 
 nist_tdes_files = (
     "TCBCMMT2.rsp",  # 2TDES
@@ -453,17 +444,30 @@ nist_tdes_files = (
     "TCBCvartext.rsp",
 )
 
-for file_name in nist_tdes_files:
 
-    def new_func(self, file_name=file_name):
+@pytest.mark.slow
+class TestNistCbcVectors(NistBlockChainingVectors):
+    aes_mode = AES.MODE_CBC
+    des_mode = DES.MODE_CBC
+    des3_mode = DES3.MODE_CBC
+
+    @pytest.mark.parametrize("file_name", nist_aes_kat_mmt_files)
+    def test_aes_kat_mmt(self, file_name):
+        self._do_kat_aes_test(file_name)
+
+    @pytest.mark.parametrize("file_name", nist_aes_mct_files)
+    def test_aes_mct(self, file_name):
+        self._do_mct_aes_test(file_name)
+
+    @pytest.mark.parametrize("file_name", nist_tdes_files)
+    def test_tdes(self, file_name):
         self._do_tdes_test(file_name)
 
-    setattr(NistCbcVectors, "test_TDES_" + file_name, new_func)
 
 # END OF NIST CBC TEST VECTORS
 
 
-class SP800TestVectors(unittest.TestCase):
+class TestSP800TestVectors:
     """Class exercising the CBC test vectors found in Section F.2
     of NIST SP 800-3A"""
 
@@ -489,9 +493,9 @@ class SP800TestVectors(unittest.TestCase):
         ciphertext = unhexlify(ciphertext)
 
         cipher = AES.new(key, AES.MODE_CBC, iv)
-        self.assertEqual(cipher.encrypt(plaintext), ciphertext)
+        assert cipher.encrypt(plaintext) == ciphertext
         cipher = AES.new(key, AES.MODE_CBC, iv)
-        self.assertEqual(cipher.decrypt(ciphertext), plaintext)
+        assert cipher.decrypt(ciphertext) == plaintext
 
     def test_aes_192(self):
         key = "8e73b0f7da0e6452c810f32b809079e562f8ead2522c6b7b"
@@ -515,9 +519,9 @@ class SP800TestVectors(unittest.TestCase):
         ciphertext = unhexlify(ciphertext)
 
         cipher = AES.new(key, AES.MODE_CBC, iv)
-        self.assertEqual(cipher.encrypt(plaintext), ciphertext)
+        assert cipher.encrypt(plaintext) == ciphertext
         cipher = AES.new(key, AES.MODE_CBC, iv)
-        self.assertEqual(cipher.decrypt(ciphertext), plaintext)
+        assert cipher.decrypt(ciphertext) == plaintext
 
     def test_aes_256(self):
         key = "603deb1015ca71be2b73aef0857d77811f352c073b6108d72d9810a30914dff4"
@@ -541,6 +545,6 @@ class SP800TestVectors(unittest.TestCase):
         ciphertext = unhexlify(ciphertext)
 
         cipher = AES.new(key, AES.MODE_CBC, iv)
-        self.assertEqual(cipher.encrypt(plaintext), ciphertext)
+        assert cipher.encrypt(plaintext) == ciphertext
         cipher = AES.new(key, AES.MODE_CBC, iv)
-        self.assertEqual(cipher.decrypt(ciphertext), plaintext)
+        assert cipher.decrypt(ciphertext) == plaintext

@@ -23,7 +23,7 @@
 
 """Self-test suite for Crypto.Cipher.Blowfish"""
 
-import unittest
+import pytest
 
 from Crypto.Cipher import Blowfish
 from Crypto.SelfTest.Cipher.common import make_block_tests
@@ -92,14 +92,16 @@ test_data = [
 ]
 
 
-class KeyLength(unittest.TestCase):
-    def runTest(self):
-        self.assertRaises(ValueError, Blowfish.new, bytes([0]) * 3, Blowfish.MODE_ECB)
-        self.assertRaises(ValueError, Blowfish.new, bytes([0]) * 57, Blowfish.MODE_ECB)
+class TestKeyLength:
+    def test(self):
+        with pytest.raises(ValueError):
+            Blowfish.new(bytes([0]) * 3, Blowfish.MODE_ECB)
+        with pytest.raises(ValueError):
+            Blowfish.new(bytes([0]) * 57, Blowfish.MODE_ECB)
 
 
-class TestOutput(unittest.TestCase):
-    def runTest(self):
+class TestOutput:
+    def test(self):
         # Encrypt/Decrypt data and test output parameter
 
         cipher = Blowfish.new(b"4" * 16, Blowfish.MODE_ECB)
@@ -109,26 +111,30 @@ class TestOutput(unittest.TestCase):
 
         output = bytearray(16)
         res = cipher.encrypt(pt, output=output)
-        self.assertEqual(ct, output)
-        self.assertEqual(res, None)
+        assert ct == output
+        assert res is None
 
         res = cipher.decrypt(ct, output=output)
-        self.assertEqual(pt, output)
-        self.assertEqual(res, None)
+        assert pt == output
+        assert res is None
 
         output = memoryview(bytearray(16))
         cipher.encrypt(pt, output=output)
-        self.assertEqual(ct, output)
+        assert ct == output
 
         cipher.decrypt(ct, output=output)
-        self.assertEqual(pt, output)
+        assert pt == output
 
-        self.assertRaises(TypeError, cipher.encrypt, pt, output=b"0" * 16)
-        self.assertRaises(TypeError, cipher.decrypt, ct, output=b"0" * 16)
+        with pytest.raises(TypeError):
+            cipher.encrypt(pt, output=b"0" * 16)
+        with pytest.raises(TypeError):
+            cipher.decrypt(ct, output=b"0" * 16)
 
         shorter_output = bytearray(7)
-        self.assertRaises(ValueError, cipher.encrypt, pt, output=shorter_output)
-        self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
+        with pytest.raises(ValueError):
+            cipher.encrypt(pt, output=shorter_output)
+        with pytest.raises(ValueError):
+            cipher.decrypt(ct, output=shorter_output)
 
 
 TestVectors = make_block_tests(Blowfish, "Blowfish", test_data)

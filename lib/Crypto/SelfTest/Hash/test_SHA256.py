@@ -23,8 +23,6 @@
 
 """Self-test suite for Crypto.Hash.SHA256"""
 
-import unittest
-
 import pytest
 
 from Crypto.Hash import SHA256
@@ -32,8 +30,8 @@ from Crypto.SelfTest.Hash.common import make_hash_tests
 
 
 @pytest.mark.slow
-class LargeSHA256Test(unittest.TestCase):
-    def runTest(self):
+class TestLargeSHA256:
+    def test(self):
         """SHA256: 512/520 MiB test"""
         zeros = bytes([0x00]) * (1024 * 1024)
 
@@ -42,17 +40,13 @@ class LargeSHA256Test(unittest.TestCase):
             h.update(zeros)
 
         # This test vector is from PyCrypto's old testdata.py file.
-        self.assertEqual(
-            "9acca8e8c22201155389f65abbf6bc9723edc7384ead80503839f49dcc56d767", h.hexdigest()
-        )  # 512 MiB
+        assert h.hexdigest() == "9acca8e8c22201155389f65abbf6bc9723edc7384ead80503839f49dcc56d767"  # 512 MiB
 
         for _i in range(8):
             h.update(zeros)
 
         # This test vector is from PyCrypto's old testdata.py file.
-        self.assertEqual(
-            "abf51ad954b246009dfe5a50ecd582fd5b8f1b8b27f30393853c3ef721e7fa6e", h.hexdigest()
-        )  # 520 MiB
+        assert h.hexdigest() == "abf51ad954b246009dfe5a50ecd582fd5b8f1b8b27f30393853c3ef721e7fa6e"  # 520 MiB
 
 
 # Test vectors from FIPS PUB 180-2

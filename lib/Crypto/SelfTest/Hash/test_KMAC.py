@@ -1,5 +1,6 @@
-import unittest
 from binascii import hexlify, unhexlify
+
+import pytest
 
 from Crypto.Hash import KMAC128, KMAC256
 from Crypto.Util._bytes import tobytes
@@ -18,16 +19,16 @@ class KMACTest:
         for new_func in self.KMAC.new, h.new:
             for dbytes in range(self.minimum_bytes, 128 + 1):
                 hobj = new_func(key=key, mac_len=dbytes)
-                self.assertEqual(hobj.digest_size, dbytes)
+                assert hobj.digest_size == dbytes
 
             digest1 = new_func(key=key, data=b"\x90").digest()
             digest2 = new_func(key=key).update(b"\x90").digest()
-            self.assertEqual(digest1, digest2)
+            assert digest1 == digest2
 
             new_func(data=b"A", key=key, custom=b"g")
 
         hobj = h.new(key=key)
-        self.assertEqual(hobj.digest_size, self.default_bytes)
+        assert hobj.digest_size == self.default_bytes
 
     def test_new_same_variant(self):
         # The new() method must create an object of the same variant
@@ -35,22 +36,27 @@ class KMACTest:
         h = self.new()
         digest1 = h.new(key=key, data=b"abc").digest()
         digest2 = self.KMAC.new(key=key, data=b"abc", mac_len=h.digest_size).digest()
-        self.assertEqual(digest1, digest2)
-        self.assertEqual(h.new(key=key).oid, h.oid)
-        self.assertRaises(ValueError, h.new, key=key[: self.minimum_key_bits // 8 - 1])
+        assert digest1 == digest2
+        assert h.new(key=key).oid == h.oid
+        with pytest.raises(ValueError):
+            h.new(key=key[: self.minimum_key_bits // 8 - 1])
 
     def test_new_negative(self):
 
         h = self.new()
         for new_func in self.KMAC.new, h.new:
-            self.assertRaises(ValueError, new_func, key=b"X" * 32, mac_len=0)
-            self.assertRaises(ValueError, new_func, key=b"X" * 32, mac_len=self.minimum_bytes - 1)
-            self.assertRaises(TypeError, new_func, key="string")
-            self.assertRaises(TypeError, new_func, data="string")
+            with pytest.raises(ValueError):
+                new_func(key=b"X" * 32, mac_len=0)
+            with pytest.raises(ValueError):
+                new_func(key=b"X" * 32, mac_len=self.minimum_bytes - 1)
+            with pytest.raises(TypeError):
+                new_func(key="string")
+            with pytest.raises(TypeError):
+                new_func(data="string")
 
     def test_default_digest_size(self):
         digest = self.new(data=b"abc").digest()
-        self.assertEqual(len(digest), self.default_bytes)
+        assert len(digest) == self.default_bytes
 
     def test_update(self):
         pieces = [b"\x0a" * 200, b"\x14" * 300]
@@ -59,20 +65,21 @@ class KMACTest:
         digest = h.digest()
         h = self.new()
         h.update(pieces[0] + pieces[1])
-        self.assertEqual(h.digest(), digest)
+        assert h.digest() == digest
 
     def test_update_negative(self):
         h = self.new()
-        self.assertRaises(TypeError, h.update, "string")
+        with pytest.raises(TypeError):
+            h.update("string")
 
     def test_digest(self):
         h = self.new()
         digest = h.digest()
 
         # hexdigest does not change the state
-        self.assertEqual(h.digest(), digest)
+        assert h.digest() == digest
         # digest returns a byte string
-        self.assertTrue(isinstance(digest, bytes))
+        assert isinstance(digest, bytes)
 
     def test_update_after_digest(self):
         msg = b"rrrrttt"
@@ -80,7 +87,8 @@ class KMACTest:
         # Normally, update() cannot be done after digest()
         h = self.new(mac_len=32, data=msg[:4])
         dig1 = h.digest()
-        self.assertRaises(TypeError, h.update, dig1)
+        with pytest.raises(TypeError):
+            h.update(dig1)
 
     def test_hex_digest(self):
         mac = self.new()
@@ -88,30 +96,32 @@ class KMACTest:
         hexdigest = mac.hexdigest()
 
         # hexdigest is equivalent to digest
-        self.assertEqual(hexlify(digest), tobytes(hexdigest))
+        assert hexlify(digest) == tobytes(hexdigest)
         # hexdigest does not change the state
-        self.assertEqual(mac.hexdigest(), hexdigest)
+        assert mac.hexdigest() == hexdigest
         # hexdigest returns a string
-        self.assertTrue(isinstance(hexdigest, str))
+        assert isinstance(hexdigest, str)
 
     def test_verify(self):
         h = self.new()
         mac = h.digest()
         h.verify(mac)
         wrong_mac = strxor_c(mac, 255)
-        self.assertRaises(ValueError, h.verify, wrong_mac)
+        with pytest.raises(ValueError):
+            h.verify(wrong_mac)
 
     def test_hexverify(self):
         h = self.new()
         mac = h.hexdigest()
         h.hexverify(mac)
-        self.assertRaises(ValueError, h.hexverify, "4556")
+        with pytest.raises(ValueError):
+            h.hexverify("4556")
 
     def test_oid(self):
 
         oid = "2.16.840.1.101.3.4.2." + self.oid_variant
         h = self.new()
-        self.assertEqual(h.oid, oid)
+        assert h.oid == oid
 
     def test_bytearray(self):
 
@@ -127,7 +137,7 @@ class KMACTest:
         key_ba[:1] = b"\xff"
         data_ba[:1] = b"\xff"
 
-        self.assertEqual(h1.digest(), h2.digest())
+        assert h1.digest() == h2.digest()
 
         # Data can be a bytearray (during operation)
         data_ba = bytearray(data)
@@ -138,7 +148,7 @@ class KMACTest:
         h2.update(data_ba)
         data_ba[:1] = b"\xff"
 
-        self.assertEqual(h1.digest(), h2.digest())
+        assert h1.digest() == h2.digest()
 
     def test_memoryview(self):
 
@@ -162,7 +172,7 @@ class KMACTest:
                 data_mv[:1] = b"\xff"
                 key_mv[:1] = b"\xff"
 
-            self.assertEqual(h1.digest(), h2.digest())
+            assert h1.digest() == h2.digest()
 
             # Data can be a memoryview (during operation)
             data_mv = get_mv(data)
@@ -174,10 +184,10 @@ class KMACTest:
             if not data_mv.readonly:
                 data_mv[:1] = b"\xff"
 
-            self.assertEqual(h1.digest(), h2.digest())
+            assert h1.digest() == h2.digest()
 
 
-class KMAC128Test(KMACTest, unittest.TestCase):
+class TestKMAC128(KMACTest):
     KMAC = KMAC128
 
     minimum_key_bits = 128
@@ -188,7 +198,7 @@ class KMAC128Test(KMACTest, unittest.TestCase):
     oid_variant = "19"
 
 
-class KMAC256Test(KMACTest, unittest.TestCase):
+class TestKMAC256(KMACTest):
     KMAC = KMAC256
 
     minimum_key_bits = 256
@@ -199,7 +209,7 @@ class KMAC256Test(KMACTest, unittest.TestCase):
     oid_variant = "20"
 
 
-class NISTExampleTestVectors(unittest.TestCase):
+class TestNISTExampleTestVectors:
     # https://csrc.nist.gov/CSRC/media/Projects/Cryptographic-Standards-and-Guidelines/documents/examples/KMAC_samples.pdf
     test_data = [
         (
@@ -297,7 +307,7 @@ class NISTExampleTestVectors(unittest.TestCase):
         ),
     ]
 
-    def setUp(self):
+    def setup_method(self):
         td = []
         for key, data, custom, mac, text, module in self.test_data:
             ni = (
@@ -311,9 +321,9 @@ class NISTExampleTestVectors(unittest.TestCase):
             td.append(ni)
         self.test_data = td
 
-    def runTest(self):
+    def test(self):
 
         for key, data, custom, mac, text, module in self.test_data:
             h = module.new(data=data, key=key, custom=custom, mac_len=len(mac))
             mac_tag = h.digest()
-            self.assertEqual(mac_tag, mac, msg=text)
+            assert mac_tag == mac, text

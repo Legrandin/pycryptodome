@@ -33,12 +33,12 @@
 
 """Self-test suite for Crypto.Hash.CMAC"""
 
-import unittest
+import pytest
 
 from Crypto.Cipher import AES, DES3
 from Crypto.Hash import CMAC, SHAKE128
 from Crypto.SelfTest.Hash.common import make_mac_tests
-from Crypto.SelfTest.loader import load_test_vectors_wycheproof
+from Crypto.SelfTest.loader import load_test_vectors_wycheproof, wycheproof_id
 from Crypto.SelfTest.st_common import wycheproof_warnings
 from Crypto.Util._bytes import tobytes
 
@@ -195,7 +195,7 @@ def get_tag_random(tag, length):
     return SHAKE128.new(data=tobytes(tag)).read(length)
 
 
-class TestCMAC(unittest.TestCase):
+class TestCMAC:
     def test_internal_caching(self):
         """Verify that internal caching is implemented correctly"""
 
@@ -211,7 +211,7 @@ class TestCMAC(unittest.TestCase):
             mac = CMAC.new(key, ciphermod=AES)
             for chunk in chunks:
                 mac.update(chunk)
-            self.assertEqual(ref_mac, mac.digest())
+            assert ref_mac == mac.digest()
 
     def test_update_after_digest(self):
         msg = b"rrrrttt"
@@ -220,20 +220,21 @@ class TestCMAC(unittest.TestCase):
         # Normally, update() cannot be done after digest()
         h = CMAC.new(key, msg[:4], ciphermod=AES)
         dig1 = h.digest()
-        self.assertRaises(TypeError, h.update, msg[4:])
+        with pytest.raises(TypeError):
+            h.update(msg[4:])
         dig2 = CMAC.new(key, msg, ciphermod=AES).digest()
 
         # With the proper flag, it is allowed
         h2 = CMAC.new(key, msg[:4], ciphermod=AES, update_after_digest=True)
-        self.assertEqual(h2.digest(), dig1)
+        assert h2.digest() == dig1
         # ... and the subsequent digest applies to the entire message
         # up to that point
         h2.update(msg[4:])
-        self.assertEqual(h2.digest(), dig2)
+        assert h2.digest() == dig2
 
 
-class ByteArrayTests(unittest.TestCase):
-    def runTest(self):
+class TestByteArray:
+    def test(self):
 
         key = b"0" * 16
         data = b"\x00\x01\x02"
@@ -246,7 +247,7 @@ class ByteArrayTests(unittest.TestCase):
         h2 = CMAC.new(key_ba, data_ba, ciphermod=AES)
         key_ba[:1] = b"\xff"
         data_ba[:1] = b"\xff"
-        self.assertEqual(h1.digest(), h2.digest())
+        assert h1.digest() == h2.digest()
 
         # Data can be a bytearray (during operation)
         key_ba = bytearray(key)
@@ -257,11 +258,11 @@ class ByteArrayTests(unittest.TestCase):
         h1.update(data)
         h2.update(data_ba)
         data_ba[:1] = b"\xff"
-        self.assertEqual(h1.digest(), h2.digest())
+        assert h1.digest() == h2.digest()
 
 
-class MemoryViewTests(unittest.TestCase):
-    def runTest(self):
+class TestMemoryView:
+    def test(self):
 
         key = b"0" * 16
         data = b"\x00\x01\x02"
@@ -282,7 +283,7 @@ class MemoryViewTests(unittest.TestCase):
             if not data_mv.readonly:
                 key_mv[:1] = b"\xff"
                 data_mv[:1] = b"\xff"
-            self.assertEqual(h1.digest(), h2.digest())
+            assert h1.digest() == h2.digest()
 
             # Data can be a memoryview (during operation)
             data_mv = get_mv(data)
@@ -293,26 +294,23 @@ class MemoryViewTests(unittest.TestCase):
             h2.update(data_mv)
             if not data_mv.readonly:
                 data_mv[:1] = b"\xff"
-            self.assertEqual(h1.digest(), h2.digest())
+            assert h1.digest() == h2.digest()
 
 
-class TestVectorsWycheproof(unittest.TestCase):
+def load_wycheproof_vectors():
+    def filter_tag(group):
+        return group["tagSize"] // 8
+
+    return load_test_vectors_wycheproof(
+        ("Hash", "wycheproof"),
+        "aes_cmac_test.json",
+        "Wycheproof CMAC",
+        group_tag={"tag_size": filter_tag},
+    )
+
+
+class TestVectorsWycheproof:
     _id = "None"
-
-    def setUp(self):
-
-        def filter_tag(group):
-            return group["tagSize"] // 8
-
-        self.tv = load_test_vectors_wycheproof(
-            ("Hash", "wycheproof"),
-            "aes_cmac_test.json",
-            "Wycheproof CMAC",
-            group_tag={"tag_size": filter_tag},
-        )
-
-    def shortDescription(self):
-        return self._id
 
     def warn(self, tv):
         if tv.warning and wycheproof_warnings():
@@ -330,7 +328,7 @@ class TestVectorsWycheproof(unittest.TestCase):
                 return
             raise e
         if tv.valid:
-            self.assertEqual(tag, tv.tag)
+            assert tag == tv.tag
             self.warn(tv)
 
     def check_verify_mac(self, tv):
@@ -350,11 +348,11 @@ class TestVectorsWycheproof(unittest.TestCase):
             assert tv.valid
             self.warn(tv)
 
-    def runTest(self):
+    @pytest.mark.parametrize("tv", load_wycheproof_vectors(), ids=wycheproof_id)
+    def test(self, tv):
 
-        for tv in self.tv:
-            self.check_create_mac(tv)
-            self.check_verify_mac(tv)
+        self.check_create_mac(tv)
+        self.check_verify_mac(tv)
 
 
 # Add new() parameters to the back of each test vector

@@ -32,15 +32,14 @@
 # ===================================================================
 
 import re
-import unittest
 from binascii import hexlify, unhexlify
 
 import pytest
 
 from Crypto.Hash import SHA1, SHA3_224, SHA3_256, SHA3_384, SHA3_512, SHA224, SHA256, SHA384, SHA512
 from Crypto.PublicKey import DSA, ECC
-from Crypto.SelfTest.loader import load_test_vectors, load_test_vectors_wycheproof
-from Crypto.SelfTest.st_common import slow_tests, wycheproof_warnings
+from Crypto.SelfTest.loader import load_test_vectors, load_test_vectors_wycheproof, wycheproof_id
+from Crypto.SelfTest.st_common import mark_slow, wycheproof_warnings
 from Crypto.Signature import DSS
 from Crypto.Util._bytes import tobytes
 from Crypto.Util.number import bytes_to_long, long_to_bytes
@@ -73,7 +72,7 @@ class StrRNG:
         return out
 
 
-class FIPS_DSA_Tests(unittest.TestCase):
+class TestFIPS_DSA:
     # 1st 1024 bit key from SigGen.txt
     P = 0xA8F9CD201E5E35D892F85F80E4DB2599A5676A3B1D4F190330ED3256B26D0E80A0E49A8FFFAAAD2A24F472D2573241D4D6D6C7480C80B4C67BB4479C15ADA7EA8424D2502FA01472E760241713DAB025AE1B02E1703A1435F62DDF4EE4C1B664066EB22F2E3BF28BB70A2A76E4FD5EBE2D1229681B5B06439AC9C7E9D8BDE283
     Q = 0xF85F0F83AC4DF7EA0CDF8F469BFEEAEA14156495
@@ -83,9 +82,6 @@ class FIPS_DSA_Tests(unittest.TestCase):
 
     key_pub = DSA.construct((Y, G, P, Q))
     key_priv = DSA.construct((Y, G, P, Q, X))
-
-    def shortDescription(self):
-        return "FIPS DSA Tests"
 
     def test_loopback(self):
         hashed_msg = SHA512.new(b"test")
@@ -100,46 +96,42 @@ class FIPS_DSA_Tests(unittest.TestCase):
 
         from Crypto.Hash import RIPEMD160
 
-        self.description = "Unapproved hash (RIPEMD160) test"
         hash_obj = RIPEMD160.new()
         signer = DSS.new(self.key_priv, "fips-186-3")
-        self.assertRaises(ValueError, signer.sign, hash_obj)
-        self.assertRaises(ValueError, signer.verify, hash_obj, b"\x00" * 40)
+        with pytest.raises(ValueError):
+            signer.sign(hash_obj)
+        with pytest.raises(ValueError):
+            signer.verify(hash_obj, b"\x00" * 40)
 
     def test_negative_unknown_modes_encodings(self):
         """Verify that unknown modes/encodings are rejected"""
-
-        self.description = "Unknown mode test"
-        self.assertRaises(ValueError, DSS.new, self.key_priv, "fips-186-0")
-
-        self.description = "Unknown encoding test"
-        self.assertRaises(ValueError, DSS.new, self.key_priv, "fips-186-3", "xml")
+        with pytest.raises(ValueError):
+            DSS.new(self.key_priv, "fips-186-0")
+        with pytest.raises(ValueError):
+            DSS.new(self.key_priv, "fips-186-3", "xml")
 
     def test_asn1_encoding(self):
         """Verify ASN.1 encoding"""
-
-        self.description = "ASN.1 encoding test"
         hash_obj = SHA1.new()
         signer = DSS.new(self.key_priv, "fips-186-3", "der")
         signature = signer.sign(hash_obj)
 
         # Verify that output looks like a DER SEQUENCE
-        self.assertEqual(signature[0], 48)
+        assert signature[0] == 48
         signer.verify(hash_obj, signature)
 
         # Verify that ASN.1 parsing fails as expected
         signature = bytes([7]) + signature[1:]
-        self.assertRaises(ValueError, signer.verify, hash_obj, signature)
+        with pytest.raises(ValueError):
+            signer.verify(hash_obj, signature)
 
     def test_sign_verify(self):
         """Verify public/private method"""
-
-        self.description = "can_sign() test"
         signer = DSS.new(self.key_priv, "fips-186-3")
-        self.assertTrue(signer.can_sign())
+        assert signer.can_sign()
 
         signer = DSS.new(self.key_pub, "fips-186-3")
-        self.assertFalse(signer.can_sign())
+        assert not signer.can_sign()
 
         try:
             signer.sign(SHA256.new(b"xyz"))
@@ -147,12 +139,7 @@ class FIPS_DSA_Tests(unittest.TestCase):
             msg = str(e)
         else:
             msg = ""
-        self.assertTrue("Private key is needed" in msg)
-
-
-@pytest.mark.slow
-class FIPS_DSA_Tests_KAT(unittest.TestCase):
-    pass
+        assert "Private key is needed" in msg
 
 
 test_vectors_verify = (
@@ -162,73 +149,79 @@ test_vectors_verify = (
     or []
 )
 
-for idx, tv in enumerate(test_vectors_verify):
-    if isinstance(tv, str):
-        res = re.match(r"\[mod = L=([0-9]+), N=([0-9]+), ([a-zA-Z0-9-]+)\]", tv)
-        assert res
-        hash_name = res.group(3).replace("-", "")
-        hash_module = load_hash_by_name(hash_name)
-        continue
 
-    if hasattr(tv, "p"):
-        modulus = tv.p
-        generator = tv.g
-        suborder = tv.q
-        continue
+def _load_dsa_verify_vectors():
+    params = []
+    for idx, tv in enumerate(test_vectors_verify):
+        if isinstance(tv, str):
+            res = re.match(r"\[mod = L=([0-9]+), N=([0-9]+), ([a-zA-Z0-9-]+)\]", tv)
+            assert res
+            hash_name = res.group(3).replace("-", "")
+            hash_module = load_hash_by_name(hash_name)
+            continue
 
-    hash_obj = hash_module.new(tv.msg)
+        if hasattr(tv, "p"):
+            modulus = tv.p
+            generator = tv.g
+            suborder = tv.q
+            continue
 
-    comps = [bytes_to_long(x) for x in (tv.y, generator, modulus, suborder)]
-    key = DSA.construct(comps, False)  # type: ignore
-    verifier = DSS.new(key, "fips-186-3")
+        hash_obj = hash_module.new(tv.msg)
 
-    def positive_test(self, verifier=verifier, hash_obj=hash_obj, signature=tv.r + tv.s):
-        verifier.verify(hash_obj, signature)
+        comps = [bytes_to_long(x) for x in (tv.y, generator, modulus, suborder)]
+        key = DSA.construct(comps, False)  # type: ignore
+        verifier = DSS.new(key, "fips-186-3")
+        params.append(pytest.param(verifier, hash_obj, tv.r + tv.s, tv.result == "p", id=str(idx)))
+    return params
 
-    def negative_test(self, verifier=verifier, hash_obj=hash_obj, signature=tv.r + tv.s):
-        self.assertRaises(ValueError, verifier.verify, hash_obj, signature)
 
-    if tv.result == "p":
-        setattr(FIPS_DSA_Tests_KAT, "test_verify_positive_%d" % idx, positive_test)
-    else:
-        setattr(FIPS_DSA_Tests_KAT, "test_verify_negative_%d" % idx, negative_test)
+def _load_dsa_sign_vectors():
+    params = []
+    for idx, tv in enumerate(test_vectors_sign):
+        if isinstance(tv, str):
+            res = re.match(r"\[mod = L=([0-9]+), N=([0-9]+), ([a-zA-Z0-9-]+)\]", tv)
+            assert res
+            hash_name = res.group(3).replace("-", "")
+            hash_module = load_hash_by_name(hash_name)
+            continue
+
+        if hasattr(tv, "p"):
+            modulus = tv.p
+            generator = tv.g
+            suborder = tv.q
+            continue
+
+        hash_obj = hash_module.new(tv.msg)
+        comps_dsa = [bytes_to_long(x) for x in (tv.y, generator, modulus, suborder, tv.x)]
+        key = DSA.construct(comps_dsa, False)  # type: ignore
+        signer = DSS.new(key, "fips-186-3", randfunc=StrRNG(tv.k))
+        params.append(pytest.param(signer, hash_obj, tv.r + tv.s, id=str(idx)))
+    return params
 
 
 test_vectors_sign = (
     load_test_vectors(("Signature", "DSA"), "FIPS_186_3_SigGen.txt", "Signature Creation 186-3", {}) or []
 )
 
-for idx, tv in enumerate(test_vectors_sign):
-    if isinstance(tv, str):
-        res = re.match(r"\[mod = L=([0-9]+), N=([0-9]+), ([a-zA-Z0-9-]+)\]", tv)
-        assert res
-        hash_name = res.group(3).replace("-", "")
-        hash_module = load_hash_by_name(hash_name)
-        continue
 
-    if hasattr(tv, "p"):
-        modulus = tv.p
-        generator = tv.g
-        suborder = tv.q
-        continue
+@pytest.mark.slow
+class TestFIPS_DSA_Tests_KAT:
+    @pytest.mark.parametrize("verifier, hash_obj, signature, valid", _load_dsa_verify_vectors())
+    def test_verify(self, verifier, hash_obj, signature, valid):
+        if valid:
+            verifier.verify(hash_obj, signature)
+        else:
+            with pytest.raises(ValueError):
+                verifier.verify(hash_obj, signature)
 
-    hash_obj = hash_module.new(tv.msg)
-    comps_dsa = [bytes_to_long(x) for x in (tv.y, generator, modulus, suborder, tv.x)]
-    key = DSA.construct(comps_dsa, False)  # type: ignore
-    signer = DSS.new(key, "fips-186-3", randfunc=StrRNG(tv.k))
-
-    def new_test(self, signer=signer, hash_obj=hash_obj, signature=tv.r + tv.s):
-        self.assertEqual(signer.sign(hash_obj), signature)
-
-    setattr(FIPS_DSA_Tests_KAT, "test_sign_%d" % idx, new_test)
+    @pytest.mark.parametrize("signer, hash_obj, signature", _load_dsa_sign_vectors())
+    def test_sign(self, signer, hash_obj, signature):
+        assert signer.sign(hash_obj) == signature
 
 
-class FIPS_ECDSA_Tests(unittest.TestCase):
+class TestFIPS_ECDSA:
     key_priv = ECC.generate(curve="P-256")
     key_pub = key_priv.public_key()
-
-    def shortDescription(self):
-        return "FIPS ECDSA Tests"
 
     def test_loopback(self):
         hashed_msg = SHA512.new(b"test")
@@ -258,26 +251,27 @@ hVvwpph00t5f4QPFAR5u8sQtzVDV09Kfma5uuiyAySRPTFQi8Jef8MO6Xg==
 
         from Crypto.Hash import SHA1
 
-        self.description = "Unapproved hash (SHA-1) test"
         hash_obj = SHA1.new()
         signer = DSS.new(self.key_priv, "fips-186-3")
-        self.assertRaises(ValueError, signer.sign, hash_obj)
-        self.assertRaises(ValueError, signer.verify, hash_obj, b"\x00" * 40)
+        with pytest.raises(ValueError):
+            signer.sign(hash_obj)
+        with pytest.raises(ValueError):
+            signer.verify(hash_obj, b"\x00" * 40)
 
     def test_negative_eddsa_key(self):
         key = ECC.generate(curve="ed25519")
-        self.assertRaises(ValueError, DSS.new, key, "fips-186-3")
+        with pytest.raises(ValueError):
+            DSS.new(key, "fips-186-3")
 
     def test_sign_verify(self):
         """Verify public/private method"""
-
-        self.description = "can_sign() test"
         signer = DSS.new(self.key_priv, "fips-186-3")
-        self.assertTrue(signer.can_sign())
+        assert signer.can_sign()
 
         signer = DSS.new(self.key_pub, "fips-186-3")
-        self.assertFalse(signer.can_sign())
-        self.assertRaises(TypeError, signer.sign, SHA256.new(b"xyz"))
+        assert not signer.can_sign()
+        with pytest.raises(TypeError):
+            signer.sign(SHA256.new(b"xyz"))
 
         try:
             signer.sign(SHA256.new(b"xyz"))
@@ -285,37 +279,29 @@ hVvwpph00t5f4QPFAR5u8sQtzVDV09Kfma5uuiyAySRPTFQi8Jef8MO6Xg==
             msg = str(e)
         else:
             msg = ""
-        self.assertTrue("Private key is needed" in msg)
+        assert "Private key is needed" in msg
 
     def test_negative_unknown_modes_encodings(self):
         """Verify that unknown modes/encodings are rejected"""
-
-        self.description = "Unknown mode test"
-        self.assertRaises(ValueError, DSS.new, self.key_priv, "fips-186-0")
-
-        self.description = "Unknown encoding test"
-        self.assertRaises(ValueError, DSS.new, self.key_priv, "fips-186-3", "xml")
+        with pytest.raises(ValueError):
+            DSS.new(self.key_priv, "fips-186-0")
+        with pytest.raises(ValueError):
+            DSS.new(self.key_priv, "fips-186-3", "xml")
 
     def test_asn1_encoding(self):
         """Verify ASN.1 encoding"""
-
-        self.description = "ASN.1 encoding test"
         hash_obj = SHA256.new()
         signer = DSS.new(self.key_priv, "fips-186-3", "der")
         signature = signer.sign(hash_obj)
 
         # Verify that output looks like a DER SEQUENCE
-        self.assertEqual(signature[0], 48)
+        assert signature[0] == 48
         signer.verify(hash_obj, signature)
 
         # Verify that ASN.1 parsing fails as expected
         signature = bytes([7]) + signature[1:]
-        self.assertRaises(ValueError, signer.verify, hash_obj, signature)
-
-
-@pytest.mark.slow
-class FIPS_ECDSA_Tests_KAT(unittest.TestCase):
-    pass
+        with pytest.raises(ValueError):
+            signer.verify(hash_obj, signature)
 
 
 test_vectors_verify = (
@@ -346,37 +332,48 @@ test_vectors_verify += (
 )
 
 
-for idx, tv in enumerate(test_vectors_verify):
-    if isinstance(tv, str):
-        res = re.match(r"\[(P-[0-9]+),(SHA-[0-9]+)\]", tv)
-        assert res
-        curve_name = res.group(1)
-        hash_name = res.group(2).replace("-", "")
-        if hash_name in ("SHA512224", "SHA512256"):
-            truncate = hash_name[-3:]
-            hash_name = hash_name[:-3]
+def _load_ecdsa_verify_vectors():
+    params = []
+    for idx, tv in enumerate(test_vectors_verify):
+        if isinstance(tv, str):
+            res = re.match(r"\[(P-[0-9]+),(SHA-[0-9]+)\]", tv)
+            assert res
+            curve_name = res.group(1)
+            hash_name = res.group(2).replace("-", "")
+            if hash_name in ("SHA512224", "SHA512256"):
+                truncate = hash_name[-3:]
+                hash_name = hash_name[:-3]
+            else:
+                truncate = None
+            hash_module = load_hash_by_name(hash_name)
+            continue
+
+        if truncate is None:
+            hash_obj = hash_module.new(tv.msg)
         else:
-            truncate = None
-        hash_module = load_hash_by_name(hash_name)
-        continue
+            hash_obj = hash_module.new(tv.msg, truncate=truncate)
+        ecc_key = ECC.construct(curve=curve_name, point_x=tv.qx, point_y=tv.qy)
+        verifier = DSS.new(ecc_key, "fips-186-3")
+        params.append(pytest.param(verifier, hash_obj, tv.r + tv.s, tv.result.startswith("p"), id=str(idx)))
+    return params
 
-    if truncate is None:
+
+def _load_ecdsa_sign_vectors():
+    params = []
+    for idx, tv in enumerate(test_vectors_sign):
+        if isinstance(tv, str):
+            res = re.match(r"\[(P-[0-9]+),(SHA-[0-9]+)\]", tv)
+            assert res
+            curve_name = res.group(1)
+            hash_name = res.group(2).replace("-", "")
+            hash_module = load_hash_by_name(hash_name)
+            continue
+
         hash_obj = hash_module.new(tv.msg)
-    else:
-        hash_obj = hash_module.new(tv.msg, truncate=truncate)
-    ecc_key = ECC.construct(curve=curve_name, point_x=tv.qx, point_y=tv.qy)
-    verifier = DSS.new(ecc_key, "fips-186-3")
-
-    def positive_test(self, verifier=verifier, hash_obj=hash_obj, signature=tv.r + tv.s):
-        verifier.verify(hash_obj, signature)
-
-    def negative_test(self, verifier=verifier, hash_obj=hash_obj, signature=tv.r + tv.s):
-        self.assertRaises(ValueError, verifier.verify, hash_obj, signature)
-
-    if tv.result.startswith("p"):
-        setattr(FIPS_ECDSA_Tests_KAT, "test_verify_positive_%d" % idx, positive_test)
-    else:
-        setattr(FIPS_ECDSA_Tests_KAT, "test_verify_negative_%d" % idx, negative_test)
+        ecc_key = ECC.construct(curve=curve_name, d=tv.d)
+        signer = DSS.new(ecc_key, "fips-186-3", randfunc=StrRNG(tv.k))
+        params.append(pytest.param(signer, hash_obj, tv.r + tv.s, id=str(idx)))
+    return params
 
 
 test_vectors_sign = (
@@ -389,26 +386,23 @@ test_vectors_sign = (
     or []
 )
 
-for idx, tv in enumerate(test_vectors_sign):
-    if isinstance(tv, str):
-        res = re.match(r"\[(P-[0-9]+),(SHA-[0-9]+)\]", tv)
-        assert res
-        curve_name = res.group(1)
-        hash_name = res.group(2).replace("-", "")
-        hash_module = load_hash_by_name(hash_name)
-        continue
 
-    hash_obj = hash_module.new(tv.msg)
-    ecc_key = ECC.construct(curve=curve_name, d=tv.d)
-    signer = DSS.new(ecc_key, "fips-186-3", randfunc=StrRNG(tv.k))
+@pytest.mark.slow
+class TestFIPS_ECDSA_Tests_KAT:
+    @pytest.mark.parametrize("verifier, hash_obj, signature, valid", _load_ecdsa_verify_vectors())
+    def test_verify(self, verifier, hash_obj, signature, valid):
+        if valid:
+            verifier.verify(hash_obj, signature)
+        else:
+            with pytest.raises(ValueError):
+                verifier.verify(hash_obj, signature)
 
-    def sign_test(self, signer=signer, hash_obj=hash_obj, signature=tv.r + tv.s):
-        self.assertEqual(signer.sign(hash_obj), signature)
-
-    setattr(FIPS_ECDSA_Tests_KAT, "test_sign_%d" % idx, sign_test)
+    @pytest.mark.parametrize("signer, hash_obj, signature", _load_ecdsa_sign_vectors())
+    def test_sign(self, signer, hash_obj, signature):
+        assert signer.sign(hash_obj) == signature
 
 
-class Det_DSA_Tests(unittest.TestCase):
+class TestDet_DSA:
     """Tests from rfc6979"""
 
     # Each key is (p, q, g, x, y, desc)
@@ -632,7 +626,7 @@ class Det_DSA_Tests(unittest.TestCase):
         ),
     ]
 
-    def setUp(self):
+    def setup_method(self):
         # Convert DSA key components from hex strings to integers
         # Each key is (p, q, g, x, y, desc)
 
@@ -662,11 +656,11 @@ class Det_DSA_Tests(unittest.TestCase):
         signer = DSS.new(key, "deterministic-rfc6979")
 
         # Test _int2octets
-        self.assertEqual(hexlify(signer._int2octets(x)), b"009a4d6792295a7f730fc3f2b49cbc0f62e862272f")
+        assert hexlify(signer._int2octets(x)) == b"009a4d6792295a7f730fc3f2b49cbc0f62e862272f"
 
         # Test _bits2octets
         h1 = SHA256.new(b"sample").digest()
-        self.assertEqual(hexlify(signer._bits2octets(h1)), b"01795edf0d54db760f156d0dac04c0322b3a204224")
+        assert hexlify(signer._bits2octets(h1)) == b"01795edf0d54db760f156d0dac04c0322b3a204224"
 
     def test2(self):
 
@@ -677,10 +671,10 @@ class Det_DSA_Tests(unittest.TestCase):
 
             hash_obj = sig.module.new(sig.message)
             result = signer.sign(hash_obj)
-            self.assertEqual(sig.result, result)
+            assert sig.result == result
 
 
-class Det_ECDSA_Tests(unittest.TestCase):
+class TestDet_ECDSA:
     key_priv_p192 = ECC.construct(curve="P-192", d=0x6FAB034934E4C0FC9AE67F5B5659A9D7D1FEFD187EE09FD4)
     key_pub_p192 = key_priv_p192.public_key()
 
@@ -1097,9 +1091,6 @@ class Det_ECDSA_Tests(unittest.TestCase):
         new_tv = (tobytes(a), unhexlify(b), unhexlify(c), unhexlify(d), e)
         signatures_p521.append(new_tv)
 
-    def shortDescription(self):
-        return "Deterministic ECDSA Tests"
-
     def test_loopback_p192(self):
         hashed_msg = SHA512.new(b"test")
         signer = DSS.new(self.key_priv_p192, "deterministic-rfc6979")
@@ -1145,35 +1136,35 @@ class Det_ECDSA_Tests(unittest.TestCase):
         for message, _k, r, s, module in self.signatures_p192:
             hash_obj = module.new(message)
             result = signer.sign(hash_obj)
-            self.assertEqual(r + s, result)
+            assert r + s == result
 
     def test_data_rfc6979_p224(self):
         signer = DSS.new(self.key_priv_p224, "deterministic-rfc6979")
         for message, _k, r, s, module in self.signatures_p224:
             hash_obj = module.new(message)
             result = signer.sign(hash_obj)
-            self.assertEqual(r + s, result)
+            assert r + s == result
 
     def test_data_rfc6979_p256(self):
         signer = DSS.new(self.key_priv_p256, "deterministic-rfc6979")
         for message, _k, r, s, module in self.signatures_p256:
             hash_obj = module.new(message)
             result = signer.sign(hash_obj)
-            self.assertEqual(r + s, result)
+            assert r + s == result
 
     def test_data_rfc6979_p384(self):
         signer = DSS.new(self.key_priv_p384, "deterministic-rfc6979")
         for message, _k, r, s, module in self.signatures_p384:
             hash_obj = module.new(message)
             result = signer.sign(hash_obj)
-            self.assertEqual(r + s, result)
+            assert r + s == result
 
     def test_data_rfc6979_p521(self):
         signer = DSS.new(self.key_priv_p521, "deterministic-rfc6979")
         for message, _k, r, s, module in self.signatures_p521:
             hash_obj = module.new(message)
             result = signer.sign(hash_obj)
-            self.assertEqual(r + s, result)
+            assert r + s == result
 
 
 def get_hash_module(hash_name):
@@ -1204,33 +1195,30 @@ def get_hash_module(hash_name):
     return hash_module
 
 
-class TestVectorsDSAWycheproof(unittest.TestCase):
+def load_wycheproof_vectors_dsa():
+    def filter_dsa(group):
+        return DSA.import_key(group["keyPem"])
+
+    def filter_sha(group):
+        return get_hash_module(group["sha"])
+
+    def filter_type(group):
+        sig_type = group["type"]
+        if sig_type != "DsaVerify":
+            raise ValueError("Unknown signature type " + sig_type)
+        return sig_type
+
+    result = load_test_vectors_wycheproof(
+        ("Signature", "wycheproof"),
+        "dsa_test.json",
+        "Wycheproof DSA signature",
+        group_tag={"key": filter_dsa, "hash_module": filter_sha, "sig_type": filter_type},
+    )
+    return result
+
+
+class TestVectorsDSAWycheproof:
     _id = "None"
-
-    def setUp(self):
-
-        def filter_dsa(group):
-            return DSA.import_key(group["keyPem"])
-
-        def filter_sha(group):
-            return get_hash_module(group["sha"])
-
-        def filter_type(group):
-            sig_type = group["type"]
-            if sig_type != "DsaVerify":
-                raise ValueError("Unknown signature type " + sig_type)
-            return sig_type
-
-        result = load_test_vectors_wycheproof(
-            ("Signature", "wycheproof"),
-            "dsa_test.json",
-            "Wycheproof DSA signature",
-            group_tag={"key": filter_dsa, "hash_module": filter_sha, "sig_type": filter_type},
-        )
-        self.tv = result
-
-    def shortDescription(self):
-        return self._id
 
     def warn(self, tv):
         if tv.warning and wycheproof_warnings():
@@ -1253,93 +1241,90 @@ class TestVectorsDSAWycheproof(unittest.TestCase):
             assert tv.valid
             self.warn(tv)
 
-    def runTest(self):
-        for tv in self.tv:
-            self.check_verify(tv)
+    @pytest.mark.parametrize("tv", load_wycheproof_vectors_dsa(), ids=wycheproof_id)
+    def test(self, tv):
+        self.check_verify(tv)
 
 
-class TestVectorsECDSAWycheproof(unittest.TestCase):
+def _load_tests_ecdsa(filename):
+
+    def filter_ecc(group):
+        # These are the only curves we accept to skip
+        if group["key"]["curve"] in (
+            "secp224k1",
+            "secp256k1",
+            "brainpoolP224r1",
+            "brainpoolP224t1",
+            "brainpoolP256r1",
+            "brainpoolP256t1",
+            "brainpoolP320r1",
+            "brainpoolP320t1",
+            "brainpoolP384r1",
+            "brainpoolP384t1",
+            "brainpoolP512r1",
+            "brainpoolP512t1",
+        ):
+            return None
+        return ECC.import_key(group["keyPem"])
+
+    def filter_sha(group):
+        return get_hash_module(group["sha"])
+
+    def filter_encoding(group):
+        encoding_name = group["type"]
+        if encoding_name == "EcdsaVerify":
+            return "der"
+        elif encoding_name == "EcdsaP1363Verify":
+            return "binary"
+        else:
+            raise ValueError("Unknown signature type " + encoding_name)
+
+    result = load_test_vectors_wycheproof(
+        ("Signature", "wycheproof"),
+        filename,
+        "Wycheproof ECDSA signature (%s)" % filename,
+        group_tag={
+            "key": filter_ecc,
+            "hash_module": filter_sha,
+            "encoding": filter_encoding,
+        },
+    )
+    return result
+
+
+def load_wycheproof_vectors_ecdsa():
+    vectors = []
+    vectors += _load_tests_ecdsa("ecdsa_secp224r1_sha224_p1363_test.json")
+    vectors += _load_tests_ecdsa("ecdsa_secp224r1_sha224_test.json")
+    vectors += mark_slow(_load_tests_ecdsa("ecdsa_secp224r1_sha256_p1363_test.json"))
+    vectors += mark_slow(_load_tests_ecdsa("ecdsa_secp224r1_sha256_test.json"))
+    vectors += mark_slow(_load_tests_ecdsa("ecdsa_secp224r1_sha3_224_test.json"))
+    vectors += mark_slow(_load_tests_ecdsa("ecdsa_secp224r1_sha3_256_test.json"))
+    vectors += mark_slow(_load_tests_ecdsa("ecdsa_secp224r1_sha3_512_test.json"))
+    vectors += mark_slow(_load_tests_ecdsa("ecdsa_secp224r1_sha512_p1363_test.json"))
+    vectors += mark_slow(_load_tests_ecdsa("ecdsa_secp224r1_sha512_test.json"))
+    vectors += mark_slow(_load_tests_ecdsa("ecdsa_secp256r1_sha256_p1363_test.json"))
+    vectors += mark_slow(_load_tests_ecdsa("ecdsa_secp256r1_sha256_test.json"))
+    vectors += mark_slow(_load_tests_ecdsa("ecdsa_secp256r1_sha3_256_test.json"))
+    vectors += mark_slow(_load_tests_ecdsa("ecdsa_secp256r1_sha3_512_test.json"))
+    vectors += mark_slow(_load_tests_ecdsa("ecdsa_secp256r1_sha512_p1363_test.json"))
+    vectors += _load_tests_ecdsa("ecdsa_secp256r1_sha512_test.json")
+    vectors += mark_slow(_load_tests_ecdsa("ecdsa_secp384r1_sha3_384_test.json"))
+    vectors += mark_slow(_load_tests_ecdsa("ecdsa_secp384r1_sha3_512_test.json"))
+    vectors += mark_slow(_load_tests_ecdsa("ecdsa_secp384r1_sha384_p1363_test.json"))
+    vectors += mark_slow(_load_tests_ecdsa("ecdsa_secp384r1_sha384_test.json"))
+    vectors += mark_slow(_load_tests_ecdsa("ecdsa_secp384r1_sha512_p1363_test.json"))
+    vectors += _load_tests_ecdsa("ecdsa_secp384r1_sha512_test.json")
+    vectors += mark_slow(_load_tests_ecdsa("ecdsa_secp521r1_sha3_512_test.json"))
+    vectors += mark_slow(_load_tests_ecdsa("ecdsa_secp521r1_sha512_p1363_test.json"))
+    vectors += _load_tests_ecdsa("ecdsa_secp521r1_sha512_test.json")
+    vectors += _load_tests_ecdsa("ecdsa_test.json")
+    vectors += _load_tests_ecdsa("ecdsa_webcrypto_test.json")
+    return vectors
+
+
+class TestVectorsECDSAWycheproof:
     _id = "None"
-
-    def add_tests(self, filename):
-
-        def filter_ecc(group):
-            # These are the only curves we accept to skip
-            if group["key"]["curve"] in (
-                "secp224k1",
-                "secp256k1",
-                "brainpoolP224r1",
-                "brainpoolP224t1",
-                "brainpoolP256r1",
-                "brainpoolP256t1",
-                "brainpoolP320r1",
-                "brainpoolP320t1",
-                "brainpoolP384r1",
-                "brainpoolP384t1",
-                "brainpoolP512r1",
-                "brainpoolP512t1",
-            ):
-                return None
-            return ECC.import_key(group["keyPem"])
-
-        def filter_sha(group):
-            return get_hash_module(group["sha"])
-
-        def filter_encoding(group):
-            encoding_name = group["type"]
-            if encoding_name == "EcdsaVerify":
-                return "der"
-            elif encoding_name == "EcdsaP1363Verify":
-                return "binary"
-            else:
-                raise ValueError("Unknown signature type " + encoding_name)
-
-        result = load_test_vectors_wycheproof(
-            ("Signature", "wycheproof"),
-            filename,
-            "Wycheproof ECDSA signature (%s)" % filename,
-            group_tag={
-                "key": filter_ecc,
-                "hash_module": filter_sha,
-                "encoding": filter_encoding,
-            },
-        )
-        self.tv += result
-
-    def setUp(self):
-        self.tv = []
-        self.add_tests("ecdsa_secp224r1_sha224_p1363_test.json")
-        self.add_tests("ecdsa_secp224r1_sha224_test.json")
-        if slow_tests():
-            self.add_tests("ecdsa_secp224r1_sha256_p1363_test.json")
-            self.add_tests("ecdsa_secp224r1_sha256_test.json")
-            self.add_tests("ecdsa_secp224r1_sha3_224_test.json")
-            self.add_tests("ecdsa_secp224r1_sha3_256_test.json")
-            self.add_tests("ecdsa_secp224r1_sha3_512_test.json")
-            self.add_tests("ecdsa_secp224r1_sha512_p1363_test.json")
-            self.add_tests("ecdsa_secp224r1_sha512_test.json")
-            self.add_tests("ecdsa_secp256r1_sha256_p1363_test.json")
-            self.add_tests("ecdsa_secp256r1_sha256_test.json")
-            self.add_tests("ecdsa_secp256r1_sha3_256_test.json")
-            self.add_tests("ecdsa_secp256r1_sha3_512_test.json")
-            self.add_tests("ecdsa_secp256r1_sha512_p1363_test.json")
-        self.add_tests("ecdsa_secp256r1_sha512_test.json")
-        if slow_tests():
-            self.add_tests("ecdsa_secp384r1_sha3_384_test.json")
-            self.add_tests("ecdsa_secp384r1_sha3_512_test.json")
-            self.add_tests("ecdsa_secp384r1_sha384_p1363_test.json")
-            self.add_tests("ecdsa_secp384r1_sha384_test.json")
-            self.add_tests("ecdsa_secp384r1_sha512_p1363_test.json")
-        self.add_tests("ecdsa_secp384r1_sha512_test.json")
-        if slow_tests():
-            self.add_tests("ecdsa_secp521r1_sha3_512_test.json")
-            self.add_tests("ecdsa_secp521r1_sha512_p1363_test.json")
-        self.add_tests("ecdsa_secp521r1_sha512_test.json")
-        self.add_tests("ecdsa_test.json")
-        self.add_tests("ecdsa_webcrypto_test.json")
-
-    def shortDescription(self):
-        return self._id
 
     def warn(self, tv):
         if tv.warning and wycheproof_warnings():
@@ -1366,6 +1351,6 @@ class TestVectorsECDSAWycheproof(unittest.TestCase):
             assert tv.valid
             self.warn(tv)
 
-    def runTest(self):
-        for tv in self.tv:
-            self.check_verify(tv)
+    @pytest.mark.parametrize("tv", load_wycheproof_vectors_ecdsa(), ids=wycheproof_id)
+    def test(self, tv):
+        self.check_verify(tv)

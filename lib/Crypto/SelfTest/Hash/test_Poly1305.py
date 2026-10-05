@@ -33,8 +33,9 @@
 
 """Self-test suite for Crypto.Hash._Poly1305"""
 
-import unittest
 from binascii import hexlify, unhexlify
+
+import pytest
 
 from Crypto.Cipher import AES, ChaCha20
 from Crypto.Hash import Poly1305
@@ -301,7 +302,7 @@ test_data_chacha20 = [
 ]
 
 
-class Poly1305Test_AES(unittest.TestCase):
+class TestPoly1305Test_AES:
     key = b"\x11" * 32
 
     def test_new_positive(self):
@@ -309,24 +310,29 @@ class Poly1305Test_AES(unittest.TestCase):
         data = b"r" * 100
 
         h1 = Poly1305.new(key=self.key, cipher=AES)
-        self.assertEqual(h1.digest_size, 16)
-        self.assertEqual(len(h1.nonce), 16)
+        assert h1.digest_size == 16
+        assert len(h1.nonce) == 16
         d1 = h1.update(data).digest()
-        self.assertEqual(len(d1), 16)
+        assert len(d1) == 16
 
         h2 = Poly1305.new(key=self.key, nonce=h1.nonce, data=data, cipher=AES)
         d2 = h2.digest()
-        self.assertEqual(h1.nonce, h2.nonce)
-        self.assertEqual(d1, d2)
+        assert h1.nonce == h2.nonce
+        assert d1 == d2
 
     def test_new_negative(self):
         from Crypto.Cipher import DES3
 
-        self.assertRaises(ValueError, Poly1305.new, key=self.key[:31], cipher=AES)
-        self.assertRaises(ValueError, Poly1305.new, key=self.key, cipher=DES3)
-        self.assertRaises(ValueError, Poly1305.new, key=self.key, nonce=b"1" * 15, cipher=AES)
-        self.assertRaises(TypeError, Poly1305.new, key="2" * 32, cipher=AES)
-        self.assertRaises(TypeError, Poly1305.new, key=self.key, data="2" * 100, cipher=AES)
+        with pytest.raises(ValueError):
+            Poly1305.new(key=self.key[:31], cipher=AES)
+        with pytest.raises(ValueError):
+            Poly1305.new(key=self.key, cipher=DES3)
+        with pytest.raises(ValueError):
+            Poly1305.new(key=self.key, nonce=b"1" * 15, cipher=AES)
+        with pytest.raises(TypeError):
+            Poly1305.new(key="2" * 32, cipher=AES)
+        with pytest.raises(TypeError):
+            Poly1305.new(key=self.key, data="2" * 100, cipher=AES)
 
     def test_update(self):
         pieces = [b"\x0a" * 200, b"\x14" * 300]
@@ -337,20 +343,21 @@ class Poly1305Test_AES(unittest.TestCase):
         h2 = Poly1305.new(key=self.key, cipher=AES, nonce=h1.nonce)
         h2.update(pieces[0] + pieces[1])
         d2 = h2.digest()
-        self.assertEqual(d1, d2)
+        assert d1 == d2
 
     def test_update_negative(self):
         h = Poly1305.new(key=self.key, cipher=AES)
-        self.assertRaises(TypeError, h.update, "string")
+        with pytest.raises(TypeError):
+            h.update("string")
 
     def test_digest(self):
         h = Poly1305.new(key=self.key, cipher=AES)
         digest = h.digest()
 
         # hexdigest does not change the state
-        self.assertEqual(h.digest(), digest)
+        assert h.digest() == digest
         # digest returns a byte string
-        self.assertTrue(isinstance(digest, bytes))
+        assert isinstance(digest, bytes)
 
     def test_update_after_digest(self):
         msg = b"rrrrttt"
@@ -358,7 +365,8 @@ class Poly1305Test_AES(unittest.TestCase):
         # Normally, update() cannot be done after digest()
         h = Poly1305.new(key=self.key, data=msg[:4], cipher=AES)
         h.digest()
-        self.assertRaises(TypeError, h.update, msg[4:])
+        with pytest.raises(TypeError):
+            h.update(msg[4:])
 
     def test_hex_digest(self):
         mac = Poly1305.new(key=self.key, cipher=AES)
@@ -366,24 +374,26 @@ class Poly1305Test_AES(unittest.TestCase):
         hexdigest = mac.hexdigest()
 
         # hexdigest is equivalent to digest
-        self.assertEqual(hexlify(digest), tobytes(hexdigest))
+        assert hexlify(digest) == tobytes(hexdigest)
         # hexdigest does not change the state
-        self.assertEqual(mac.hexdigest(), hexdigest)
+        assert mac.hexdigest() == hexdigest
         # hexdigest returns a string
-        self.assertTrue(isinstance(hexdigest, str))
+        assert isinstance(hexdigest, str)
 
     def test_verify(self):
         h = Poly1305.new(key=self.key, cipher=AES)
         mac = h.digest()
         h.verify(mac)
         wrong_mac = strxor_c(mac, 255)
-        self.assertRaises(ValueError, h.verify, wrong_mac)
+        with pytest.raises(ValueError):
+            h.verify(wrong_mac)
 
     def test_hexverify(self):
         h = Poly1305.new(key=self.key, cipher=AES)
         mac = h.hexdigest()
         h.hexverify(mac)
-        self.assertRaises(ValueError, h.hexverify, "4556")
+        with pytest.raises(ValueError):
+            h.hexverify("4556")
 
     def test_bytearray(self):
 
@@ -400,8 +410,8 @@ class Poly1305Test_AES(unittest.TestCase):
         key_ba[:1] = b"\xff"
         data_ba[:1] = b"\xee"
 
-        self.assertEqual(h1.digest(), d_ref)
-        self.assertEqual(h2.digest(), d_ref)
+        assert h1.digest() == d_ref
+        assert h2.digest() == d_ref
 
         # Data can be a bytearray (during operation)
         data_ba = bytearray(data)
@@ -412,7 +422,7 @@ class Poly1305Test_AES(unittest.TestCase):
         h2.update(data_ba)
         data_ba[:1] = b"\xff"
 
-        self.assertEqual(h1.digest(), h2.digest())
+        assert h1.digest() == h2.digest()
 
     def test_memoryview(self):
 
@@ -435,7 +445,7 @@ class Poly1305Test_AES(unittest.TestCase):
                 data_mv[:1] = b"\xff"
                 key_mv[:1] = b"\xff"
 
-            self.assertEqual(h1.digest(), h2.digest())
+            assert h1.digest() == h2.digest()
 
             # Data can be a memoryview (during operation)
             data_mv = get_mv(data)
@@ -447,25 +457,26 @@ class Poly1305Test_AES(unittest.TestCase):
             if not data_mv.readonly:
                 data_mv[:1] = b"\xff"
 
-            self.assertEqual(h1.digest(), h2.digest())
+            assert h1.digest() == h2.digest()
 
 
-class Poly1305Test_ChaCha20(unittest.TestCase):
+class TestPoly1305Test_ChaCha20:
     key = b"\x11" * 32
 
     def test_new_positive(self):
 
         h1 = Poly1305.new(key=self.key, cipher=ChaCha20)
-        self.assertEqual(h1.digest_size, 16)
-        self.assertEqual(len(h1.nonce), 12)
+        assert h1.digest_size == 16
+        assert len(h1.nonce) == 12
 
         h2 = Poly1305.new(key=self.key, cipher=ChaCha20, nonce=b"8" * 8)
-        self.assertEqual(len(h2.nonce), 8)
-        self.assertEqual(h2.nonce, b"8" * 8)
+        assert len(h2.nonce) == 8
+        assert h2.nonce == b"8" * 8
 
     def test_new_negative(self):
 
-        self.assertRaises(ValueError, Poly1305.new, key=self.key, nonce=b"1" * 7, cipher=ChaCha20)
+        with pytest.raises(ValueError):
+            Poly1305.new(key=self.key, nonce=b"1" * 7, cipher=ChaCha20)
 
 
 #
@@ -495,8 +506,8 @@ class Poly1305_Basic:
         return Poly1305_MAC(key[:16], key[16:], msg)
 
 
-class Poly1305AES_MC(unittest.TestCase):
-    def runTest(self):
+class TestPoly1305AES_MC:
+    def test(self):
         tag = unhexlify(b"fb447350c4e868c52ac3275cf9d4327e")
 
         msg = b""
@@ -509,7 +520,7 @@ class Poly1305AES_MC(unittest.TestCase):
             tag = auth.digest()
 
         # Compare against output of original DJB's poly1305aes-20050218
-        self.assertEqual("CDFA436DDD629C7DC20E1128530BAED2", auth.hexdigest().upper())
+        assert auth.hexdigest().upper() == "CDFA436DDD629C7DC20E1128530BAED2"
 
 
 TestVectorsBasic = make_mac_tests(Poly1305_Basic, "Poly1305", test_data_basic)

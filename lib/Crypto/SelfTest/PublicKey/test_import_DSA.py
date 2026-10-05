@@ -20,26 +20,27 @@
 # ===================================================================
 
 import re
-import unittest
 from binascii import unhexlify
 from io import BytesIO
+
+import pytest
 
 from Crypto.PublicKey import DSA
 from Crypto.Util._bytes import tobytes
 
 
-class ImportKeyTests(unittest.TestCase):
+class TestImportKey:
     y = 92137165128186062214622779787483327510946462589285775188003362705875131352591574106484271700740858696583623951844732128165434284507709057439633739849986759064015013893156866539696757799934634945787496920169462601722830899660681779448742875054459716726855443681559131362852474817534616736104831095601710736729
     p = 162452170958135306109773853318304545923250830605675936228618290525164105310663722368377131295055868997377338797580997938253236213714988311430600065853662861806894003694743806769284131194035848116051021923956699231855223389086646903420682639786976554552864568460372266462812137447840653688476258666833303658691
     q = 988791743931120302950649732173330531512663554851
     g = 85583152299197514738065570254868711517748965097380456700369348466136657764813442044039878840094809620913085570225318356734366886985903212775602770761953571967834823306046501307810937486758039063386311593890777319935391363872375452381836756832784184928202587843258855704771836753434368484556809100537243908232
     x = 540873410045082450874416847965843801027716145253
 
-    def setUp(self):
+    def setup_method(self):
 
         # It is easier to write test vectors in text form,
         # and convert them to byte strigs dynamically here
-        for mname, mvalue in ImportKeyTests.__dict__.items():
+        for mname, mvalue in TestImportKey.__dict__.items():
             if mname[:4] in ("der_", "pem_", "ssh_"):
                 if mname[:4] == "der_":
                     mvalue = unhexlify(tobytes(mvalue))
@@ -66,17 +67,17 @@ class ImportKeyTests(unittest.TestCase):
 
     def testImportKey1(self):
         key_obj = DSA.importKey(self.der_public)
-        self.assertFalse(key_obj.has_private())
-        self.assertEqual(self.y, key_obj.y)
-        self.assertEqual(self.p, key_obj.p)
-        self.assertEqual(self.q, key_obj.q)
-        self.assertEqual(self.g, key_obj.g)
+        assert not key_obj.has_private()
+        assert self.y == key_obj.y
+        assert self.p == key_obj.p
+        assert self.q == key_obj.q
+        assert self.g == key_obj.g
 
     def testExportKey1(self):
         tup = (self.y, self.g, self.p, self.q)
         key = DSA.construct(tup)
         encoded = key.export_key("DER")
-        self.assertEqual(self.der_public, encoded)
+        assert self.der_public == encoded
 
     # 2.
     pem_public = """\
@@ -96,17 +97,17 @@ tPG+TJKpGYb7pVk=
     def testImportKey2(self):
         for pem in (self.pem_public, self.pem_public.decode("latin-1")):
             key_obj = DSA.importKey(pem)
-            self.assertFalse(key_obj.has_private())
-            self.assertEqual(self.y, key_obj.y)
-            self.assertEqual(self.p, key_obj.p)
-            self.assertEqual(self.q, key_obj.q)
-            self.assertEqual(self.g, key_obj.g)
+            assert not key_obj.has_private()
+            assert self.y == key_obj.y
+            assert self.p == key_obj.p
+            assert self.q == key_obj.q
+            assert self.g == key_obj.g
 
     def testExportKey2(self):
         tup = (self.y, self.g, self.p, self.q)
         key = DSA.construct(tup)
         encoded = key.export_key("PEM")
-        self.assertEqual(self.pem_public, encoded)
+        assert self.pem_public == encoded
 
     # 3. OpenSSL/OpenSSH format
     der_private = (
@@ -128,18 +129,18 @@ tPG+TJKpGYb7pVk=
 
     def testImportKey3(self):
         key_obj = DSA.importKey(self.der_private)
-        self.assertTrue(key_obj.has_private())
-        self.assertEqual(self.y, key_obj.y)
-        self.assertEqual(self.p, key_obj.p)
-        self.assertEqual(self.q, key_obj.q)
-        self.assertEqual(self.g, key_obj.g)
-        self.assertEqual(self.x, key_obj.x)
+        assert key_obj.has_private()
+        assert self.y == key_obj.y
+        assert self.p == key_obj.p
+        assert self.q == key_obj.q
+        assert self.g == key_obj.g
+        assert self.x == key_obj.x
 
     def testExportKey3(self):
         tup = (self.y, self.g, self.p, self.q, self.x)
         key = DSA.construct(tup)
         encoded = key.export_key("DER", pkcs8=False)
-        self.assertEqual(self.der_private, encoded)
+        assert self.der_private == encoded
 
     # 4.
     pem_private = """\
@@ -159,18 +160,18 @@ ggadmEIJhrMUIVAldWBl
     def testImportKey4(self):
         for pem in (self.pem_private, self.pem_private.decode("latin-1")):
             key_obj = DSA.importKey(pem)
-            self.assertTrue(key_obj.has_private())
-            self.assertEqual(self.y, key_obj.y)
-            self.assertEqual(self.p, key_obj.p)
-            self.assertEqual(self.q, key_obj.q)
-            self.assertEqual(self.g, key_obj.g)
-            self.assertEqual(self.x, key_obj.x)
+            assert key_obj.has_private()
+            assert self.y == key_obj.y
+            assert self.p == key_obj.p
+            assert self.q == key_obj.q
+            assert self.g == key_obj.g
+            assert self.x == key_obj.x
 
     def testExportKey4(self):
         tup = (self.y, self.g, self.p, self.q, self.x)
         key = DSA.construct(tup)
         encoded = key.export_key("PEM", pkcs8=False)
-        self.assertEqual(self.pem_private, encoded)
+        assert self.pem_private == encoded
 
     # 5. PKCS8 (unencrypted)
     der_pkcs8 = (
@@ -189,20 +190,20 @@ ggadmEIJhrMUIVAldWBl
 
     def testImportKey5(self):
         key_obj = DSA.importKey(self.der_pkcs8)
-        self.assertTrue(key_obj.has_private())
-        self.assertEqual(self.y, key_obj.y)
-        self.assertEqual(self.p, key_obj.p)
-        self.assertEqual(self.q, key_obj.q)
-        self.assertEqual(self.g, key_obj.g)
-        self.assertEqual(self.x, key_obj.x)
+        assert key_obj.has_private()
+        assert self.y == key_obj.y
+        assert self.p == key_obj.p
+        assert self.q == key_obj.q
+        assert self.g == key_obj.g
+        assert self.x == key_obj.x
 
     def testExportKey5(self):
         tup = (self.y, self.g, self.p, self.q, self.x)
         key = DSA.construct(tup)
         encoded = key.export_key("DER")
-        self.assertEqual(self.der_pkcs8, encoded)
+        assert self.der_pkcs8 == encoded
         encoded = key.export_key("DER", pkcs8=True)
-        self.assertEqual(self.der_pkcs8, encoded)
+        assert self.der_pkcs8 == encoded
 
     # 6.
     pem_pkcs8 = """\
@@ -219,20 +220,20 @@ tBxWrkP9MA2JJi5O/YmUP5mmUbA4iAQWAhRevZo/C4IGnZhCCYazFCFQJXVgZQ==
     def testImportKey6(self):
         for pem in (self.pem_pkcs8, self.pem_pkcs8.decode("latin-1")):
             key_obj = DSA.importKey(pem)
-            self.assertTrue(key_obj.has_private())
-            self.assertEqual(self.y, key_obj.y)
-            self.assertEqual(self.p, key_obj.p)
-            self.assertEqual(self.q, key_obj.q)
-            self.assertEqual(self.g, key_obj.g)
-            self.assertEqual(self.x, key_obj.x)
+            assert key_obj.has_private()
+            assert self.y == key_obj.y
+            assert self.p == key_obj.p
+            assert self.q == key_obj.q
+            assert self.g == key_obj.g
+            assert self.x == key_obj.x
 
     def testExportKey6(self):
         tup = (self.y, self.g, self.p, self.q, self.x)
         key = DSA.construct(tup)
         encoded = key.export_key("PEM")
-        self.assertEqual(self.pem_pkcs8, encoded)
+        assert self.pem_pkcs8 == encoded
         encoded = key.export_key("PEM", pkcs8=True)
-        self.assertEqual(self.pem_pkcs8, encoded)
+        assert self.pem_pkcs8 == encoded
 
     # 7. OpenSSH/RFC4253
     ssh_pub = """ssh-dss AAAAB3NzaC1kc3MAAACBAOdW7hcX9LZ5THwhRyShl2N0LEVXK0s/j/O0Tzvp9EzgOaJ1dpXskVaX2nTvkU/NGwVmDiQZx2HWOfRdLXm4AtvSPnq4uBtHmjgOHzCTJYS6KguVUDI0LryDy1ypBuew181v5lbOy0yLWncSOoxnUKSB47BgV6/2qm66YguDLWDDAAAAFQCtMvSM064MRaGYph+kteIDIHY7IwAAAIB539w9YU/mNfzrfq6uNxjcLv77RSgpk6xnSdyDwiPYwYhyljFrOwtURmz0RPNLguNVTQuQp3j6rxMG8CXa5qPjbH+T3VusQFK5I3AECspwuNWCBZlxGQDvvJYYEsNV3Zvv/gmB2oXFVIB0tBxWrkP9MA2JJi5O/YmUP5mmUbA4iAAAAIEAgzUqaaEy80hD0qDrmVv/Ti8IOnPwBJ0skeovDOQ9FEq9pIGZ5LADxXCor4MwPUUQX2BsXEjZJaQO2cJjDC+kzb+DhTneuaKfkZCF8gRjafYnyoSyyx4seUBWS2cPljqxFk1OLKK/b/058S9UiSi/TS0bXmmAtPG+TJKpGYb7pVk="""
@@ -240,17 +241,17 @@ tBxWrkP9MA2JJi5O/YmUP5mmUbA4iAQWAhRevZo/C4IGnZhCCYazFCFQJXVgZQ==
     def testImportKey7(self):
         for ssh in (self.ssh_pub, self.ssh_pub.decode("latin-1")):
             key_obj = DSA.importKey(ssh)
-            self.assertFalse(key_obj.has_private())
-            self.assertEqual(self.y, key_obj.y)
-            self.assertEqual(self.p, key_obj.p)
-            self.assertEqual(self.q, key_obj.q)
-            self.assertEqual(self.g, key_obj.g)
+            assert not key_obj.has_private()
+            assert self.y == key_obj.y
+            assert self.p == key_obj.p
+            assert self.q == key_obj.q
+            assert self.g == key_obj.g
 
     def testExportKey7(self):
         tup = (self.y, self.g, self.p, self.q)
         key = DSA.construct(tup)
         encoded = key.export_key("OpenSSH")
-        self.assertEqual(self.ssh_pub, encoded)
+        assert self.ssh_pub == encoded
 
     # 8. Encrypted OpenSSL/OpenSSH
     pem_private_encrypted = """\
@@ -273,23 +274,23 @@ xVJtxaV37m3aXxtCsPnbBg==
     def testImportKey8(self):
         for pem in (self.pem_private_encrypted, self.pem_private_encrypted.decode("latin-1")):
             key_obj = DSA.importKey(pem, "PWDTEST")
-            self.assertTrue(key_obj.has_private())
-            self.assertEqual(self.y, key_obj.y)
-            self.assertEqual(self.p, key_obj.p)
-            self.assertEqual(self.q, key_obj.q)
-            self.assertEqual(self.g, key_obj.g)
-            self.assertEqual(self.x, key_obj.x)
+            assert key_obj.has_private()
+            assert self.y == key_obj.y
+            assert self.p == key_obj.p
+            assert self.q == key_obj.q
+            assert self.g == key_obj.g
+            assert self.x == key_obj.x
 
     def testExportKey8(self):
         tup = (self.y, self.g, self.p, self.q, self.x)
         key = DSA.construct(tup)
         encoded = key.export_key("PEM", pkcs8=False, passphrase="PWDTEST")
         key = DSA.importKey(encoded, "PWDTEST")
-        self.assertEqual(self.y, key.y)
-        self.assertEqual(self.p, key.p)
-        self.assertEqual(self.q, key.q)
-        self.assertEqual(self.g, key.g)
-        self.assertEqual(self.x, key.x)
+        assert self.y == key.y
+        assert self.p == key.p
+        assert self.q == key.q
+        assert self.g == key.g
+        assert self.x == key.x
 
     # 9. Encrypted PKCS8
     # pbeWithMD5AndDES-CBC
@@ -308,12 +309,12 @@ eZ4k+NQDbEL8GiHmFxzDWQAuPPZKJWEEEV2p/To+WOh+kSDHQw==
     def testImportKey9(self):
         for pem in (self.pem_pkcs8_encrypted, self.pem_pkcs8_encrypted.decode("latin-1")):
             key_obj = DSA.importKey(pem, "PWDTEST")
-            self.assertTrue(key_obj.has_private())
-            self.assertEqual(self.y, key_obj.y)
-            self.assertEqual(self.p, key_obj.p)
-            self.assertEqual(self.q, key_obj.q)
-            self.assertEqual(self.g, key_obj.g)
-            self.assertEqual(self.x, key_obj.x)
+            assert key_obj.has_private()
+            assert self.y == key_obj.y
+            assert self.p == key_obj.p
+            assert self.q == key_obj.q
+            assert self.g == key_obj.g
+            assert self.x == key_obj.x
 
     # 10. Encrypted PKCS8
     # pkcs5PBES2 /
@@ -338,50 +339,53 @@ eZ4k+NQDbEL8GiHmFxzDWQAuPPZKJWEEEV2p/To+WOh+kSDHQw==
 
     def testImportKey10(self):
         key_obj = DSA.importKey(self.der_pkcs8_encrypted, "PWDTEST")
-        self.assertTrue(key_obj.has_private())
-        self.assertEqual(self.y, key_obj.y)
-        self.assertEqual(self.p, key_obj.p)
-        self.assertEqual(self.q, key_obj.q)
-        self.assertEqual(self.g, key_obj.g)
-        self.assertEqual(self.x, key_obj.x)
+        assert key_obj.has_private()
+        assert self.y == key_obj.y
+        assert self.p == key_obj.p
+        assert self.q == key_obj.q
+        assert self.g == key_obj.g
+        assert self.x == key_obj.x
 
     def testExportKey10(self):
         tup = (self.y, self.g, self.p, self.q, self.x)
         key = DSA.construct(tup)
         randfunc = BytesIO(unhexlify(b"27A1C66C42AFEECE" + b"D725BF1B6B8239F4")).read
         encoded = key.export_key("DER", pkcs8=True, passphrase="PWDTEST", randfunc=randfunc)
-        self.assertEqual(self.der_pkcs8_encrypted, encoded)
+        assert self.der_pkcs8_encrypted == encoded
 
     # ----
 
     def testImportError1(self):
-        self.assertRaises(ValueError, DSA.importKey, self.der_pkcs8_encrypted, "wrongpwd")
+        with pytest.raises(ValueError):
+            DSA.importKey(self.der_pkcs8_encrypted, "wrongpwd")
 
     def testExportError2(self):
         tup = (self.y, self.g, self.p, self.q, self.x)
         key = DSA.construct(tup)
-        self.assertRaises(ValueError, key.export_key, "DER", pkcs8=False, passphrase="PWDTEST")
+        with pytest.raises(ValueError):
+            key.export_key("DER", pkcs8=False, passphrase="PWDTEST")
 
     def test_import_key(self):
         """Verify importKey is an alias to import_key"""
 
         key_obj = DSA.import_key(self.der_public)
-        self.assertFalse(key_obj.has_private())
-        self.assertEqual(self.y, key_obj.y)
-        self.assertEqual(self.p, key_obj.p)
-        self.assertEqual(self.q, key_obj.q)
-        self.assertEqual(self.g, key_obj.g)
+        assert not key_obj.has_private()
+        assert self.y == key_obj.y
+        assert self.p == key_obj.p
+        assert self.q == key_obj.q
+        assert self.g == key_obj.g
 
     def test_exportKey(self):
         tup = (self.y, self.g, self.p, self.q, self.x)
         key = DSA.construct(tup)
-        self.assertEqual(key.exportKey(), key.export_key())
+        assert key.exportKey() == key.export_key()
 
     def test_import_empty(self):
-        self.assertRaises(ValueError, DSA.import_key, b"")
+        with pytest.raises(ValueError):
+            DSA.import_key(b"")
 
 
-class ImportKeyFromX509Cert(unittest.TestCase):
+class TestImportKeyFromX509Cert:
     def test_x509v1(self):
 
         # Sample V1 certificate with a 1024 bit DSA key
@@ -451,8 +455,8 @@ a1:e4:20:fa:55:a8:a7:5c:d2:f0:ea:9a:0c:2e:da:
         for comp_name in ("y", "p", "q", "g"):
             comp_str = locals()[comp_name + "_str"]
             comp = int(re.sub("[^0-9a-f]", "", comp_str), 16)
-            self.assertEqual(getattr(key, comp_name), comp)
-        self.assertFalse(key.has_private())
+            assert getattr(key, comp_name) == comp
+        assert not key.has_private()
 
     def test_x509v3(self):
 
@@ -535,5 +539,5 @@ c4:ee:bd:e3:82:e5:9a:2e:3e:b5:e8:01:b5:1d:63:
         for comp_name in ("y", "p", "q", "g"):
             comp_str = locals()[comp_name + "_str"]
             comp = int(re.sub("[^0-9a-f]", "", comp_str), 16)
-            self.assertEqual(getattr(key, comp_name), comp)
-        self.assertFalse(key.has_private())
+            assert getattr(key, comp_name) == comp
+        assert not key.has_private()

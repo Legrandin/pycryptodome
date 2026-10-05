@@ -23,8 +23,6 @@
 
 """Self-test suite for Crypto.Hash.MD5"""
 
-import unittest
-
 import pytest
 
 from Crypto.Hash import MD5
@@ -55,21 +53,21 @@ test_data = [
 
 
 @pytest.mark.slow
-class Md5IterTest(unittest.TestCase):
-    def runTest(self):
+class TestMd5Iter:
+    def test(self):
         message = b"\x00" * 16
         result1 = "4AE71336E44BF9BF79D2752E234818A5".lower()
         result2 = "1A83F51285E4D89403D00C46EF8508FE".lower()
 
         h = MD5.new(message)
         message = h.digest()
-        self.assertEqual(h.hexdigest(), result1)
+        assert h.hexdigest() == result1
 
         for _ in range(99999):
             h = MD5.new(message)
             message = h.digest()
 
-        self.assertEqual(h.hexdigest(), result2)
+        assert h.hexdigest() == result2
 
 
 TestVectors = make_hash_tests(MD5, "MD5", test_data, digest_size=16, oid="1.2.840.113549.2.5")

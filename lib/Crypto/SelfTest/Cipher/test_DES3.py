@@ -23,8 +23,9 @@
 
 """Self-test suite for Crypto.Cipher.DES3"""
 
-import unittest
 from binascii import hexlify, unhexlify
+
+import pytest
 
 from Crypto.Cipher import DES3
 from Crypto.SelfTest.Cipher.common import make_block_tests
@@ -75,54 +76,62 @@ for tdes_file in nist_tdes_mmt_files:
         test_data.append(test_data_item)
 
 
-class CheckParity(unittest.TestCase):
+class TestCheckParity:
     def test_parity_option2(self):
         before_2k = unhexlify("CABF326FA56734324FFCCABCDEFACABF")
         after_2k = DES3.adjust_key_parity(before_2k)
-        self.assertEqual(after_2k, unhexlify("CBBF326EA46734324FFDCBBCDFFBCBBF"))
+        assert after_2k == unhexlify("CBBF326EA46734324FFDCBBCDFFBCBBF")
 
     def test_parity_option3(self):
         before_3k = unhexlify("AAAAAAAAAAAAAAAABBBBBBBBBBBBBBBBCCCCCCCCCCCCCCCC")
         after_3k = DES3.adjust_key_parity(before_3k)
-        self.assertEqual(after_3k, unhexlify("ABABABABABABABABBABABABABABABABACDCDCDCDCDCDCDCD"))
+        assert after_3k == unhexlify("ABABABABABABABABBABABABABABABABACDCDCDCDCDCDCDCD")
 
     def test_degradation(self):
         sub_key1 = bytes([1]) * 8
         sub_key2 = bytes([255]) * 8
 
         # K1 == K2
-        self.assertRaises(ValueError, DES3.adjust_key_parity, sub_key1 * 2 + sub_key2)
+        with pytest.raises(ValueError):
+            DES3.adjust_key_parity(sub_key1 * 2 + sub_key2)
 
         # K2 == K3
-        self.assertRaises(ValueError, DES3.adjust_key_parity, sub_key1 + sub_key2 * 2)
+        with pytest.raises(ValueError):
+            DES3.adjust_key_parity(sub_key1 + sub_key2 * 2)
 
         # K1 == K2 == K3
-        self.assertRaises(ValueError, DES3.adjust_key_parity, sub_key1 * 3)
+        with pytest.raises(ValueError):
+            DES3.adjust_key_parity(sub_key1 * 3)
 
         # K1 == K2 (with different parity)
-        self.assertRaises(ValueError, DES3.adjust_key_parity, sub_key1 + strxor_c(sub_key1, 1) + sub_key2)
+        with pytest.raises(ValueError):
+            DES3.adjust_key_parity(sub_key1 + strxor_c(sub_key1, 1) + sub_key2)
 
 
-class DegenerateToDESTest(unittest.TestCase):
-    def runTest(self):
+class TestDegenerateToDES:
+    def test(self):
         sub_key1 = bytes([1]) * 8
         sub_key2 = bytes([255]) * 8
 
         # K1 == K2
-        self.assertRaises(ValueError, DES3.new, sub_key1 * 2 + sub_key2, DES3.MODE_ECB)
+        with pytest.raises(ValueError):
+            DES3.new(sub_key1 * 2 + sub_key2, DES3.MODE_ECB)
 
         # K2 == K3
-        self.assertRaises(ValueError, DES3.new, sub_key1 + sub_key2 * 2, DES3.MODE_ECB)
+        with pytest.raises(ValueError):
+            DES3.new(sub_key1 + sub_key2 * 2, DES3.MODE_ECB)
 
         # K1 == K2 == K3
-        self.assertRaises(ValueError, DES3.new, sub_key1 * 3, DES3.MODE_ECB)
+        with pytest.raises(ValueError):
+            DES3.new(sub_key1 * 3, DES3.MODE_ECB)
 
         # K2 == K3 (parity is ignored)
-        self.assertRaises(ValueError, DES3.new, sub_key1 + sub_key2 + strxor_c(sub_key2, 0x1), DES3.MODE_ECB)
+        with pytest.raises(ValueError):
+            DES3.new(sub_key1 + sub_key2 + strxor_c(sub_key2, 0x1), DES3.MODE_ECB)
 
 
-class TestOutput(unittest.TestCase):
-    def runTest(self):
+class TestOutput:
+    def test(self):
         # Encrypt/Decrypt data and test output parameter
 
         cipher = DES3.new(b"4" * 8 + b"G" * 8 + b"T" * 8, DES3.MODE_ECB)
@@ -132,26 +141,30 @@ class TestOutput(unittest.TestCase):
 
         output = bytearray(16)
         res = cipher.encrypt(pt, output=output)
-        self.assertEqual(ct, output)
-        self.assertEqual(res, None)
+        assert ct == output
+        assert res is None
 
         res = cipher.decrypt(ct, output=output)
-        self.assertEqual(pt, output)
-        self.assertEqual(res, None)
+        assert pt == output
+        assert res is None
 
         output = memoryview(bytearray(16))
         cipher.encrypt(pt, output=output)
-        self.assertEqual(ct, output)
+        assert ct == output
 
         cipher.decrypt(ct, output=output)
-        self.assertEqual(pt, output)
+        assert pt == output
 
-        self.assertRaises(TypeError, cipher.encrypt, pt, output=b"0" * 16)
-        self.assertRaises(TypeError, cipher.decrypt, ct, output=b"0" * 16)
+        with pytest.raises(TypeError):
+            cipher.encrypt(pt, output=b"0" * 16)
+        with pytest.raises(TypeError):
+            cipher.decrypt(ct, output=b"0" * 16)
 
         shorter_output = bytearray(7)
-        self.assertRaises(ValueError, cipher.encrypt, pt, output=shorter_output)
-        self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
+        with pytest.raises(ValueError):
+            cipher.encrypt(pt, output=shorter_output)
+        with pytest.raises(ValueError):
+            cipher.decrypt(ct, output=shorter_output)
 
 
 TestVectors = make_block_tests(DES3, "DES3", test_data)

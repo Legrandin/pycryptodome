@@ -20,13 +20,13 @@
 # ===================================================================
 
 
-import unittest
+import pytest
 
 from Crypto import Random
 from Crypto.Cipher import PKCS1_v1_5 as PKCS
 from Crypto.PublicKey import RSA
-from Crypto.SelfTest.loader import load_test_vectors_wycheproof
-from Crypto.SelfTest.st_common import a2b_hex, slow_tests, wycheproof_warnings
+from Crypto.SelfTest.loader import load_test_vectors_wycheproof, wycheproof_id
+from Crypto.SelfTest.st_common import a2b_hex, mark_slow, wycheproof_warnings
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 
 
@@ -45,8 +45,8 @@ def t2b(t):
     return a2b_hex(clean)
 
 
-class PKCS1_15_Tests(unittest.TestCase):
-    def setUp(self):
+class TestPKCS1_15:
+    def setup_method(self):
         self.rng = Random.new().read
         self.key1024 = RSA.generate(1024, self.rng)
 
@@ -120,13 +120,14 @@ HKukWBcq9f/UOmS0oEhai/6g+Uf7VHJdWaeO5LzuvwU=
             # The real test
             cipher = PKCS.new(key, randfunc=randGen(t2b(test[3])))
             ct = cipher.encrypt(test[1].encode("latin-1"))
-            self.assertEqual(ct, t2b(test[2]))
+            assert ct == t2b(test[2])
 
     def testEncrypt2(self):
         # Verify that encryption fail if plaintext is too long
         pt = "\x00" * (128 - 11 + 1)
         cipher = PKCS.new(self.key1024)
-        self.assertRaises(ValueError, cipher.encrypt, pt)
+        with pytest.raises(ValueError):
+            cipher.encrypt(pt)
 
     def testVerify1(self):
         for test in self._testData:
@@ -137,17 +138,19 @@ HKukWBcq9f/UOmS0oEhai/6g+Uf7VHJdWaeO5LzuvwU=
 
             # The real test
             pt = cipher.decrypt(ct, None)
-            self.assertEqual(pt, expected_pt)
+            assert pt == expected_pt
 
             pt = cipher.decrypt(ct, b"\xff" * len(expected_pt))
-            self.assertEqual(pt, expected_pt)
+            assert pt == expected_pt
 
     def testVerify2(self):
         # Verify that decryption fails if ciphertext is not as long as
         # RSA modulus
         cipher = PKCS.new(self.key1024)
-        self.assertRaises(ValueError, cipher.decrypt, "\x00" * 127, "---")
-        self.assertRaises(ValueError, cipher.decrypt, "\x00" * 129, "---")
+        with pytest.raises(ValueError):
+            cipher.decrypt("\x00" * 127, "---")
+        with pytest.raises(ValueError):
+            cipher.decrypt("\x00" * 129, "---")
 
         # Verify that decryption fails if there are less then 8 non-zero padding
         # bytes
@@ -155,7 +158,7 @@ HKukWBcq9f/UOmS0oEhai/6g+Uf7VHJdWaeO5LzuvwU=
         pt_int = bytes_to_long(pt)
         ct_int = self.key1024._encrypt(pt_int)
         ct = long_to_bytes(ct_int, 128)
-        self.assertEqual(b"---", cipher.decrypt(ct, b"---"))
+        assert cipher.decrypt(ct, b"---") == b"---"
 
     def testEncryptVerify1(self):
         # Encrypt/Verify messages of length [0..RSAlen-11]
@@ -165,7 +168,7 @@ HKukWBcq9f/UOmS0oEhai/6g+Uf7VHJdWaeO5LzuvwU=
             cipher = PKCS.new(self.key1024)
             ct = cipher.encrypt(pt)
             pt2 = cipher.decrypt(ct, b"\xaa" * pt_len)
-            self.assertEqual(pt, pt2)
+            assert pt == pt2
 
     def test_encrypt_verify_exp_pt_len(self):
 
@@ -175,62 +178,61 @@ HKukWBcq9f/UOmS0oEhai/6g+Uf7VHJdWaeO5LzuvwU=
         sentinel = b"\xaa" * 16
 
         pt_A = cipher.decrypt(ct, sentinel, 16)
-        self.assertEqual(pt, pt_A)
+        assert pt == pt_A
 
         pt_B = cipher.decrypt(ct, sentinel, 15)
-        self.assertEqual(sentinel, pt_B)
+        assert sentinel == pt_B
 
         pt_C = cipher.decrypt(ct, sentinel, 17)
-        self.assertEqual(sentinel, pt_C)
+        assert sentinel == pt_C
 
     def testByteArray(self):
         pt = b"XER"
         cipher = PKCS.new(self.key1024)
         ct = cipher.encrypt(bytearray(pt))
         pt2 = cipher.decrypt(bytearray(ct), "\xff" * len(pt))
-        self.assertEqual(pt, pt2)
+        assert pt == pt2
 
     def testMemoryview(self):
         pt = b"XER"
         cipher = PKCS.new(self.key1024)
         ct = cipher.encrypt(memoryview(bytearray(pt)))
         pt2 = cipher.decrypt(memoryview(bytearray(ct)), b"\xff" * len(pt))
-        self.assertEqual(pt, pt2)
+        assert pt == pt2
 
     def test_return_type(self):
         pt = b"XYZ"
         cipher = PKCS.new(self.key1024)
         ct = cipher.encrypt(pt)
-        self.assertTrue(isinstance(ct, bytes))
+        assert isinstance(ct, bytes)
         pt2 = cipher.decrypt(ct, b"\xaa" * 3)
-        self.assertTrue(isinstance(pt2, bytes))
+        assert isinstance(pt2, bytes)
 
 
-class TestVectorsWycheproof(unittest.TestCase):
+def _load_tests(filename):
+
+    def filter_rsa(group):
+        return RSA.import_key(group["privateKeyPem"])
+
+    result = load_test_vectors_wycheproof(
+        ("Cipher", "wycheproof"),
+        filename,
+        "Wycheproof PKCS#1v1.5 (%s)" % filename,
+        group_tag={"rsa_key": filter_rsa},
+    )
+    return result
+
+
+def load_wycheproof_vectors():
+    vectors = []
+    vectors += _load_tests("rsa_pkcs1_2048_test.json")
+    vectors += mark_slow(_load_tests("rsa_pkcs1_3072_test.json"))
+    vectors += mark_slow(_load_tests("rsa_pkcs1_4096_test.json"))
+    return vectors
+
+
+class TestVectorsWycheproof:
     _id = "None"
-
-    def load_tests(self, filename):
-
-        def filter_rsa(group):
-            return RSA.import_key(group["privateKeyPem"])
-
-        result = load_test_vectors_wycheproof(
-            ("Cipher", "wycheproof"),
-            filename,
-            "Wycheproof PKCS#1v1.5 (%s)" % filename,
-            group_tag={"rsa_key": filter_rsa},
-        )
-        return result
-
-    def setUp(self):
-        self.tv = []
-        self.tv.extend(self.load_tests("rsa_pkcs1_2048_test.json"))
-        if slow_tests():
-            self.tv.extend(self.load_tests("rsa_pkcs1_3072_test.json"))
-            self.tv.extend(self.load_tests("rsa_pkcs1_4096_test.json"))
-
-    def shortDescription(self):
-        return self._id
 
     def warn(self, tv):
         if tv.warning and wycheproof_warnings():
@@ -251,10 +253,10 @@ class TestVectorsWycheproof(unittest.TestCase):
                 assert not tv.valid
             else:
                 assert tv.valid
-                self.assertEqual(pt, tv.msg)
+                assert pt == tv.msg
                 self.warn(tv)
 
-    def runTest(self):
+    @pytest.mark.parametrize("tv", load_wycheproof_vectors(), ids=wycheproof_id)
+    def test(self, tv):
 
-        for tv in self.tv:
-            self.check_decrypt(tv)
+        self.check_decrypt(tv)

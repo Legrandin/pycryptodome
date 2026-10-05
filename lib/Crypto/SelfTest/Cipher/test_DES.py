@@ -23,7 +23,7 @@
 
 """Self-test suite for Crypto.Cipher.DES"""
 
-import unittest
+import pytest
 
 from Crypto.Cipher import DES
 from Crypto.SelfTest.Cipher.common import make_block_tests
@@ -162,7 +162,7 @@ test_data = [
 ]
 
 
-class RonRivestTest(unittest.TestCase):
+class TestRonRivest:
     """Ronald L. Rivest's DES test, see
         http://people.csail.mit.edu/rivest/Destest.txt
     ABSTRACT
@@ -185,7 +185,7 @@ class RonRivestTest(unittest.TestCase):
     errors described herein.
     """
 
-    def runTest(self):
+    def test(self):
         from binascii import b2a_hex
 
         X = []
@@ -198,11 +198,11 @@ class RonRivestTest(unittest.TestCase):
             else:
                 X[i + 1 :] = [c.decrypt(X[i])]  # odd
 
-        self.assertEqual(b2a_hex(X[16]), b2a_hex(b"\x1b\x1a\x2d\xdb\x4c\x64\x24\x38"))
+        assert b2a_hex(X[16]) == b2a_hex(b"\x1b\x1a\x2d\xdb\x4c\x64\x24\x38")
 
 
-class TestOutput(unittest.TestCase):
-    def runTest(self):
+class TestOutput:
+    def test(self):
         # Encrypt/Decrypt data and test output parameter
 
         cipher = DES.new(b"4" * 8, DES.MODE_ECB)
@@ -212,26 +212,30 @@ class TestOutput(unittest.TestCase):
 
         output = bytearray(8)
         res = cipher.encrypt(pt, output=output)
-        self.assertEqual(ct, output)
-        self.assertEqual(res, None)
+        assert ct == output
+        assert res is None
 
         res = cipher.decrypt(ct, output=output)
-        self.assertEqual(pt, output)
-        self.assertEqual(res, None)
+        assert pt == output
+        assert res is None
 
         output = memoryview(bytearray(8))
         cipher.encrypt(pt, output=output)
-        self.assertEqual(ct, output)
+        assert ct == output
 
         cipher.decrypt(ct, output=output)
-        self.assertEqual(pt, output)
+        assert pt == output
 
-        self.assertRaises(TypeError, cipher.encrypt, pt, output=b"0" * 8)
-        self.assertRaises(TypeError, cipher.decrypt, ct, output=b"0" * 8)
+        with pytest.raises(TypeError):
+            cipher.encrypt(pt, output=b"0" * 8)
+        with pytest.raises(TypeError):
+            cipher.decrypt(ct, output=b"0" * 8)
 
         shorter_output = bytearray(7)
-        self.assertRaises(ValueError, cipher.encrypt, pt, output=shorter_output)
-        self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
+        with pytest.raises(ValueError):
+            cipher.encrypt(pt, output=shorter_output)
+        with pytest.raises(ValueError):
+            cipher.decrypt(ct, output=shorter_output)
 
 
 TestVectors = make_block_tests(DES, "DES", test_data)

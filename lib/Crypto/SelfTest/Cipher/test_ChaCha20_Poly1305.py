@@ -28,12 +28,13 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-import unittest
 from binascii import unhexlify
+
+import pytest
 
 from Crypto.Cipher import ChaCha20_Poly1305
 from Crypto.Hash import SHAKE128
-from Crypto.SelfTest.loader import load_test_vectors_wycheproof
+from Crypto.SelfTest.loader import load_test_vectors_wycheproof, wycheproof_id
 from Crypto.SelfTest.st_common import wycheproof_warnings
 from Crypto.Util._bytes import tobytes
 from Crypto.Util.strxor import strxor
@@ -43,7 +44,7 @@ def get_tag_random(tag, length):
     return SHAKE128.new(data=tobytes(tag)).read(length)
 
 
-class ChaCha20Poly1305Tests(unittest.TestCase):
+class TestChaCha20Poly1305:
     key_256 = get_tag_random("key_256", 32)
     nonce_96 = get_tag_random("nonce_96", 12)
     data_128 = get_tag_random("data_128", 16)
@@ -55,81 +56,89 @@ class ChaCha20Poly1305Tests(unittest.TestCase):
 
         cipher = ChaCha20_Poly1305.new(key=self.key_256, nonce=self.nonce_96)
         pt2 = cipher.decrypt(ct)
-        self.assertEqual(pt, pt2)
+        assert pt == pt2
 
     def test_nonce(self):
         # Nonce can only be 8 or 12 bytes
         cipher = ChaCha20_Poly1305.new(key=self.key_256, nonce=b"H" * 8)
-        self.assertEqual(len(cipher.nonce), 8)
+        assert len(cipher.nonce) == 8
         cipher = ChaCha20_Poly1305.new(key=self.key_256, nonce=b"H" * 12)
-        self.assertEqual(len(cipher.nonce), 12)
+        assert len(cipher.nonce) == 12
 
         # If not passed, the nonce is created randomly
         cipher = ChaCha20_Poly1305.new(key=self.key_256)
         nonce1 = cipher.nonce
         cipher = ChaCha20_Poly1305.new(key=self.key_256)
         nonce2 = cipher.nonce
-        self.assertEqual(len(nonce1), 12)
-        self.assertNotEqual(nonce1, nonce2)
+        assert len(nonce1) == 12
+        assert nonce1 != nonce2
 
         cipher = ChaCha20_Poly1305.new(key=self.key_256, nonce=self.nonce_96)
         ct = cipher.encrypt(self.data_128)
 
         cipher = ChaCha20_Poly1305.new(key=self.key_256, nonce=self.nonce_96)
-        self.assertEqual(ct, cipher.encrypt(self.data_128))
+        assert ct == cipher.encrypt(self.data_128)
 
     def test_nonce_must_be_bytes(self):
-        self.assertRaises(TypeError, ChaCha20_Poly1305.new, key=self.key_256, nonce="test12345678")
+        with pytest.raises(TypeError):
+            ChaCha20_Poly1305.new(key=self.key_256, nonce="test12345678")
 
     def test_nonce_length(self):
         # nonce can only be 8 or 12 bytes long
-        self.assertRaises(ValueError, ChaCha20_Poly1305.new, key=self.key_256, nonce=b"0" * 7)
-        self.assertRaises(ValueError, ChaCha20_Poly1305.new, key=self.key_256, nonce=b"")
+        with pytest.raises(ValueError):
+            ChaCha20_Poly1305.new(key=self.key_256, nonce=b"0" * 7)
+        with pytest.raises(ValueError):
+            ChaCha20_Poly1305.new(key=self.key_256, nonce=b"")
 
     def test_block_size(self):
         # Not based on block ciphers
         cipher = ChaCha20_Poly1305.new(key=self.key_256, nonce=self.nonce_96)
-        self.assertFalse(hasattr(cipher, "block_size"))
+        assert not hasattr(cipher, "block_size")
 
     def test_nonce_attribute(self):
         cipher = ChaCha20_Poly1305.new(key=self.key_256, nonce=self.nonce_96)
-        self.assertEqual(cipher.nonce, self.nonce_96)
+        assert cipher.nonce == self.nonce_96
 
         # By default, a 12 bytes long nonce is randomly generated
         nonce1 = ChaCha20_Poly1305.new(key=self.key_256).nonce
         nonce2 = ChaCha20_Poly1305.new(key=self.key_256).nonce
-        self.assertEqual(len(nonce1), 12)
-        self.assertNotEqual(nonce1, nonce2)
+        assert len(nonce1) == 12
+        assert nonce1 != nonce2
 
     def test_unknown_parameters(self):
-        self.assertRaises(TypeError, ChaCha20_Poly1305.new, key=self.key_256, param=9)
+        with pytest.raises(TypeError):
+            ChaCha20_Poly1305.new(key=self.key_256, param=9)
 
     def test_null_encryption_decryption(self):
         for func in "encrypt", "decrypt":
             cipher = ChaCha20_Poly1305.new(key=self.key_256, nonce=self.nonce_96)
             result = getattr(cipher, func)(b"")
-            self.assertEqual(result, b"")
+            assert result == b""
 
     def test_either_encrypt_or_decrypt(self):
         cipher = ChaCha20_Poly1305.new(key=self.key_256, nonce=self.nonce_96)
         cipher.encrypt(b"")
-        self.assertRaises(TypeError, cipher.decrypt, b"")
+        with pytest.raises(TypeError):
+            cipher.decrypt(b"")
 
         cipher = ChaCha20_Poly1305.new(key=self.key_256, nonce=self.nonce_96)
         cipher.decrypt(b"")
-        self.assertRaises(TypeError, cipher.encrypt, b"")
+        with pytest.raises(TypeError):
+            cipher.encrypt(b"")
 
     def test_data_must_be_bytes(self):
         cipher = ChaCha20_Poly1305.new(key=self.key_256, nonce=self.nonce_96)
-        self.assertRaises(TypeError, cipher.encrypt, "test1234567890-*")
+        with pytest.raises(TypeError):
+            cipher.encrypt("test1234567890-*")
 
         cipher = ChaCha20_Poly1305.new(key=self.key_256, nonce=self.nonce_96)
-        self.assertRaises(TypeError, cipher.decrypt, "test1234567890-*")
+        with pytest.raises(TypeError):
+            cipher.decrypt("test1234567890-*")
 
     def test_mac_len(self):
         cipher = ChaCha20_Poly1305.new(key=self.key_256, nonce=self.nonce_96)
         _, mac = cipher.encrypt_and_digest(self.data_128)
-        self.assertEqual(len(mac), 16)
+        assert len(mac) == 16
 
     def test_invalid_mac(self):
         from Crypto.Util.strxor import strxor_c
@@ -140,12 +149,13 @@ class ChaCha20Poly1305Tests(unittest.TestCase):
         invalid_mac = strxor_c(mac, 0x01)
 
         cipher = ChaCha20_Poly1305.new(key=self.key_256, nonce=self.nonce_96)
-        self.assertRaises(ValueError, cipher.decrypt_and_verify, ct, invalid_mac)
+        with pytest.raises(ValueError):
+            cipher.decrypt_and_verify(ct, invalid_mac)
 
     def test_hex_mac(self):
         cipher = ChaCha20_Poly1305.new(key=self.key_256, nonce=self.nonce_96)
         mac_hex = cipher.hexdigest()
-        self.assertEqual(cipher.digest(), unhexlify(mac_hex))
+        assert cipher.digest() == unhexlify(mac_hex)
 
         cipher = ChaCha20_Poly1305.new(key=self.key_256, nonce=self.nonce_96)
         cipher.hexverify(mac_hex)
@@ -173,7 +183,7 @@ class ChaCha20Poly1305Tests(unittest.TestCase):
             pt2 = b""
             for chunk in break_up(ciphertext, chunk_length):
                 pt2 += cipher.decrypt(chunk)
-            self.assertEqual(plaintext, pt2)
+            assert plaintext == pt2
             cipher.verify(ref_mac)
 
         # Decryption
@@ -185,8 +195,8 @@ class ChaCha20Poly1305Tests(unittest.TestCase):
             ct2 = b""
             for chunk in break_up(plaintext, chunk_length):
                 ct2 += cipher.encrypt(chunk)
-            self.assertEqual(ciphertext, ct2)
-            self.assertEqual(cipher.digest(), ref_mac)
+            assert ciphertext == ct2
+            assert cipher.digest() == ref_mac
 
     def test_bytearray(self):
 
@@ -210,9 +220,9 @@ class ChaCha20Poly1305Tests(unittest.TestCase):
         data_ba[:3] = b"\x99\x99\x99"
         tag_test = cipher2.digest()
 
-        self.assertEqual(ct, ct_test)
-        self.assertEqual(tag, tag_test)
-        self.assertEqual(cipher1.nonce, cipher2.nonce)
+        assert ct == ct_test
+        assert tag == tag_test
+        assert cipher1.nonce == cipher2.nonce
 
         # Decrypt
         key_ba = bytearray(self.key_256)
@@ -231,7 +241,7 @@ class ChaCha20Poly1305Tests(unittest.TestCase):
         ct_ba[:3] = b"\xff\xff\xff"
         cipher3.verify(tag_ba)
 
-        self.assertEqual(pt_test, self.data_128)
+        assert pt_test == self.data_128
 
     def test_memoryview(self):
 
@@ -255,9 +265,9 @@ class ChaCha20Poly1305Tests(unittest.TestCase):
         data_mv[:3] = b"\x99\x99\x99"
         tag_test = cipher2.digest()
 
-        self.assertEqual(ct, ct_test)
-        self.assertEqual(tag, tag_test)
-        self.assertEqual(cipher1.nonce, cipher2.nonce)
+        assert ct == ct_test
+        assert tag == tag_test
+        assert cipher1.nonce == cipher2.nonce
 
         # Decrypt
         key_mv = memoryview(bytearray(self.key_256))
@@ -276,15 +286,15 @@ class ChaCha20Poly1305Tests(unittest.TestCase):
         ct_mv[:3] = b"\x99\x99\x99"
         cipher3.verify(tag_mv)
 
-        self.assertEqual(pt_test, self.data_128)
+        assert pt_test == self.data_128
 
 
-class XChaCha20Poly1305Tests(unittest.TestCase):
+class TestXChaCha20Poly1305:
     def test_nonce(self):
         # Nonce can only be 24 bytes
         cipher = ChaCha20_Poly1305.new(key=b"Y" * 32, nonce=b"H" * 24)
-        self.assertEqual(len(cipher.nonce), 24)
-        self.assertEqual(cipher.nonce, b"H" * 24)
+        assert len(cipher.nonce) == 24
+        assert cipher.nonce == b"H" * 24
 
     def test_encrypt(self):
         # From https://tools.ietf.org/html/draft-arciszewski-xchacha-03
@@ -314,15 +324,15 @@ class XChaCha20Poly1305Tests(unittest.TestCase):
         cipher.update(aad)
         ct_test, tag_test = cipher.encrypt_and_digest(pt)
 
-        self.assertEqual(ct, ct_test)
-        self.assertEqual(tag, tag_test)
+        assert ct == ct_test
+        assert tag == tag_test
 
         cipher = ChaCha20_Poly1305.new(key=key, nonce=iv)
         cipher.update(aad)
         cipher.decrypt_and_verify(ct, tag)
 
 
-class ChaCha20Poly1305FSMTests(unittest.TestCase):
+class TestChaCha20Poly1305FSM:
     key_256 = get_tag_random("key_256", 32)
     nonce_96 = get_tag_random("nonce_96", 12)
     data_128 = get_tag_random("data_128", 16)
@@ -396,7 +406,7 @@ class ChaCha20Poly1305FSMTests(unittest.TestCase):
         cipher.update(self.data_128)
         first_mac = cipher.digest()
         for _x in range(4):
-            self.assertEqual(first_mac, cipher.digest())
+            assert first_mac == cipher.digest()
 
         # Multiple calls to verify
         cipher = ChaCha20_Poly1305.new(key=self.key_256, nonce=self.nonce_96)
@@ -414,7 +424,7 @@ class ChaCha20Poly1305FSMTests(unittest.TestCase):
         cipher = ChaCha20_Poly1305.new(key=self.key_256, nonce=self.nonce_96)
         cipher.update(self.data_128)
         pt = cipher.decrypt_and_verify(ct, mac)
-        self.assertEqual(self.data_128, pt)
+        assert self.data_128 == pt
 
     def test_invalid_mixing_encrypt_decrypt(self):
         # Once per method, with or without assoc. data
@@ -424,14 +434,16 @@ class ChaCha20Poly1305FSMTests(unittest.TestCase):
                 if assoc_data_present:
                     cipher.update(self.data_128)
                 getattr(cipher, method1_name)(self.data_128)
-                self.assertRaises(TypeError, getattr(cipher, method2_name), self.data_128)
+                with pytest.raises(TypeError):
+                    getattr(cipher, method2_name)(self.data_128)
 
     def test_invalid_encrypt_or_update_after_digest(self):
         for method_name in "encrypt", "update":
             cipher = ChaCha20_Poly1305.new(key=self.key_256, nonce=self.nonce_96)
             cipher.encrypt(self.data_128)
             cipher.digest()
-            self.assertRaises(TypeError, getattr(cipher, method_name), self.data_128)
+            with pytest.raises(TypeError):
+                getattr(cipher, method_name)(self.data_128)
 
             cipher = ChaCha20_Poly1305.new(key=self.key_256, nonce=self.nonce_96)
             cipher.encrypt_and_digest(self.data_128)
@@ -445,23 +457,26 @@ class ChaCha20Poly1305FSMTests(unittest.TestCase):
             cipher = ChaCha20_Poly1305.new(key=self.key_256, nonce=self.nonce_96)
             cipher.decrypt(ct)
             cipher.verify(mac)
-            self.assertRaises(TypeError, getattr(cipher, method_name), self.data_128)
+            with pytest.raises(TypeError):
+                getattr(cipher, method_name)(self.data_128)
 
             cipher = ChaCha20_Poly1305.new(key=self.key_256, nonce=self.nonce_96)
             cipher.decrypt(ct)
             cipher.verify(mac)
-            self.assertRaises(TypeError, getattr(cipher, method_name), self.data_128)
+            with pytest.raises(TypeError):
+                getattr(cipher, method_name)(self.data_128)
 
             cipher = ChaCha20_Poly1305.new(key=self.key_256, nonce=self.nonce_96)
             cipher.decrypt_and_verify(ct, mac)
-            self.assertRaises(TypeError, getattr(cipher, method_name), self.data_128)
+            with pytest.raises(TypeError):
+                getattr(cipher, method_name)(self.data_128)
 
 
 def compact(x):
     return unhexlify(x.replace(" ", "").replace(":", ""))
 
 
-class TestVectorsRFC(unittest.TestCase):
+class TestVectorsRFC:
     """Test cases from RFC7539"""
 
     # AAD, PT, CT, MAC, KEY, NONCE
@@ -532,49 +547,49 @@ class TestVectorsRFC(unittest.TestCase):
 
     test_vectors = [[unhexlify(x.replace(" ", "").replace(":", "")) for x in tv] for tv in test_vectors_hex]
 
-    def runTest(self):
+    def test(self):
         for assoc_data, pt, ct, mac, key, nonce in self.test_vectors:
             # Encrypt
             cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
             cipher.update(assoc_data)
             ct2, mac2 = cipher.encrypt_and_digest(pt)
-            self.assertEqual(ct, ct2)
-            self.assertEqual(mac, mac2)
+            assert ct == ct2
+            assert mac == mac2
 
             # Decrypt
             cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
             cipher.update(assoc_data)
             pt2 = cipher.decrypt_and_verify(ct, mac)
-            self.assertEqual(pt, pt2)
+            assert pt == pt2
 
 
-class TestVectorsWycheproof(unittest.TestCase):
+def _load_tests(filename):
+
+    def filter_tag(group):
+        return group["tagSize"] // 8
+
+    def filter_algo(root):
+        return root["algorithm"]
+
+    result = load_test_vectors_wycheproof(
+        ("Cipher", "wycheproof"),
+        filename,
+        "Wycheproof ChaCha20-Poly1305",
+        root_tag={"algo": filter_algo},
+        group_tag={"tag_size": filter_tag},
+    )
+    return result
+
+
+def load_wycheproof_vectors():
+    vectors = []
+    vectors += _load_tests("chacha20_poly1305_test.json")
+    vectors += _load_tests("xchacha20_poly1305_test.json")
+    return vectors
+
+
+class TestVectorsWycheproof:
     _id = "None"
-
-    def load_tests(self, filename):
-
-        def filter_tag(group):
-            return group["tagSize"] // 8
-
-        def filter_algo(root):
-            return root["algorithm"]
-
-        result = load_test_vectors_wycheproof(
-            ("Cipher", "wycheproof"),
-            filename,
-            "Wycheproof ChaCha20-Poly1305",
-            root_tag={"algo": filter_algo},
-            group_tag={"tag_size": filter_tag},
-        )
-        return result
-
-    def setUp(self):
-        self.tv = []
-        self.tv.extend(self.load_tests("chacha20_poly1305_test.json"))
-        self.tv.extend(self.load_tests("xchacha20_poly1305_test.json"))
-
-    def shortDescription(self):
-        return self._id
 
     def warn(self, tv):
         if tv.warning and wycheproof_warnings():
@@ -594,8 +609,8 @@ class TestVectorsWycheproof(unittest.TestCase):
         cipher.update(tv.aad)
         ct, tag = cipher.encrypt_and_digest(tv.msg)
         if tv.valid:
-            self.assertEqual(ct, tv.ct)
-            self.assertEqual(tag, tv.tag)
+            assert ct == tv.ct
+            assert tag == tv.tag
             self.warn(tv)
 
     def check_decrypt(self, tv):
@@ -614,7 +629,7 @@ class TestVectorsWycheproof(unittest.TestCase):
             assert not tv.valid
         else:
             assert tv.valid
-            self.assertEqual(pt, tv.msg)
+            assert pt == tv.msg
             self.warn(tv)
 
     def check_corrupt_decrypt(self, tv):
@@ -624,18 +639,19 @@ class TestVectorsWycheproof(unittest.TestCase):
         cipher = ChaCha20_Poly1305.new(key=tv.key, nonce=tv.iv)
         cipher.update(tv.aad)
         ct_corrupt = strxor(tv.ct, b"\x00" * (len(tv.ct) - 1) + b"\x01")
-        self.assertRaises(ValueError, cipher.decrypt_and_verify, ct_corrupt, tv.tag)
+        with pytest.raises(ValueError):
+            cipher.decrypt_and_verify(ct_corrupt, tv.tag)
 
-    def runTest(self):
+    @pytest.mark.parametrize("tv", load_wycheproof_vectors(), ids=wycheproof_id)
+    def test(self, tv):
 
-        for tv in self.tv:
-            self.check_encrypt(tv)
-            self.check_decrypt(tv)
-            self.check_corrupt_decrypt(tv)
+        self.check_encrypt(tv)
+        self.check_decrypt(tv)
+        self.check_corrupt_decrypt(tv)
 
 
-class TestOutput(unittest.TestCase):
-    def runTest(self):
+class TestOutput:
+    def test(self):
         # Encrypt/Decrypt data and test output parameter
 
         key = b"4" * 32
@@ -648,33 +664,37 @@ class TestOutput(unittest.TestCase):
         output = bytearray(16)
         cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
         res = cipher.encrypt(pt, output=output)
-        self.assertEqual(ct, output)
-        self.assertEqual(res, None)
+        assert ct == output
+        assert res is None
 
         cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
         res = cipher.decrypt(ct, output=output)
-        self.assertEqual(pt, output)
-        self.assertEqual(res, None)
+        assert pt == output
+        assert res is None
 
         output = memoryview(bytearray(16))
         cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
         cipher.encrypt(pt, output=output)
-        self.assertEqual(ct, output)
+        assert ct == output
 
         cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
         cipher.decrypt(ct, output=output)
-        self.assertEqual(pt, output)
+        assert pt == output
 
         cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
-        self.assertRaises(TypeError, cipher.encrypt, pt, output=b"0" * 16)
+        with pytest.raises(TypeError):
+            cipher.encrypt(pt, output=b"0" * 16)
 
         cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
-        self.assertRaises(TypeError, cipher.decrypt, ct, output=b"0" * 16)
+        with pytest.raises(TypeError):
+            cipher.decrypt(ct, output=b"0" * 16)
 
         shorter_output = bytearray(7)
 
         cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
-        self.assertRaises(ValueError, cipher.encrypt, pt, output=shorter_output)
+        with pytest.raises(ValueError):
+            cipher.encrypt(pt, output=shorter_output)
 
         cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
-        self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
+        with pytest.raises(ValueError):
+            cipher.decrypt(ct, output=shorter_output)

@@ -25,13 +25,15 @@
 
 import binascii
 
-# Options of the current test session, set from the command line by conftest.py
-options = {"slow_tests": True, "wycheproof_warnings": False}
+import pytest
+
+# Options of the current test session, set from the command line by plugin.py
+options = {"wycheproof_warnings": False}
 
 
-def slow_tests():
-    """Return True if slow tests must be run"""
-    return options["slow_tests"]
+def mark_slow(params):
+    """Mark each of the given pytest parameters as slow"""
+    return [pytest.param(p, marks=pytest.mark.slow) for p in params]
 
 
 def wycheproof_warnings():

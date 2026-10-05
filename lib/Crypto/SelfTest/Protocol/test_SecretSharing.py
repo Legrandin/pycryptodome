@@ -32,29 +32,30 @@
 # ===================================================================
 
 from binascii import unhexlify
-from unittest import TestCase
+
+import pytest
 
 from Crypto.Hash import SHAKE128
 from Crypto.Protocol.SecretSharing import Shamir, _div_gf2, _Element, _mult_gf2
 
 
-class GF2_Tests(TestCase):
+class TestGF2:
     def test_mult_gf2(self):
         # Prove mult by zero
         x = _mult_gf2(0, 0)
-        self.assertEqual(x, 0)
+        assert x == 0
 
         # Prove mult by unity
         x = _mult_gf2(34, 1)
-        self.assertEqual(x, 34)
+        assert x == 34
 
         z = 3  # (x+1)
         y = _mult_gf2(z, z)
-        self.assertEqual(y, 5)  # (x+1)^2 = x^2 + 1
+        assert y == 5  # (x+1)^2 = x^2 + 1
         y = _mult_gf2(y, z)
-        self.assertEqual(y, 15)  # (x+1)^3 = x^3 + x^2 + x + 1
+        assert y == 15  # (x+1)^3 = x^3 + x^2 + x + 1
         y = _mult_gf2(y, z)
-        self.assertEqual(y, 17)  # (x+1)^4 = x^4 + 1
+        assert y == 17  # (x+1)^4 = x^4 + 1
 
         # Prove linearity works
         comps = [1, 4, 128, 2**34]
@@ -64,41 +65,42 @@ class GF2_Tests(TestCase):
         w = 0
         for x in comps:
             w ^= _mult_gf2(x, y)
-        self.assertEqual(w, z)
+        assert w == z
 
     def test_div_gf2(self):
         from Crypto.Util.number import size as deg
 
         x, y = _div_gf2(567, 7)
-        self.assertTrue(deg(y) < deg(7))
+        assert deg(y) < deg(7)
 
         w = _mult_gf2(x, 7) ^ y
-        self.assertEqual(567, w)
+        assert w == 567
 
         x, y = _div_gf2(7, 567)
-        self.assertEqual(x, 0)
-        self.assertEqual(y, 7)
+        assert x == 0
+        assert y == 7
 
 
-class Element_Tests(TestCase):
+class TestElement:
     def test1(self):
         # Test encondings
         e = _Element(256)
-        self.assertEqual(int(e), 256)
-        self.assertEqual(e.encode(), bytes([0]) * 14 + b"\x01\x00")
+        assert int(e) == 256
+        assert e.encode() == bytes([0]) * 14 + b"\x01\x00"
 
         e = _Element(bytes([0]) * 14 + b"\x01\x10")
-        self.assertEqual(int(e), 0x110)
-        self.assertEqual(e.encode(), bytes([0]) * 14 + b"\x01\x10")
+        assert int(e) == 0x110
+        assert e.encode() == bytes([0]) * 14 + b"\x01\x10"
 
         # Only 16 byte string are a valid encoding
-        self.assertRaises(ValueError, _Element, bytes([0]))
+        with pytest.raises(ValueError):
+            _Element(bytes([0]))
 
     def test2(self):
         # Test addition
         e = _Element(0x10)
         f = _Element(0x0A)
-        self.assertEqual(int(e + f), 0x1A)
+        assert int(e + f) == 0x1A
 
     def test3(self):
         # Test multiplication
@@ -107,34 +109,34 @@ class Element_Tests(TestCase):
         two = _Element(2)
 
         x = _Element(6) * zero
-        self.assertEqual(int(x), 0)
+        assert int(x) == 0
 
         x = _Element(6) * one
-        self.assertEqual(int(x), 6)
+        assert int(x) == 6
 
         x = _Element(2**127) * two
-        self.assertEqual(int(x), 1 + 2 + 4 + 128)
+        assert int(x) == 1 + 2 + 4 + 128
 
     def test4(self):
         # Test inversion
         one = _Element(1)
 
         x = one.inverse()
-        self.assertEqual(int(x), 1)
+        assert int(x) == 1
 
         x = _Element(82323923)
         y = x.inverse()
-        self.assertEqual(int(x * y), 1)
+        assert int(x * y) == 1
 
 
-class Shamir_Tests(TestCase):
+class TestShamir:
     def test1(self):
         # Test splitting
         shares = Shamir.split(2, 3, bytes([90]) * 16)
-        self.assertEqual(len(shares), 3)
+        assert len(shares) == 3
         for index in range(3):
-            self.assertEqual(shares[index][0], index + 1)
-            self.assertEqual(len(shares[index][1]), 16)
+            assert shares[index][0] == index + 1
+            assert len(shares[index][1]) == 16
 
     def test2(self):
         # Test recombine
@@ -246,7 +248,7 @@ class Shamir_Tests(TestCase):
                     break
                 shares = [get_share(tv[x]) for x in shares_idx]
                 result = Shamir.combine(shares, True)
-                self.assertEqual(secret, result)
+                assert secret == result
 
     def test3(self):
         # Loopback split/recombine
@@ -259,10 +261,10 @@ class Shamir_Tests(TestCase):
             shares = Shamir.split(2, 3, secret)
 
             secret2 = Shamir.combine(shares[:2])
-            self.assertEqual(secret, secret2)
+            assert secret == secret2
 
             secret3 = Shamir.combine([shares[0], shares[2]])
-            self.assertEqual(secret, secret3)
+            assert secret == secret3
 
     def test4(self):
         # Loopback split/recombine (SSSS)
@@ -275,7 +277,7 @@ class Shamir_Tests(TestCase):
             shares = Shamir.split(2, 3, secret, ssss=True)
 
             secret2 = Shamir.combine(shares[:2], ssss=True)
-            self.assertEqual(secret, secret2)
+            assert secret == secret2
 
         for _ in range(10):
             secret = rng.read(16)
@@ -283,11 +285,12 @@ class Shamir_Tests(TestCase):
             shares = Shamir.split(3, 7, secret, ssss=True)
 
             secret2 = Shamir.combine([shares[3], shares[4], shares[6]], ssss=True)
-            self.assertEqual(secret, secret2)
+            assert secret == secret2
 
     def test5(self):
         # Detect duplicate shares
         secret = unhexlify(b"000102030405060708090a0b0c0d0e0f")
 
         shares = Shamir.split(2, 3, secret)
-        self.assertRaises(ValueError, Shamir.combine, (shares[0], shares[0]))
+        with pytest.raises(ValueError):
+            Shamir.combine((shares[0], shares[0]))

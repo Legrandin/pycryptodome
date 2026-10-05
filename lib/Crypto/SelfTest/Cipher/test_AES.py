@@ -23,8 +23,6 @@
 
 """Self-test suite for Crypto.Cipher.AES"""
 
-import unittest
-
 import pytest
 
 from Crypto.Cipher import AES
@@ -1244,10 +1242,10 @@ for td in test_data:
 test_data += test_data_8_lanes
 
 
-class TestMultipleBlocks(unittest.TestCase):
+class TestMultipleBlocks:
     use_aesni = False
 
-    def runTest(self):
+    def test(self):
         # Encrypt data which is 8*2+4 bytes long, so as to trigger (for the
         # AESNI variant) both the path that parallelizes 8 lanes and the one
         # that processes data serially
@@ -1264,42 +1262,46 @@ class TestMultipleBlocks(unittest.TestCase):
 
             pt = b"".join([tobytes(f"{x:016x}") for x in range(20)])
             ct = cipher.encrypt(pt)
-            self.assertEqual(SHA256.new(ct).hexdigest(), expected)
+            assert SHA256.new(ct).hexdigest() == expected
 
 
-@unittest.skipUnless(_cpu_features.have_aes_ni(), "AES-NI not available")
+@pytest.mark.skipif(not _cpu_features.have_aes_ni(), reason="AES-NI not available")
 class TestMultipleBlocksAESNI(TestMultipleBlocks):
     use_aesni = True
 
 
-class TestIncompleteBlocks(unittest.TestCase):
+class TestIncompleteBlocks:
     use_aesni = False
 
-    def runTest(self):
+    def test(self):
         # Encrypt data with length not multiple of 16 bytes
 
         cipher = AES.new(b"4" * 16, AES.MODE_ECB, use_aesni=self.use_aesni)
 
         for msg_len in range(1, 16):
-            self.assertRaises(ValueError, cipher.encrypt, b"1" * msg_len)
-            self.assertRaises(ValueError, cipher.encrypt, b"1" * (msg_len + 16))
-            self.assertRaises(ValueError, cipher.decrypt, b"1" * msg_len)
-            self.assertRaises(ValueError, cipher.decrypt, b"1" * (msg_len + 16))
+            with pytest.raises(ValueError):
+                cipher.encrypt(b"1" * msg_len)
+            with pytest.raises(ValueError):
+                cipher.encrypt(b"1" * (msg_len + 16))
+            with pytest.raises(ValueError):
+                cipher.decrypt(b"1" * msg_len)
+            with pytest.raises(ValueError):
+                cipher.decrypt(b"1" * (msg_len + 16))
 
-        self.assertEqual(cipher.encrypt(b""), b"")
-        self.assertEqual(cipher.decrypt(b""), b"")
+        assert cipher.encrypt(b"") == b""
+        assert cipher.decrypt(b"") == b""
 
 
-@unittest.skipUnless(_cpu_features.have_aes_ni(), "AES-NI not available")
+@pytest.mark.skipif(not _cpu_features.have_aes_ni(), reason="AES-NI not available")
 class TestIncompleteBlocksAESNI(TestIncompleteBlocks):
     use_aesni = True
 
 
-@unittest.skipUnless(_cpu_features.have_aes_ni(), "AES-NI not available")
-class TestOutput(unittest.TestCase):
+@pytest.mark.skipif(not _cpu_features.have_aes_ni(), reason="AES-NI not available")
+class TestOutput:
     use_aesni = True
 
-    def runTest(self):
+    def test(self):
         # Encrypt/Decrypt data and test output parameter
 
         cipher = AES.new(b"4" * 16, AES.MODE_ECB, use_aesni=self.use_aesni)
@@ -1309,26 +1311,30 @@ class TestOutput(unittest.TestCase):
 
         output = bytearray(16)
         res = cipher.encrypt(pt, output=output)
-        self.assertEqual(ct, output)
-        self.assertEqual(res, None)
+        assert ct == output
+        assert res is None
 
         res = cipher.decrypt(ct, output=output)
-        self.assertEqual(pt, output)
-        self.assertEqual(res, None)
+        assert pt == output
+        assert res is None
 
         output = memoryview(bytearray(16))
         cipher.encrypt(pt, output=output)
-        self.assertEqual(ct, output)
+        assert ct == output
 
         cipher.decrypt(ct, output=output)
-        self.assertEqual(pt, output)
+        assert pt == output
 
-        self.assertRaises(TypeError, cipher.encrypt, pt, output=b"0" * 16)
-        self.assertRaises(TypeError, cipher.decrypt, ct, output=b"0" * 16)
+        with pytest.raises(TypeError):
+            cipher.encrypt(pt, output=b"0" * 16)
+        with pytest.raises(TypeError):
+            cipher.decrypt(ct, output=b"0" * 16)
 
         shorter_output = bytearray(15)
-        self.assertRaises(ValueError, cipher.encrypt, pt, output=shorter_output)
-        self.assertRaises(ValueError, cipher.decrypt, ct, output=shorter_output)
+        with pytest.raises(ValueError):
+            cipher.encrypt(pt, output=shorter_output)
+        with pytest.raises(ValueError):
+            cipher.decrypt(ct, output=shorter_output)
 
 
 TestVectors = make_block_tests(AES, "AES", test_data, {"use_aesni": False})

@@ -1,10 +1,11 @@
 import binascii
-import unittest
+
+import pytest
 
 from Crypto.Util.RFC1751 import english_to_key, key_to_english
 
 
-class RFC1751_Tests(unittest.TestCase):
+class TestRFC1751:
     def test1(self):
         data = [
             ("EB33F77EE73D4053", "TIDE ITCH SLOW REIN RULE MOT"),
@@ -16,11 +17,12 @@ class RFC1751_Tests(unittest.TestCase):
             key_bin = binascii.a2b_hex(key_hex)
 
             w2 = key_to_english(key_bin)
-            self.assertEqual(w2, words)
+            assert w2 == words
 
             k2 = english_to_key(words)
-            self.assertEqual(k2, key_bin)
+            assert k2 == key_bin
 
     def test_error_key_to_english(self):
 
-        self.assertRaises(ValueError, key_to_english, b"0" * 7)
+        with pytest.raises(ValueError):
+            key_to_english(b"0" * 7)

@@ -1,15 +1,14 @@
 import sys
-import unittest
 
 import pytest
 
 from Crypto.Cipher import AES
-from Crypto.SelfTest.loader import load_test_vectors_wycheproof
+from Crypto.SelfTest.loader import load_test_vectors_wycheproof, wycheproof_id
 
 pytestmark = pytest.mark.skipif(sys.version_info < (3, 9), reason="requires Python 3.9")
 
 
-class KW_Tests(unittest.TestCase):
+class TestKW:
     # From RFC3394
     tvs = [
         (
@@ -44,27 +43,27 @@ class KW_Tests(unittest.TestCase):
         ),
     ]
 
-    def test_rfc3394(self):
-        for tv in self.tvs:
-            kek, pt, ct = (bytes.fromhex(x) for x in tv)
+    @pytest.mark.parametrize("tv", tvs)
+    def test_rfc3394(self, tv):
+        kek, pt, ct = (bytes.fromhex(x) for x in tv)
 
-            cipher = AES.new(kek, AES.MODE_KW)
-            ct2 = cipher.seal(pt)
+        cipher = AES.new(kek, AES.MODE_KW)
+        ct2 = cipher.seal(pt)
 
-            self.assertEqual(ct, ct2)
+        assert ct == ct2
 
-            cipher = AES.new(kek, AES.MODE_KW)
-            pt2 = cipher.unseal(ct)
-            self.assertEqual(pt, pt2)
+        cipher = AES.new(kek, AES.MODE_KW)
+        pt2 = cipher.unseal(ct)
+        assert pt == pt2
 
     def test_neg1(self):
 
         cipher = AES.new(b"-" * 16, AES.MODE_KW)
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             cipher.seal(b"")
 
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             cipher.seal(b"8" * 17)
 
     def test_neg2(self):
@@ -77,44 +76,38 @@ class KW_Tests(unittest.TestCase):
 
         cipher = AES.new(b"-" * 16, AES.MODE_KW)
         ct[0] ^= 0xFF
-        with self.assertRaises(ValueError):
+        with pytest.raises(ValueError):
             cipher.unseal(ct)
 
 
-class KW_Wycheproof(unittest.TestCase):
-    def setUp(self):
-        self.vectors = load_test_vectors_wycheproof(
-            ("Cipher", "wycheproof"), "kw_test.json", "Wycheproof tests for KW"
-        )
+class TestKW_Wycheproof:
+    @pytest.mark.parametrize(
+        "vector",
+        load_test_vectors_wycheproof(("Cipher", "wycheproof"), "kw_test.json", "Wycheproof tests for KW"),
+        ids=wycheproof_id,
+    )
+    def test_wycheproof(self, vector):
+        cipher = AES.new(vector.key, AES.MODE_KW)
 
-    def test_wycheproof(self):
+        try:
+            cipher.seal(vector.msg)
+        except ValueError:
+            if vector.valid:
+                raise
+            return
 
-        if not self.vectors:
-            self.skipTest("No test vectors available")
+        cipher = AES.new(vector.key, AES.MODE_KW)
+        try:
+            pt = cipher.unseal(vector.ct)
+        except ValueError:
+            if vector.valid:
+                raise
+            return
 
-        for vector in self.vectors:
-            with self.subTest(testId=vector.id):
-                cipher = AES.new(vector.key, AES.MODE_KW)
-
-                try:
-                    cipher.seal(vector.msg)
-                except ValueError:
-                    if vector.valid:
-                        raise
-                    continue
-
-                cipher = AES.new(vector.key, AES.MODE_KW)
-                try:
-                    pt = cipher.unseal(vector.ct)
-                except ValueError:
-                    if vector.valid:
-                        raise
-                    continue
-
-                self.assertEqual(pt, vector.msg)
+        assert pt == vector.msg
 
 
-class KWP_Tests(unittest.TestCase):
+class TestKWP:
     tvs = [
         (
             "5840df6e29b02af1ab493b705bf16ea1ae8338f4dcc176a8",
@@ -128,48 +121,42 @@ class KWP_Tests(unittest.TestCase):
         ),
     ]
 
-    def test_rfc5649(self):
-        for tv in self.tvs:
-            kek, pt, ct = (bytes.fromhex(x) for x in tv)
+    @pytest.mark.parametrize("tv", tvs)
+    def test_rfc5649(self, tv):
+        kek, pt, ct = (bytes.fromhex(x) for x in tv)
 
-            cipher = AES.new(kek, AES.MODE_KWP)
-            ct2 = cipher.seal(pt)
+        cipher = AES.new(kek, AES.MODE_KWP)
+        ct2 = cipher.seal(pt)
 
-            self.assertEqual(ct, ct2)
+        assert ct == ct2
 
-            cipher = AES.new(kek, AES.MODE_KWP)
-            pt2 = cipher.unseal(ct)
-            self.assertEqual(pt, pt2)
+        cipher = AES.new(kek, AES.MODE_KWP)
+        pt2 = cipher.unseal(ct)
+        assert pt == pt2
 
 
-class KWP_Wycheproof(unittest.TestCase):
-    def setUp(self):
-        self.vectors = load_test_vectors_wycheproof(
-            ("Cipher", "wycheproof"), "kwp_test.json", "Wycheproof tests for KWP"
-        )
+class TestKWP_Wycheproof:
+    @pytest.mark.parametrize(
+        "vector",
+        load_test_vectors_wycheproof(("Cipher", "wycheproof"), "kwp_test.json", "Wycheproof tests for KWP"),
+        ids=wycheproof_id,
+    )
+    def test_wycheproof(self, vector):
+        cipher = AES.new(vector.key, AES.MODE_KWP)
 
-    def test_wycheproof(self):
+        try:
+            cipher.seal(vector.msg)
+        except ValueError:
+            if vector.valid and not vector.warning:
+                raise
+            return
 
-        if not self.vectors:
-            self.skipTest("No test vectors available")
+        cipher = AES.new(vector.key, AES.MODE_KWP)
+        try:
+            pt = cipher.unseal(vector.ct)
+        except ValueError:
+            if vector.valid and not vector.warning:
+                raise
+            return
 
-        for vector in self.vectors:
-            with self.subTest(testId=vector.id):
-                cipher = AES.new(vector.key, AES.MODE_KWP)
-
-                try:
-                    cipher.seal(vector.msg)
-                except ValueError:
-                    if vector.valid and not vector.warning:
-                        raise
-                    continue
-
-                cipher = AES.new(vector.key, AES.MODE_KWP)
-                try:
-                    pt = cipher.unseal(vector.ct)
-                except ValueError:
-                    if vector.valid and not vector.warning:
-                        raise
-                    continue
-
-                self.assertEqual(pt, vector.msg)
+        assert pt == vector.msg

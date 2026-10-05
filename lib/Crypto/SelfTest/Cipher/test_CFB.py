@@ -28,7 +28,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-import unittest
 from binascii import unhexlify
 
 import pytest
@@ -44,7 +43,7 @@ def get_tag_random(tag, length):
     return SHAKE128.new(data=tobytes(tag)).read(length)
 
 
-class CfbTests(BlockChainingTests, unittest.TestCase):
+class TestCfb(BlockChainingTests):
     aes_mode = AES.MODE_CFB
     des3_mode = DES3.MODE_CFB
 
@@ -56,24 +55,24 @@ class CfbTests(BlockChainingTests, unittest.TestCase):
         cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128, segment_size=8)
         ciphertexts = [cipher.encrypt(x) for x in plaintexts]
         cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128, segment_size=8)
-        self.assertEqual(b"".join(ciphertexts), cipher.encrypt(b"".join(plaintexts)))
+        assert b"".join(ciphertexts) == cipher.encrypt(b"".join(plaintexts))
 
         cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128, segment_size=128)
         ciphertexts = [cipher.encrypt(x) for x in plaintexts]
         cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128, segment_size=128)
-        self.assertEqual(b"".join(ciphertexts), cipher.encrypt(b"".join(plaintexts)))
+        assert b"".join(ciphertexts) == cipher.encrypt(b"".join(plaintexts))
 
     def test_unaligned_data_64(self):
         plaintexts = [b"7777777"] * 100
         cipher = DES3.new(self.key_192, DES3.MODE_CFB, self.iv_64, segment_size=8)
         ciphertexts = [cipher.encrypt(x) for x in plaintexts]
         cipher = DES3.new(self.key_192, DES3.MODE_CFB, self.iv_64, segment_size=8)
-        self.assertEqual(b"".join(ciphertexts), cipher.encrypt(b"".join(plaintexts)))
+        assert b"".join(ciphertexts) == cipher.encrypt(b"".join(plaintexts))
 
         cipher = DES3.new(self.key_192, DES3.MODE_CFB, self.iv_64, segment_size=64)
         ciphertexts = [cipher.encrypt(x) for x in plaintexts]
         cipher = DES3.new(self.key_192, DES3.MODE_CFB, self.iv_64, segment_size=64)
-        self.assertEqual(b"".join(ciphertexts), cipher.encrypt(b"".join(plaintexts)))
+        assert b"".join(ciphertexts) == cipher.encrypt(b"".join(plaintexts))
 
     # Extra
 
@@ -82,18 +81,62 @@ class CfbTests(BlockChainingTests, unittest.TestCase):
             AES.new(self.key_128, AES.MODE_CFB, self.iv_128, segment_size=bits)
 
         for bits in 0, 7, 9, 127, 129:
-            self.assertRaises(ValueError, AES.new, self.key_128, AES.MODE_CFB, self.iv_128, segment_size=bits)
+            with pytest.raises(ValueError):
+                AES.new(self.key_128, AES.MODE_CFB, self.iv_128, segment_size=bits)
 
     def test_segment_size_64(self):
         for bits in range(8, 65, 8):
             DES3.new(self.key_192, DES3.MODE_CFB, self.iv_64, segment_size=bits)
 
         for bits in 0, 7, 9, 63, 65:
-            self.assertRaises(ValueError, DES3.new, self.key_192, AES.MODE_CFB, self.iv_64, segment_size=bits)
+            with pytest.raises(ValueError):
+                DES3.new(self.key_192, AES.MODE_CFB, self.iv_64, segment_size=bits)
+
+
+# NIST test vector files ("?" is the segment size in bits)
+nist_aes_kat_mmt_files = (
+    # KAT
+    "CFB?GFSbox128.rsp",
+    "CFB?GFSbox192.rsp",
+    "CFB?GFSbox256.rsp",
+    "CFB?KeySbox128.rsp",
+    "CFB?KeySbox192.rsp",
+    "CFB?KeySbox256.rsp",
+    "CFB?VarKey128.rsp",
+    "CFB?VarKey192.rsp",
+    "CFB?VarKey256.rsp",
+    "CFB?VarTxt128.rsp",
+    "CFB?VarTxt192.rsp",
+    "CFB?VarTxt256.rsp",
+    # MMT
+    "CFB?MMT128.rsp",
+    "CFB?MMT192.rsp",
+    "CFB?MMT256.rsp",
+)
+
+nist_aes_mct_files = (
+    "CFB?MCT128.rsp",
+    "CFB?MCT192.rsp",
+    "CFB?MCT256.rsp",
+)
+
+nist_tdes_files = (
+    "TCFB?MMT2.rsp",  # 2TDES
+    "TCFB?MMT3.rsp",  # 3TDES
+    "TCFB?invperm.rsp",  # Single DES
+    "TCFB?permop.rsp",
+    "TCFB?subtab.rsp",
+    "TCFB?varkey.rsp",
+    "TCFB?vartext.rsp",
+)
+
+
+def _expand(file_names, segment_sizes):
+    return [(f.replace("?", str(s)), s) for f in file_names for s in segment_sizes]
 
 
 @pytest.mark.slow
-class NistCfbVectors(unittest.TestCase):
+class TestNistCfbVectors:
     def _do_kat_aes_test(self, file_name, segment_size):
 
         test_vectors = load_test_vectors(
@@ -108,13 +151,11 @@ class NistCfbVectors(unittest.TestCase):
             if isinstance(tv, str):
                 direction = tv
                 continue
-
-            self.description = tv.desc
             cipher = AES.new(tv.key, AES.MODE_CFB, tv.iv, segment_size=segment_size)
             if direction == "[ENCRYPT]":
-                self.assertEqual(cipher.encrypt(tv.plaintext), tv.ciphertext)
+                assert cipher.encrypt(tv.plaintext) == tv.ciphertext
             elif direction == "[DECRYPT]":
-                self.assertEqual(cipher.decrypt(tv.ciphertext), tv.plaintext)
+                assert cipher.decrypt(tv.ciphertext) == tv.plaintext
             else:
                 raise AssertionError()
 
@@ -135,8 +176,6 @@ class NistCfbVectors(unittest.TestCase):
             if isinstance(tv, str):
                 direction = tv
                 continue
-
-            self.description = tv.desc
             cipher = AES.new(tv.key, AES.MODE_CFB, tv.iv, segment_size=segment_size)
 
             def get_input(input_text, output_seq, j):
@@ -157,13 +196,13 @@ class NistCfbVectors(unittest.TestCase):
                 for j in range(1000):
                     plaintext = get_input(tv.plaintext, cts, j)
                     cts.append(cipher.encrypt(plaintext))
-                self.assertEqual(cts[-1], tv.ciphertext)
+                assert cts[-1] == tv.ciphertext
             elif direction == "[DECRYPT]":
                 pts = []
                 for j in range(1000):
                     ciphertext = get_input(tv.ciphertext, pts, j)
                     pts.append(cipher.decrypt(ciphertext))
-                self.assertEqual(pts[-1], tv.plaintext)
+                assert pts[-1] == tv.plaintext
             else:
                 raise AssertionError()
 
@@ -181,8 +220,6 @@ class NistCfbVectors(unittest.TestCase):
             if isinstance(tv, str):
                 direction = tv
                 continue
-
-            self.description = tv.desc
             if hasattr(tv, "keys"):
                 cipher = DES.new(tv.keys, DES.MODE_CFB, tv.iv, segment_size=segment_size)
             else:
@@ -192,81 +229,29 @@ class NistCfbVectors(unittest.TestCase):
                     key = tv.key1 + tv.key2  # Option 2
                 cipher = DES3.new(key, DES3.MODE_CFB, tv.iv, segment_size=segment_size)
             if direction == "[ENCRYPT]":
-                self.assertEqual(cipher.encrypt(tv.plaintext), tv.ciphertext)
+                assert cipher.encrypt(tv.plaintext) == tv.ciphertext
             elif direction == "[DECRYPT]":
-                self.assertEqual(cipher.decrypt(tv.ciphertext), tv.plaintext)
+                assert cipher.decrypt(tv.ciphertext) == tv.plaintext
             else:
                 raise AssertionError()
 
+    @pytest.mark.parametrize("file_name, segment_size", _expand(nist_aes_kat_mmt_files, (8, 128)))
+    def test_aes_kat_mmt(self, file_name, segment_size):
+        self._do_kat_aes_test(file_name, segment_size)
 
-# Create one test method per file
-nist_aes_kat_mmt_files = (
-    # KAT
-    "CFB?GFSbox128.rsp",
-    "CFB?GFSbox192.rsp",
-    "CFB?GFSbox256.rsp",
-    "CFB?KeySbox128.rsp",
-    "CFB?KeySbox192.rsp",
-    "CFB?KeySbox256.rsp",
-    "CFB?VarKey128.rsp",
-    "CFB?VarKey192.rsp",
-    "CFB?VarKey256.rsp",
-    "CFB?VarTxt128.rsp",
-    "CFB?VarTxt192.rsp",
-    "CFB?VarTxt256.rsp",
-    # MMT
-    "CFB?MMT128.rsp",
-    "CFB?MMT192.rsp",
-    "CFB?MMT256.rsp",
-)
-nist_aes_mct_files = (
-    "CFB?MCT128.rsp",
-    "CFB?MCT192.rsp",
-    "CFB?MCT256.rsp",
-)
+    @pytest.mark.parametrize("file_name, segment_size", _expand(nist_aes_mct_files, (8, 128)))
+    def test_aes_mct(self, file_name, segment_size):
+        self._do_mct_aes_test(file_name, segment_size)
 
-for file_gen_name in nist_aes_kat_mmt_files:
-    for bits in "8", "128":
-        file_name = file_gen_name.replace("?", bits)
-
-        def new_func(self, file_name=file_name, bits=bits):
-            self._do_kat_aes_test(file_name, int(bits))
-
-        setattr(NistCfbVectors, "test_AES_" + file_name, new_func)
-
-for file_gen_name in nist_aes_mct_files:
-    for bits in "8", "128":
-        file_name = file_gen_name.replace("?", bits)
-
-        def new_func(self, file_name=file_name, bits=bits):
-            self._do_mct_aes_test(file_name, int(bits))
-
-        setattr(NistCfbVectors, "test_AES_" + file_name, new_func)
-del file_name, new_func
-
-nist_tdes_files = (
-    "TCFB?MMT2.rsp",  # 2TDES
-    "TCFB?MMT3.rsp",  # 3TDES
-    "TCFB?invperm.rsp",  # Single DES
-    "TCFB?permop.rsp",
-    "TCFB?subtab.rsp",
-    "TCFB?varkey.rsp",
-    "TCFB?vartext.rsp",
-)
-
-for file_gen_name in nist_tdes_files:
-    for bits in "8", "64":
-        file_name = file_gen_name.replace("?", bits)
-
-        def new_func(self, file_name=file_name, bits=bits):
-            self._do_tdes_test(file_name, int(bits))
-
-    setattr(NistCfbVectors, "test_TDES_" + file_name, new_func)
-
-# END OF NIST CBC TEST VECTORS
+    @pytest.mark.parametrize("file_name, segment_size", _expand(nist_tdes_files, (8, 64)))
+    def test_tdes(self, file_name, segment_size):
+        self._do_tdes_test(file_name, segment_size)
 
 
-class SP800TestVectors(unittest.TestCase):
+# END OF NIST CFB TEST VECTORS
+
+
+class TestSP800TestVectors:
     """Class exercising the CFB test vectors found in Section F.3
     of NIST SP 800-3A"""
 
@@ -282,9 +267,9 @@ class SP800TestVectors(unittest.TestCase):
         ciphertext = unhexlify(ciphertext)
 
         cipher = AES.new(key, AES.MODE_CFB, iv, segment_size=8)
-        self.assertEqual(cipher.encrypt(plaintext), ciphertext)
+        assert cipher.encrypt(plaintext) == ciphertext
         cipher = AES.new(key, AES.MODE_CFB, iv, segment_size=8)
-        self.assertEqual(cipher.decrypt(ciphertext), plaintext)
+        assert cipher.decrypt(ciphertext) == plaintext
 
     def test_aes_192_cfb8(self):
         plaintext = "6bc1bee22e409f96e93d7e117393172aae2d"
@@ -298,9 +283,9 @@ class SP800TestVectors(unittest.TestCase):
         ciphertext = unhexlify(ciphertext)
 
         cipher = AES.new(key, AES.MODE_CFB, iv, segment_size=8)
-        self.assertEqual(cipher.encrypt(plaintext), ciphertext)
+        assert cipher.encrypt(plaintext) == ciphertext
         cipher = AES.new(key, AES.MODE_CFB, iv, segment_size=8)
-        self.assertEqual(cipher.decrypt(ciphertext), plaintext)
+        assert cipher.decrypt(ciphertext) == plaintext
 
     def test_aes_256_cfb8(self):
         plaintext = "6bc1bee22e409f96e93d7e117393172aae2d"
@@ -314,9 +299,9 @@ class SP800TestVectors(unittest.TestCase):
         ciphertext = unhexlify(ciphertext)
 
         cipher = AES.new(key, AES.MODE_CFB, iv, segment_size=8)
-        self.assertEqual(cipher.encrypt(plaintext), ciphertext)
+        assert cipher.encrypt(plaintext) == ciphertext
         cipher = AES.new(key, AES.MODE_CFB, iv, segment_size=8)
-        self.assertEqual(cipher.decrypt(ciphertext), plaintext)
+        assert cipher.decrypt(ciphertext) == plaintext
 
     def test_aes_128_cfb128(self):
         plaintext = (
@@ -340,9 +325,9 @@ class SP800TestVectors(unittest.TestCase):
         ciphertext = unhexlify(ciphertext)
 
         cipher = AES.new(key, AES.MODE_CFB, iv, segment_size=128)
-        self.assertEqual(cipher.encrypt(plaintext), ciphertext)
+        assert cipher.encrypt(plaintext) == ciphertext
         cipher = AES.new(key, AES.MODE_CFB, iv, segment_size=128)
-        self.assertEqual(cipher.decrypt(ciphertext), plaintext)
+        assert cipher.decrypt(ciphertext) == plaintext
 
     def test_aes_192_cfb128(self):
         plaintext = (
@@ -366,9 +351,9 @@ class SP800TestVectors(unittest.TestCase):
         ciphertext = unhexlify(ciphertext)
 
         cipher = AES.new(key, AES.MODE_CFB, iv, segment_size=128)
-        self.assertEqual(cipher.encrypt(plaintext), ciphertext)
+        assert cipher.encrypt(plaintext) == ciphertext
         cipher = AES.new(key, AES.MODE_CFB, iv, segment_size=128)
-        self.assertEqual(cipher.decrypt(ciphertext), plaintext)
+        assert cipher.decrypt(ciphertext) == plaintext
 
     def test_aes_256_cfb128(self):
         plaintext = (
@@ -393,6 +378,6 @@ class SP800TestVectors(unittest.TestCase):
         ciphertext = unhexlify(ciphertext)
 
         cipher = AES.new(key, AES.MODE_CFB, iv, segment_size=128)
-        self.assertEqual(cipher.encrypt(plaintext), ciphertext)
+        assert cipher.encrypt(plaintext) == ciphertext
         cipher = AES.new(key, AES.MODE_CFB, iv, segment_size=128)
-        self.assertEqual(cipher.decrypt(ciphertext), plaintext)
+        assert cipher.decrypt(ciphertext) == plaintext

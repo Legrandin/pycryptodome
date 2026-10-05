@@ -28,8 +28,9 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-import unittest
 from binascii import unhexlify
+
+import pytest
 
 from Crypto.Cipher import AES, DES3
 from Crypto.Hash import SHAKE128
@@ -41,7 +42,7 @@ def get_tag_random(tag, length):
     return SHAKE128.new(data=tobytes(tag)).read(length)
 
 
-class OpenPGPTests(BlockChainingTests, unittest.TestCase):
+class TestOpenPGP(BlockChainingTests):
     aes_mode = AES.MODE_OPENPGP
     des3_mode = DES3.MODE_OPENPGP
 
@@ -62,7 +63,7 @@ class OpenPGPTests(BlockChainingTests, unittest.TestCase):
 
         cipher = AES.new(self.key_128, AES.MODE_OPENPGP, eiv)
         pt2 = cipher.decrypt(ct)
-        self.assertEqual(pt, pt2)
+        assert pt == pt2
 
     def test_loopback_64(self):
         cipher = DES3.new(self.key_192, DES3.MODE_OPENPGP, self.iv_64)
@@ -73,31 +74,33 @@ class OpenPGPTests(BlockChainingTests, unittest.TestCase):
 
         cipher = DES3.new(self.key_192, DES3.MODE_OPENPGP, eiv)
         pt2 = cipher.decrypt(ct)
-        self.assertEqual(pt, pt2)
+        assert pt == pt2
 
     def test_IV_iv_attributes(self):
         cipher = AES.new(self.key_128, AES.MODE_OPENPGP, self.iv_128)
         eiv = cipher.encrypt(b"")
-        self.assertEqual(cipher.iv, self.iv_128)
+        assert cipher.iv == self.iv_128
 
         cipher = AES.new(self.key_128, AES.MODE_OPENPGP, eiv)
-        self.assertEqual(cipher.iv, self.iv_128)
+        assert cipher.iv == self.iv_128
 
     def test_null_encryption_decryption(self):
         cipher = AES.new(self.key_128, AES.MODE_OPENPGP, self.iv_128)
         eiv = cipher.encrypt(b"")
 
         cipher = AES.new(self.key_128, AES.MODE_OPENPGP, eiv)
-        self.assertEqual(cipher.decrypt(b""), b"")
+        assert cipher.decrypt(b"") == b""
 
     def test_either_encrypt_or_decrypt(self):
         cipher = AES.new(self.key_128, AES.MODE_OPENPGP, self.iv_128)
         eiv = cipher.encrypt(b"")
-        self.assertRaises(TypeError, cipher.decrypt, b"")
+        with pytest.raises(TypeError):
+            cipher.decrypt(b"")
 
         cipher = AES.new(self.key_128, AES.MODE_OPENPGP, eiv)
         cipher.decrypt(b"")
-        self.assertRaises(TypeError, cipher.encrypt, b"")
+        with pytest.raises(TypeError):
+            cipher.encrypt(b"")
 
     def test_unaligned_data_128(self):
         plaintexts = [b"7777777"] * 100
@@ -105,7 +108,7 @@ class OpenPGPTests(BlockChainingTests, unittest.TestCase):
         cipher = AES.new(self.key_128, AES.MODE_OPENPGP, self.iv_128)
         ciphertexts = [cipher.encrypt(x) for x in plaintexts]
         cipher = AES.new(self.key_128, AES.MODE_OPENPGP, self.iv_128)
-        self.assertEqual(b"".join(ciphertexts), cipher.encrypt(b"".join(plaintexts)))
+        assert b"".join(ciphertexts) == cipher.encrypt(b"".join(plaintexts))
 
     def test_unaligned_data_64(self):
         plaintexts = [b"7777777"] * 100
@@ -113,7 +116,7 @@ class OpenPGPTests(BlockChainingTests, unittest.TestCase):
         cipher = DES3.new(self.key_192, DES3.MODE_OPENPGP, self.iv_64)
         ciphertexts = [cipher.encrypt(x) for x in plaintexts]
         cipher = DES3.new(self.key_192, DES3.MODE_OPENPGP, self.iv_64)
-        self.assertEqual(b"".join(ciphertexts), cipher.encrypt(b"".join(plaintexts)))
+        assert b"".join(ciphertexts) == cipher.encrypt(b"".join(plaintexts))
 
     def test_output_param(self):
         pass
@@ -128,7 +131,7 @@ class OpenPGPTests(BlockChainingTests, unittest.TestCase):
         pass
 
 
-class TestVectors(unittest.TestCase):
+class TestVectors:
     def test_aes(self):
         # The following test vectors have been generated with gpg v1.4.0.
         # The command line used was:
@@ -167,12 +170,12 @@ class TestVectors(unittest.TestCase):
 
         cipher = AES.new(key, AES.MODE_OPENPGP, iv)
         ct = cipher.encrypt(plaintext)
-        self.assertEqual(ct[:18], encrypted_iv)
-        self.assertEqual(ct[18:], ciphertext)
+        assert ct[:18] == encrypted_iv
+        assert ct[18:] == ciphertext
 
         cipher = AES.new(key, AES.MODE_OPENPGP, encrypted_iv)
         pt = cipher.decrypt(ciphertext)
-        self.assertEqual(pt, plaintext)
+        assert pt == plaintext
 
     def test_des3(self):
         # The following test vectors have been generated with gpg v1.4.0.
@@ -195,9 +198,9 @@ class TestVectors(unittest.TestCase):
 
         cipher = DES3.new(key, DES3.MODE_OPENPGP, iv)
         ct = cipher.encrypt(plaintext)
-        self.assertEqual(ct[:10], encrypted_iv)
-        self.assertEqual(ct[10:], ciphertext)
+        assert ct[:10] == encrypted_iv
+        assert ct[10:] == ciphertext
 
         cipher = DES3.new(key, DES3.MODE_OPENPGP, encrypted_iv)
         pt = cipher.decrypt(ciphertext)
-        self.assertEqual(pt, plaintext)
+        assert pt == plaintext

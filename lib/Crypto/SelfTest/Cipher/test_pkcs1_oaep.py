@@ -19,14 +19,15 @@
 # SOFTWARE.
 # ===================================================================
 
-import unittest
+
+import pytest
 
 from Crypto import Random
 from Crypto.Cipher import PKCS1_OAEP as PKCS
 from Crypto.Hash import MD2, MD5, RIPEMD160, SHA1, SHA224, SHA256, SHA384, SHA512
 from Crypto.PublicKey import RSA
-from Crypto.SelfTest.loader import load_test_vectors_wycheproof
-from Crypto.SelfTest.st_common import a2b_hex, slow_tests, wycheproof_warnings
+from Crypto.SelfTest.loader import load_test_vectors_wycheproof, wycheproof_id
+from Crypto.SelfTest.st_common import a2b_hex, mark_slow, wycheproof_warnings
 from Crypto.Signature.pss import MGF1
 
 
@@ -45,8 +46,8 @@ def t2b(t):
     return a2b_hex(clean)
 
 
-class PKCS1_OAEP_Tests(unittest.TestCase):
-    def setUp(self):
+class TestPKCS1_OAEP:
+    def setup_method(self):
         self.rng = Random.new().read
         self.key1024 = RSA.generate(1024, self.rng)
 
@@ -278,13 +279,14 @@ class PKCS1_OAEP_Tests(unittest.TestCase):
             # The real test
             cipher = PKCS.new(key, test[4], randfunc=randGen(t2b(test[3])))
             ct = cipher.encrypt(t2b(test[1]))
-            self.assertEqual(ct, t2b(test[2]))
+            assert ct == t2b(test[2])
 
     def testEncrypt2(self):
         # Verify that encryption fails if plaintext is too long
         pt = "\x00" * (128 - 2 * 20 - 2 + 1)
         cipher = PKCS.new(self.key1024)
-        self.assertRaises(ValueError, cipher.encrypt, pt)
+        with pytest.raises(ValueError):
+            cipher.encrypt(pt)
 
     def testDecrypt1(self):
         # Verify decryption using all test vectors
@@ -295,13 +297,14 @@ class PKCS1_OAEP_Tests(unittest.TestCase):
             # The real test
             cipher = PKCS.new(key, test[4])
             pt = cipher.decrypt(t2b(test[2]))
-            self.assertEqual(pt, t2b(test[1]))
+            assert pt == t2b(test[1])
 
     def testDecrypt2(self):
         # Simplest possible negative tests
         for ct_size in (127, 128, 129):
             cipher = PKCS.new(self.key1024)
-            self.assertRaises(ValueError, cipher.decrypt, bytes([0x00]) * ct_size)
+            with pytest.raises(ValueError):
+                cipher.decrypt(bytes([0x00]) * ct_size)
 
     def testEncryptDecrypt1(self):
         # Encrypt/Decrypt messages of length [0..128-2*20-2]
@@ -310,7 +313,7 @@ class PKCS1_OAEP_Tests(unittest.TestCase):
             cipher = PKCS.new(self.key1024)
             ct = cipher.encrypt(pt)
             pt2 = cipher.decrypt(ct)
-            self.assertEqual(pt, pt2)
+            assert pt == pt2
 
     def testEncryptDecrypt2(self):
         # Helper function to monitor what's requested from RNG
@@ -329,8 +332,8 @@ class PKCS1_OAEP_Tests(unittest.TestCase):
             pt = self.rng(40)
             cipher = PKCS.new(self.key1024, hashmod, randfunc=localRng)
             ct = cipher.encrypt(pt)
-            self.assertEqual(cipher.decrypt(ct), pt)
-            self.assertEqual(asked, hashmod.digest_size)
+            assert cipher.decrypt(ct) == pt
+            assert asked == hashmod.digest_size
 
     def testEncryptDecrypt3(self):
         # Verify that OAEP supports labels
@@ -338,7 +341,7 @@ class PKCS1_OAEP_Tests(unittest.TestCase):
         xlabel = self.rng(22)
         cipher = PKCS.new(self.key1024, label=xlabel)
         ct = cipher.encrypt(pt)
-        self.assertEqual(cipher.decrypt(ct), pt)
+        assert cipher.decrypt(ct) == pt
 
     def testEncryptDecrypt4(self):
         # Verify that encrypt() uses the custom MGF
@@ -354,96 +357,94 @@ class PKCS1_OAEP_Tests(unittest.TestCase):
         pt = self.rng(32)
         cipher = PKCS.new(self.key1024, mgfunc=newMGF)
         ct = cipher.encrypt(pt)
-        self.assertEqual(mgfcalls, 2)
-        self.assertEqual(cipher.decrypt(ct), pt)
+        assert mgfcalls == 2
+        assert cipher.decrypt(ct) == pt
 
     def testByteArray(self):
         pt = b"XER"
         cipher = PKCS.new(self.key1024)
         ct = cipher.encrypt(bytearray(pt))
         pt2 = cipher.decrypt(bytearray(ct))
-        self.assertEqual(pt, pt2)
+        assert pt == pt2
 
     def testMemoryview(self):
         pt = b"XER"
         cipher = PKCS.new(self.key1024)
         ct = cipher.encrypt(memoryview(bytearray(pt)))
         pt2 = cipher.decrypt(memoryview(bytearray(ct)))
-        self.assertEqual(pt, pt2)
+        assert pt == pt2
 
 
-class TestVectorsWycheproof(unittest.TestCase):
+def _load_tests(filename):
+
+    def filter_rsa(group):
+        return RSA.import_key(group["privateKeyPem"])
+
+    def filter_sha(group):
+        if group["sha"] == "SHA-1":
+            return SHA1
+        elif group["sha"] == "SHA-224":
+            return SHA224
+        elif group["sha"] == "SHA-256":
+            return SHA256
+        elif group["sha"] == "SHA-384":
+            return SHA384
+        elif group["sha"] == "SHA-512":
+            return SHA512
+        else:
+            raise ValueError("Unknown sha " + group["sha"])
+
+    def filter_mgf(group):
+        if group["mgfSha"] == "SHA-1":
+            return lambda x, y: MGF1(x, y, SHA1)
+        elif group["mgfSha"] == "SHA-224":
+            return lambda x, y: MGF1(x, y, SHA224)
+        elif group["mgfSha"] == "SHA-256":
+            return lambda x, y: MGF1(x, y, SHA256)
+        elif group["mgfSha"] == "SHA-384":
+            return lambda x, y: MGF1(x, y, SHA384)
+        elif group["mgfSha"] == "SHA-512":
+            return lambda x, y: MGF1(x, y, SHA512)
+        else:
+            raise ValueError("Unknown mgf/sha " + group["mgfSha"])
+
+    def filter_algo(group):
+        return "%s with MGF1/%s" % (group["sha"], group["mgfSha"])
+
+    result = load_test_vectors_wycheproof(
+        ("Cipher", "wycheproof"),
+        filename,
+        "Wycheproof PKCS#1 OAEP (%s)" % filename,
+        group_tag={"rsa_key": filter_rsa, "hash_mod": filter_sha, "mgf": filter_mgf, "algo": filter_algo},
+    )
+    return result
+
+
+def load_wycheproof_vectors():
+    vectors = []
+    vectors += _load_tests("rsa_oaep_2048_sha1_mgf1sha1_test.json")
+    vectors += _load_tests("rsa_oaep_2048_sha224_mgf1sha1_test.json")
+    vectors += _load_tests("rsa_oaep_2048_sha224_mgf1sha224_test.json")
+    vectors += _load_tests("rsa_oaep_2048_sha256_mgf1sha1_test.json")
+    vectors += _load_tests("rsa_oaep_2048_sha256_mgf1sha256_test.json")
+    vectors += _load_tests("rsa_oaep_2048_sha384_mgf1sha1_test.json")
+    vectors += _load_tests("rsa_oaep_2048_sha384_mgf1sha384_test.json")
+    vectors += _load_tests("rsa_oaep_2048_sha512_mgf1sha1_test.json")
+    vectors += _load_tests("rsa_oaep_2048_sha512_mgf1sha512_test.json")
+    vectors += mark_slow(_load_tests("rsa_oaep_3072_sha256_mgf1sha1_test.json"))
+    vectors += mark_slow(_load_tests("rsa_oaep_3072_sha256_mgf1sha256_test.json"))
+    vectors += mark_slow(_load_tests("rsa_oaep_3072_sha512_mgf1sha1_test.json"))
+    vectors += mark_slow(_load_tests("rsa_oaep_3072_sha512_mgf1sha512_test.json"))
+    vectors += mark_slow(_load_tests("rsa_oaep_4096_sha256_mgf1sha1_test.json"))
+    vectors += mark_slow(_load_tests("rsa_oaep_4096_sha256_mgf1sha256_test.json"))
+    vectors += mark_slow(_load_tests("rsa_oaep_4096_sha512_mgf1sha1_test.json"))
+    vectors += mark_slow(_load_tests("rsa_oaep_4096_sha512_mgf1sha512_test.json"))
+    vectors += mark_slow(_load_tests("rsa_oaep_misc_test.json"))
+    return vectors
+
+
+class TestVectorsWycheproof:
     _id = "None"
-
-    def load_tests(self, filename):
-
-        def filter_rsa(group):
-            return RSA.import_key(group["privateKeyPem"])
-
-        def filter_sha(group):
-            if group["sha"] == "SHA-1":
-                return SHA1
-            elif group["sha"] == "SHA-224":
-                return SHA224
-            elif group["sha"] == "SHA-256":
-                return SHA256
-            elif group["sha"] == "SHA-384":
-                return SHA384
-            elif group["sha"] == "SHA-512":
-                return SHA512
-            else:
-                raise ValueError("Unknown sha " + group["sha"])
-
-        def filter_mgf(group):
-            if group["mgfSha"] == "SHA-1":
-                return lambda x, y: MGF1(x, y, SHA1)
-            elif group["mgfSha"] == "SHA-224":
-                return lambda x, y: MGF1(x, y, SHA224)
-            elif group["mgfSha"] == "SHA-256":
-                return lambda x, y: MGF1(x, y, SHA256)
-            elif group["mgfSha"] == "SHA-384":
-                return lambda x, y: MGF1(x, y, SHA384)
-            elif group["mgfSha"] == "SHA-512":
-                return lambda x, y: MGF1(x, y, SHA512)
-            else:
-                raise ValueError("Unknown mgf/sha " + group["mgfSha"])
-
-        def filter_algo(group):
-            return "%s with MGF1/%s" % (group["sha"], group["mgfSha"])
-
-        result = load_test_vectors_wycheproof(
-            ("Cipher", "wycheproof"),
-            filename,
-            "Wycheproof PKCS#1 OAEP (%s)" % filename,
-            group_tag={"rsa_key": filter_rsa, "hash_mod": filter_sha, "mgf": filter_mgf, "algo": filter_algo},
-        )
-        return result
-
-    def setUp(self):
-        self.tv = []
-        self.tv.extend(self.load_tests("rsa_oaep_2048_sha1_mgf1sha1_test.json"))
-        self.tv.extend(self.load_tests("rsa_oaep_2048_sha224_mgf1sha1_test.json"))
-        self.tv.extend(self.load_tests("rsa_oaep_2048_sha224_mgf1sha224_test.json"))
-        self.tv.extend(self.load_tests("rsa_oaep_2048_sha256_mgf1sha1_test.json"))
-        self.tv.extend(self.load_tests("rsa_oaep_2048_sha256_mgf1sha256_test.json"))
-        self.tv.extend(self.load_tests("rsa_oaep_2048_sha384_mgf1sha1_test.json"))
-        self.tv.extend(self.load_tests("rsa_oaep_2048_sha384_mgf1sha384_test.json"))
-        self.tv.extend(self.load_tests("rsa_oaep_2048_sha512_mgf1sha1_test.json"))
-        self.tv.extend(self.load_tests("rsa_oaep_2048_sha512_mgf1sha512_test.json"))
-        if slow_tests():
-            self.tv.extend(self.load_tests("rsa_oaep_3072_sha256_mgf1sha1_test.json"))
-            self.tv.extend(self.load_tests("rsa_oaep_3072_sha256_mgf1sha256_test.json"))
-            self.tv.extend(self.load_tests("rsa_oaep_3072_sha512_mgf1sha1_test.json"))
-            self.tv.extend(self.load_tests("rsa_oaep_3072_sha512_mgf1sha512_test.json"))
-            self.tv.extend(self.load_tests("rsa_oaep_4096_sha256_mgf1sha1_test.json"))
-            self.tv.extend(self.load_tests("rsa_oaep_4096_sha256_mgf1sha256_test.json"))
-            self.tv.extend(self.load_tests("rsa_oaep_4096_sha512_mgf1sha1_test.json"))
-            self.tv.extend(self.load_tests("rsa_oaep_4096_sha512_mgf1sha512_test.json"))
-            self.tv.extend(self.load_tests("rsa_oaep_4096_sha512_mgf1sha512_test.json"))
-            self.tv.extend(self.load_tests("rsa_oaep_misc_test.json"))
-
-    def shortDescription(self):
-        return self._id
 
     def warn(self, tv):
         if tv.warning and wycheproof_warnings():
@@ -461,10 +462,10 @@ class TestVectorsWycheproof(unittest.TestCase):
             assert not tv.valid
         else:
             assert tv.valid
-            self.assertEqual(pt, tv.msg)
+            assert pt == tv.msg
             self.warn(tv)
 
-    def runTest(self):
+    @pytest.mark.parametrize("tv", load_wycheproof_vectors(), ids=wycheproof_id)
+    def test(self, tv):
 
-        for tv in self.tv:
-            self.check_decrypt(tv)
+        self.check_decrypt(tv)

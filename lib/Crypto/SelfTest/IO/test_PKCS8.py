@@ -33,7 +33,6 @@
 
 """Self-tests for Crypto.IO.PKCS8 module"""
 
-import unittest
 from binascii import unhexlify
 
 from Crypto.IO import PKCS8
@@ -396,8 +395,8 @@ class Rng:
         return output
 
 
-class PKCS8_Decrypt(unittest.TestCase):
-    def setUp(self):
+class TestPKCS8_Decrypt:
+    def setup_method(self):
         self.oid_key = oid_key
         self.clear_key = txt2bin(clear_key)
         self.wrapped_clear_key = txt2bin(wrapped_clear_key)
@@ -410,15 +409,15 @@ class PKCS8_Decrypt(unittest.TestCase):
     def test1(self):
         """Verify unwrapping w/o encryption"""
         res1, res2, _res3 = PKCS8.unwrap(self.wrapped_clear_key)
-        self.assertEqual(res1, self.oid_key)
-        self.assertEqual(res2, self.clear_key)
+        assert res1 == self.oid_key
+        assert res2 == self.clear_key
 
     def test2(self):
         """Verify wrapping w/o encryption"""
         wrapped = PKCS8.wrap(self.clear_key, self.oid_key)
         res1, res2, _res3 = PKCS8.unwrap(wrapped)
-        self.assertEqual(res1, self.oid_key)
-        self.assertEqual(res2, self.clear_key)
+        assert res1 == self.oid_key
+        assert res2 == self.clear_key
 
     ## ENCRYPTION
 
@@ -427,8 +426,8 @@ class PKCS8_Decrypt(unittest.TestCase):
 
         for t in self.wrapped_enc_keys:
             res1, res2, _res3 = PKCS8.unwrap(t[4], b"TestTest")
-            self.assertEqual(res1, self.oid_key)
-            self.assertEqual(res2, self.clear_key)
+            assert res1 == self.oid_key
+            assert res2 == self.clear_key
 
     def test4(self):
         """Verify wrapping with encryption"""
@@ -447,11 +446,11 @@ class PKCS8_Decrypt(unittest.TestCase):
                 key_params=DerNull(),
                 randfunc=rng,
             )
-            self.assertEqual(wrapped, t[4])
+            assert wrapped == t[4]
 
     def test_import_botan_keys(self):
         botan_scrypt_der = txt2bin(botan_scrypt)
         key1 = PKCS8.unwrap(botan_scrypt_der, b"your_password")
         botan_pbkdf2_der = txt2bin(botan_pbkdf2)
         key2 = PKCS8.unwrap(botan_pbkdf2_der, b"your_password")
-        self.assertEqual(key1, key2)
+        assert key1 == key2

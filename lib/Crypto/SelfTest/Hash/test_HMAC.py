@@ -23,8 +23,9 @@
 
 """Self-test suite for Crypto.Hash.HMAC"""
 
-import unittest
 from binascii import hexlify
+
+import pytest
 
 from Crypto.Hash import (
     HMAC,
@@ -456,7 +457,7 @@ test_data = [
 ]
 
 
-class HMAC_Module_and_Instance_Test(unittest.TestCase):
+class TestHMAC_Module_and_Instance:
     """Test the HMAC construction and verify that it does not
     matter if you initialize it with a hash module or
     with an hash instance.
@@ -464,36 +465,29 @@ class HMAC_Module_and_Instance_Test(unittest.TestCase):
     See https://bugs.launchpad.net/pycrypto/+bug/1209399
     """
 
-    hashmods = hash_modules
-    description = ""
-
-    def shortDescription(self):
-        return self.description
-
-    def runTest(self):
+    @pytest.mark.parametrize(
+        "hashmod", [m for m in hash_modules.values() if m is not None], ids=lambda m: m.__name__
+    )
+    def test(self, hashmod):
         key = b"\x90\x91\x92\x93" * 4
         payload = b"\x00" * 100
 
-        for hashname, hashmod in self.hashmods.items():
-            if hashmod is None:
-                continue
-            self.description = "Test HMAC in combination with " + hashname
-            one = HMAC.new(key, payload, hashmod).digest()
-            two = HMAC.new(key, payload, hashmod.new()).digest()
-            self.assertEqual(one, two)
+        one = HMAC.new(key, payload, hashmod).digest()
+        two = HMAC.new(key, payload, hashmod.new()).digest()
+        assert one == two
 
 
-class HMAC_None(unittest.TestCase):
-    def runTest(self):
+class TestHMAC_None:
+    def test(self):
 
         key = b"\x04" * 20
         one = HMAC.new(key, b"", SHA1).digest()
         two = HMAC.new(key, None, SHA1).digest()
-        self.assertEqual(one, two)
+        assert one == two
 
 
-class ByteArrayTests(unittest.TestCase):
-    def runTest(self):
+class TestByteArray:
+    def test(self):
 
         key = b"0" * 16
         data = b"\x00\x01\x02"
@@ -506,7 +500,7 @@ class ByteArrayTests(unittest.TestCase):
         h2 = HMAC.new(key_ba, data_ba)
         key_ba[:1] = b"\xff"
         data_ba[:1] = b"\xff"
-        self.assertEqual(h1.digest(), h2.digest())
+        assert h1.digest() == h2.digest()
 
         # Data can be a bytearray (during operation)
         key_ba = bytearray(key)
@@ -517,11 +511,11 @@ class ByteArrayTests(unittest.TestCase):
         h1.update(data)
         h2.update(data_ba)
         data_ba[:1] = b"\xff"
-        self.assertEqual(h1.digest(), h2.digest())
+        assert h1.digest() == h2.digest()
 
 
-class MemoryViewTests(unittest.TestCase):
-    def runTest(self):
+class TestMemoryView:
+    def test(self):
 
         key = b"0" * 16
         data = b"\x00\x01\x02"
@@ -542,7 +536,7 @@ class MemoryViewTests(unittest.TestCase):
             if not data_mv.readonly:
                 key_mv[:1] = b"\xff"
                 data_mv[:1] = b"\xff"
-            self.assertEqual(h1.digest(), h2.digest())
+            assert h1.digest() == h2.digest()
 
             # Data can be a memoryview (during operation)
             data_mv = get_mv(data)
@@ -553,7 +547,7 @@ class MemoryViewTests(unittest.TestCase):
             h2.update(data_mv)
             if not data_mv.readonly:
                 data_mv[:1] = b"\xff"
-            self.assertEqual(h1.digest(), h2.digest())
+            assert h1.digest() == h2.digest()
 
 
 def _expand_test_data():

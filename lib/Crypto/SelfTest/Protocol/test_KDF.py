@@ -20,8 +20,9 @@
 # ===================================================================
 
 import re
-import unittest
 from binascii import unhexlify
+
+import pytest
 
 from Crypto.Cipher import AES, DES3
 from Crypto.Hash import CMAC, HMAC, MD5, SHA1, SHA224, SHA256, SHA384, SHA512
@@ -36,8 +37,8 @@ from Crypto.Protocol.KDF import (
     bcrypt_check,
     scrypt,
 )
-from Crypto.SelfTest.loader import load_test_vectors, load_test_vectors_wycheproof
-from Crypto.SelfTest.st_common import slow_tests, wycheproof_warnings
+from Crypto.SelfTest.loader import load_test_vectors, load_test_vectors_wycheproof, wycheproof_id
+from Crypto.SelfTest.st_common import mark_slow, wycheproof_warnings
 
 
 def t2b(t):
@@ -47,11 +48,7 @@ def t2b(t):
     return unhexlify(t2.encode("latin-1"))
 
 
-class TestVector:
-    pass
-
-
-class PBKDF1_Tests(unittest.TestCase):
+class TestPBKDF1:
     # List of tuples with test data.
     # Each tuple is made up by:
     #       Item #0: a pass phrase
@@ -67,10 +64,10 @@ class PBKDF1_Tests(unittest.TestCase):
     def test1(self):
         v = self._testData[0]
         res = PBKDF1(v[0], t2b(v[1]), v[2], v[3], SHA1)
-        self.assertEqual(res, t2b(v[4]))
+        assert res == t2b(v[4])
 
 
-class PBKDF2_Tests(unittest.TestCase):
+class TestPBKDF2:
     # List of tuples with test data.
     # Each tuple is made up by:
     #       Item #0: a pass phrase
@@ -114,7 +111,9 @@ class PBKDF2_Tests(unittest.TestCase):
         ),
     )
 
-    def test1(self):
+    # Only the first vectors are fast
+    @pytest.mark.parametrize("v", [*_testData[:3], *mark_slow(_testData[3:])])
+    def test1(self, v):
         # Test only for HMAC-SHA1 as PRF
 
         def prf_SHA1(p, s):
@@ -123,32 +122,30 @@ class PBKDF2_Tests(unittest.TestCase):
         def prf_SHA256(p, s):
             return HMAC.new(p, s, SHA256).digest()
 
-        # Only the first vectors are fast
-        test_data = self._testData if slow_tests() else self._testData[:3]
-        for _i, v in enumerate(test_data):
-            password = v[0]
-            salt = t2b(v[1])
-            out_len = v[2]
-            iters = v[3]
-            hash_mod = v[4]
-            expected = t2b(v[5])
+        password = v[0]
+        salt = t2b(v[1])
+        out_len = v[2]
+        iters = v[3]
+        hash_mod = v[4]
+        expected = t2b(v[5])
 
-            if hash_mod is SHA1:
-                res = PBKDF2(password, salt, out_len, iters)
-                self.assertEqual(res, expected)
+        if hash_mod is SHA1:
+            res = PBKDF2(password, salt, out_len, iters)
+            assert res == expected
 
-                res = PBKDF2(password, salt, out_len, iters, prf_SHA1)
-                self.assertEqual(res, expected)
-            else:
-                res = PBKDF2(password, salt, out_len, iters, prf_SHA256)
-                self.assertEqual(res, expected)
+            res = PBKDF2(password, salt, out_len, iters, prf_SHA1)
+            assert res == expected
+        else:
+            res = PBKDF2(password, salt, out_len, iters, prf_SHA256)
+            assert res == expected
 
     def test2(self):
         # Verify that prf and hmac_hash_module are mutual exclusive
         def prf_SHA1(p, s):
             return HMAC.new(p, s, SHA1).digest()
 
-        self.assertRaises(ValueError, PBKDF2, b"xxx", b"yyy", 16, 100, prf=prf_SHA1, hmac_hash_module=SHA1)
+        with pytest.raises(ValueError):
+            PBKDF2(b"xxx", b"yyy", 16, 100, prf=prf_SHA1, hmac_hash_module=SHA1)
 
     def test3(self):
         # Verify that hmac_hash_module works like prf
@@ -160,20 +157,20 @@ class PBKDF2_Tests(unittest.TestCase):
             pr1 = PBKDF2(password, salt, 16, 100, prf=lambda p, s: HMAC.new(p, s, hashmod).digest())  # noqa: B023
             pr2 = PBKDF2(password, salt, 16, 100, hmac_hash_module=hashmod)
 
-            self.assertEqual(pr1, pr2)
+            assert pr1 == pr2
 
     def test4(self):
         # Verify that PBKDF2 can take bytes or strings as password or salt
         k1 = PBKDF2("xxx", b"yyy", 16, 10)
         k2 = PBKDF2(b"xxx", b"yyy", 16, 10)
-        self.assertEqual(k1, k2)
+        assert k1 == k2
 
         k1 = PBKDF2(b"xxx", "yyy", 16, 10)
         k2 = PBKDF2(b"xxx", b"yyy", 16, 10)
-        self.assertEqual(k1, k2)
+        assert k1 == k2
 
 
-class S2V_Tests(unittest.TestCase):
+class TestS2V:
     # Sequence of test vectors.
     # Each test vector is made up by:
     #   Item #0: a tuple of strings
@@ -205,14 +202,14 @@ class S2V_Tests(unittest.TestCase):
         ),
     ]
 
-    def test1(self):
+    @pytest.mark.parametrize("tv", _testData)
+    def test1(self, tv):
         """Verify correctness of test vector"""
-        for tv in self._testData:
-            s2v = _S2V.new(t2b(tv[1]), tv[3])
-            for s in tv[0]:
-                s2v.update(t2b(s))
-            result = s2v.derive()
-            self.assertEqual(result, t2b(tv[2]))
+        s2v = _S2V.new(t2b(tv[1]), tv[3])
+        for s in tv[0]:
+            s2v.update(t2b(s))
+        result = s2v.derive()
+        assert result == t2b(tv[2])
 
     def test2(self):
         """Verify that no more than 127(AES) and 63(TDES)
@@ -223,10 +220,11 @@ class S2V_Tests(unittest.TestCase):
             max_comps = module.block_size * 8 - 1
             for _i in range(max_comps):
                 s2v.update(b"XX")
-            self.assertRaises(TypeError, s2v.update, b"YY")
+            with pytest.raises(TypeError):
+                s2v.update(b"YY")
 
 
-class HKDF_Tests(unittest.TestCase):
+class TestHKDF:
     # Test vectors from RFC5869, Appendix A
     # Each tuple is made up by:
     #       Item #0: hash module
@@ -327,27 +325,27 @@ class HKDF_Tests(unittest.TestCase):
         ),
     )
 
-    def test1(self):
-        for tv in self._test_vector:
-            secret, salt, info, exp = (t2b(tv[x]) for x in (1, 2, 3, 5))
-            key_len, hashmod = (tv[x] for x in (4, 0))
+    @pytest.mark.parametrize("tv", _test_vector)
+    def test1(self, tv):
+        secret, salt, info, exp = (t2b(tv[x]) for x in (1, 2, 3, 5))
+        key_len, hashmod = (tv[x] for x in (4, 0))
 
-            output = HKDF(secret, key_len, salt, hashmod, 1, info)
-            self.assertEqual(output, exp)
+        output = HKDF(secret, key_len, salt, hashmod, 1, info)
+        assert output == exp
 
     def test2(self):
         ref = HKDF(b"XXXXXX", 12, b"YYYY", SHA1)
 
         # Same output, but this time split over 2 keys
         key1, key2 = HKDF(b"XXXXXX", 6, b"YYYY", SHA1, 2)
-        self.assertEqual((ref[:6], ref[6:]), (key1, key2))
+        assert (ref[:6], ref[6:]) == (key1, key2)
 
         # Same output, but this time split over 3 keys
         key1, key2, key3 = HKDF(b"XXXXXX", 4, b"YYYY", SHA1, 3)
-        self.assertEqual((ref[:4], ref[4:8], ref[8:]), (key1, key2, key3))
+        assert (ref[:4], ref[4:8], ref[8:]) == (key1, key2, key3)
 
 
-class scrypt_Tests(unittest.TestCase):
+class TestScrypt:
     # Test vectors taken from
     # https://tools.ietf.org/html/rfc7914
     # - password
@@ -410,58 +408,50 @@ class scrypt_Tests(unittest.TestCase):
         ),
     )
 
-    def setUp(self):
-        # Only the first vectors are fast
-        data = self.data if slow_tests() else self.data[:3]
-        new_test_vectors = []
-        for tv in data:
-            new_tv = TestVector()
-            new_tv.P = tv[0].encode("latin-1")
-            new_tv.S = tv[1].encode("latin-1")
-            new_tv.N = tv[2]
-            new_tv.r = tv[3]
-            new_tv.p = tv[4]
-            new_tv.output = t2b(tv[5])
-            new_tv.dkLen = len(new_tv.output)
-            new_test_vectors.append(new_tv)
-        self.data = new_test_vectors
+    # Only the first vectors are fast
+    @pytest.mark.parametrize("tv", [*data[:3], *mark_slow(data[3:])])
+    def test2(self, tv):
+        password = tv[0].encode("latin-1")
+        salt = tv[1].encode("latin-1")
+        N, r, p = tv[2:5]
+        expected = t2b(tv[5])
 
-    def test2(self):
-
-        for tv in self.data:
-            try:
-                output = scrypt(tv.P, tv.S, tv.dkLen, tv.N, tv.r, tv.p)
-            except ValueError as e:
-                if " 2 " in str(e) and tv.N >= 1048576:
-                    import warnings
-
-                    warnings.warn("Not enough memory to unit test scrypt() with N=1048576", RuntimeWarning)
-                    continue
-                else:
-                    raise e
-            self.assertEqual(output, tv.output)
+        try:
+            output = scrypt(password, salt, len(expected), N, r, p)
+        except ValueError as e:
+            if " 2 " in str(e) and N >= 1048576:
+                pytest.skip("Not enough memory to unit test scrypt() with N=1048576")
+            raise
+        assert output == expected
 
     def test3(self):
         ref = scrypt(b"password", b"salt", 12, 16, 1, 1)
 
         # Same output, but this time split over 2 keys
         key1, key2 = scrypt(b"password", b"salt", 6, 16, 1, 1, 2)
-        self.assertEqual((ref[:6], ref[6:]), (key1, key2))
+        assert (ref[:6], ref[6:]) == (key1, key2)
 
         # Same output, but this time split over 3 keys
         key1, key2, key3 = scrypt(b"password", b"salt", 4, 16, 1, 1, 3)
-        self.assertEqual((ref[:4], ref[4:8], ref[8:]), (key1, key2, key3))
+        assert (ref[:4], ref[4:8], ref[8:]) == (key1, key2, key3)
 
 
-class bcrypt_Tests(unittest.TestCase):
+class TestBcrypt:
     def test_negative_cases(self):
-        self.assertRaises(ValueError, bcrypt, b"1" * 73, 10)
-        self.assertRaises(ValueError, bcrypt, b"1" * 10, 3)
-        self.assertRaises(ValueError, bcrypt, b"1" * 10, 32)
-        self.assertRaises(ValueError, bcrypt, b"1" * 10, 4, salt=b"")
-        self.assertRaises(ValueError, bcrypt, b"1" * 10, 4, salt=b"1")
-        self.assertRaises(ValueError, bcrypt, b"1" * 10, 4, salt=b"1" * 17)
-        self.assertRaises(ValueError, bcrypt, b"1\x00" * 10, 4)
+        with pytest.raises(ValueError):
+            bcrypt(b"1" * 73, 10)
+        with pytest.raises(ValueError):
+            bcrypt(b"1" * 10, 3)
+        with pytest.raises(ValueError):
+            bcrypt(b"1" * 10, 32)
+        with pytest.raises(ValueError):
+            bcrypt(b"1" * 10, 4, salt=b"")
+        with pytest.raises(ValueError):
+            bcrypt(b"1" * 10, 4, salt=b"1")
+        with pytest.raises(ValueError):
+            bcrypt(b"1" * 10, 4, salt=b"1" * 17)
+        with pytest.raises(ValueError):
+            bcrypt(b"1\x00" * 10, 4)
 
     def test_bytearray_mismatch(self):
         ref = bcrypt("pwd", 4)
@@ -470,10 +460,12 @@ class bcrypt_Tests(unittest.TestCase):
         bcrypt_check("pwd", bref)
 
         wrong = ref[:-1] + bytes([bref[-1] ^ 0x01])
-        self.assertRaises(ValueError, bcrypt_check, "pwd", wrong)
+        with pytest.raises(ValueError):
+            bcrypt_check("pwd", wrong)
 
         wrong = b"x" + ref[1:]
-        self.assertRaises(ValueError, bcrypt_check, "pwd", wrong)
+        with pytest.raises(ValueError):
+            bcrypt_check("pwd", wrong)
 
     # https://github.com/patrickfav/bcrypt/wiki/Published-Test-Vectors
 
@@ -491,7 +483,7 @@ class bcrypt_Tests(unittest.TestCase):
 
         for _idx, (password, cost, salt64, result) in enumerate(tvs):
             x = bcrypt(password, cost, salt=_bcrypt_decode(salt64))
-            self.assertEqual(x, result)
+            assert x == result
             bcrypt_check(password, result)
 
     def test_random_password_and_salt_short_pw(self):
@@ -511,7 +503,7 @@ class bcrypt_Tests(unittest.TestCase):
 
         for _idx, (password, cost, salt64, result) in enumerate(tvs):
             x = bcrypt(password, cost, salt=_bcrypt_decode(salt64))
-            self.assertEqual(x, result)
+            assert x == result
             bcrypt_check(password, result)
 
     def test_random_password_and_salt_long_pw(self):
@@ -531,7 +523,7 @@ class bcrypt_Tests(unittest.TestCase):
 
         for _idx, (password, cost, salt64, result) in enumerate(tvs):
             x = bcrypt(password, cost, salt=_bcrypt_decode(salt64))
-            self.assertEqual(x, result)
+            assert x == result
             bcrypt_check(password, result)
 
     def test_same_password_and_random_salt(self):
@@ -559,7 +551,7 @@ class bcrypt_Tests(unittest.TestCase):
 
         for _idx, (password, cost, salt64, result) in enumerate(tvs):
             x = bcrypt(password, cost, salt=_bcrypt_decode(salt64))
-            self.assertEqual(x, result)
+            assert x == result
             bcrypt_check(password, result)
 
     def test_same_password_and_salt_increasing_cost_factor(self):
@@ -579,7 +571,7 @@ class bcrypt_Tests(unittest.TestCase):
 
         for _idx, (password, cost, salt64, result) in enumerate(tvs):
             x = bcrypt(password, cost, salt=_bcrypt_decode(salt64))
-            self.assertEqual(x, result)
+            assert x == result
             bcrypt_check(password, result)
 
     def test_long_passwords(self):
@@ -607,7 +599,7 @@ class bcrypt_Tests(unittest.TestCase):
 
         for _idx, (password, cost, salt64, result) in enumerate(tvs):
             x = bcrypt(password, cost, salt=_bcrypt_decode(salt64))
-            self.assertEqual(x, result)
+            assert x == result
             bcrypt_check(password, result)
 
     def test_increasing_password_length(self):
@@ -635,7 +627,7 @@ class bcrypt_Tests(unittest.TestCase):
 
         for _idx, (password, cost, salt64, result) in enumerate(tvs):
             x = bcrypt(password, cost, salt=_bcrypt_decode(salt64))
-            self.assertEqual(x, result)
+            assert x == result
             bcrypt_check(password, result)
 
     def test_non_ascii_characters(self):
@@ -661,7 +653,7 @@ class bcrypt_Tests(unittest.TestCase):
 
         for _idx, (password, cost, salt64, result) in enumerate(tvs):
             x = bcrypt(password, cost, salt=_bcrypt_decode(salt64))
-            self.assertEqual(x, result)
+            assert x == result
             bcrypt_check(password, result)
 
     def test_special_case_salt(self):
@@ -685,49 +677,49 @@ class bcrypt_Tests(unittest.TestCase):
 
         for _idx, (password, cost, salt64, result) in enumerate(tvs):
             x = bcrypt(password, cost, salt=_bcrypt_decode(salt64))
-            self.assertEqual(x, result)
+            assert x == result
             bcrypt_check(password, result)
 
 
-class TestVectorsHKDFWycheproof(unittest.TestCase):
+def _load_tests_hkdf(filename):
+
+    def filter_algo(root):
+        algo_name = root["algorithm"]
+        if algo_name == "HKDF-SHA-1":
+            return SHA1
+        elif algo_name == "HKDF-SHA-256":
+            return SHA256
+        elif algo_name == "HKDF-SHA-384":
+            return SHA384
+        elif algo_name == "HKDF-SHA-512":
+            return SHA512
+        else:
+            raise ValueError("Unknown algorithm " + algo_name)
+
+    def filter_size(unit):
+        return int(unit["size"])
+
+    result = load_test_vectors_wycheproof(
+        ("Protocol", "wycheproof"),
+        filename,
+        "Wycheproof HMAC (%s)" % filename,
+        root_tag={"hash_module": filter_algo},
+        unit_tag={"size": filter_size},
+    )
+    return result
+
+
+def load_wycheproof_vectors_hkdf():
+    vectors = []
+    vectors += _load_tests_hkdf("hkdf_sha1_test.json")
+    vectors += _load_tests_hkdf("hkdf_sha256_test.json")
+    vectors += _load_tests_hkdf("hkdf_sha384_test.json")
+    vectors += _load_tests_hkdf("hkdf_sha512_test.json")
+    return vectors
+
+
+class TestVectorsHKDFWycheproof:
     _id = "None"
-
-    def add_tests(self, filename):
-
-        def filter_algo(root):
-            algo_name = root["algorithm"]
-            if algo_name == "HKDF-SHA-1":
-                return SHA1
-            elif algo_name == "HKDF-SHA-256":
-                return SHA256
-            elif algo_name == "HKDF-SHA-384":
-                return SHA384
-            elif algo_name == "HKDF-SHA-512":
-                return SHA512
-            else:
-                raise ValueError("Unknown algorithm " + algo_name)
-
-        def filter_size(unit):
-            return int(unit["size"])
-
-        result = load_test_vectors_wycheproof(
-            ("Protocol", "wycheproof"),
-            filename,
-            "Wycheproof HMAC (%s)" % filename,
-            root_tag={"hash_module": filter_algo},
-            unit_tag={"size": filter_size},
-        )
-        return result
-
-    def setUp(self):
-        self.tv = []
-        self.add_tests("hkdf_sha1_test.json")
-        self.add_tests("hkdf_sha256_test.json")
-        self.add_tests("hkdf_sha384_test.json")
-        self.add_tests("hkdf_sha512_test.json")
-
-    def shortDescription(self):
-        return self._id
 
     def warn(self, tv):
         if tv.warning and wycheproof_warnings():
@@ -749,40 +741,16 @@ class TestVectorsHKDFWycheproof(unittest.TestCase):
                 assert tv.valid
                 self.warn(tv)
 
-    def runTest(self):
-        for tv in self.tv:
-            self.check_verify(tv)
+    @pytest.mark.parametrize("tv", load_wycheproof_vectors_hkdf(), ids=wycheproof_id)
+    def test(self, tv):
+        self.check_verify(tv)
 
 
 def load_hash_by_name(hash_name):
     return __import__("Crypto.Hash." + hash_name, globals(), locals(), ["new"])
 
 
-class SP800_108_Counter_Tests(unittest.TestCase):
-    def test_negative_zeroes(self):
-        def prf(s, x):
-            return HMAC.new(s, x, SHA256).digest()
-
-        try:
-            _ = SP800_108_Counter(b"0" * 16, 1, prf, label=b"A\x00B")
-        except ValueError:
-            self.fail("SP800_108_Counter failed with zero in label")
-        self.assertRaises(ValueError, SP800_108_Counter, b"0" * 16, 1, prf, context=b"A\x00B")
-
-    def test_multiple_keys(self):
-        def prf(s, x):
-            return HMAC.new(s, x, SHA256).digest()
-
-        key = b"0" * 16
-        expected = SP800_108_Counter(key, 2 * 3 * 23, prf)
-        for r in (1, 2, 3, 23):
-            dks = SP800_108_Counter(key, r, prf, 138 // r)
-            self.assertEqual(len(dks), 138 // r)
-            self.assertEqual(len(dks[0]), r)
-            self.assertEqual(b"".join(dks), expected)
-
-
-def add_tests_sp800_108_counter(cls):
+def _load_sp800_108_counter_vectors():
 
     test_vectors_sp800_108_counter = (
         load_test_vectors(
@@ -794,6 +762,7 @@ def add_tests_sp800_108_counter(cls):
         or []
     )
 
+    params = []
     mac_type = None
     for idx, tv in enumerate(test_vectors_sp800_108_counter):
         if isinstance(tv, str):
@@ -820,14 +789,36 @@ def add_tests_sp800_108_counter(cls):
 
             continue
 
-        def kdf_test(
-            self, prf=prf, kin=tv.kin, label=tv.label, context=tv.context, kout=tv.kout, count=tv.count
-        ):
-            result = SP800_108_Counter(kin, len(kout), prf, 1, label, context)
-            assert len(result) == len(kout)
-            self.assertEqual(result, kout)
-
-        setattr(cls, "test_kdf_sp800_108_counter_%d" % idx, kdf_test)
+        params.append(pytest.param(prf, tv.kin, tv.label, tv.context, tv.kout, id=str(idx)))
+    return params
 
 
-add_tests_sp800_108_counter(SP800_108_Counter_Tests)
+class TestSP800_108_Counter:
+    def test_negative_zeroes(self):
+        def prf(s, x):
+            return HMAC.new(s, x, SHA256).digest()
+
+        try:
+            _ = SP800_108_Counter(b"0" * 16, 1, prf, label=b"A\x00B")
+        except ValueError:
+            pytest.fail("SP800_108_Counter failed with zero in label")
+        with pytest.raises(ValueError):
+            SP800_108_Counter(b"0" * 16, 1, prf, context=b"A\x00B")
+
+    def test_multiple_keys(self):
+        def prf(s, x):
+            return HMAC.new(s, x, SHA256).digest()
+
+        key = b"0" * 16
+        expected = SP800_108_Counter(key, 2 * 3 * 23, prf)
+        for r in (1, 2, 3, 23):
+            dks = SP800_108_Counter(key, r, prf, 138 // r)
+            assert len(dks) == 138 // r
+            assert len(dks[0]) == r
+            assert b"".join(dks) == expected
+
+    @pytest.mark.parametrize("prf, kin, label, context, kout", _load_sp800_108_counter_vectors())
+    def test_kdf_sp800_108_counter(self, prf, kin, label, context, kout):
+        result = SP800_108_Counter(kin, len(kout), prf, 1, label, context)
+        assert len(result) == len(kout)
+        assert result == kout

@@ -23,7 +23,7 @@
 
 """Self-test suite for Crypto.PublicKey.DSA"""
 
-import unittest
+import pytest
 
 from Crypto.SelfTest.st_common import a2b_hex, b2a_hex
 
@@ -36,7 +36,7 @@ def _sws(s):
         return b"".join(s.split())
 
 
-class DSATest(unittest.TestCase):
+class TestDSA:
     # Test vector from "Appendix 5. Example of the DSA" of
     # "Digital Signature Standard (DSS)",
     # U.S. Department of Commerce/National Institute of Standards and Technology
@@ -66,7 +66,7 @@ class DSATest(unittest.TestCase):
     r = _sws("""8bac1ab6 6410435c b7181f95 b16ab97c 92b341c0""")
     s = _sws("""41e2345f 1f56df24 58f426d1 55b4ba2d b6dcd8c8""")
 
-    def setUp(self):
+    def setup_method(self):
         global DSA, Random, bytes_to_long, size
         from Crypto import Random
         from Crypto.PublicKey import DSA
@@ -106,62 +106,68 @@ class DSATest(unittest.TestCase):
     def test_construct_bad_key4(self):
         (y, g, p, q) = (bytes_to_long(a2b_hex(param)) for param in (self.y, self.g, self.p, self.q))
         tup = (y, g, p + 1, q)
-        self.assertRaises(ValueError, self.dsa.construct, tup)
+        with pytest.raises(ValueError):
+            self.dsa.construct(tup)
 
         tup = (y, g, p, q + 1)
-        self.assertRaises(ValueError, self.dsa.construct, tup)
+        with pytest.raises(ValueError):
+            self.dsa.construct(tup)
 
         tup = (y, 1, p, q)
-        self.assertRaises(ValueError, self.dsa.construct, tup)
+        with pytest.raises(ValueError):
+            self.dsa.construct(tup)
 
     def test_construct_bad_key5(self):
         (y, g, p, q, x) = (
             bytes_to_long(a2b_hex(param)) for param in (self.y, self.g, self.p, self.q, self.x)
         )
         tup = (y, g, p, q, x + 1)
-        self.assertRaises(ValueError, self.dsa.construct, tup)
+        with pytest.raises(ValueError):
+            self.dsa.construct(tup)
 
         tup = (y, g, p, q, q + 10)
-        self.assertRaises(ValueError, self.dsa.construct, tup)
+        with pytest.raises(ValueError):
+            self.dsa.construct(tup)
 
     def _check_private_key(self, dsaObj):
         # Check capabilities
-        self.assertEqual(1, dsaObj.has_private())
-        self.assertEqual(1, dsaObj.can_sign())
-        self.assertEqual(0, dsaObj.can_encrypt())
+        assert dsaObj.has_private() == 1
+        assert dsaObj.can_sign() == 1
+        assert dsaObj.can_encrypt() == 0
 
         # Sanity check key data
-        self.assertEqual(1, dsaObj.p > dsaObj.q)  # p > q
-        self.assertEqual(160, size(dsaObj.q))  # size(q) == 160 bits
-        self.assertEqual(0, (dsaObj.p - 1) % dsaObj.q)  # q is a divisor of p-1
-        self.assertEqual(dsaObj.y, pow(dsaObj.g, dsaObj.x, dsaObj.p))  # y == g**x mod p
-        self.assertEqual(1, 0 < dsaObj.x < dsaObj.q)  # 0 < x < q
+        assert (dsaObj.p > dsaObj.q) == 1  # p > q
+        assert size(dsaObj.q) == 160  # size(q) == 160 bits
+        assert (dsaObj.p - 1) % dsaObj.q == 0  # q is a divisor of p-1
+        assert dsaObj.y == pow(dsaObj.g, dsaObj.x, dsaObj.p)  # y == g**x mod p
+        assert (0 < dsaObj.x < dsaObj.q) == 1  # 0 < x < q
 
     def _check_public_key(self, dsaObj):
         k = bytes_to_long(a2b_hex(self.k))
         m_hash = bytes_to_long(a2b_hex(self.m_hash))
 
         # Check capabilities
-        self.assertEqual(0, dsaObj.has_private())
-        self.assertEqual(1, dsaObj.can_sign())
-        self.assertEqual(0, dsaObj.can_encrypt())
+        assert dsaObj.has_private() == 0
+        assert dsaObj.can_sign() == 1
+        assert dsaObj.can_encrypt() == 0
 
         # Check that private parameters are all missing
-        self.assertEqual(0, hasattr(dsaObj, "x"))
+        assert hasattr(dsaObj, "x") == 0
 
         # Sanity check key data
-        self.assertEqual(1, dsaObj.p > dsaObj.q)  # p > q
-        self.assertEqual(160, size(dsaObj.q))  # size(q) == 160 bits
-        self.assertEqual(0, (dsaObj.p - 1) % dsaObj.q)  # q is a divisor of p-1
+        assert (dsaObj.p > dsaObj.q) == 1  # p > q
+        assert size(dsaObj.q) == 160  # size(q) == 160 bits
+        assert (dsaObj.p - 1) % dsaObj.q == 0  # q is a divisor of p-1
 
         # Public-only key objects should raise an error when .sign() is called
-        self.assertRaises(TypeError, dsaObj._sign, m_hash, k)
+        with pytest.raises(TypeError):
+            dsaObj._sign(m_hash, k)
 
         # Check __eq__ and __ne__
-        self.assertEqual(dsaObj.public_key() == dsaObj.public_key(), True)  # assert_
-        self.assertEqual(dsaObj.public_key() != dsaObj.public_key(), False)  # assertFalse
+        assert dsaObj.public_key() == dsaObj.public_key()
+        assert not (dsaObj.public_key() != dsaObj.public_key())  # noqa: SIM202 (tests __ne__)
 
-        self.assertEqual(dsaObj.public_key(), dsaObj.publickey())
+        assert dsaObj.public_key() == dsaObj.publickey()
 
     def _test_signing(self, dsaObj):
         k = bytes_to_long(a2b_hex(self.k))
@@ -169,14 +175,14 @@ class DSATest(unittest.TestCase):
         r = bytes_to_long(a2b_hex(self.r))
         s = bytes_to_long(a2b_hex(self.s))
         (r_out, s_out) = dsaObj._sign(m_hash, k)
-        self.assertEqual((r, s), (r_out, s_out))
+        assert (r, s) == (r_out, s_out)
 
     def _test_verification(self, dsaObj):
         m_hash = bytes_to_long(a2b_hex(self.m_hash))
         r = bytes_to_long(a2b_hex(self.r))
         s = bytes_to_long(a2b_hex(self.s))
-        self.assertTrue(dsaObj._verify(m_hash, (r, s)))
-        self.assertFalse(dsaObj._verify(m_hash + 1, (r, s)))
+        assert dsaObj._verify(m_hash, (r, s))
+        assert not dsaObj._verify(m_hash + 1, (r, s))
 
     def test_repr(self):
         (y, g, p, q) = (bytes_to_long(a2b_hex(param)) for param in (self.y, self.g, self.p, self.q))
@@ -184,18 +190,18 @@ class DSATest(unittest.TestCase):
         repr(dsaObj)
 
 
-class DSADomainTest(unittest.TestCase):
+class TestDSADomain:
     def test_domain1(self):
         """Verify we can generate new keys in a given domain"""
         dsa_key_1 = DSA.generate(1024)
         domain_params = dsa_key_1.domain()
 
         dsa_key_2 = DSA.generate(1024, domain=domain_params)
-        self.assertEqual(dsa_key_1.p, dsa_key_2.p)
-        self.assertEqual(dsa_key_1.q, dsa_key_2.q)
-        self.assertEqual(dsa_key_1.g, dsa_key_2.g)
+        assert dsa_key_1.p == dsa_key_2.p
+        assert dsa_key_1.q == dsa_key_2.q
+        assert dsa_key_1.g == dsa_key_2.g
 
-        self.assertEqual(dsa_key_1.domain(), dsa_key_2.domain())
+        assert dsa_key_1.domain() == dsa_key_2.domain()
 
     def _get_weak_domain(self):
 
@@ -222,11 +228,13 @@ class DSADomainTest(unittest.TestCase):
         """Verify that domain parameters with composite q are rejected"""
 
         domain_params = self._get_weak_domain()
-        self.assertRaises(ValueError, DSA.generate, 1024, domain=domain_params)
+        with pytest.raises(ValueError):
+            DSA.generate(1024, domain=domain_params)
 
     def test_construct_error_weak_domain(self):
         """Verify that domain parameters with composite q are rejected"""
 
         p, q, g = self._get_weak_domain()
         y = pow(g, 89, p)
-        self.assertRaises(ValueError, DSA.construct, (y, g, p, q))
+        with pytest.raises(ValueError):
+            DSA.construct((y, g, p, q))

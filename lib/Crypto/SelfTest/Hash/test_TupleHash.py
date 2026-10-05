@@ -1,5 +1,6 @@
-import unittest
 from binascii import hexlify, unhexlify
+
+import pytest
 
 from Crypto.Hash import TupleHash128, TupleHash256
 from Crypto.Util._bytes import tobytes
@@ -15,38 +16,42 @@ class TupleHashTest:
         for new_func in self.TupleHash.new, h.new:
             for dbits in range(64, 1024 + 1, 8):
                 hobj = new_func(digest_bits=dbits)
-                self.assertEqual(hobj.digest_size * 8, dbits)
+                assert hobj.digest_size * 8 == dbits
 
             for dbytes in range(8, 128 + 1):
                 hobj = new_func(digest_bytes=dbytes)
-                self.assertEqual(hobj.digest_size, dbytes)
+                assert hobj.digest_size == dbytes
 
         hobj = h.new()
-        self.assertEqual(hobj.digest_size, self.default_bytes)
+        assert hobj.digest_size == self.default_bytes
 
     def test_new_same_variant(self):
         # The new() method must create an object of the same variant
         h = self.new()
         digest1 = h.new(custom=b"c").update(b"abc").digest()
         digest2 = self.TupleHash.new(custom=b"c").update(b"abc").digest()
-        self.assertEqual(digest1, digest2)
+        assert digest1 == digest2
 
     def test_new_negative(self):
 
         h = self.new()
         for new_func in self.TupleHash.new, h.new:
-            self.assertRaises(
-                TypeError, new_func, digest_bytes=self.minimum_bytes, digest_bits=self.minimum_bits
-            )
-            self.assertRaises(ValueError, new_func, digest_bytes=0)
-            self.assertRaises(ValueError, new_func, digest_bits=self.minimum_bits + 7)
-            self.assertRaises(ValueError, new_func, digest_bits=self.minimum_bits - 8)
-            self.assertRaises(ValueError, new_func, digest_bits=self.minimum_bytes - 1)
-            self.assertRaises(TypeError, new_func, costum=b"x")
+            with pytest.raises(TypeError):
+                new_func(digest_bytes=self.minimum_bytes, digest_bits=self.minimum_bits)
+            with pytest.raises(ValueError):
+                new_func(digest_bytes=0)
+            with pytest.raises(ValueError):
+                new_func(digest_bits=self.minimum_bits + 7)
+            with pytest.raises(ValueError):
+                new_func(digest_bits=self.minimum_bits - 8)
+            with pytest.raises(ValueError):
+                new_func(digest_bits=self.minimum_bytes - 1)
+            with pytest.raises(TypeError):
+                new_func(costum=b"x")
 
     def test_default_digest_size(self):
         digest = self.new().digest()
-        self.assertEqual(len(digest), self.default_bytes)
+        assert len(digest) == self.default_bytes
 
     def test_update(self):
         h = self.new()
@@ -63,31 +68,34 @@ class TupleHashTest:
         h.update(b"STRING1")
         h.update(b"STRING2")
         mac2 = h.digest()
-        self.assertNotEqual(mac1, mac2)
+        assert mac1 != mac2
 
         h = self.new()
         h.update(b"STRING1", b"STRING2")
-        self.assertEqual(mac2, h.digest())
+        assert mac2 == h.digest()
 
         h = self.new()
         t = b"STRING1", b"STRING2"
         h.update(*t)
-        self.assertEqual(mac2, h.digest())
+        assert mac2 == h.digest()
 
     def test_update_negative(self):
         h = self.new()
-        self.assertRaises(TypeError, h.update, "string")
-        self.assertRaises(TypeError, h.update, None)
-        self.assertRaises(TypeError, h.update, (b"STRING1", b"STRING2"))
+        with pytest.raises(TypeError):
+            h.update("string")
+        with pytest.raises(TypeError):
+            h.update(None)
+        with pytest.raises(TypeError):
+            h.update((b"STRING1", b"STRING2"))
 
     def test_digest(self):
         h = self.new()
         digest = h.digest()
 
         # hexdigest does not change the state
-        self.assertEqual(h.digest(), digest)
+        assert h.digest() == digest
         # digest returns a byte string
-        self.assertTrue(isinstance(digest, bytes))
+        assert isinstance(digest, bytes)
 
     def test_update_after_digest(self):
         msg = b"rrrrttt"
@@ -96,7 +104,8 @@ class TupleHashTest:
         h = self.new()
         h.update(msg)
         dig1 = h.digest()
-        self.assertRaises(TypeError, h.update, dig1)
+        with pytest.raises(TypeError):
+            h.update(dig1)
 
     def test_hex_digest(self):
         mac = self.new()
@@ -104,11 +113,11 @@ class TupleHashTest:
         hexdigest = mac.hexdigest()
 
         # hexdigest is equivalent to digest
-        self.assertEqual(hexlify(digest), tobytes(hexdigest))
+        assert hexlify(digest) == tobytes(hexdigest)
         # hexdigest does not change the state
-        self.assertEqual(mac.hexdigest(), hexdigest)
+        assert mac.hexdigest() == hexdigest
         # hexdigest returns a string
-        self.assertTrue(isinstance(hexdigest, str))
+        assert isinstance(hexdigest, str)
 
     def test_bytearray(self):
 
@@ -123,7 +132,7 @@ class TupleHashTest:
         h2.update(data_ba)
         data_ba[:1] = b"\xff"
 
-        self.assertEqual(h1.digest(), h2.digest())
+        assert h1.digest() == h2.digest()
 
     def test_memoryview(self):
 
@@ -146,10 +155,10 @@ class TupleHashTest:
             if not data_mv.readonly:
                 data_mv[:1] = b"\xff"
 
-            self.assertEqual(h1.digest(), h2.digest())
+            assert h1.digest() == h2.digest()
 
 
-class TupleHash128Test(TupleHashTest, unittest.TestCase):
+class TestTupleHash128(TupleHashTest):
     TupleHash = TupleHash128
 
     minimum_bytes = 8
@@ -159,7 +168,7 @@ class TupleHash128Test(TupleHashTest, unittest.TestCase):
     default_bits = 512
 
 
-class TupleHash256Test(TupleHashTest, unittest.TestCase):
+class TestTupleHash256(TupleHashTest):
     TupleHash = TupleHash256
 
     minimum_bytes = 8
@@ -169,7 +178,7 @@ class TupleHash256Test(TupleHashTest, unittest.TestCase):
     default_bits = 512
 
 
-class NISTExampleTestVectors(unittest.TestCase):
+class TestNISTExampleTestVectors:
     # http://csrc.nist.gov/groups/ST/toolkit/documents/Examples/TupleHash_samples.pdf
     test_data = [
         (
@@ -245,7 +254,7 @@ class NISTExampleTestVectors(unittest.TestCase):
         ),
     ]
 
-    def setUp(self):
+    def setup_method(self):
         td = []
         for tv_in in self.test_data:
             tv_out = [None] * len(tv_in)
@@ -261,7 +270,7 @@ class NISTExampleTestVectors(unittest.TestCase):
             td.append(tv_out)
         self.test_data = td
 
-    def runTest(self):
+    def test(self):
 
         for data, custom, digest, text, module in self.test_data:
             hd1 = module.new(custom=custom, digest_bytes=len(digest))
@@ -274,5 +283,5 @@ class NISTExampleTestVectors(unittest.TestCase):
             # One single update for all elements
             hd2.update(*data)
 
-            self.assertEqual(hd1.digest(), digest, msg=text)
-            self.assertEqual(hd2.digest(), digest, msg=text)
+            assert hd1.digest() == digest, text
+            assert hd2.digest() == digest, text

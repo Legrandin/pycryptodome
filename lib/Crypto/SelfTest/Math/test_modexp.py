@@ -33,7 +33,7 @@
 
 """Self-test for the custom module exponentiation"""
 
-import unittest
+import pytest
 
 from Crypto.Hash import SHAKE128
 from Crypto.Math._IntegerCustom import _raw_montgomery
@@ -78,39 +78,42 @@ exponent1 = 0x2CE0AF628901460A419A08EF950D498B9FD6F271A1A52AC293B86FE5C60EFE8E8B
 modulus1 = 0xD66691B20071BE4D66D4B71032B37FA007CFABF579FCB91E50BFC2753B3F0CE7BE74E216AEF7E26D4AE180BC20D7BD3EA88A6CBF6F87380E613C8979B5B043B200A8FF8856A3B12875E36E98A7569F3852D028E967551000B02C19E9FA52E83115B89309AABB1E1CF1E2CB6369D637D46775CE4523EA31F64AD2794CBC365DD8A35E007ED3B57695877FBF102DBEB8B3212491398E494314E93726926E1383F8ABB5889BEA954EB8C0CA1C62C8E9D83F41888095C5E645ED6D32515FE0C58C1368CAD84694E18DA43668C6F43E61D7C9BCA633DDCDA7AEF5B79BC396D4A9F48E2A9ABE0836CC455E435305357228E93D25AAED46B952DEFAE0F57339BF26F5A9
 
 
-class TestModExp(unittest.TestCase):
+class TestModExp:
     def test_small(self):
-        self.assertEqual(1, monty_pow(11, 12, 19))
+        assert monty_pow(11, 12, 19) == 1
 
     def test_large_1(self):
         base = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
         expected = pow(base, exponent1, modulus1)
         result = monty_pow(base, exponent1, modulus1)
-        self.assertEqual(result, expected)
+        assert result == expected
 
     def test_zero_exp(self):
         base = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
         result = monty_pow(base, 0, modulus1)
-        self.assertEqual(result, 1)
+        assert result == 1
 
     def test_zero_base(self):
         result = monty_pow(0, exponent1, modulus1)
-        self.assertEqual(result, 0)
+        assert result == 0
 
     def test_zero_modulus(self):
         base = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF
-        self.assertRaises(ExceptionModulus, monty_pow, base, exponent1, 0)
-        self.assertRaises(ExceptionModulus, monty_pow, 0, 0, 0)
+        with pytest.raises(ExceptionModulus):
+            monty_pow(base, exponent1, 0)
+        with pytest.raises(ExceptionModulus):
+            monty_pow(0, 0, 0)
 
     def test_larger_exponent(self):
         base = modulus1 - 0xFFFFFFF
         expected = pow(base, modulus1 << 64, modulus1)
         result = monty_pow(base, modulus1 << 64, modulus1)
-        self.assertEqual(result, expected)
+        assert result == expected
 
     def test_even_modulus(self):
         base = modulus1 >> 4
-        self.assertRaises(ExceptionModulus, monty_pow, base, exponent1, modulus1 - 1)
+        with pytest.raises(ExceptionModulus):
+            monty_pow(base, exponent1, modulus1 - 1)
 
     def test_several_lengths(self):
         prng = SHAKE128.new().update(b"Test")
@@ -121,7 +124,7 @@ class TestModExp(unittest.TestCase):
 
             expected = pow(base, exponent2, modulus2)
             result = monty_pow(base, exponent2, modulus2)
-            self.assertEqual(result, expected)
+            assert result == expected
 
     def test_variable_exponent(self):
         prng = create_rng(b"Test variable exponent")
@@ -133,13 +136,13 @@ class TestModExp(unittest.TestCase):
 
                 expected = pow(base, exponent, modulus)
                 result = monty_pow(base, exponent, modulus)
-                self.assertEqual(result, expected)
+                assert result == expected
 
                 exponent ^= (1 << (i * 8 + j)) - 1
 
                 expected = pow(base, exponent, modulus)
                 result = monty_pow(base, exponent, modulus)
-                self.assertEqual(result, expected)
+                assert result == expected
 
     def test_stress_63(self):
         prng = create_rng(b"Test 63")
@@ -151,7 +154,7 @@ class TestModExp(unittest.TestCase):
 
             expected = pow(base, exponent, modulus)
             result = monty_pow(base, exponent, modulus)
-            self.assertEqual(result, expected)
+            assert result == expected
 
     def test_stress_64(self):
         prng = create_rng(b"Test 64")
@@ -163,7 +166,7 @@ class TestModExp(unittest.TestCase):
 
             expected = pow(base, exponent, modulus)
             result = monty_pow(base, exponent, modulus)
-            self.assertEqual(result, expected)
+            assert result == expected
 
     def test_stress_65(self):
         prng = create_rng(b"Test 65")
@@ -175,4 +178,4 @@ class TestModExp(unittest.TestCase):
 
             expected = pow(base, exponent, modulus)
             result = monty_pow(base, exponent, modulus)
-            self.assertEqual(result, expected)
+            assert result == expected

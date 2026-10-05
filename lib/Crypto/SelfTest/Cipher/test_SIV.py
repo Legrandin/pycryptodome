@@ -28,12 +28,13 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-import unittest
 from binascii import unhexlify
+
+import pytest
 
 from Crypto.Cipher import AES
 from Crypto.Hash import SHAKE128
-from Crypto.SelfTest.loader import load_test_vectors_wycheproof
+from Crypto.SelfTest.loader import load_test_vectors_wycheproof, wycheproof_id
 from Crypto.Util._bytes import tobytes
 
 
@@ -41,7 +42,7 @@ def get_tag_random(tag, length):
     return SHAKE128.new(data=tobytes(tag)).read(length)
 
 
-class SivTests(unittest.TestCase):
+class TestSiv:
     key_256 = get_tag_random("key_256", 32)
     key_384 = get_tag_random("key_384", 48)
     key_512 = get_tag_random("key_512", 64)
@@ -56,7 +57,7 @@ class SivTests(unittest.TestCase):
 
             cipher = AES.new(key, AES.MODE_SIV, nonce=self.nonce_96)
             pt2 = cipher.decrypt_and_verify(ct, mac)
-            self.assertEqual(pt, pt2)
+            assert pt == pt2
 
     def test_nonce(self):
         # Deterministic encryption
@@ -67,14 +68,16 @@ class SivTests(unittest.TestCase):
 
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         ct2, tag2 = cipher.encrypt_and_digest(self.data)
-        self.assertEqual(ct1 + tag1, ct2 + tag2)
+        assert ct1 + tag1 == ct2 + tag2
 
     def test_nonce_must_be_bytes(self):
-        self.assertRaises(TypeError, AES.new, self.key_256, AES.MODE_SIV, nonce="test12345678")
+        with pytest.raises(TypeError):
+            AES.new(self.key_256, AES.MODE_SIV, nonce="test12345678")
 
     def test_nonce_length(self):
         # nonce can be of any length (but not empty)
-        self.assertRaises(ValueError, AES.new, self.key_256, AES.MODE_SIV, nonce=b"")
+        with pytest.raises(ValueError):
+            AES.new(self.key_256, AES.MODE_SIV, nonce=b"")
 
         for x in range(1, 128):
             cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=bytes([1]) * x)
@@ -82,18 +85,20 @@ class SivTests(unittest.TestCase):
 
     def test_block_size_128(self):
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
-        self.assertEqual(cipher.block_size, AES.block_size)
+        assert cipher.block_size == AES.block_size
 
     def test_nonce_attribute(self):
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
-        self.assertEqual(cipher.nonce, self.nonce_96)
+        assert cipher.nonce == self.nonce_96
 
         # By default, no nonce is randomly generated
-        self.assertFalse(hasattr(AES.new(self.key_256, AES.MODE_SIV), "nonce"))
+        assert not hasattr(AES.new(self.key_256, AES.MODE_SIV), "nonce")
 
     def test_unknown_parameters(self):
-        self.assertRaises(TypeError, AES.new, self.key_256, AES.MODE_SIV, self.nonce_96, 7)
-        self.assertRaises(TypeError, AES.new, self.key_256, AES.MODE_SIV, nonce=self.nonce_96, unknown=7)
+        with pytest.raises(TypeError):
+            AES.new(self.key_256, AES.MODE_SIV, self.nonce_96, 7)
+        with pytest.raises(TypeError):
+            AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96, unknown=7)
 
         # But some are only known by the base cipher
         # (e.g. use_aesni consumed by the AES module)
@@ -102,23 +107,27 @@ class SivTests(unittest.TestCase):
     def test_encrypt_excludes_decrypt(self):
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         cipher.encrypt_and_digest(self.data)
-        self.assertRaises(TypeError, cipher.decrypt, self.data)
+        with pytest.raises(TypeError):
+            cipher.decrypt(self.data)
 
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         cipher.encrypt_and_digest(self.data)
-        self.assertRaises(TypeError, cipher.decrypt_and_verify, self.data, self.data)
+        with pytest.raises(TypeError):
+            cipher.decrypt_and_verify(self.data, self.data)
 
     def test_data_must_be_bytes(self):
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
-        self.assertRaises(TypeError, cipher.encrypt, "test1234567890-*")
+        with pytest.raises(TypeError):
+            cipher.encrypt("test1234567890-*")
 
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
-        self.assertRaises(TypeError, cipher.decrypt_and_verify, "test1234567890-*", b"xxxx")
+        with pytest.raises(TypeError):
+            cipher.decrypt_and_verify("test1234567890-*", b"xxxx")
 
     def test_mac_len(self):
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         _, mac = cipher.encrypt_and_digest(self.data)
-        self.assertEqual(len(mac), 16)
+        assert len(mac) == 16
 
     def test_invalid_mac(self):
         from Crypto.Util.strxor import strxor_c
@@ -129,12 +138,13 @@ class SivTests(unittest.TestCase):
         invalid_mac = strxor_c(mac, 0x01)
 
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
-        self.assertRaises(ValueError, cipher.decrypt_and_verify, ct, invalid_mac)
+        with pytest.raises(ValueError):
+            cipher.decrypt_and_verify(ct, invalid_mac)
 
     def test_hex_mac(self):
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         mac_hex = cipher.hexdigest()
-        self.assertEqual(cipher.digest(), unhexlify(mac_hex))
+        assert cipher.digest() == unhexlify(mac_hex)
 
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         cipher.hexverify(mac_hex)
@@ -158,9 +168,9 @@ class SivTests(unittest.TestCase):
         header[:3] = b"\xff\xff\xff"
         ct_test, tag_test = cipher2.encrypt_and_digest(data)
 
-        self.assertEqual(ct, ct_test)
-        self.assertEqual(tag, tag_test)
-        self.assertEqual(cipher1.nonce, cipher2.nonce)
+        assert ct == ct_test
+        assert tag == tag_test
+        assert cipher1.nonce == cipher2.nonce
 
         # Decrypt
         key = bytearray(self.key_256)
@@ -176,7 +186,7 @@ class SivTests(unittest.TestCase):
         header[:3] = b"\xff\xff\xff"
         pt_test = cipher3.decrypt_and_verify(ct_ba, tag_ba)
 
-        self.assertEqual(self.data, pt_test)
+        assert self.data == pt_test
 
     def test_memoryview(self):
 
@@ -197,9 +207,9 @@ class SivTests(unittest.TestCase):
         header[:3] = b"\xff\xff\xff"
         ct_test, tag_test = cipher2.encrypt_and_digest(data)
 
-        self.assertEqual(ct, ct_test)
-        self.assertEqual(tag, tag_test)
-        self.assertEqual(cipher1.nonce, cipher2.nonce)
+        assert ct == ct_test
+        assert tag == tag_test
+        assert cipher1.nonce == cipher2.nonce
 
         # Decrypt
         key = memoryview(bytearray(self.key_256))
@@ -215,7 +225,7 @@ class SivTests(unittest.TestCase):
         header[:3] = b"\xff\xff\xff"
         pt_test = cipher3.decrypt_and_verify(ct_ba, tag_ba)
 
-        self.assertEqual(self.data, pt_test)
+        assert self.data == pt_test
 
     def test_output_param(self):
 
@@ -226,14 +236,14 @@ class SivTests(unittest.TestCase):
         output = bytearray(128)
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         res, tag_out = cipher.encrypt_and_digest(pt, output=output)
-        self.assertEqual(ct, output)
-        self.assertEqual(res, None)
-        self.assertEqual(tag, tag_out)
+        assert ct == output
+        assert res is None
+        assert tag == tag_out
 
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         res = cipher.decrypt_and_verify(ct, tag, output=output)
-        self.assertEqual(pt, output)
-        self.assertEqual(res, None)
+        assert pt == output
+        assert res is None
 
     def test_output_param_memoryview(self):
 
@@ -244,11 +254,11 @@ class SivTests(unittest.TestCase):
         output = memoryview(bytearray(128))
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         cipher.encrypt_and_digest(pt, output=output)
-        self.assertEqual(ct, output)
+        assert ct == output
 
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         cipher.decrypt_and_verify(ct, tag, output=output)
-        self.assertEqual(pt, output)
+        assert pt == output
 
     def test_output_param_neg(self):
         LEN_PT = 128
@@ -258,19 +268,23 @@ class SivTests(unittest.TestCase):
         ct, tag = cipher.encrypt_and_digest(pt)
 
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
-        self.assertRaises(TypeError, cipher.encrypt_and_digest, pt, output=b"0" * LEN_PT)
+        with pytest.raises(TypeError):
+            cipher.encrypt_and_digest(pt, output=b"0" * LEN_PT)
 
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
-        self.assertRaises(TypeError, cipher.decrypt_and_verify, ct, tag, output=b"0" * LEN_PT)
+        with pytest.raises(TypeError):
+            cipher.decrypt_and_verify(ct, tag, output=b"0" * LEN_PT)
 
         shorter_output = bytearray(LEN_PT - 1)
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
-        self.assertRaises(ValueError, cipher.encrypt_and_digest, pt, output=shorter_output)
+        with pytest.raises(ValueError):
+            cipher.encrypt_and_digest(pt, output=shorter_output)
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
-        self.assertRaises(ValueError, cipher.decrypt_and_verify, ct, tag, output=shorter_output)
+        with pytest.raises(ValueError):
+            cipher.decrypt_and_verify(ct, tag, output=shorter_output)
 
 
-class SivFSMTests(unittest.TestCase):
+class TestSivFSM:
     key_256 = get_tag_random("key_256", 32)
     nonce_96 = get_tag_random("nonce_96", 12)
     data = get_tag_random("data", 128)
@@ -278,12 +292,14 @@ class SivFSMTests(unittest.TestCase):
     def test_invalid_init_encrypt(self):
         # Path INIT->ENCRYPT fails
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
-        self.assertRaises(TypeError, cipher.encrypt, b"xxx")
+        with pytest.raises(TypeError):
+            cipher.encrypt(b"xxx")
 
     def test_invalid_init_decrypt(self):
         # Path INIT->DECRYPT fails
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
-        self.assertRaises(TypeError, cipher.decrypt, b"xxx")
+        with pytest.raises(TypeError):
+            cipher.decrypt(b"xxx")
 
     def test_valid_init_update_digest_verify(self):
         # No plaintext, fixed authenticated data
@@ -316,7 +332,7 @@ class SivFSMTests(unittest.TestCase):
         cipher.update(self.data)
         first_mac = cipher.digest()
         for _x in range(4):
-            self.assertEqual(first_mac, cipher.digest())
+            assert first_mac == cipher.digest()
 
         # Multiple calls to verify
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
@@ -334,12 +350,13 @@ class SivFSMTests(unittest.TestCase):
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         cipher.update(self.data)
         pt = cipher.decrypt_and_verify(ct, mac)
-        self.assertEqual(self.data, pt)
+        assert self.data == pt
 
     def test_invalid_multiple_encrypt_and_digest(self):
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         _ct, _tag = cipher.encrypt_and_digest(self.data)
-        self.assertRaises(TypeError, cipher.encrypt_and_digest, b"")
+        with pytest.raises(TypeError):
+            cipher.encrypt_and_digest(b"")
 
     def test_invalid_multiple_decrypt_and_verify(self):
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
@@ -347,7 +364,8 @@ class SivFSMTests(unittest.TestCase):
 
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         cipher.decrypt_and_verify(ct, tag)
-        self.assertRaises(TypeError, cipher.decrypt_and_verify, ct, tag)
+        with pytest.raises(TypeError):
+            cipher.decrypt_and_verify(ct, tag)
 
 
 def transform(tv):
@@ -361,7 +379,7 @@ def transform(tv):
     return new_tv
 
 
-class TestVectors(unittest.TestCase):
+class TestVectors:
     """Class exercising the SIV test vectors found in RFC5297"""
 
     # This is a list of tuples with 5 items:
@@ -399,34 +417,32 @@ class TestVectors(unittest.TestCase):
 
     test_vectors = [transform(tv) for tv in test_vectors_hex]
 
-    def runTest(self):
+    def test(self):
         for assoc_data, pt, ct, mac, key, nonce in self.test_vectors:
             # Encrypt
             cipher = AES.new(key, AES.MODE_SIV, nonce=nonce)
             for x in assoc_data:
                 cipher.update(x)
             ct2, mac2 = cipher.encrypt_and_digest(pt)
-            self.assertEqual(ct, ct2)
-            self.assertEqual(mac, mac2)
+            assert ct == ct2
+            assert mac == mac2
 
             # Decrypt
             cipher = AES.new(key, AES.MODE_SIV, nonce=nonce)
             for x in assoc_data:
                 cipher.update(x)
             pt2 = cipher.decrypt_and_verify(ct, mac)
-            self.assertEqual(pt, pt2)
+            assert pt == pt2
 
 
-class TestVectorsWycheproof(unittest.TestCase):
+def load_wycheproof_vectors_siv():
+    return load_test_vectors_wycheproof(
+        ("Cipher", "wycheproof"), "aes_siv_cmac_test.json", "Wycheproof AES SIV"
+    )
+
+
+class TestVectorsWycheproof:
     _id = "None"
-
-    def setUp(self):
-        self.tv = load_test_vectors_wycheproof(
-            ("Cipher", "wycheproof"), "aes_siv_cmac_test.json", "Wycheproof AES SIV"
-        )
-
-    def shortDescription(self):
-        return self._id
 
     def check_encrypt(self, tv):
         self._id = "Wycheproof Encrypt AES-SIV Test #" + str(tv.id)
@@ -435,7 +451,7 @@ class TestVectorsWycheproof(unittest.TestCase):
         cipher.update(tv.aad)
         ct, tag = cipher.encrypt_and_digest(tv.msg)
         if tv.valid:
-            self.assertEqual(tag + ct, tv.ct)
+            assert tag + ct == tv.ct
 
     def check_decrypt(self, tv):
         self._id = "Wycheproof Decrypt AES_SIV Test #" + str(tv.id)
@@ -448,25 +464,23 @@ class TestVectorsWycheproof(unittest.TestCase):
             assert not tv.valid
         else:
             assert tv.valid
-            self.assertEqual(pt, tv.msg)
+            assert pt == tv.msg
 
-    def runTest(self):
+    @pytest.mark.parametrize("tv", load_wycheproof_vectors_siv(), ids=wycheproof_id)
+    def test(self, tv):
 
-        for tv in self.tv:
-            self.check_encrypt(tv)
-            self.check_decrypt(tv)
+        self.check_encrypt(tv)
+        self.check_decrypt(tv)
 
 
-class TestVectorsWycheproof2(unittest.TestCase):
+def load_wycheproof_vectors_aead_siv():
+    return load_test_vectors_wycheproof(
+        ("Cipher", "wycheproof"), "aead_aes_siv_cmac_test.json", "Wycheproof AEAD SIV"
+    )
+
+
+class TestVectorsWycheproof2:
     _id = "None"
-
-    def setUp(self):
-        self.tv = load_test_vectors_wycheproof(
-            ("Cipher", "wycheproof"), "aead_aes_siv_cmac_test.json", "Wycheproof AEAD SIV"
-        )
-
-    def shortDescription(self):
-        return self._id
 
     def check_encrypt(self, tv):
         self._id = "Wycheproof Encrypt AEAD-AES-SIV Test #" + str(tv.id)
@@ -475,8 +489,8 @@ class TestVectorsWycheproof2(unittest.TestCase):
         cipher.update(tv.aad)
         ct, tag = cipher.encrypt_and_digest(tv.msg)
         if tv.valid:
-            self.assertEqual(ct, tv.ct)
-            self.assertEqual(tag, tv.tag)
+            assert ct == tv.ct
+            assert tag == tv.tag
 
     def check_decrypt(self, tv):
         self._id = "Wycheproof Decrypt AEAD-AES-SIV Test #" + str(tv.id)
@@ -489,10 +503,10 @@ class TestVectorsWycheproof2(unittest.TestCase):
             assert not tv.valid
         else:
             assert tv.valid
-            self.assertEqual(pt, tv.msg)
+            assert pt == tv.msg
 
-    def runTest(self):
+    @pytest.mark.parametrize("tv", load_wycheproof_vectors_aead_siv(), ids=wycheproof_id)
+    def test(self, tv):
 
-        for tv in self.tv:
-            self.check_encrypt(tv)
-            self.check_decrypt(tv)
+        self.check_encrypt(tv)
+        self.check_decrypt(tv)

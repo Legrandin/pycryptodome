@@ -11,6 +11,10 @@ You can test everything is right with::
     pip install pytest pycryptodome-test-vectors
     python -m Crypto.SelfTest
 
+This runs the complete test suite, which takes a few minutes.
+Add ``--skip-slow-tests`` for a quicker check that skips the most
+time-consuming test vectors.
+
 One must avoid having both PyCrypto and PyCryptodome installed
 at the same time, as they will interfere with each other.
 This is not a problem if your application is deployed in a ``virtualenv``.

@@ -30,9 +30,10 @@
 
 import os
 import re
-import unittest
 import warnings
 from binascii import hexlify, unhexlify
+
+import pytest
 
 from Crypto.Hash import BLAKE2b, BLAKE2s
 from Crypto.Util._bytes import tobytes
@@ -46,37 +47,45 @@ class Blake2Test:
         for new_func in self.BLAKE2.new, h.new:
             for dbits in range(8, self.max_bits + 1, 8):
                 hobj = new_func(digest_bits=dbits)
-                self.assertEqual(hobj.digest_size, dbits // 8)
+                assert hobj.digest_size == dbits // 8
 
             for dbytes in range(1, self.max_bytes + 1):
                 hobj = new_func(digest_bytes=dbytes)
-                self.assertEqual(hobj.digest_size, dbytes)
+                assert hobj.digest_size == dbytes
 
             digest1 = new_func(data=b"\x90", digest_bytes=self.max_bytes).digest()
             digest2 = new_func(digest_bytes=self.max_bytes).update(b"\x90").digest()
-            self.assertEqual(digest1, digest2)
+            assert digest1 == digest2
 
             new_func(data=b"A", key=b"5", digest_bytes=self.max_bytes)
 
         hobj = h.new()
-        self.assertEqual(hobj.digest_size, self.max_bytes)
+        assert hobj.digest_size == self.max_bytes
 
     def test_new_negative(self):
 
         h = self.BLAKE2.new(digest_bits=self.max_bits)
         for new_func in self.BLAKE2.new, h.new:
-            self.assertRaises(TypeError, new_func, digest_bytes=self.max_bytes, digest_bits=self.max_bits)
-            self.assertRaises(ValueError, new_func, digest_bytes=0)
-            self.assertRaises(ValueError, new_func, digest_bytes=self.max_bytes + 1)
-            self.assertRaises(ValueError, new_func, digest_bits=7)
-            self.assertRaises(ValueError, new_func, digest_bits=15)
-            self.assertRaises(ValueError, new_func, digest_bits=self.max_bits + 1)
-            self.assertRaises(TypeError, new_func, digest_bytes=self.max_bytes, key="string")
-            self.assertRaises(TypeError, new_func, digest_bytes=self.max_bytes, data="string")
+            with pytest.raises(TypeError):
+                new_func(digest_bytes=self.max_bytes, digest_bits=self.max_bits)
+            with pytest.raises(ValueError):
+                new_func(digest_bytes=0)
+            with pytest.raises(ValueError):
+                new_func(digest_bytes=self.max_bytes + 1)
+            with pytest.raises(ValueError):
+                new_func(digest_bits=7)
+            with pytest.raises(ValueError):
+                new_func(digest_bits=15)
+            with pytest.raises(ValueError):
+                new_func(digest_bits=self.max_bits + 1)
+            with pytest.raises(TypeError):
+                new_func(digest_bytes=self.max_bytes, key="string")
+            with pytest.raises(TypeError):
+                new_func(digest_bytes=self.max_bytes, data="string")
 
     def test_default_digest_size(self):
         digest = self.BLAKE2.new(data=b"abc").digest()
-        self.assertEqual(len(digest), self.max_bytes)
+        assert len(digest) == self.max_bytes
 
     def test_update(self):
         pieces = [b"\x0a" * 200, b"\x14" * 300]
@@ -85,20 +94,21 @@ class Blake2Test:
         digest = h.digest()
         h = self.BLAKE2.new(digest_bytes=self.max_bytes)
         h.update(pieces[0] + pieces[1])
-        self.assertEqual(h.digest(), digest)
+        assert h.digest() == digest
 
     def test_update_negative(self):
         h = self.BLAKE2.new(digest_bytes=self.max_bytes)
-        self.assertRaises(TypeError, h.update, "string")
+        with pytest.raises(TypeError):
+            h.update("string")
 
     def test_digest(self):
         h = self.BLAKE2.new(digest_bytes=self.max_bytes)
         digest = h.digest()
 
         # hexdigest does not change the state
-        self.assertEqual(h.digest(), digest)
+        assert h.digest() == digest
         # digest returns a byte string
-        self.assertTrue(isinstance(digest, bytes))
+        assert isinstance(digest, bytes)
 
     def test_update_after_digest(self):
         msg = b"rrrrttt"
@@ -106,16 +116,17 @@ class Blake2Test:
         # Normally, update() cannot be done after digest()
         h = self.BLAKE2.new(digest_bits=256, data=msg[:4])
         dig1 = h.digest()
-        self.assertRaises(TypeError, h.update, msg[4:])
+        with pytest.raises(TypeError):
+            h.update(msg[4:])
         dig2 = self.BLAKE2.new(digest_bits=256, data=msg).digest()
 
         # With the proper flag, it is allowed
         h = self.BLAKE2.new(digest_bits=256, data=msg[:4], update_after_digest=True)
-        self.assertEqual(h.digest(), dig1)
+        assert h.digest() == dig1
         # ... and the subsequent digest applies to the entire message
         # up to that point
         h.update(msg[4:])
-        self.assertEqual(h.digest(), dig2)
+        assert h.digest() == dig2
 
     def test_hex_digest(self):
         mac = self.BLAKE2.new(digest_bits=self.max_bits)
@@ -123,24 +134,26 @@ class Blake2Test:
         hexdigest = mac.hexdigest()
 
         # hexdigest is equivalent to digest
-        self.assertEqual(hexlify(digest), tobytes(hexdigest))
+        assert hexlify(digest) == tobytes(hexdigest)
         # hexdigest does not change the state
-        self.assertEqual(mac.hexdigest(), hexdigest)
+        assert mac.hexdigest() == hexdigest
         # hexdigest returns a string
-        self.assertTrue(isinstance(hexdigest, str))
+        assert isinstance(hexdigest, str)
 
     def test_verify(self):
         h = self.BLAKE2.new(digest_bytes=self.max_bytes, key=b"4")
         mac = h.digest()
         h.verify(mac)
         wrong_mac = strxor_c(mac, 255)
-        self.assertRaises(ValueError, h.verify, wrong_mac)
+        with pytest.raises(ValueError):
+            h.verify(wrong_mac)
 
     def test_hexverify(self):
         h = self.BLAKE2.new(digest_bytes=self.max_bytes, key=b"4")
         mac = h.hexdigest()
         h.hexverify(mac)
-        self.assertRaises(ValueError, h.hexverify, "4556")
+        with pytest.raises(ValueError):
+            h.hexverify("4556")
 
     def test_oid(self):
 
@@ -150,15 +163,18 @@ class Blake2Test:
 
         for digest_bits in self.digest_bits_oid:
             h = self.BLAKE2.new(digest_bits=digest_bits)
-            self.assertEqual(h.oid, prefix + suffix[digest_bits])
+            assert h.oid == prefix + suffix[digest_bits]
 
             h = self.BLAKE2.new(digest_bits=digest_bits, key=b"secret")
-            self.assertRaises(AttributeError, lambda: h.oid)  # noqa: B023
+            with pytest.raises(AttributeError):
+                _ = h.oid
 
         for digest_bits in (8, self.max_bits):
             if digest_bits in self.digest_bits_oid:
                 continue
-            self.assertRaises(AttributeError, lambda: h.oid)
+            h = self.BLAKE2.new(digest_bits=digest_bits)
+            with pytest.raises(AttributeError):
+                _ = h.oid
 
     def test_bytearray(self):
 
@@ -174,7 +190,7 @@ class Blake2Test:
         key_ba[:1] = b"\xff"
         data_ba[:1] = b"\xff"
 
-        self.assertEqual(h1.digest(), h2.digest())
+        assert h1.digest() == h2.digest()
 
         # Data can be a bytearray (during operation)
         data_ba = bytearray(data)
@@ -185,7 +201,7 @@ class Blake2Test:
         h2.update(data_ba)
         data_ba[:1] = b"\xff"
 
-        self.assertEqual(h1.digest(), h2.digest())
+        assert h1.digest() == h2.digest()
 
     def test_memoryview(self):
 
@@ -209,7 +225,7 @@ class Blake2Test:
                 data_mv[:1] = b"\xff"
                 key_mv[:1] = b"\xff"
 
-            self.assertEqual(h1.digest(), h2.digest())
+            assert h1.digest() == h2.digest()
 
             # Data can be a memoryview (during operation)
             data_mv = get_mv(data)
@@ -221,10 +237,10 @@ class Blake2Test:
             if not data_mv.readonly:
                 data_mv[:1] = b"\xff"
 
-            self.assertEqual(h1.digest(), h2.digest())
+            assert h1.digest() == h2.digest()
 
 
-class Blake2bTest(Blake2Test, unittest.TestCase):
+class TestBlake2b(Blake2Test):
     #: Module
     BLAKE2 = BLAKE2b
     #: Max output size (in bits)
@@ -237,7 +253,7 @@ class Blake2bTest(Blake2Test, unittest.TestCase):
     oid_variant = "1"
 
 
-class Blake2sTest(Blake2Test, unittest.TestCase):
+class TestBlake2s(Blake2Test):
     #: Module
     BLAKE2 = BLAKE2s
     #: Max output size (in bits)
@@ -279,11 +295,10 @@ class Blake2OfficialTestVector:
                     test_vectors.append((input_data, key, result))
         return test_vectors
 
-    def setUp(self):
+    def setup_method(self):
 
         dir_comps = ("Hash", self.name)
         file_name = self.name.lower() + "-test.txt"
-        self.description = "%s tests" % self.name
 
         try:
             import pycryptodome_test_vectors  # type: ignore
@@ -296,14 +311,14 @@ class Blake2OfficialTestVector:
         full_file_name = os.path.join(os.path.join(init_dir, *dir_comps), file_name)
         self.test_vectors = self._load_tests(full_file_name)
 
-    def runTest(self):
+    def test(self):
         for input_data, key, result in self.test_vectors:
             mac = self.BLAKE2.new(key=key, digest_bytes=self.max_bytes)
             mac.update(input_data)
-            self.assertEqual(mac.digest(), result)
+            assert mac.digest() == result
 
 
-class Blake2bOfficialTestVector(Blake2OfficialTestVector, unittest.TestCase):
+class TestBlake2bOfficialTestVector(Blake2OfficialTestVector):
     #: Module
     BLAKE2 = BLAKE2b
     #: Hash name
@@ -312,7 +327,7 @@ class Blake2bOfficialTestVector(Blake2OfficialTestVector, unittest.TestCase):
     max_bytes = 64
 
 
-class Blake2sOfficialTestVector(Blake2OfficialTestVector, unittest.TestCase):
+class TestBlake2sOfficialTestVector(Blake2OfficialTestVector):
     #: Module
     BLAKE2 = BLAKE2s
     #: Hash name
@@ -335,10 +350,9 @@ class Blake2TestVector1:
                 test_vectors.append(unhexlify(tobytes(res.group(1))))
         return test_vectors
 
-    def setUp(self):
+    def setup_method(self):
         dir_comps = ("Hash", self.name)
         file_name = "tv1.txt"
-        self.description = "%s tests" % self.name
 
         try:
             import pycryptodome_test_vectors
@@ -351,7 +365,7 @@ class Blake2TestVector1:
         full_file_name = os.path.join(os.path.join(init_dir, *dir_comps), file_name)
         self.test_vectors = self._load_tests(full_file_name)
 
-    def runTest(self):
+    def test(self):
 
         for tv in self.test_vectors:
             digest_bytes = len(tv)
@@ -360,17 +374,17 @@ class Blake2TestVector1:
                 h = self.BLAKE2.new(digest_bytes=digest_bytes)
                 h.update(next_data)
                 next_data = h.digest() + next_data
-            self.assertEqual(h.digest(), tv)
+            assert h.digest() == tv
 
 
-class Blake2bTestVector1(Blake2TestVector1, unittest.TestCase):
+class TestBlake2bTestVector1(Blake2TestVector1):
     #: Module
     BLAKE2 = BLAKE2b
     #: Hash name
     name = "BLAKE2b"
 
 
-class Blake2sTestVector1(Blake2TestVector1, unittest.TestCase):
+class TestBlake2sTestVector1(Blake2TestVector1):
     #: Module
     BLAKE2 = BLAKE2s
     #: Hash name
@@ -392,10 +406,9 @@ class Blake2TestVector2:
                 test_vectors.append((key_size, result))
         return test_vectors
 
-    def setUp(self):
+    def setup_method(self):
         dir_comps = ("Hash", self.name)
         file_name = "tv2.txt"
-        self.description = "%s tests" % self.name
 
         try:
             import pycryptodome_test_vectors  # type: ignore
@@ -408,7 +421,7 @@ class Blake2TestVector2:
         full_file_name = os.path.join(os.path.join(init_dir, *dir_comps), file_name)
         self.test_vectors = self._load_tests(full_file_name)
 
-    def runTest(self):
+    def test(self):
 
         for key_size, result in self.test_vectors:
             next_data = b""
@@ -416,10 +429,10 @@ class Blake2TestVector2:
                 h = self.BLAKE2.new(digest_bytes=self.max_bytes, key=b"A" * key_size)
                 h.update(next_data)
                 next_data = h.digest() + next_data
-            self.assertEqual(h.digest(), result)
+            assert h.digest() == result
 
 
-class Blake2bTestVector2(Blake2TestVector2, unittest.TestCase):
+class TestBlake2bTestVector2(Blake2TestVector2):
     #: Module
     BLAKE2 = BLAKE2b
     #: Hash name
@@ -428,7 +441,7 @@ class Blake2bTestVector2(Blake2TestVector2, unittest.TestCase):
     max_bytes = 64
 
 
-class Blake2sTestVector2(Blake2TestVector2, unittest.TestCase):
+class TestBlake2sTestVector2(Blake2TestVector2):
     #: Module
     BLAKE2 = BLAKE2s
     #: Hash name

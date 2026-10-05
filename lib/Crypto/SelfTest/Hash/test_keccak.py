@@ -30,54 +30,63 @@
 
 """Self-test suite for Crypto.Hash.keccak"""
 
-import unittest
 from binascii import hexlify
+
+import pytest
 
 from Crypto.Hash import keccak
 from Crypto.SelfTest.loader import load_test_vectors
 from Crypto.Util._bytes import tobytes
 
 
-class KeccakTest(unittest.TestCase):
+class TestKeccak:
     def test_new_positive(self):
 
         for digest_bits in (224, 256, 384, 512):
             hobj = keccak.new(digest_bits=digest_bits)
-            self.assertEqual(hobj.digest_size, digest_bits // 8)
+            assert hobj.digest_size == digest_bits // 8
 
             hobj2 = hobj.new()
-            self.assertEqual(hobj2.digest_size, digest_bits // 8)
+            assert hobj2.digest_size == digest_bits // 8
 
         for digest_bytes in (28, 32, 48, 64):
             hobj = keccak.new(digest_bytes=digest_bytes)
-            self.assertEqual(hobj.digest_size, digest_bytes)
+            assert hobj.digest_size == digest_bytes
 
             hobj2 = hobj.new()
-            self.assertEqual(hobj2.digest_size, digest_bytes)
+            assert hobj2.digest_size == digest_bytes
 
     def test_new_positive2(self):
 
         digest1 = keccak.new(data=b"\x90", digest_bytes=64).digest()
         digest2 = keccak.new(digest_bytes=64).update(b"\x90").digest()
-        self.assertEqual(digest1, digest2)
+        assert digest1 == digest2
 
     def test_new_negative(self):
 
         # keccak.new needs digest size
-        self.assertRaises(TypeError, keccak.new)
+        with pytest.raises(TypeError):
+            keccak.new()
 
         keccak.new(digest_bits=512)
 
         # Either bits or bytes can be specified
-        self.assertRaises(TypeError, keccak.new, digest_bytes=64, digest_bits=512)
+        with pytest.raises(TypeError):
+            keccak.new(digest_bytes=64, digest_bits=512)
 
         # Range
-        self.assertRaises(ValueError, keccak.new, digest_bytes=0)
-        self.assertRaises(ValueError, keccak.new, digest_bytes=1)
-        self.assertRaises(ValueError, keccak.new, digest_bytes=65)
-        self.assertRaises(ValueError, keccak.new, digest_bits=0)
-        self.assertRaises(ValueError, keccak.new, digest_bits=1)
-        self.assertRaises(ValueError, keccak.new, digest_bits=513)
+        with pytest.raises(ValueError):
+            keccak.new(digest_bytes=0)
+        with pytest.raises(ValueError):
+            keccak.new(digest_bytes=1)
+        with pytest.raises(ValueError):
+            keccak.new(digest_bytes=65)
+        with pytest.raises(ValueError):
+            keccak.new(digest_bits=0)
+        with pytest.raises(ValueError):
+            keccak.new(digest_bits=1)
+        with pytest.raises(ValueError):
+            keccak.new(digest_bits=513)
 
     def test_update(self):
         pieces = [bytes([10]) * 200, bytes([20]) * 300]
@@ -86,20 +95,21 @@ class KeccakTest(unittest.TestCase):
         digest = h.digest()
         h = keccak.new(digest_bytes=64)
         h.update(pieces[0] + pieces[1])
-        self.assertEqual(h.digest(), digest)
+        assert h.digest() == digest
 
     def test_update_negative(self):
         h = keccak.new(digest_bytes=64)
-        self.assertRaises(TypeError, h.update, "string")
+        with pytest.raises(TypeError):
+            h.update("string")
 
     def test_digest(self):
         h = keccak.new(digest_bytes=64)
         digest = h.digest()
 
         # hexdigest does not change the state
-        self.assertEqual(h.digest(), digest)
+        assert h.digest() == digest
         # digest returns a byte string
-        self.assertTrue(isinstance(digest, bytes))
+        assert isinstance(digest, bytes)
 
     def test_hex_digest(self):
         mac = keccak.new(digest_bits=512)
@@ -107,11 +117,11 @@ class KeccakTest(unittest.TestCase):
         hexdigest = mac.hexdigest()
 
         # hexdigest is equivalent to digest
-        self.assertEqual(hexlify(digest), tobytes(hexdigest))
+        assert hexlify(digest) == tobytes(hexdigest)
         # hexdigest does not change the state
-        self.assertEqual(mac.hexdigest(), hexdigest)
+        assert mac.hexdigest() == hexdigest
         # hexdigest returns a string
-        self.assertTrue(isinstance(hexdigest, str))
+        assert isinstance(hexdigest, str)
 
     def test_update_after_digest(self):
         msg = b"rrrrttt"
@@ -119,22 +129,17 @@ class KeccakTest(unittest.TestCase):
         # Normally, update() cannot be done after digest()
         h = keccak.new(digest_bits=512, data=msg[:4])
         dig1 = h.digest()
-        self.assertRaises(TypeError, h.update, msg[4:])
+        with pytest.raises(TypeError):
+            h.update(msg[4:])
         dig2 = keccak.new(digest_bits=512, data=msg).digest()
 
         # With the proper flag, it is allowed
         h = keccak.new(digest_bits=512, data=msg[:4], update_after_digest=True)
-        self.assertEqual(h.digest(), dig1)
+        assert h.digest() == dig1
         # ... and the subsequent digest applies to the entire message
         # up to that point
         h.update(msg[4:])
-        self.assertEqual(h.digest(), dig2)
-
-
-class KeccakVectors(unittest.TestCase):
-    pass
-
-    # TODO: add ExtremelyLong tests
+        assert h.digest() == dig2
 
 
 test_vectors_224 = (
@@ -151,19 +156,6 @@ test_vectors_224 += (
     or []
 )
 
-for idx, tv in enumerate(test_vectors_224):
-    if tv.len == 0:
-        data = b""
-    else:
-        data = tobytes(tv.msg)
-
-    def new_test(self, data=data, result=tv.md):
-        hobj = keccak.new(digest_bits=224, data=data)
-        self.assertEqual(hobj.digest(), result)
-
-    setattr(KeccakVectors, "test_224_%d" % idx, new_test)
-
-# ---
 
 test_vectors_256 = (
     load_test_vectors(
@@ -179,20 +171,6 @@ test_vectors_256 += (
     or []
 )
 
-for idx, tv in enumerate(test_vectors_256):
-    if tv.len == 0:
-        data = b""
-    else:
-        data = tobytes(tv.msg)
-
-    def new_test(self, data=data, result=tv.md):
-        hobj = keccak.new(digest_bits=256, data=data)
-        self.assertEqual(hobj.digest(), result)
-
-    setattr(KeccakVectors, "test_256_%d" % idx, new_test)
-
-
-# ---
 
 test_vectors_384 = (
     load_test_vectors(
@@ -208,19 +186,6 @@ test_vectors_384 += (
     or []
 )
 
-for idx, tv in enumerate(test_vectors_384):
-    if tv.len == 0:
-        data = b""
-    else:
-        data = tobytes(tv.msg)
-
-    def new_test(self, data=data, result=tv.md):
-        hobj = keccak.new(digest_bits=384, data=data)
-        self.assertEqual(hobj.digest(), result)
-
-    setattr(KeccakVectors, "test_384_%d" % idx, new_test)
-
-# ---
 
 test_vectors_512 = (
     load_test_vectors(
@@ -236,14 +201,30 @@ test_vectors_512 += (
     or []
 )
 
-for idx, tv in enumerate(test_vectors_512):
-    if tv.len == 0:
-        data = b""
-    else:
-        data = tobytes(tv.msg)
 
-    def new_test(self, data=data, result=tv.md):
-        hobj = keccak.new(digest_bits=512, data=data)
-        self.assertEqual(hobj.digest(), result)
+def _vectors(test_vectors):
+    return [
+        pytest.param(b"" if tv.len == 0 else tobytes(tv.msg), tv.md, id=str(idx))
+        for idx, tv in enumerate(test_vectors)
+    ]
 
-    setattr(KeccakVectors, "test_512_%d" % idx, new_test)
+
+class TestKeccakVectors:
+    # TODO: add ExtremelyLong tests
+
+    @pytest.mark.parametrize(
+        "digest_bits, data, result",
+        [
+            pytest.param(bits, *p.values, id="%d-%s" % (bits, p.id))
+            for bits, tvs in (
+                (224, test_vectors_224),
+                (256, test_vectors_256),
+                (384, test_vectors_384),
+                (512, test_vectors_512),
+            )
+            for p in _vectors(tvs)
+        ],
+    )
+    def test(self, digest_bits, data, result):
+        hobj = keccak.new(digest_bits=digest_bits, data=data)
+        assert hobj.digest() == result

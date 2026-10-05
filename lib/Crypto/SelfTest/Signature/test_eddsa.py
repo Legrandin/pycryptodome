@@ -27,12 +27,13 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-import unittest
 from binascii import unhexlify
+
+import pytest
 
 from Crypto.Hash import SHA512, SHAKE256
 from Crypto.PublicKey import ECC
-from Crypto.SelfTest.loader import load_test_vectors_wycheproof
+from Crypto.SelfTest.loader import load_test_vectors_wycheproof, wycheproof_id
 from Crypto.Signature import eddsa
 from Crypto.Util.number import bytes_to_long
 
@@ -394,7 +395,7 @@ for tv_str in rfc8032_tv_str:
     rfc8032_tv_bytes.append([unhexlify(i) if isinstance(i, str) else i for i in tv_str])
 
 
-class TestEdDSA(unittest.TestCase):
+class TestEdDSA:
     def test_sign(self):
         for sk, _, msg, hashmod, ctx, exp_signature in rfc8032_tv_bytes:
             key = eddsa.import_private_key(sk)
@@ -406,7 +407,7 @@ class TestEdDSA(unittest.TestCase):
                 # HashEdDSA
                 hashobj = hashmod.new(msg)
                 signature = signer.sign(hashobj)
-            self.assertEqual(exp_signature, signature)
+            assert exp_signature == signature
 
     def test_verify(self):
         for _, pk, msg, hashmod, ctx, exp_signature in rfc8032_tv_bytes:
@@ -428,7 +429,7 @@ class TestEdDSA(unittest.TestCase):
 
         signature = signer.sign(msg_hash)
         signature2 = signer.sign(msg_hash)
-        self.assertEqual(signature, signature2)
+        assert signature == signature2
 
         verifier.verify(msg_hash, signature)
         verifier.verify(msg_hash, signature)
@@ -441,20 +442,22 @@ class TestEdDSA(unittest.TestCase):
 
         signature = signer.sign(msg_hash)
         signature2 = signer.sign(msg_hash)
-        self.assertEqual(signature, signature2)
+        assert signature == signature2
 
         verifier.verify(msg_hash, signature)
         verifier.verify(msg_hash, signature)
 
     def test_negative(self):
         key = ECC.generate(curve="ed25519")
-        self.assertRaises(ValueError, eddsa.new, key, "rfc9999")
+        with pytest.raises(ValueError):
+            eddsa.new(key, "rfc9999")
 
         nist_key = ECC.generate(curve="p256")
-        self.assertRaises(ValueError, eddsa.new, nist_key, "rfc8032")
+        with pytest.raises(ValueError):
+            eddsa.new(nist_key, "rfc8032")
 
 
-class TestExport_Ed25519(unittest.TestCase):
+class TestExport_Ed25519:
     def test_raw(self):
         key = ECC.generate(curve="Ed25519")
         x, y = key.pointQ.xy
@@ -462,15 +465,15 @@ class TestExport_Ed25519(unittest.TestCase):
         sign_x = raw[31] >> 7
         raw[31] &= 0x7F
         yt = bytes_to_long(raw[::-1])
-        self.assertEqual(y, yt)
-        self.assertEqual(x & 1, sign_x)
+        assert y == yt
+        assert x & 1 == sign_x
 
         key = ECC.construct(point_x=0, point_y=1, curve="Ed25519")
         out = key._export_eddsa_public()
-        self.assertEqual(b"\x01" + b"\x00" * 31, out)
+        assert out == b"\x01" + b"\x00" * 31
 
 
-class TestExport_Ed448(unittest.TestCase):
+class TestExport_Ed448:
     def test_raw(self):
         key = ECC.generate(curve="Ed448")
         x, y = key.pointQ.xy
@@ -478,30 +481,30 @@ class TestExport_Ed448(unittest.TestCase):
         sign_x = raw[56] >> 7
         raw[56] &= 0x7F
         yt = bytes_to_long(raw[::-1])
-        self.assertEqual(y, yt)
-        self.assertEqual(x & 1, sign_x)
+        assert y == yt
+        assert x & 1 == sign_x
 
         key = ECC.construct(point_x=0, point_y=1, curve="Ed448")
         out = key._export_eddsa_public()
-        self.assertEqual(b"\x01" + b"\x00" * 56, out)
+        assert out == b"\x01" + b"\x00" * 56
 
 
-class TestImport_Ed25519(unittest.TestCase):
+class TestImport_Ed25519:
     def test_raw(self):
         Px = 24407857220263921307776619664228778204996144802740950419837658238229122415920
         Py = 56480760040633817885061096979765646085062883740629155052073094891081309750690
         encoded = b"\xa2\x05\xd6\x00\xe1 \xe1\xc0\xff\x96\xee?V\x8e\xba/\xd3\x89\x06\xd7\xc4c\xe8$\xc2d\xd7a1\xfa\xde|"
         key = eddsa.import_public_key(encoded)
-        self.assertEqual(Py, key.pointQ.y)
-        self.assertEqual(Px, key.pointQ.x)
+        assert Py == key.pointQ.y
+        assert Px == key.pointQ.x
 
         encoded = b"\x01" + b"\x00" * 31
         key = eddsa.import_public_key(encoded)
-        self.assertEqual(1, key.pointQ.y)
-        self.assertEqual(0, key.pointQ.x)
+        assert key.pointQ.y == 1
+        assert key.pointQ.x == 0
 
 
-class TestImport_Ed448(unittest.TestCase):
+class TestImport_Ed448:
     def test_raw(self):
         Px = 0x153F42025ABA3B0DAECAA5CD79458B3146C7C9378C16C17B4A59BC3561113D90C169045BC12966C3F93E140C2CA0A3ACC33D9205B9DAF9B1
         Py = 0x38F5C0015D3DEDD576C232810DD90373B5B1D631A12894C043B7BE529CBAE03EDE177D8FA490B56131DBCB2465D2ABA777EF839FC1719B25
@@ -512,39 +515,42 @@ class TestImport_Ed448(unittest.TestCase):
             "d5ed3d5d01c0f53880"
         )
         key = eddsa.import_public_key(encoded)
-        self.assertEqual(Py, key.pointQ.y)
-        self.assertEqual(Px, key.pointQ.x)
+        assert Py == key.pointQ.y
+        assert Px == key.pointQ.x
 
         encoded = b"\x01" + b"\x00" * 56
         key = eddsa.import_public_key(encoded)
-        self.assertEqual(1, key.pointQ.y)
-        self.assertEqual(0, key.pointQ.x)
+        assert key.pointQ.y == 1
+        assert key.pointQ.x == 0
 
 
-class TestVectorsEdDSAWycheproof(unittest.TestCase):
-    def add_tests(self, filename):
+def _load_tests(filename):
 
-        def pk(group):
-            elem = group["key"]["pk"]
-            return unhexlify(elem)
+    def pk(group):
+        elem = group["key"]["pk"]
+        return unhexlify(elem)
 
-        def sk(group):
-            elem = group["key"]["sk"]
-            return unhexlify(elem)
+    def sk(group):
+        elem = group["key"]["sk"]
+        return unhexlify(elem)
 
-        result = load_test_vectors_wycheproof(
-            ("Signature", "wycheproof"),
-            filename,
-            "Wycheproof ECDSA signature (%s)" % filename,
-            group_tag={"pk": pk, "sk": sk},
-        )
-        self.tv += result
+    result = load_test_vectors_wycheproof(
+        ("Signature", "wycheproof"),
+        filename,
+        "Wycheproof ECDSA signature (%s)" % filename,
+        group_tag={"pk": pk, "sk": sk},
+    )
+    return result
 
-    def setUp(self):
-        self.tv = []
-        self.add_tests("eddsa_test.json")
-        self.add_tests("ed448_test.json")
 
+def load_wycheproof_vectors():
+    vectors = []
+    vectors += _load_tests("eddsa_test.json")
+    vectors += _load_tests("ed448_test.json")
+    return vectors
+
+
+class TestVectorsEdDSAWycheproof:
     def check_sign(self, tv):
         if not tv.valid:
             return
@@ -553,7 +559,7 @@ class TestVectorsEdDSAWycheproof(unittest.TestCase):
         key = eddsa.import_private_key(tv.sk)
         signer = eddsa.new(key, "rfc8032")
         signature = signer.sign(tv.msg)
-        self.assertEqual(signature, tv.sig)
+        assert signature == tv.sig
 
     def check_verify(self, tv):
         self._id = "Wycheproof EdDSA Verify Test #%d (%s, %s)" % (tv.id, tv.comment, tv.filename)
@@ -566,7 +572,7 @@ class TestVectorsEdDSAWycheproof(unittest.TestCase):
         else:
             assert tv.valid
 
-    def runTest(self):
-        for tv in self.tv:
-            self.check_sign(tv)
-            self.check_verify(tv)
+    @pytest.mark.parametrize("tv", load_wycheproof_vectors(), ids=wycheproof_id)
+    def test(self, tv):
+        self.check_sign(tv)
+        self.check_verify(tv)

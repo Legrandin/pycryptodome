@@ -28,7 +28,6 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-import unittest
 from binascii import unhexlify
 
 import pytest
@@ -43,7 +42,7 @@ def get_tag_random(tag, length):
     return SHAKE128.new(data=tobytes(tag)).read(length)
 
 
-class OfbTests(BlockChainingTests, unittest.TestCase):
+class TestOfb(BlockChainingTests):
     aes_mode = AES.MODE_OFB
     des3_mode = DES3.MODE_OFB
 
@@ -55,34 +54,27 @@ class OfbTests(BlockChainingTests, unittest.TestCase):
         cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128, segment_size=8)
         ciphertexts = [cipher.encrypt(x) for x in plaintexts]
         cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128, segment_size=8)
-        self.assertEqual(b"".join(ciphertexts), cipher.encrypt(b"".join(plaintexts)))
+        assert b"".join(ciphertexts) == cipher.encrypt(b"".join(plaintexts))
 
         cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128, segment_size=128)
         ciphertexts = [cipher.encrypt(x) for x in plaintexts]
         cipher = AES.new(self.key_128, AES.MODE_CFB, self.iv_128, segment_size=128)
-        self.assertEqual(b"".join(ciphertexts), cipher.encrypt(b"".join(plaintexts)))
+        assert b"".join(ciphertexts) == cipher.encrypt(b"".join(plaintexts))
 
     def test_unaligned_data_64(self):
         plaintexts = [b"7777777"] * 100
         cipher = DES3.new(self.key_192, DES3.MODE_CFB, self.iv_64, segment_size=8)
         ciphertexts = [cipher.encrypt(x) for x in plaintexts]
         cipher = DES3.new(self.key_192, DES3.MODE_CFB, self.iv_64, segment_size=8)
-        self.assertEqual(b"".join(ciphertexts), cipher.encrypt(b"".join(plaintexts)))
+        assert b"".join(ciphertexts) == cipher.encrypt(b"".join(plaintexts))
 
         cipher = DES3.new(self.key_192, DES3.MODE_CFB, self.iv_64, segment_size=64)
         ciphertexts = [cipher.encrypt(x) for x in plaintexts]
         cipher = DES3.new(self.key_192, DES3.MODE_CFB, self.iv_64, segment_size=64)
-        self.assertEqual(b"".join(ciphertexts), cipher.encrypt(b"".join(plaintexts)))
+        assert b"".join(ciphertexts) == cipher.encrypt(b"".join(plaintexts))
 
 
-@pytest.mark.slow
-class NistOfbVectors(NistBlockChainingVectors, unittest.TestCase):
-    aes_mode = AES.MODE_OFB
-    des_mode = DES.MODE_OFB
-    des3_mode = DES3.MODE_OFB
-
-
-# Create one test method per file
+# NIST test vector files
 nist_aes_kat_mmt_files = (
     # KAT
     "OFBGFSbox128.rsp",
@@ -102,26 +94,12 @@ nist_aes_kat_mmt_files = (
     "OFBMMT192.rsp",
     "OFBMMT256.rsp",
 )
+
 nist_aes_mct_files = (
     "OFBMCT128.rsp",
     "OFBMCT192.rsp",
     "OFBMCT256.rsp",
 )
-
-for file_name in nist_aes_kat_mmt_files:
-
-    def new_func(self, file_name=file_name):
-        self._do_kat_aes_test(file_name)
-
-    setattr(NistOfbVectors, "test_AES_" + file_name, new_func)
-
-for file_name in nist_aes_mct_files:
-
-    def new_func(self, file_name=file_name):
-        self._do_mct_aes_test(file_name)
-
-    setattr(NistOfbVectors, "test_AES_" + file_name, new_func)
-del file_name, new_func
 
 nist_tdes_files = (
     "TOFBMMT2.rsp",  # 2TDES
@@ -133,17 +111,30 @@ nist_tdes_files = (
     "TOFBvartext.rsp",
 )
 
-for file_name in nist_tdes_files:
 
-    def new_func(self, file_name=file_name):
+@pytest.mark.slow
+class TestNistOfbVectors(NistBlockChainingVectors):
+    aes_mode = AES.MODE_OFB
+    des_mode = DES.MODE_OFB
+    des3_mode = DES3.MODE_OFB
+
+    @pytest.mark.parametrize("file_name", nist_aes_kat_mmt_files)
+    def test_aes_kat_mmt(self, file_name):
+        self._do_kat_aes_test(file_name)
+
+    @pytest.mark.parametrize("file_name", nist_aes_mct_files)
+    def test_aes_mct(self, file_name):
+        self._do_mct_aes_test(file_name)
+
+    @pytest.mark.parametrize("file_name", nist_tdes_files)
+    def test_tdes(self, file_name):
         self._do_tdes_test(file_name)
 
-    setattr(NistOfbVectors, "test_TDES_" + file_name, new_func)
 
 # END OF NIST OFB TEST VECTORS
 
 
-class SP800TestVectors(unittest.TestCase):
+class TestSP800TestVectors:
     """Class exercising the OFB test vectors found in Section F.4
     of NIST SP 800-3A"""
 
@@ -169,14 +160,14 @@ class SP800TestVectors(unittest.TestCase):
         ciphertext = unhexlify(ciphertext)
 
         cipher = AES.new(key, AES.MODE_OFB, iv)
-        self.assertEqual(cipher.encrypt(plaintext), ciphertext)
+        assert cipher.encrypt(plaintext) == ciphertext
         cipher = AES.new(key, AES.MODE_OFB, iv)
-        self.assertEqual(cipher.decrypt(ciphertext), plaintext)
+        assert cipher.decrypt(ciphertext) == plaintext
 
         cipher = AES.new(key, AES.MODE_OFB, iv)
-        self.assertEqual(cipher.encrypt(plaintext[:-8]), ciphertext[:-8])
+        assert cipher.encrypt(plaintext[:-8]) == ciphertext[:-8]
         cipher = AES.new(key, AES.MODE_OFB, iv)
-        self.assertEqual(cipher.decrypt(ciphertext[:-8]), plaintext[:-8])
+        assert cipher.decrypt(ciphertext[:-8]) == plaintext[:-8]
 
     def test_aes_192(self):
         plaintext = (
@@ -200,14 +191,14 @@ class SP800TestVectors(unittest.TestCase):
         ciphertext = unhexlify(ciphertext)
 
         cipher = AES.new(key, AES.MODE_OFB, iv)
-        self.assertEqual(cipher.encrypt(plaintext), ciphertext)
+        assert cipher.encrypt(plaintext) == ciphertext
         cipher = AES.new(key, AES.MODE_OFB, iv)
-        self.assertEqual(cipher.decrypt(ciphertext), plaintext)
+        assert cipher.decrypt(ciphertext) == plaintext
 
         cipher = AES.new(key, AES.MODE_OFB, iv)
-        self.assertEqual(cipher.encrypt(plaintext[:-8]), ciphertext[:-8])
+        assert cipher.encrypt(plaintext[:-8]) == ciphertext[:-8]
         cipher = AES.new(key, AES.MODE_OFB, iv)
-        self.assertEqual(cipher.decrypt(ciphertext[:-8]), plaintext[:-8])
+        assert cipher.decrypt(ciphertext[:-8]) == plaintext[:-8]
 
     def test_aes_256(self):
         plaintext = (
@@ -231,11 +222,11 @@ class SP800TestVectors(unittest.TestCase):
         ciphertext = unhexlify(ciphertext)
 
         cipher = AES.new(key, AES.MODE_OFB, iv)
-        self.assertEqual(cipher.encrypt(plaintext), ciphertext)
+        assert cipher.encrypt(plaintext) == ciphertext
         cipher = AES.new(key, AES.MODE_OFB, iv)
-        self.assertEqual(cipher.decrypt(ciphertext), plaintext)
+        assert cipher.decrypt(ciphertext) == plaintext
 
         cipher = AES.new(key, AES.MODE_OFB, iv)
-        self.assertEqual(cipher.encrypt(plaintext[:-8]), ciphertext[:-8])
+        assert cipher.encrypt(plaintext[:-8]) == ciphertext[:-8]
         cipher = AES.new(key, AES.MODE_OFB, iv)
-        self.assertEqual(cipher.decrypt(ciphertext[:-8]), plaintext[:-8])
+        assert cipher.decrypt(ciphertext[:-8]) == plaintext[:-8]

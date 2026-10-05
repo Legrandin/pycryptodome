@@ -21,31 +21,33 @@
 
 """Self-test suite for Crypto.Hash.SHA3_224"""
 
-import unittest
 from binascii import hexlify
+
+import pytest
 
 from Crypto.Hash import SHA3_224 as SHA3
 from Crypto.SelfTest.Hash.common import make_hash_tests
 from Crypto.SelfTest.loader import load_test_vectors
 
 
-class APITest(unittest.TestCase):
+class TestAPI:
     def test_update_after_digest(self):
         msg = b"rrrrttt"
 
         # Normally, update() cannot be done after digest()
         h = SHA3.new(data=msg[:4])
         dig1 = h.digest()
-        self.assertRaises(TypeError, h.update, msg[4:])
+        with pytest.raises(TypeError):
+            h.update(msg[4:])
         dig2 = SHA3.new(data=msg).digest()
 
         # With the proper flag, it is allowed
         h = SHA3.new(data=msg[:4], update_after_digest=True)
-        self.assertEqual(h.digest(), dig1)
+        assert h.digest() == dig1
         # ... and the subsequent digest applies to the entire message
         # up to that point
         h.update(msg[4:])
-        self.assertEqual(h.digest(), dig2)
+        assert h.digest() == dig2
 
 
 def _load_test_data():
