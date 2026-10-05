@@ -51,6 +51,9 @@ Resolved issues
   producing wrong results.
 * Fixed a bug in KangarooTwelve in the scenario where customization string is very
   long (8190 bytes or longer) and the message to hash is empty.
+* GH#922: Fixed incorrect verification of an otherwise valid ECDSA signature,
+  when the raw x-coordinate of the computed point is not reduced.
+  Thanks to afldl for reporting and Ville Vesilehto for the fix.
 
 Other changes
 -------------
