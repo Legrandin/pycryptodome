@@ -10,7 +10,7 @@ it produces digests of any length, and it can be used as a Pseudo Random Generat
 
 Output bits do **not** depend on the output length.
 
-KangarooTwelve is not standardized. However, an RFC_ is being written.
+KangarooTwelve is specified by RFC9861_.
 It provides 128 bit of security against (second) pre-image attacks when the output is at least 128 bits long.
 It provides the same security level against collision attacks when the output is at least 256 bits long.
 
@@ -52,7 +52,7 @@ The output does not depend on the number of threads.
 Threads only help with long data passed in large chunks:
 each thread hashes at least 256 KiB of a single :meth:`update` call.
 
-.. _RFC: https://datatracker.ietf.org/doc/draft-irtf-cfrg-kangarootwelve/
+.. _RFC9861: https://www.rfc-editor.org/rfc/rfc9861.html
 
 .. automodule:: Crypto.Hash.KangarooTwelve
     :members:
