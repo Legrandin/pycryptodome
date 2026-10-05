@@ -419,7 +419,7 @@ class Blake2TestVector2:
             self.assertEqual(h.digest(), result)
 
 
-class Blake2bTestVector2(Blake2TestVector1, unittest.TestCase):
+class Blake2bTestVector2(Blake2TestVector2, unittest.TestCase):
     #: Module
     BLAKE2 = BLAKE2b
     #: Hash name
@@ -428,7 +428,7 @@ class Blake2bTestVector2(Blake2TestVector1, unittest.TestCase):
     max_bytes = 64
 
 
-class Blake2sTestVector2(Blake2TestVector1, unittest.TestCase):
+class Blake2sTestVector2(Blake2TestVector2, unittest.TestCase):
     #: Module
     BLAKE2 = BLAKE2s
     #: Hash name
