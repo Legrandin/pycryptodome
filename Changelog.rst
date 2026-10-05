@@ -13,6 +13,10 @@ Breaking changes
   ``python -m Crypto.SelfTest`` to work.
 * Remove the ``test`` command of ``setup.py``. Install the package
   (e.g. with ``pip install -e .``) and run ``python -m Crypto.SelfTest`` instead.
+* The output length must be a proper integer (``bool`` is rejected) in ``read()``
+  of SHAKE, cSHAKE, TurboSHAKE and KangarooTwelve objects, and for
+  ``digest_bytes`` and ``digest_bits`` of BLAKE2b and BLAKE2s.
+  Before, ``True`` was accepted as 1 and produced a 1-byte output.
 
 Resolved issues
 ---------------
@@ -27,6 +31,12 @@ Resolved issues
   it created a KMAC128 or TupleHash128 object instead (for KMAC, also accepting
   keys shorter than the 32 bytes required for KMAC256).
 * Added the missing documentation for ``Crypto.Hash.MD4``.
+
+New features
+------------
+* New function ``Crypto.Hash.KangarooTwelve.digest()``, to hash a whole message
+  with a single call. For messages up to 8 KiB, it is 1.3x to 3x faster than
+  ``new()`` followed by ``read()``.
 
 3.24.0 (4 October 2026)
 ++++++++++++++++++++++++++

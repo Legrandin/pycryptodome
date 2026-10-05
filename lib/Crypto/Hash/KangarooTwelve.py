@@ -34,13 +34,33 @@ import os
 import threading
 from typing import Optional, Union
 
-from Crypto.Util._raw_api import c_size_t, c_uint8_ptr
+from Crypto.Util._raw_api import (
+    c_size_t,
+    c_uint8_ptr,
+    create_string_buffer,
+    get_raw_buffer,
+    load_pycryptodome_raw_lib,
+)
 from Crypto.Util.number import long_to_bytes
 
 from . import TurboSHAKE128
-from .keccak import _raw_keccak_lib
 
 Buffer = Union[bytes, bytearray, memoryview]
+
+_raw_k12_lib = load_pycryptodome_raw_lib(
+    "Crypto.Hash._k12",
+    """
+                        int k12_leaves(const uint8_t *in,
+                                       size_t n_leaves,
+                                       uint8_t *cvs);
+                        int k12_oneshot(const uint8_t *in,
+                                        size_t in_len,
+                                        const uint8_t *custom,
+                                        size_t custom_len,
+                                        uint8_t *out,
+                                        size_t out_len);
+                        """,
+)
 
 
 def _length_encode(x):
@@ -69,7 +89,7 @@ def _hash_leaves(leaves: memoryview, cvs: memoryview) -> None:
     if n_leaves == 0:
         return
 
-    result = _raw_keccak_lib.k12_leaves(c_uint8_ptr(leaves), c_size_t(n_leaves), c_uint8_ptr(cvs))
+    result = _raw_k12_lib.k12_leaves(c_uint8_ptr(leaves), c_size_t(n_leaves), c_uint8_ptr(cvs))
     if result:
         raise ValueError("Error %d while hashing K12 leaves" % result)
 
@@ -303,6 +323,11 @@ class K12_XOF:
         :rtype: byte string
         """
 
+        if not isinstance(length, int) or isinstance(length, bool):
+            raise TypeError("'length' must be an integer")
+        if length < 0:
+            raise ValueError("'length' must be a non-negative integer")
+
         custom_was_consumed = False
 
         # The message and the customization string together may still
@@ -375,3 +400,44 @@ def new(data: Optional[Buffer] = None, custom: Optional[bytes] = None, threads: 
     """
 
     return K12_XOF(data, custom, threads)
+
+
+def digest(data: Buffer, *, length: int, custom: Optional[bytes] = None) -> bytes:
+    """Compute the KangarooTwelve output for a complete message, in one go.
+
+    It returns the same bytes as ``new(data, custom).read(length)``,
+    but it is much faster for short messages.
+
+    Args:
+       data (bytes/bytearray/memoryview):
+        The whole message to hash.
+       length (integer):
+        Keyword-only. The amount of bytes to return.
+       custom (bytes):
+        Optional, keyword-only.
+        A customization byte string.
+
+    :Return: the output of the XOF, ``length`` bytes long
+    :rtype: byte string
+    """
+
+    if custom is None:
+        custom = b""
+
+    if not isinstance(length, int) or isinstance(length, bool):
+        raise TypeError("'length' must be an integer")
+    if length < 0:
+        raise ValueError("'length' must be a non-negative integer")
+
+    out = create_string_buffer(length)
+    result = _raw_k12_lib.k12_oneshot(
+        c_uint8_ptr(data),
+        c_size_t(len(data)),
+        c_uint8_ptr(custom),
+        c_size_t(len(custom)),
+        out,
+        c_size_t(length),
+    )
+    if result:
+        raise ValueError("Error %d while computing KangarooTwelve" % result)
+    return get_raw_buffer(out)

@@ -87,6 +87,18 @@ class TestKangarooTwelve:
         assert isinstance(digest, bytes)
         assert len(digest) == 90
 
+    def test_read_negative(self):
+        xof = K12.new()
+        for bad in (True, False, 1.0, "1", None):
+            with pytest.raises(TypeError):
+                xof.read(bad)
+        with pytest.raises(ValueError):
+            xof.read(-1)
+
+        # A rejected read() does not start squeezing
+        xof.update(b"abc")
+        assert xof.read(10) == K12.new(data=b"abc").read(10)
+
     def test_update_after_read(self):
         mac = K12.new()
         mac.update(b"rrrr")
@@ -492,3 +504,75 @@ class TestKangarooTwelveThreads:
                 xof.update(memoryview(data)[index : index + size])
                 index += size
             assert xof.read(32) == ref
+
+
+def k12_reference(message, custom, length):
+    """Straightforward KangarooTwelve, on top of TurboSHAKE128"""
+    from Crypto.Hash import TurboSHAKE128
+
+    s = bytes(message) + bytes(custom) + K12._length_encode(len(custom))
+    if len(s) <= 8192:
+        return TurboSHAKE128.new(data=s, domain=0x07).read(length)
+
+    final_node = s[:8192] + b"\x03" + b"\x00" * 7
+    leaves = [s[i : i + 8192] for i in range(8192, len(s), 8192)]
+    for leaf in leaves:
+        final_node += TurboSHAKE128.new(data=leaf, domain=0x0B).read(32)
+    final_node += K12._length_encode(len(leaves)) + b"\xff\xff"
+    return TurboSHAKE128.new(data=final_node, domain=0x06).read(length)
+
+
+class TestKangarooTwelveDigest:
+    def test_vs_reference(self):
+        # fmt: off
+        sizes = (0, 1, 100, 167, 168, 169, 4096, 8000, 8189, 8190, 8191, 8192, 8193,
+                 8192 * 2, 8192 * 3 + 1, 100000)
+        # fmt: on
+        customs = (b"", b"C", b"C" * 300, b"C" * 8189, b"C" * 8192, b"C" * 9000)
+        for size in sizes:
+            data = ptn(size)
+            for custom in customs:
+                for length in (0, 1, 32, 200):
+                    ref = k12_reference(data, custom, length)
+                    assert K12.digest(data, length=length, custom=custom) == ref
+                    assert K12.new(data=data, custom=custom).read(length) == ref
+
+    def test_test_vectors(self):
+        # Same as test_ptn_17_3 and test_ptn_c_41_3
+        tv = """CB 55 2E 2E C7 7D 99 10 70 1D 57 8B 45 7D DF 77
+        2C 12 E3 22 E4 EE 7F E4 17 F9 2C 75 8F 0D 59 D0"""
+        assert K12.digest(ptn(17**3), length=32) == txt2bin(tv)
+        tv = """75 D2 F8 6A 2E 64 45 66 72 6B 4F BC FC 56 57 B9
+        DB CF 07 0C 7B 0D CA 06 45 0A B2 91 D7 44 3B CF"""
+        assert K12.digest(b"\xff" * 7, length=32, custom=ptn(41**3)) == txt2bin(tv)
+
+    def test_types(self):
+        ref = K12.digest(b"abc", length=32)
+        assert K12.digest(bytearray(b"abc"), length=32) == ref
+        assert K12.digest(memoryview(b"abc"), length=32) == ref
+        assert K12.digest(b"abc", length=32, custom=None) == ref
+        assert K12.digest(b"abc", length=32, custom=b"") == ref
+        assert K12.digest(data=b"abc", length=32) == ref
+        assert K12.digest(custom=b"", length=32, data=b"abc") == ref
+        assert isinstance(ref, bytes)
+
+    def test_negative(self):
+        for bad in ("string", 5, None):
+            with pytest.raises(TypeError):
+                K12.digest(bad, length=32)
+        with pytest.raises(TypeError):
+            K12.digest(b"abc", length=32, custom="string")
+        for bad in (32.0, "32", None, True):
+            with pytest.raises(TypeError):
+                K12.digest(b"abc", length=bad)
+        with pytest.raises(ValueError):
+            K12.digest(b"abc", length=-1)
+
+    def test_keyword_only(self):
+        # Only the message can be passed by position
+        with pytest.raises(TypeError):
+            K12.digest(b"abc", 32)
+        with pytest.raises(TypeError):
+            K12.digest(b"abc", 32, b"custom")
+        with pytest.raises(TypeError):
+            K12.digest(length=32)

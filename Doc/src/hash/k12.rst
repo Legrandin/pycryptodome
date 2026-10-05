@@ -10,7 +10,7 @@ it produces digests of any length, and it can be used as a Pseudo Random Generat
 
 Output bits do **not** depend on the output length.
 
-KangarooTwelve is not standardized. However, an RFC_ is being written.
+KangarooTwelve is specified by RFC9861_.
 It provides 128 bit of security against (second) pre-image attacks when the output is at least 128 bits long.
 It provides the same security level against collision attacks when the output is at least 256 bits long.
 
@@ -34,6 +34,12 @@ In the following example, we extract 26 bytes (208 bits) from the XOF::
     >>> print(kangaroo.read(26).hex())
     61e571c51da64228a85d495f3546c43a4dd2c1fd5de87e45dc58
 
+If the whole message is available at once, :func:`Crypto.Hash.KangarooTwelve.digest`
+returns the output with a single call, which is much faster for short messages::
+
+    >>> print(K12.digest(b'Some data', length=26, custom=b'Email Signature').hex())
+    61e571c51da64228a85d495f3546c43a4dd2c1fd5de87e45dc58
+
 KangarooTwelve hashes long messages as a tree of independent 8 KiB leaves,
 so it can use several CPU cores. This is disabled by default; enable it with
 the ``threads`` parameter to :func:`Crypto.Hash.KangarooTwelve.new`::
@@ -46,7 +52,7 @@ The output does not depend on the number of threads.
 Threads only help with long data passed in large chunks:
 each thread hashes at least 256 KiB of a single :meth:`update` call.
 
-.. _RFC: https://datatracker.ietf.org/doc/draft-irtf-cfrg-kangarootwelve/
+.. _RFC9861: https://www.rfc-editor.org/rfc/rfc9861.html
 
 .. automodule:: Crypto.Hash.KangarooTwelve
     :members:

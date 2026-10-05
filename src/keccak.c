@@ -31,7 +31,18 @@
 #include "common.h"
 #include "endianess.h"
 
+/*
+ * Another module can reuse this code by defining KECCAK_EMBEDDED and
+ * including this file: then, it does not define the module init
+ * function nor exports any symbol of its own.
+ * The functions are inline so that unused ones raise no warnings.
+ */
+#ifndef KECCAK_EMBEDDED
 FAKE_INIT(keccak)
+#define KECCAK_API EXPORT_SYM
+#else
+#define KECCAK_API static inline
+#endif
 
 #define KECCAK_F1600_STATE 200
 
@@ -64,7 +75,7 @@ typedef struct
 
 static void keccak_function (uint64_t *state, unsigned rounds);
 
-EXPORT_SYM int keccak_reset(keccak_state *state)
+KECCAK_API int keccak_reset(keccak_state *state)
 {
     if (NULL == state)
         return ERR_NULL;
@@ -98,7 +109,7 @@ keccak_squeeze_internal (keccak_state *self)
     }
 }
 
-EXPORT_SYM int keccak_init (keccak_state **state,
+KECCAK_API int keccak_init (keccak_state **state,
                             size_t capacity_bytes,
                             uint8_t rounds)
 {
@@ -132,13 +143,13 @@ EXPORT_SYM int keccak_init (keccak_state **state,
     return 0;
 }
 
-EXPORT_SYM int keccak_destroy(keccak_state *state)
+KECCAK_API int keccak_destroy(keccak_state *state)
 {
     free(state);
     return 0;
 }
 
-EXPORT_SYM int keccak_absorb (keccak_state *self,
+KECCAK_API int keccak_absorb (keccak_state *self,
                               const uint8_t *in,
                               size_t length)
 {
@@ -204,7 +215,7 @@ static void keccak_finish (keccak_state *self, uint8_t padding)
     self->valid_bytes = self->rate;
 }
 
-EXPORT_SYM int keccak_squeeze (keccak_state *self, uint8_t *out, size_t length, uint8_t padding)
+KECCAK_API int keccak_squeeze (keccak_state *self, uint8_t *out, size_t length, uint8_t padding)
 {
     if ((NULL == self) || (NULL == out))
         return ERR_NULL;
@@ -237,7 +248,7 @@ EXPORT_SYM int keccak_squeeze (keccak_state *self, uint8_t *out, size_t length, 
     return 0;
 }
 
-EXPORT_SYM int keccak_digest(keccak_state *state, uint8_t *digest, size_t len, uint8_t padding)
+KECCAK_API int keccak_digest(keccak_state *state, uint8_t *digest, size_t len, uint8_t padding)
 {
     keccak_state tmp;
 
@@ -251,48 +262,13 @@ EXPORT_SYM int keccak_digest(keccak_state *state, uint8_t *digest, size_t len, u
     return keccak_squeeze(&tmp, digest, len, padding);
 }
 
-EXPORT_SYM int keccak_copy(const keccak_state *src, keccak_state *dst)
+KECCAK_API int keccak_copy(const keccak_state *src, keccak_state *dst)
 {
     if (NULL == src || NULL == dst) {
         return ERR_NULL;
     }
 
     *dst = *src;
-    return 0;
-}
-
-#define K12_LEAF_SIZE   8192
-#define K12_CV_SIZE     32
-
-/*
- * Hash n_leaves complete 8192-byte leaves with TurboSHAKE128
- * (domain 0x0B) and write their 32-byte chaining values to cvs
- * (n_leaves * 32 bytes).
- *
- * It only uses a local state on the stack, so it is reentrant
- * and it can be called from several threads at the same time.
- */
-EXPORT_SYM int k12_leaves(const uint8_t *in, size_t n_leaves, uint8_t *cvs)
-{
-    keccak_state ks;
-    size_t i;
-
-    if (NULL == in || NULL == cvs)
-        return ERR_NULL;
-
-    memset(&ks, 0, sizeof ks);
-    ks.capacity = 32;
-    ks.rate = KECCAK_F1600_STATE - ks.capacity;
-    ks.rounds = 12;
-
-    for (i=0; i<n_leaves; i++) {
-        keccak_reset(&ks);
-        keccak_absorb(&ks, in, K12_LEAF_SIZE);
-        keccak_squeeze(&ks, cvs, K12_CV_SIZE, 0x0B);
-        in += K12_LEAF_SIZE;
-        cvs += K12_CV_SIZE;
-    }
-
     return 0;
 }
 
