@@ -89,3 +89,9 @@ ignore = [
 
 [tool.ruff.lint.isort]
 known-first-party = ["Crypto"]
+
+[tool.pytest.ini_options]
+# Plain "pytest" runs the self-tests of the installed package
+# (the sources in lib/ lack the compiled extensions)
+addopts = ["-p", "Crypto.SelfTest.plugin", "--pyargs"]
+testpaths = ["Crypto.SelfTest"]
