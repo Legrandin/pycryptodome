@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "pycryptodome"
 dynamic = ["version", "license"]
 description = "Cryptographic library for Python"
-readme = {file = "DESCRIPTION.rst", content-type = "text/x-rst"}
+readme = "README.rst"
 authors = [{name = "Helder Eijs", email = "helderijs@gmail.com"}]
 requires-python = ">=3.8"
 classifiers = [
