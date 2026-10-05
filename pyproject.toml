@@ -44,4 +44,4 @@ ignore = [
 "lib/Crypto/Util/_raw_api.py" = ["F401"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["Crypto", "Cryptodome"]
+known-first-party = ["Crypto"]

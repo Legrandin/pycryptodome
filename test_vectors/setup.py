@@ -44,9 +44,8 @@ longdesc = """
 This package contains an extensive set of test vectors
 to verify the PyCryptodome cryptographic library.
 
-PyCryptdome can be installed with either the ``pycryptodome``
-package (``Crypto`` namespace) or
-the ``pycryptodomex`` package (``Cryptodome`` namespace).
+PyCryptodome can be installed with the ``pycryptodome``
+package (``Crypto`` namespace).
 
 For more information, see the `homepage`_.
 

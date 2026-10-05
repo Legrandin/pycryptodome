@@ -7,6 +7,8 @@ Changelog
 Breaking changes
 ----------------
 * Remove support for Python 2.7. The minimum supported version is now Python 3.8.
+* The ``pycryptodomex`` package (``Cryptodome`` namespace) is no longer released.
+  The library is only available as ``pycryptodome``, under the ``Crypto`` namespace.
 
 Resolved issues
 ---------------

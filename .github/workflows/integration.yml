@@ -52,11 +52,7 @@ jobs:
     - name: Test
       shell: bash
       run: |
-        if [[ -f .separate_namespace ]]; then
-          python -m Cryptodome.SelfTest
-        else
-          python -m Crypto.SelfTest
-        fi
+        python -m Crypto.SelfTest
 
   build_desktop:
     runs-on: ${{ matrix.os }}
@@ -97,11 +93,7 @@ jobs:
     - name: Test
       shell: bash
       run: |
-        if [[ -f .separate_namespace ]]; then
-          python -m Cryptodome.SelfTest
-        else
-          python -m Crypto.SelfTest
-        fi
+        python -m Crypto.SelfTest
 
   build_linux_arm:
     runs-on: ubuntu-22.04-arm
@@ -138,11 +130,7 @@ jobs:
     - name: Test
       shell: bash
       run: |
-        if [[ -f .separate_namespace ]]; then
-          python -m Cryptodome.SelfTest
-        else
-          python -m Crypto.SelfTest
-        fi
+        python -m Crypto.SelfTest
 
   ruff:
     runs-on: ubuntu-latest

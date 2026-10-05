@@ -1,6 +1,5 @@
 include MANIFEST.in
 include *.rst
-include .separate_namespace
 include setup.py pct-speedtest.py compiler_opt.py setup.cfg
 include pyproject.toml
 include requirements-test.txt

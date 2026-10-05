@@ -1,37 +1,23 @@
 Installation
 ------------
 
-The installation procedure depends on the package you want the library to be in.
-PyCryptodome can be used as:
+You install PyCryptodome with::
 
- #. **An almost drop-in replacement for the old PyCrypto library**.
-    You install it with::
+    pip install pycryptodome
 
-        pip install pycryptodome
-   
-    In this case, all modules are installed under the ``Crypto`` package.
-    You can test everything is right with::
-		
-        pip install pycryptodome-test-vectors
-        python -m Crypto.SelfTest
-   
-    One must avoid having both PyCrypto and PyCryptodome installed
-    at the same time, as they will interfere with each other.
-    This option is therefore recommended only when you are sure that
-    the whole application is deployed in a ``virtualenv``.
+All modules are installed under the ``Crypto`` package.
+You can test everything is right with::
 
- #. **A library independent of the old PyCrypto**.
-    You install it with::
+    pip install pycryptodome-test-vectors
+    python -m Crypto.SelfTest
 
-        pip install pycryptodomex
-   
-    You can test everything is right with::
-		
-        pip install pycryptodome-test-vectors
-        python -m Cryptodome.SelfTest
-  
-    In this case, all modules are installed under the ``Cryptodome`` package.
-    The old PyCrypto and PyCryptodome can coexist.
+One must avoid having both PyCrypto and PyCryptodome installed
+at the same time, as they will interfere with each other.
+This is not a problem if your application is deployed in a ``virtualenv``.
+
+.. note::
+    Starting with version 4.0, the ``pycryptodomex`` project
+    (``Cryptodome`` package) is no longer released.
 
 The procedures below go a bit more in detail, by explaining
 how to setup the environment for compiling the C extensions
@@ -40,52 +26,40 @@ for each OS, and how to install the GMP library.
 Compiling in Linux Ubuntu
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. note::
-    If you want to install under the ``Crypto`` package, replace
-    below ``pycryptodomex`` with ``pycryptodome``.
-
 For Python 3.x::
 
         $ sudo apt-get install build-essential python3-dev
-        $ pip install pycryptodomex
+        $ pip install pycryptodome
         $ pip install pycryptodome-test-vectors
-        $ python3 -m Cryptodome.SelfTest
+        $ python3 -m Crypto.SelfTest
 
 For PyPy::
 
         $ sudo apt-get install build-essential pypy-dev
-        $ pip install pycryptodomex
+        $ pip install pycryptodome
         $ pip install pycryptodome-test-vectors
-        $ pypy -m Cryptodome.SelfTest
+        $ pypy -m Crypto.SelfTest
 
 Compiling in Linux Fedora
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. note::
-    If you want to install under the ``Crypto`` package, replace
-    below ``pycryptodomex`` with ``pycryptodome``.
-
 For Python 3.x::
 
         $ sudo yum install gcc gmp python3-devel
-        $ pip install pycryptodomex
+        $ pip install pycryptodome
         $ pip install pycryptodome-test-vectors
-        $ python3 -m Cryptodome.SelfTest
+        $ python3 -m Crypto.SelfTest
 
 For PyPy::
 
         $ sudo yum install gcc gmp pypy-devel
-        $ pip install pycryptodomex
+        $ pip install pycryptodome
         $ pip install pycryptodome-test-vectors
-        $ pypy -m Cryptodome.SelfTest
+        $ pypy -m Crypto.SelfTest
 
 
 Windows (from sources)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. note::
-    If you want to install under the ``Crypto`` package, replace
-    below ``pycryptodomex`` with ``pycryptodome``. That being the case and if you want to run the test, instead of ``Cryptodome.SelfTest``, run ``Crypto.SelfTest``.
 
 Windows does not come with a C compiler like most Unix systems.
 The simplest way to compile the *PyCryptodome* extensions from
@@ -97,12 +71,12 @@ components freely made available by Microsoft.
 
 #. Compile and install PyCryptodome::
 
-        > pip install pycryptodomex --no-binary :all:
+        > pip install pycryptodome --no-binary :all:
 
 #. To make sure everything work fine, run the test suite::
 
         > pip install pycryptodome-test-vectors
-        > python -m Cryptodome.SelfTest
+        > python -m Crypto.SelfTest
 
 Documentation
 ~~~~~~~~~~~~~

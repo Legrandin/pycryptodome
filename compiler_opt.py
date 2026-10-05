@@ -314,7 +314,7 @@ def remove_extension(extensions, name):
     del extensions[idxs[0]]
 
 
-def set_compiler_options(package_root, extensions):
+def set_compiler_options(extensions):
     """Environment specific settings for extension modules.
 
     This function modifies how each module gets compiled, to
@@ -369,7 +369,7 @@ def set_compiler_options(package_root, extensions):
 
     # AESNI
     aesni_result = (cpuid_h_present or intrin_h_present) and compiler_supports_aesni()
-    aesni_mod_name = package_root + ".Cipher._raw_aesni"
+    aesni_mod_name = "Crypto.Cipher._raw_aesni"
     if aesni_result:
         print("Compiling support for AESNI instructions")
         aes_mods = [x for x in extensions if x.name == aesni_mod_name]
@@ -383,7 +383,7 @@ def set_compiler_options(package_root, extensions):
 
     # CLMUL
     clmul_result = (cpuid_h_present or intrin_h_present) and compiler_supports_clmul()
-    clmul_mod_name = package_root + ".Hash._ghash_clmul"
+    clmul_mod_name = "Crypto.Hash._ghash_clmul"
     if clmul_result:
         print("Compiling support for CLMUL instructions")
         clmul_mods = [x for x in extensions if x.name == clmul_mod_name]

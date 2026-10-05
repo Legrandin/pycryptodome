@@ -21,8 +21,6 @@
 # ===================================================================
 
 import os
-import re
-import shutil
 import sys
 import sysconfig
 
@@ -34,19 +32,7 @@ sys.path.append(os.getcwd())
 
 from compiler_opt import set_compiler_options
 
-use_separate_namespace = os.path.isfile(".separate_namespace")
-
-project_name = "pycryptodome"
-package_root = "Crypto"
-other_project = "pycryptodomex"
-other_root = "Cryptodome"
-
-if use_separate_namespace:
-    project_name, other_project = other_project, project_name
-    package_root, other_root = other_root, package_root
-
-longdesc = (
-    """
+longdesc = """
 PyCryptodome
 ============
 
@@ -57,12 +43,12 @@ It supports Python 3.8 and newer, and PyPy.
 
 You can install it with::
 
-    pip install THIS_PROJECT
+    pip install pycryptodome
 
-All modules are installed under the ``THIS_ROOT`` package.
+All modules are installed under the ``Crypto`` package.
 
-Check the OTHER_PROJECT_ project for the equivalent library that
-works under the ``OTHER_ROOT`` package.
+Starting with version 4.0, the library is no longer released
+as the ``pycryptodomex`` project (``Cryptodome`` package).
 
 PyCryptodome is a fork of PyCrypto. It brings several enhancements
 with respect to the last official version of PyCrypto (2.6.1),
@@ -96,14 +82,9 @@ For more information, see the `homepage`_.
 
 All the code can be downloaded from `GitHub`_.
 
-.. _OTHER_PROJECT: https://pypi.python.org/pypi/OTHER_PROJECT
 .. _`homepage`: http://www.pycryptodome.org
 .. _GitHub: https://github.com/Legrandin/pycryptodome
-""".replace("THIS_PROJECT", project_name)
-    .replace("THIS_ROOT", package_root)
-    .replace("OTHER_PROJECT", other_project)
-    .replace("OTHER_ROOT", other_root)
-)
+"""
 
 
 class PCTBuildExt(build_ext):
@@ -154,33 +135,29 @@ class TestCommand(Command):
 
         # Run SelfTest
         old_path = sys.path[:]
-        self.announce("running self-tests on " + package_root)
+        self.announce("running self-tests")
         try:
             sys.path.insert(0, self.build_dir)
 
-            if use_separate_namespace:
-                from Cryptodome import SelfTest
-                from Cryptodome.Math import Numbers
-            else:
-                from Crypto import SelfTest
-                from Crypto.Math import Numbers
+            from Crypto import SelfTest
+            from Crypto.Math import Numbers
 
             moduleObj = None
             if self.module:
                 if self.module.count(".") == 0:
                     # Test a whole a sub-package
-                    full_module = package_root + ".SelfTest." + self.module
+                    full_module = "Crypto.SelfTest." + self.module
                     module_name = self.module
                 else:
                     # Test only a module
                     # Assume only one dot is present
                     comps = self.module.split(".")
                     module_name = "test_" + comps[1]
-                    full_module = package_root + ".SelfTest." + comps[0] + "." + module_name
+                    full_module = "Crypto.SelfTest." + comps[0] + "." + module_name
                 # Import sub-package or module
                 moduleObj = __import__(full_module, globals(), locals(), module_name)
 
-            print(package_root + ".Math implementation:", str(Numbers._implementation))
+            print("Crypto.Math implementation:", str(Numbers._implementation))
 
             SelfTest.run(module=moduleObj, verbosity=self.verbose, stream=sys.stdout, config=self.config)
         finally:
@@ -191,45 +168,6 @@ class TestCommand(Command):
         self.announce("running extended self-tests")
 
     sub_commands = [("build", None)]
-
-
-def create_cryptodome_lib():
-    assert os.path.isdir("lib/Crypto")
-
-    try:
-        shutil.rmtree("lib/Cryptodome")
-    except OSError:
-        pass
-    for root_src, dirs, files in os.walk("lib/Crypto"):
-        root_dst, nr_repl = re.subn("Crypto", "Cryptodome", root_src)
-        assert nr_repl == 1
-
-        for dir_name in dirs:
-            full_dir_name_dst = os.path.join(root_dst, dir_name)
-            if not os.path.exists(full_dir_name_dst):
-                os.makedirs(full_dir_name_dst)
-
-        for file_name in files:
-            full_file_name_src = os.path.join(root_src, file_name)
-            full_file_name_dst = os.path.join(root_dst, file_name)
-
-            print("Copying file %s to %s" % (full_file_name_src, full_file_name_dst))
-            shutil.copy2(full_file_name_src, full_file_name_dst)
-
-            if full_file_name_src.split(".")[-1] != "py":
-                continue
-
-            with open(full_file_name_dst, encoding="utf-8") as fd:
-                content = (
-                    fd.read()
-                    .replace("Crypto.", "Cryptodome.")
-                    .replace("Crypto ", "Cryptodome ")
-                    .replace("'Crypto'", "'Cryptodome'")
-                    .replace('"Crypto"', '"Cryptodome"')
-                )
-            os.remove(full_file_name_dst)
-            with open(full_file_name_dst, "w", encoding="utf-8") as fd:
-                fd.write(content)
 
 
 # Parameters for setup
@@ -397,27 +335,11 @@ ext_modules = [
     ),
 ]
 
-if use_separate_namespace:
-    # Fix-up setup information
-    for i in range(len(packages)):
-        packages[i] = packages[i].replace("Crypto", "Cryptodome")
-    new_package_data = {}
-    for k, v in package_data.items():
-        new_package_data[k.replace("Crypto", "Cryptodome")] = v
-    package_data = new_package_data
-    for ext in ext_modules:
-        ext.name = ext.name.replace("Crypto", "Cryptodome")
-
-    # Recreate lib/Cryptodome from scratch, unless it is the only
-    # directory available
-    if os.path.isdir("lib/Crypto"):
-        create_cryptodome_lib()
-
 # Add compiler specific options.
-set_compiler_options(package_root, ext_modules)
+set_compiler_options(ext_modules)
 
 # By doing this we need to change version information in a single file
-with open(os.path.join("lib", package_root, "__init__.py")) as init_root:
+with open(os.path.join("lib", "Crypto", "__init__.py")) as init_root:
     for line in init_root:
         if line.startswith("version_info"):
             version_tuple = eval(line.split("=")[1])
@@ -432,7 +354,7 @@ if not sysconfig.get_config_var("Py_GIL_DISABLED"):
     setup_options["options"] = {"bdist_wheel": {"py_limited_api": "cp38"}}
 
 setup(
-    name=project_name,
+    name="pycryptodome",
     version=version_string,
     description="Cryptographic library for Python",
     long_description=longdesc,

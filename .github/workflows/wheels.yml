@@ -59,11 +59,7 @@ jobs:
           CIBW_ENABLE: "cpython-freethreading pypy pypy-eol"
           CIBW_BEFORE_TEST_LINUX: "(ldd /bin/ls | grep -q musl && apk add gmp) || true"
 
-          # Set pycryptodome/x test command according to built package
-          CIBW_TEST_COMMAND:
-            "${{ endsWith(github.ref, 'x') == true &&
-            'python -m Cryptodome.SelfTest --skip-slow-tests' ||
-            'python -m Crypto.SelfTest --skip-slow-tests' }}"
+          CIBW_TEST_COMMAND: "python -m Crypto.SelfTest --skip-slow-tests"
 
       - name: Delete manylinux1 wheels
         if: runner.os == 'Linux'
