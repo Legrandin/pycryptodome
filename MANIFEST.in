@@ -1,6 +1,6 @@
 include MANIFEST.in
 include *.rst
-include setup.py pct-speedtest.py compiler_opt.py setup.cfg
+include setup.py pct-speedtest.py compiler_opt.py
 include pyproject.toml
 include requirements-test.txt
 graft Doc

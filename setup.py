@@ -26,65 +26,10 @@ import sysconfig
 
 from setuptools import Extension, setup
 from setuptools.command.build_ext import build_ext
-from setuptools.command.build_py import build_py
 
 sys.path.append(os.getcwd())
 
 from compiler_opt import set_compiler_options
-
-longdesc = """
-PyCryptodome
-============
-
-PyCryptodome is a self-contained Python package of low-level
-cryptographic primitives.
-
-It supports Python 3.8 and newer, and PyPy.
-
-You can install it with::
-
-    pip install pycryptodome
-
-All modules are installed under the ``Crypto`` package.
-
-Starting with version 4.0, the library is no longer released
-as the ``pycryptodomex`` project (``Cryptodome`` package).
-
-PyCryptodome is a fork of PyCrypto. It brings several enhancements
-with respect to the last official version of PyCrypto (2.6.1),
-for instance:
-
-* Authenticated encryption modes (GCM, CCM, EAX, SIV, OCB, KW, KWP)
-* Hybrid Public Key Encryption (HPKE)
-* Accelerated AES on Intel platforms via AES-NI
-* First class support for PyPy
-* Elliptic curves cryptography (NIST P-curves; Ed25519, Ed448, Curve25519)
-* Better and more compact API (`nonce` and `iv` attributes for ciphers,
-  automatic generation of random nonces and IVs, simplified CTR cipher mode,
-  and more)
-* SHA-3 (including SHAKE XOFs) and BLAKE2 hash algorithms
-* Salsa20 and ChaCha20 stream ciphers
-* scrypt and HKDF
-* Deterministic (EC)DSA and EdDSA
-* Password-protected PKCS#8 key containers
-* Shamir's Secret Sharing scheme
-* Random numbers get sourced directly from the OS (and not from a CSPRNG in userspace)
-* Simplified install process, including better support for Windows
-* Cleaner RSA and DSA key generation (largely based on FIPS 186-4)
-* Major clean ups and simplification of the code base
-
-PyCryptodome is not a wrapper to a separate C library like *OpenSSL*.
-To the largest possible extent, algorithms are implemented in pure Python.
-Only the pieces that are extremely critical to performance (e.g. block ciphers)
-are implemented as C extensions.
-
-For more information, see the `homepage`_.
-
-All the code can be downloaded from `GitHub`_.
-
-.. _`homepage`: http://www.pycryptodome.org
-.. _GitHub: https://github.com/Legrandin/pycryptodome
-"""
 
 
 class PCTBuildExt(build_ext):
@@ -92,45 +37,6 @@ class PCTBuildExt(build_ext):
     def get_libraries(self, ext):
         return []
 
-
-class PCTBuildPy(build_py):
-    def find_package_modules(self, package, package_dir, *args, **kwargs):
-        modules = build_py.find_package_modules(self, package, package_dir, *args, **kwargs)
-
-        # Exclude certain modules
-        retval = []
-        for item in modules:
-            _pkg, _module = item[:2]
-            retval.append(item)
-        return retval
-
-
-# Parameters for setup
-packages = [
-    "Crypto",
-    "Crypto.Cipher",
-    "Crypto.Hash",
-    "Crypto.IO",
-    "Crypto.PublicKey",
-    "Crypto.Protocol",
-    "Crypto.Random",
-    "Crypto.Signature",
-    "Crypto.Util",
-    "Crypto.Math",
-    "Crypto.SelfTest",
-    "Crypto.SelfTest.Cipher",
-    "Crypto.SelfTest.Hash",
-    "Crypto.SelfTest.IO",
-    "Crypto.SelfTest.Protocol",
-    "Crypto.SelfTest.PublicKey",
-    "Crypto.SelfTest.Random",
-    "Crypto.SelfTest.Signature",
-    "Crypto.SelfTest.Util",
-    "Crypto.SelfTest.Math",
-]
-package_data = {
-    "Crypto": ["py.typed"],
-}
 
 ext_modules = [
     # Hash functions
@@ -273,14 +179,6 @@ ext_modules = [
 # Add compiler specific options.
 set_compiler_options(ext_modules)
 
-# By doing this we need to change version information in a single file
-with open(os.path.join("lib", "Crypto", "__init__.py")) as init_root:
-    for line in init_root:
-        if line.startswith("version_info"):
-            version_tuple = eval(line.split("=")[1])
-
-version_string = ".".join([str(x) for x in version_tuple])
-
 # Set the minimum ABI3 version for bdist_wheel to 3.8
 # unless Python is running without GIL (as there is no established way yet to
 # specify multiple ABI levels)
@@ -289,46 +187,10 @@ if not sysconfig.get_config_var("Py_GIL_DISABLED"):
     setup_options["options"] = {"bdist_wheel": {"py_limited_api": "cp38"}}
 
 setup(
-    name="pycryptodome",
-    version=version_string,
-    description="Cryptographic library for Python",
-    long_description=longdesc,
-    author="Helder Eijs",
-    author_email="helderijs@gmail.com",
-    url="https://www.pycryptodome.org",
-    platforms="Posix; MacOS X; Windows",
-    zip_safe=False,
-    python_requires=">=3.8",
-    classifiers=[
-        "Development Status :: 5 - Production/Stable",
-        "License :: OSI Approved :: BSD License",
-        "License :: Public Domain",
-        "Intended Audience :: Developers",
-        "Operating System :: Unix",
-        "Operating System :: Microsoft :: Windows",
-        "Operating System :: MacOS :: MacOS X",
-        "Topic :: Security :: Cryptography",
-        "Typing :: Typed",
-        "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.10",
-        "Programming Language :: Python :: 3.11",
-        "Programming Language :: Python :: 3.12",
-        "Programming Language :: Python :: 3.13",
-        "Programming Language :: Python :: 3.14",
-    ],
+    # Not in pyproject.toml: a license as a TOML table is deprecated, and an
+    # SPDX expression requires a version of setuptools without Python 3.8 support
     license="BSD, Public Domain",
-    packages=packages,
-    package_dir={"": "lib"},
-    package_data=package_data,
-    extras_require={
-        "test": ["pytest", "pycryptodome-test-vectors"],
-    },
-    cmdclass={
-        "build_ext": PCTBuildExt,
-        "build_py": PCTBuildPy,
-    },
+    cmdclass={"build_ext": PCTBuildExt},
     ext_modules=ext_modules,
     **setup_options,
 )

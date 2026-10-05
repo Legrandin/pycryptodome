@@ -1,6 +1,50 @@
 [build-system]
-requires = ["setuptools"]
+requires = ["setuptools>=61"]
 build-backend = "setuptools.build_meta"
+
+[project]
+name = "pycryptodome"
+dynamic = ["version", "license"]
+description = "Cryptographic library for Python"
+readme = {file = "DESCRIPTION.rst", content-type = "text/x-rst"}
+authors = [{name = "Helder Eijs", email = "helderijs@gmail.com"}]
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "License :: OSI Approved :: BSD License",
+    "License :: Public Domain",
+    "Intended Audience :: Developers",
+    "Operating System :: Unix",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS :: MacOS X",
+    "Topic :: Security :: Cryptography",
+    "Typing :: Typed",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+
+[project.optional-dependencies]
+test = ["pytest", "pycryptodome-test-vectors"]
+
+[project.urls]
+Homepage = "https://www.pycryptodome.org"
+Source = "https://github.com/Legrandin/pycryptodome/"
+Changelog = "https://www.pycryptodome.org/src/changelog"
+
+[tool.setuptools.dynamic]
+version = {attr = "Crypto.__version__"}
+
+[tool.setuptools.packages.find]
+where = ["lib"]
+
+[tool.setuptools.package-data]
+Crypto = ["py.typed"]
 
 [[tool.mypy.overrides]]
 module = ["pycryptodome_test_vectors.*"]
