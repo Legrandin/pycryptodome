@@ -444,6 +444,20 @@ class TestBytesOutput:
         assert res == ref
         assert b"".join(output([sum(lengths)])) == b"".join(ref)
 
+    def test_strxor(self, monkeypatch):
+        from Crypto.Util.strxor import strxor, strxor_c
+
+        a = bytes(range(256)) * 300
+        b = bytes(reversed(a))
+        ref = (strxor(a, b), strxor_c(a, 0x5A))
+
+        monkeypatch.setattr(_raw_api, "_MIN_BYTES_OUTPUT", 1)
+        res = (strxor(a, memoryview(b)), strxor_c(bytearray(a), 0x5A))
+        assert all(type(x) is bytes for x in res)
+        assert res == ref
+        assert strxor(b"\x01", b"\x03") == b"\x02"
+        assert strxor_c(b"\x01", 3) == b"\x02"
+
     def test_lying_input(self, always_direct):
         from Crypto.Cipher import AES, ARC4
 

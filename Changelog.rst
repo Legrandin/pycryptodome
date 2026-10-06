@@ -53,8 +53,9 @@ New features
   and ARC4) write their result directly into the returned ``bytes`` object,
   without copying it (for 64 KiB or more). For long data, this is 1.3x to 1.8x faster,
   and up to 3x with threads. The same applies to the ``read()`` method of SHAKE128,
-  SHAKE256, cSHAKE, TurboSHAKE and KangarooTwelve, and to
-  ``Crypto.Hash.KangarooTwelve.digest()``.
+  SHAKE256, cSHAKE, TurboSHAKE and KangarooTwelve, to
+  ``Crypto.Hash.KangarooTwelve.digest()``, and to ``Crypto.Util.strxor.strxor()``
+  and ``strxor_c()`` (up to 3.6x faster).
 
 3.24.0 (4 October 2026)
 ++++++++++++++++++++++++++
