@@ -119,34 +119,40 @@ static void keccak_function_x4(__m256i A[25], unsigned rounds)
 }
 
 /*
- * XOR 'words' 64-bit words into each of the 4 states,
- * taking them from the 4 input buffers in[0..3].
+ * XOR n 64-bit words (n <= 25) into each of the 4 states.
+ *
+ * blocks[j] is the input for state j: it points to at least 8*n bytes
+ * (with any alignment), read as n little-endian 64-bit words.
+ * Word i of blocks[j] is XOR-ed into lane i of state j.
  */
-static void keccak_absorb_x4(__m256i A[25], const uint8_t *in[4], unsigned words)
+static void keccak_absorb_x4(__m256i A[25], const uint8_t *blocks[4], unsigned n)
 {
     unsigned i;
     __m256i w;
 
-    for (i=0; i<words; i++) {
-        w = _mm256_set_epi64x((long long)LOAD_U64_LITTLE(in[3] + 8*i),
-                              (long long)LOAD_U64_LITTLE(in[2] + 8*i),
-                              (long long)LOAD_U64_LITTLE(in[1] + 8*i),
-                              (long long)LOAD_U64_LITTLE(in[0] + 8*i));
+    for (i=0; i<n; i++) {
+        w = _mm256_set_epi64x((long long)LOAD_U64_LITTLE(blocks[3] + 8*i),
+                              (long long)LOAD_U64_LITTLE(blocks[2] + 8*i),
+                              (long long)LOAD_U64_LITTLE(blocks[1] + 8*i),
+                              (long long)LOAD_U64_LITTLE(blocks[0] + 8*i));
         A[i] = _mm256_xor_si256(A[i], w);
     }
 }
 
 /*
- * Write the first 'words' 64-bit words of each of the 4 states
- * into the 4 output buffers out[0..3].
+ * Write the first n 64-bit words (n <= 25) of each of the 4 states.
+ *
+ * out[j] is the output for state j: it points to at least 8*n bytes
+ * (with any alignment), written as n little-endian 64-bit words.
+ * Lane i of state j is written into word i of out[j].
  */
-static void keccak_extract_x4(const __m256i A[25], uint8_t *out[4], unsigned words)
+static void keccak_extract_x4(const __m256i A[25], uint8_t *out[4], unsigned n)
 {
     unsigned i, j;
     uint64_t w[4];
 
-    for (i=0; i<words; i++) {
-        _mm256_storeu_si256((__m256i*)w, A[i]);
+    for (i=0; i<n; i++) {
+        memcpy(w, &A[i], sizeof w);
         for (j=0; j<4; j++) {
             STORE_U64_LITTLE(out[j] + 8*i, w[j]);
         }
