@@ -8,7 +8,15 @@ from typing import Any, Dict, Optional, Tuple, Union
 
 from Crypto.Math.Numbers import Integer
 from Crypto.Random.random import getrandbits
-from Crypto.Util._raw_api import SmartPointer, VoidPointer, c_size_t, c_uint8_ptr, c_ulonglong, null_pointer
+from Crypto.Util._raw_api import (
+    SmartPointer,
+    VoidPointer,
+    c_size_t,
+    c_uint8_ptr,
+    c_uint8_ptr_out,
+    c_ulonglong,
+    null_pointer,
+)
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 
 
@@ -265,7 +273,8 @@ class EccPoint:
         xb = bytearray(modulus_bytes)
         yb = bytearray(modulus_bytes)
         get_xy = self._curve.rawlib.get_xy
-        result = get_xy(c_uint8_ptr(xb), c_uint8_ptr(yb), c_size_t(modulus_bytes), self._point.get())
+        with c_uint8_ptr_out(xb) as xb_ptr, c_uint8_ptr_out(yb) as yb_ptr:
+            result = get_xy(xb_ptr, yb_ptr, c_size_t(modulus_bytes), self._point.get())
         if result:
             raise ValueError("Error %d while encoding an EC point" % result)
 
@@ -444,7 +453,8 @@ class EccXPoint:
         modulus_bytes = self.size_in_bytes()
         xb = bytearray(modulus_bytes)
         get_x = self._curve.rawlib.get_x
-        result = get_x(c_uint8_ptr(xb), c_size_t(modulus_bytes), self._point.get())
+        with c_uint8_ptr_out(xb) as xb_ptr:
+            result = get_x(xb_ptr, c_size_t(modulus_bytes), self._point.get())
         if result == 19:  # ERR_ECC_PAI
             raise ValueError("No X coordinate for the point at infinity")
         if result:
