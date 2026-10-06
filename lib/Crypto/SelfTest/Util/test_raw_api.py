@@ -30,12 +30,13 @@
 
 """Self-test suite for Crypto.Util._raw_api"""
 
+import gc
 import sys
 import threading
 
 import pytest
 
-from Crypto.Hash import keccak
+from Crypto.Hash import SHA3_256, keccak
 from Crypto.Util import _raw_api
 
 
@@ -78,3 +79,67 @@ class TestLoadLib:
                 assert errors == []
         finally:
             sys.setswitchinterval(old_interval)
+
+
+class TestUint8Ptr:
+    """While the C code runs, the GIL is released: another thread must not
+    be able to resize or free a buffer that the C code is using.
+    So, c_uint8_ptr() must hold the buffer for as long as its result lives."""
+
+    def test_bytearray_held(self):
+        data = bytearray(b"abc")
+        ptr = _raw_api.c_uint8_ptr(data)
+        with pytest.raises(BufferError):
+            data.extend(b"d")
+        del ptr
+        gc.collect()
+        data.extend(b"d")
+
+    @pytest.mark.parametrize("data", [bytearray(b"abc"), b"abc"], ids=["writable", "read-only"])
+    def test_memoryview_held(self, data):
+        mv = memoryview(data)
+        ptr = _raw_api.c_uint8_ptr(mv)
+        with pytest.raises(BufferError):
+            mv.release()
+        del ptr
+        gc.collect()
+        mv.release()
+
+    @pytest.mark.parametrize(
+        "data",
+        [b"", bytearray(), b"abc", bytearray(b"abc"), memoryview(b"xabcx")[1:4], memoryview(bytearray(b"abc"))],
+        ids=["bytes0", "bytearray0", "bytes", "bytearray", "memoryview-ro", "memoryview-rw"],
+    )
+    def test_content(self, data):
+        assert SHA3_256.new(data).digest() == SHA3_256.new(bytes(data)).digest()
+
+    def test_resize_from_other_thread(self):
+        """Resize a bytearray while another thread hashes it in C."""
+
+        data = bytearray(32 << 20)
+        digest_long = SHA3_256.new(bytes(data)).digest()
+        digest_short = SHA3_256.new(bytes(16)).digest()
+        started = threading.Event()
+        result = []
+
+        def hasher():
+            started.set()
+            result.append(SHA3_256.new(data).digest())
+
+        t = threading.Thread(target=hasher)
+        t.start()
+        started.wait()
+        try:
+            # Most likely, the C code is running now. Without the fix,
+            # this would free the memory it reads (crash or wrong digest).
+            del data[16:]
+            resized = True
+        except BufferError:
+            resized = False
+        t.join()
+
+        if resized:
+            # Only possible before or after the C code ran
+            assert result[0] in (digest_long, digest_short)
+        else:
+            assert result == [digest_long]

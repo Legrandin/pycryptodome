@@ -34,6 +34,7 @@ import abc
 import os
 import sys
 import threading
+import weakref
 from importlib import machinery
 from typing import Any, List, Optional, Union
 
@@ -80,9 +81,12 @@ try:
     ):
         raise ImportError("CFFI 1.16.0+ is required with CPython 3.12+ on Windows")
 
+    # ffi.from_buffer() with a type (used by c_uint8_ptr) requires cffi 1.12+
+    if cffi.__version_info__ < (1, 12):
+        raise ImportError("CFFI 1.12.0+ is required")
+
     ffi: Any = cffi.FFI()
     null_pointer: Any = ffi.NULL
-    uint8_t_type = ffi.typeof(ffi.new("const uint8_t*"))
 
     _Array = ffi.new("uint8_t[1]").__class__.__bases__
 
@@ -148,8 +152,10 @@ try:
 
     def c_uint8_ptr(data: Union[bytes, memoryview, bytearray]) -> Any:
         if isinstance(data, _buffer_type):
-            # This only works for cffi >= 1.7
-            return ffi.cast(uint8_t_type, ffi.from_buffer(data))
+            # The returned object holds the buffer of data, which cannot
+            # be resized or freed (e.g. by another thread, while the GIL
+            # is released during a C call) for as long as it is alive.
+            return ffi.from_buffer("uint8_t[]", data)
         elif isinstance(data, (bytes, _Array)):
             return data
         else:
@@ -246,15 +252,30 @@ except ImportError:
     def c_uint8_ptr(data: Union[bytes, memoryview, bytearray]) -> Any:
         if isinstance(data, (bytes, _Array)):
             return data
+        elif isinstance(data, bytearray):
+            # Fast path: the array holds the buffer of data until it is
+            # garbage collected, so data cannot be resized or freed
+            # (e.g. by another thread, while the GIL is released during
+            # a C call)
+            return (ctypes.c_ubyte * len(data)).from_buffer(data)
         elif isinstance(data, _buffer_type):
+            # memoryview objects can be read-only, which from_buffer()
+            # does not accept
             obj = _py_object(data)
             buf = _Py_buffer()
             _PyObject_GetBuffer(obj, byref(buf), _PyBUF_SIMPLE)
             try:
                 buffer_type = ctypes.c_ubyte * buf.len
-                return buffer_type.from_address(buf.buf)
-            finally:
+                result = buffer_type.from_address(buf.buf)
+                # Hold the buffer of data until the returned array is
+                # garbage collected: until then, data cannot be resized
+                # or freed (e.g. by another thread, while the GIL is
+                # released during a C call).
+                weakref.finalize(result, _PyBuffer_Release, byref(buf))
+            except BaseException:
                 _PyBuffer_Release(byref(buf))
+                raise
+            return result
         else:
             raise TypeError("Object type %s cannot be passed to C code" % type(data))
 
