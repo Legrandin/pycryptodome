@@ -38,7 +38,7 @@ from Crypto.Util._raw_api import (
     c_size_t,
     c_uint8_ptr_len,
     c_uint8_ptr_out,
-    create_string_buffer,
+    create_output_buffer,
     get_raw_buffer,
     load_pycryptodome_raw_lib,
 )
@@ -421,17 +421,18 @@ def digest(data: Buffer, *, length: int, custom: Optional[bytes] = None) -> byte
     if length < 0:
         raise ValueError("'length' must be a non-negative integer")
 
-    out = create_string_buffer(length)
+    out = create_output_buffer(length)
     data_ptr, data_len = c_uint8_ptr_len(data)
     custom_ptr, custom_len = c_uint8_ptr_len(custom)
-    result = _raw_k12_lib.k12_oneshot(
-        data_ptr,
-        c_size_t(data_len),
-        custom_ptr,
-        c_size_t(custom_len),
-        out,
-        c_size_t(length),
-    )
+    with c_uint8_ptr_out(out) as out_ptr:
+        result = _raw_k12_lib.k12_oneshot(
+            data_ptr,
+            c_size_t(data_len),
+            custom_ptr,
+            c_size_t(custom_len),
+            out_ptr,
+            c_size_t(length),
+        )
     if result:
         raise ValueError("Error %d while computing KangarooTwelve" % result)
     return get_raw_buffer(out)

@@ -52,7 +52,9 @@ New features
   (block cipher modes ECB, CBC, CFB, OFB, CTR, GCM and OCB, plus ChaCha20, Salsa20
   and ARC4) write their result directly into the returned ``bytes`` object,
   without copying it (for 64 KiB or more). For long data, this is 1.3x to 1.8x faster,
-  and up to 3x with threads.
+  and up to 3x with threads. The same applies to the ``read()`` method of SHAKE128,
+  SHAKE256, cSHAKE, TurboSHAKE and KangarooTwelve, and to
+  ``Crypto.Hash.KangarooTwelve.digest()``.
 
 3.24.0 (4 October 2026)
 ++++++++++++++++++++++++++

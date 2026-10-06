@@ -8,7 +8,8 @@ from Crypto.Util._raw_api import (
     c_size_t,
     c_ubyte,
     c_uint8_ptr_len,
-    create_string_buffer,
+    c_uint8_ptr_out,
+    create_output_buffer,
     get_raw_buffer,
 )
 
@@ -76,10 +77,11 @@ class TurboSHAKE:
             raise ValueError("'length' must be a non-negative integer")
 
         self._is_squeezing = True
-        bfr = create_string_buffer(length)
-        result = _raw_keccak_lib.keccak_squeeze(
-            self._state.get(), bfr, c_size_t(length), c_ubyte(self._domain)
-        )
+        bfr = create_output_buffer(length)
+        with c_uint8_ptr_out(bfr) as bfr_ptr:
+            result = _raw_keccak_lib.keccak_squeeze(
+                self._state.get(), bfr_ptr, c_size_t(length), c_ubyte(self._domain)
+            )
         if result:
             raise ValueError("Error %d while extracting from TurboSHAKE" % result)
 

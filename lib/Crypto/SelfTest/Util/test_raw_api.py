@@ -406,6 +406,44 @@ class TestBytesOutput:
             assert type(dec) is bytes
             assert dec == ref_dec == data
 
+    @pytest.mark.parametrize(
+        "name",
+        (
+            "SHAKE128",
+            "SHAKE256",
+            "TurboSHAKE128",
+            "TurboSHAKE256",
+            "cSHAKE128",
+            "cSHAKE256",
+            "K12",
+            "K12.digest",
+        ),
+    )
+    def test_xof_read(self, monkeypatch, name):
+        from Crypto.Hash import KangarooTwelve, cSHAKE128, cSHAKE256
+
+        data = b"message" * 1000
+
+        def output(lengths):
+            if name == "K12.digest":
+                return [KangarooTwelve.digest(data, length=sum(lengths))]
+            if name == "K12":
+                xof = KangarooTwelve.new(data)
+            elif name.startswith("cSHAKE"):
+                xof = {"cSHAKE128": cSHAKE128, "cSHAKE256": cSHAKE256}[name].new(data, custom=b"C")
+            else:
+                xof = __import__("Crypto.Hash." + name, fromlist=["new"]).new(data=data)
+            return [xof.read(length) for length in lengths]
+
+        lengths = (1, 100, 5000, 200000, 7)
+        ref = output(lengths)
+
+        monkeypatch.setattr(_raw_api, "_MIN_BYTES_OUTPUT", 1)
+        res = output(lengths)
+        assert all(type(x) is bytes for x in res)
+        assert res == ref
+        assert b"".join(output([sum(lengths)])) == b"".join(ref)
+
     def test_lying_input(self, always_direct):
         from Crypto.Cipher import AES, ARC4
 
