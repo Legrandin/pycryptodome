@@ -217,33 +217,47 @@ EXPORT_SYM int chacha20_encrypt(stream_state *state,
                                 uint8_t out[],
                                 size_t len)
 {
+    unsigned used;
+
     if (NULL == state || NULL == in || NULL == out)
         return ERR_NULL;
 
     if ((state->nonceSize != 8) && (state->nonceSize != 12))
         return ERR_NONCE_SIZE;
 
+    /*
+     * Read the position in the key stream only once, and check it:
+     * if several threads used the object at once (not supported),
+     * the state could be inconsistent, but the key stream must never
+     * be read out of bounds.
+     */
+    used = state->usedKeyStream;
+    if (used > sizeof state->keyStream)
+        return ERR_STATE;
+
     while (len>0) {
         unsigned keyStreamToUse;
         unsigned i;
         uint32_t h[16];
 
-        if (state->usedKeyStream == sizeof state->keyStream) {
+        if (used == sizeof state->keyStream) {
             int result;
 
             result = chacha20_core(state, h);
             if (result)
                 return result;
+            used = 0;
         }
 
-        keyStreamToUse = (unsigned)MIN(len, sizeof state->keyStream - state->usedKeyStream);
+        keyStreamToUse = (unsigned)MIN(len, sizeof state->keyStream - used);
         for (i=0; i<keyStreamToUse; i++)
-            *out++ = *in++ ^ state->keyStream[i + state->usedKeyStream];
+            *out++ = *in++ ^ state->keyStream[i + used];
 
         len -= keyStreamToUse;
-        state->usedKeyStream += keyStreamToUse;
+        used += keyStreamToUse;
     }
 
+    state->usedKeyStream = used;
     return 0;
 }
 

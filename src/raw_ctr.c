@@ -227,7 +227,6 @@ static inline void update_keystream(CtrModeState *ctr_state)
                                ctr_state->counter_blocks,
                                ctr_state->keystream,
                                ctr_state->cipher->block_len * NR_BLOCKS);
-    ctr_state->used_ks = 0;
 }
 
 EXPORT_SYM int CTR_encrypt(CtrModeState *ctr_state,
@@ -235,53 +234,68 @@ EXPORT_SYM int CTR_encrypt(CtrModeState *ctr_state,
                            uint8_t *out,
                            size_t data_len)
 {
-    size_t block_len;
+    size_t block_len, ks_size, used_ks;
     uint64_t max_hi, max_lo;
+    int result = 0;
 
     if (NULL == ctr_state || NULL == in || NULL == out)
         return ERR_NULL;
 
     block_len = ctr_state->cipher->block_len;
+    ks_size = block_len * NR_BLOCKS;
     max_hi = ctr_state->length_max_hi;
     max_lo = ctr_state->length_max_lo;
 
+    /*
+     * Read the position in the key stream only once, and check it:
+     * if several threads used the object at once (not supported),
+     * the state could be inconsistent, but the key stream must never
+     * be read out of bounds.
+     */
+    used_ks = ctr_state->used_ks;
+    if (used_ks > ks_size)
+        return ERR_STATE;
+
     while (data_len > 0) {
         size_t ks_to_use;
-        size_t ks_size;
         unsigned j;
         
-        ks_size = block_len * NR_BLOCKS;
-        if (ctr_state->used_ks == ks_size)
+        if (used_ks == ks_size) {
             update_keystream(ctr_state);
+            used_ks = 0;
+        }
         
-        ks_to_use = MIN(data_len, ks_size - ctr_state->used_ks);
+        ks_to_use = MIN(data_len, ks_size - used_ks);
         
         for (j=0; j<ks_to_use; j++) {
-            *out++ = *in++ ^ ctr_state->keystream[j + ctr_state->used_ks];
+            *out++ = *in++ ^ ctr_state->keystream[j + used_ks];
         }
 
         data_len -= ks_to_use;
-        ctr_state->used_ks += ks_to_use;
+        used_ks += ks_to_use;
 
         ctr_state->length_lo += ks_to_use;
         if (ctr_state->length_lo < ks_to_use) {
             ctr_state->length_hi++;
-            if (ctr_state->length_hi == 0)
-                return ERR_CTR_REPEATED_KEY_STREAM;
+            if (ctr_state->length_hi == 0) {
+                result = ERR_CTR_REPEATED_KEY_STREAM;
+                break;
+            }
         }
 
         /** 128-bit counter **/
         if (0 == max_lo && 0 == max_hi)
             continue;
 
-        if (ctr_state->length_hi > max_hi)
-            return ERR_CTR_REPEATED_KEY_STREAM;
-        if (ctr_state->length_hi == max_hi &&
-            ctr_state->length_lo > max_lo)
-                return ERR_CTR_REPEATED_KEY_STREAM;
+        if (ctr_state->length_hi > max_hi ||
+            (ctr_state->length_hi == max_hi && ctr_state->length_lo > max_lo)) {
+            result = ERR_CTR_REPEATED_KEY_STREAM;
+            break;
+        }
     }
 
-    return 0;
+    ctr_state->used_ks = used_ks;
+    return result;
 }
 
 EXPORT_SYM int CTR_decrypt(CtrModeState *ctr_state,

@@ -232,14 +232,31 @@ EXPORT_SYM int Salsa20_stream_destroy(stream_state *salsaState)
 EXPORT_SYM int Salsa20_stream_encrypt(stream_state *salsaState, const uint8_t in[],
                            uint8_t out[], size_t len)
 {
-    unsigned i;
+    size_t i;
+    unsigned blockindex;
+
+    if (NULL == salsaState || NULL == in || NULL == out)
+        return ERR_NULL;
+
+    /*
+     * Read the position in the key stream only once, and check it:
+     * if several threads used the object at once (not supported),
+     * the state could be inconsistent, but the key stream must never
+     * be read out of bounds.
+     */
+    blockindex = salsaState->blockindex;
+    if (blockindex > 64)
+        return ERR_STATE;
+
     for (i = 0; i < len; ++i) {
-        if (salsaState->blockindex == 64) {
-            salsaState->blockindex = 0;
+        if (blockindex == 64) {
+            blockindex = 0;
             _salsa20_block(ROUNDS, salsaState->input, salsaState->block);
         }
-        out[i] = in[i] ^ salsaState->block[salsaState->blockindex];
-        salsaState->blockindex++;
+        out[i] = in[i] ^ salsaState->block[blockindex];
+        blockindex++;
     }
+
+    salsaState->blockindex = (uint8_t)blockindex;
     return 0;
 }
