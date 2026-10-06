@@ -94,7 +94,7 @@ static uint32_t leaf7_ebx(void)
 __attribute__((target("xsave")))
 static uint64_t read_xcr0(void)
 {
-    return _xgetbv(0);
+    return (uint64_t)_xgetbv(0);
 }
 
 /** Return non-zero if the CPU supports AVX2 and the OS saves the 256-bit
@@ -114,21 +114,21 @@ EXPORT_SYM int have_avx2(void)
         return 0;
 
     /* Leaf 7: AVX2 (EBX bit 5) */
-    return (leaf7_ebx() >> 5) & 1;
+    return (leaf7_ebx() & (1UL<<5)) ? 1 : 0;
 }
 
 /** Return non-zero if the CPU supports BMI1 (ANDN and other bit
  * manipulation instructions). **/
 EXPORT_SYM int have_bmi1(void)
 {
-    return (leaf7_ebx() >> 3) & 1;
+    return (leaf7_ebx() & (1UL<<3)) ? 1 : 0;
 }
 
 /** Return non-zero if the CPU supports BMI2 (RORX and other bit
  * manipulation instructions). **/
 EXPORT_SYM int have_bmi2(void)
 {
-    return (leaf7_ebx() >> 8) & 1;
+    return (leaf7_ebx() & (1UL<<8)) ? 1 : 0;
 }
 
 #else
