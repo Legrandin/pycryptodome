@@ -35,6 +35,7 @@ from Crypto.Util._raw_api import (
     VoidPointer,
     c_size_t,
     c_uint8_ptr,
+    c_uint8_ptr_out,
     create_string_buffer,
     get_raw_buffer,
     is_writeable_buffer,
@@ -185,9 +186,10 @@ class CfbMode:
             if len(plaintext) != len(output):
                 raise ValueError("output must have the same length as the input  (%d bytes)" % len(plaintext))
 
-        result = raw_cfb_lib.CFB_encrypt(
-            self._state.get(), c_uint8_ptr(plaintext), c_uint8_ptr(ciphertext), c_size_t(len(plaintext))
-        )
+        with c_uint8_ptr_out(ciphertext) as ciphertext_ptr:
+            result = raw_cfb_lib.CFB_encrypt(
+                self._state.get(), c_uint8_ptr(plaintext), ciphertext_ptr, c_size_t(len(plaintext))
+            )
         if result:
             raise ValueError("Error %d while encrypting in CFB mode" % result)
 
@@ -252,9 +254,10 @@ class CfbMode:
             if len(ciphertext) != len(output):
                 raise ValueError("output must have the same length as the input  (%d bytes)" % len(plaintext))
 
-        result = raw_cfb_lib.CFB_decrypt(
-            self._state.get(), c_uint8_ptr(ciphertext), c_uint8_ptr(plaintext), c_size_t(len(ciphertext))
-        )
+        with c_uint8_ptr_out(plaintext) as plaintext_ptr:
+            result = raw_cfb_lib.CFB_decrypt(
+                self._state.get(), c_uint8_ptr(ciphertext), plaintext_ptr, c_size_t(len(ciphertext))
+            )
         if result:
             raise ValueError("Error %d while decrypting in CFB mode" % result)
 
