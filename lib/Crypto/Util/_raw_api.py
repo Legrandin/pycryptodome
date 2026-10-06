@@ -33,6 +33,7 @@ from __future__ import annotations
 import abc
 import os
 import sys
+import threading
 from importlib import machinery
 from typing import Any, List, Optional, Union
 
@@ -85,8 +86,10 @@ try:
 
     _Array = ffi.new("uint8_t[1]").__class__.__bases__
 
-    # Declarations already passed to ffi.cdef()
+    # Declarations already passed to ffi.cdef(), and the lock that
+    # protects it when modules are imported from several threads
     _declared: set = set()
+    _declared_lock = threading.Lock()
 
     def load_lib(name: str, cdecl: str) -> Any:
         """Load a shared library and return a handle to it.
@@ -104,9 +107,10 @@ try:
         # Several libraries can export the same functions (for instance,
         # a portable and an optimized build of the same code), but
         # cffi rejects a second declaration of a function.
-        if cdecl not in _declared:
-            ffi.cdef(cdecl)
-            _declared.add(cdecl)
+        with _declared_lock:
+            if cdecl not in _declared:
+                ffi.cdef(cdecl)
+                _declared.add(cdecl)
         return lib
 
     def c_ulong(x: int) -> Any:
