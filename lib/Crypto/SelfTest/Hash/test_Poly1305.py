@@ -306,7 +306,6 @@ class TestPoly1305Test_AES:
     key = b"\x11" * 32
 
     def test_new_positive(self):
-
         data = b"r" * 100
 
         h1 = Poly1305.new(key=self.key, cipher=AES)
@@ -396,7 +395,6 @@ class TestPoly1305Test_AES:
             h.hexverify("4556")
 
     def test_bytearray(self):
-
         data = b"\x00\x01\x02"
         h0 = Poly1305.new(key=self.key, data=data, cipher=AES)
         d_ref = h0.digest()
@@ -425,7 +423,6 @@ class TestPoly1305Test_AES:
         assert h1.digest() == h2.digest()
 
     def test_memoryview(self):
-
         data = b"\x00\x01\x02"
 
         def get_mv_ro(data):
@@ -464,7 +461,6 @@ class TestPoly1305Test_ChaCha20:
     key = b"\x11" * 32
 
     def test_new_positive(self):
-
         h1 = Poly1305.new(key=self.key, cipher=ChaCha20)
         assert h1.digest_size == 16
         assert len(h1.nonce) == 12
@@ -474,7 +470,6 @@ class TestPoly1305Test_ChaCha20:
         assert h2.nonce == b"8" * 8
 
     def test_new_negative(self):
-
         with pytest.raises(ValueError):
             Poly1305.new(key=self.key, nonce=b"1" * 7, cipher=ChaCha20)
 

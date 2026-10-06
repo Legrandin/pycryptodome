@@ -242,7 +242,6 @@ class BlockChainingTests:
         assert ref3 == ref4
 
     def test_output_param(self):
-
         pt = b"5" * 128
         cipher = AES.new(b"4" * 16, self.aes_mode, iv=self.iv_128)
         ct = cipher.encrypt(pt)
@@ -259,7 +258,6 @@ class BlockChainingTests:
         assert res is None
 
     def test_output_param_same_buffer(self):
-
         pt = b"5" * 128
         cipher = AES.new(b"4" * 16, self.aes_mode, iv=self.iv_128)
         ct = cipher.encrypt(pt)
@@ -277,7 +275,6 @@ class BlockChainingTests:
         assert res is None
 
     def test_output_param_memoryview(self):
-
         pt = b"5" * 128
         cipher = AES.new(b"4" * 16, self.aes_mode, iv=self.iv_128)
         ct = cipher.encrypt(pt)
@@ -322,7 +319,6 @@ class TestCbc(BlockChainingTests):
 
 class NistBlockChainingVectors:
     def _do_kat_aes_test(self, file_name):
-
         test_vectors = load_test_vectors(
             ("Cipher", "AES"), file_name, "AES CBC KAT", {"count": lambda x: int(x)}
         )
@@ -346,7 +342,6 @@ class NistBlockChainingVectors:
 
     # See Section 6.4.2 in AESAVS
     def _do_mct_aes_test(self, file_name):
-
         test_vectors = load_test_vectors(
             ("Cipher", "AES"), file_name, "AES CBC Montecarlo", {"count": lambda x: int(x)}
         )
@@ -377,7 +372,6 @@ class NistBlockChainingVectors:
                 raise AssertionError()
 
     def _do_tdes_test(self, file_name):
-
         test_vectors = load_test_vectors(
             ("Cipher", "TDES"), file_name, "TDES CBC KAT", {"count": lambda x: int(x)}
         )

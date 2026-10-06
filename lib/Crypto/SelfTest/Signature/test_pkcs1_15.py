@@ -197,7 +197,6 @@ class TestPKCS1_Legacy_Module:
 
 class TestPKCS1_All_Hashes:
     def test(self):
-
         key = RSA.generate(1024)
         signer = pkcs1_15.new(key)
         hash_names = (
@@ -231,7 +230,6 @@ class TestPKCS1_All_Hashes:
 
 
 def _load_tests(filename):
-
     def filter_rsa(group):
         return RSA.import_key(group["keyPem"])
 

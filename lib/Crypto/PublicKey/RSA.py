@@ -731,7 +731,6 @@ def _import_pkcs1_public(encoded, *kwargs):
 
 
 def _import_subjectPublicKeyInfo(encoded, *kwargs):
-
     oids = (oid, "1.2.840.113549.1.1.10")
 
     algoid, encoded_key, params = _expand_subject_public_key_info(encoded)
@@ -741,7 +740,6 @@ def _import_subjectPublicKeyInfo(encoded, *kwargs):
 
 
 def _import_x509_cert(encoded, *kwargs):
-
     sp_info = _extract_subject_public_key_info(encoded)
     return _import_subjectPublicKeyInfo(sp_info)
 
@@ -778,7 +776,6 @@ def _import_keyDER(extern_key, passphrase):
 
 
 def _import_openssh_private_rsa(data, password):
-
     from ._openssh import check_padding, import_openssh_private_generic, read_bytes, read_string
 
     ssh_name, decrypted = import_openssh_private_generic(data, password)

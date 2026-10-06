@@ -376,7 +376,6 @@ class TestPKCS1_OAEP:
 
 
 def _load_tests(filename):
-
     def filter_rsa(group):
         return RSA.import_key(group["privateKeyPem"])
 
@@ -467,5 +466,4 @@ class TestVectorsWycheproof:
 
     @pytest.mark.parametrize("tv", load_wycheproof_vectors(), ids=wycheproof_id)
     def test(self, tv):
-
         self.check_decrypt(tv)

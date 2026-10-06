@@ -120,7 +120,6 @@ class IntegerCustom(IntegerNative):
 
     @staticmethod
     def _mult_modulo_bytes(term1, term2, modulus):
-
         # With modular reduction
         mod_value = int(modulus)
         if mod_value < 0:

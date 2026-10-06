@@ -138,7 +138,6 @@ def _expand(file_names, segment_sizes):
 @pytest.mark.slow
 class TestNistCfbVectors:
     def _do_kat_aes_test(self, file_name, segment_size):
-
         test_vectors = load_test_vectors(
             ("Cipher", "AES"), file_name, "AES CFB%d KAT" % segment_size, {"count": lambda x: int(x)}
         )
@@ -161,7 +160,6 @@ class TestNistCfbVectors:
 
     # See Section 6.4.5 in AESAVS
     def _do_mct_aes_test(self, file_name, segment_size):
-
         test_vectors = load_test_vectors(
             ("Cipher", "AES"), file_name, "AES CFB%d Montecarlo" % segment_size, {"count": lambda x: int(x)}
         )
@@ -207,7 +205,6 @@ class TestNistCfbVectors:
                 raise AssertionError()
 
     def _do_tdes_test(self, file_name, segment_size):
-
         test_vectors = load_test_vectors(
             ("Cipher", "TDES"), file_name, "TDES CFB%d KAT" % segment_size, {"count": lambda x: int(x)}
         )

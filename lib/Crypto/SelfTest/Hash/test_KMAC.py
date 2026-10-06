@@ -12,7 +12,6 @@ class KMACTest:
         return self.KMAC.new(key=b"X" * (self.minimum_key_bits // 8), **kwargs)
 
     def test_new_positive(self):
-
         key = b"X" * 32
 
         h = self.new()
@@ -42,7 +41,6 @@ class KMACTest:
             h.new(key=key[: self.minimum_key_bits // 8 - 1])
 
     def test_new_negative(self):
-
         h = self.new()
         for new_func in self.KMAC.new, h.new:
             with pytest.raises(ValueError):
@@ -118,13 +116,11 @@ class KMACTest:
             h.hexverify("4556")
 
     def test_oid(self):
-
         oid = "2.16.840.1.101.3.4.2." + self.oid_variant
         h = self.new()
         assert h.oid == oid
 
     def test_bytearray(self):
-
         key = b"0" * 32
         data = b"\x00\x01\x02"
 
@@ -151,7 +147,6 @@ class KMACTest:
         assert h1.digest() == h2.digest()
 
     def test_memoryview(self):
-
         key = b"0" * 32
         data = b"\x00\x01\x02"
 
@@ -322,7 +317,6 @@ class TestNISTExampleTestVectors:
         self.test_data = td
 
     def test(self):
-
         for key, data, custom, mac, text, module in self.test_data:
             h = module.new(data=data, key=key, custom=custom, mac_len=len(mac))
             mac_tag = h.digest()

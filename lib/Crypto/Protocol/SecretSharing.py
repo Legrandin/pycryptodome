@@ -113,7 +113,6 @@ class _Element:
         return long_to_bytes(self._value, 16)
 
     def __mul__(self, factor: _Element) -> _Element:
-
         f1 = self._value
         f2 = factor._value
 

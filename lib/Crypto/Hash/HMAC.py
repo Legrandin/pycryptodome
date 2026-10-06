@@ -77,7 +77,6 @@ class HMAC:
     """
 
     def __init__(self, key: Buffer, msg: Buffer = b"", digestmod: Optional[ModuleType] = None) -> None:
-
         if digestmod is None:
             from Crypto.Hash import MD5
 

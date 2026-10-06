@@ -164,7 +164,6 @@ class EdDSASigScheme:
         return eddsa_sign_method(msg_or_hash, ph)
 
     def _sign_ed25519(self, msg_or_hash, ph):
-
         if self._context or ph:
             flag = int(ph)
             # dom2(flag, self._context)
@@ -195,7 +194,6 @@ class EdDSASigScheme:
         return R_pk + s.to_bytes(32, "little")
 
     def _sign_ed448(self, msg_or_hash, ph):
-
         flag = int(ph)
         # dom4(flag, self._context)
         dom4 = b"SigEd448" + bytes([flag]) + bytes([len(self._context)]) + self._context
@@ -253,7 +251,6 @@ class EdDSASigScheme:
         return eddsa_verify_method(msg_or_hash, signature, ph)
 
     def _verify_ed25519(self, msg_or_hash, signature, ph):
-
         if len(signature) != 64:
             raise ValueError("The signature is not authentic (length)")
 
@@ -292,7 +289,6 @@ class EdDSASigScheme:
             raise ValueError("The signature is not authentic")
 
     def _verify_ed448(self, msg_or_hash, signature, ph):
-
         if len(signature) != 114:
             raise ValueError("The signature is not authentic (length)")
 

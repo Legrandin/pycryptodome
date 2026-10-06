@@ -1120,7 +1120,6 @@ class TestExport_P192:
             )
 
     def test_compressed_curve(self):
-
         # Compressed P-192 curve (Y-point is even)
         pem1 = """-----BEGIN EC PRIVATE KEY-----
         MF8CAQEEGHvhXmIW95JxZYfd4AUPu9BwknjuvS36aqAKBggqhkjOPQMBAaE0AzIA
@@ -1384,7 +1383,6 @@ class TestExport_P224:
             )
 
     def test_compressed_curve(self):
-
         # Compressed P-224 curve (Y-point is even)
         pem1 = """-----BEGIN EC PRIVATE KEY-----
         MGgCAQEEHPYicBNI9nd6wDKAX2l+f3A0Q+KWUQeMqSt5GoOgBwYFK4EEACGhPAM6
@@ -1682,7 +1680,6 @@ class TestExport_P256:
             self.ref_private.export_key(format="OpenSSH", passphrase="secret")
 
     def test_compressed_curve(self):
-
         # Compressed P-256 curve (Y-point is even)
         pem1 = """-----BEGIN EC PRIVATE KEY-----
         MFcCAQEEIHTuc09jC51xXomV6MVCDN+DpAAvSmaJWZPTEHM6D5H1oAoGCCqGSM49
@@ -1978,7 +1975,6 @@ class TestExport_P384:
             self.ref_private.export_key(format="OpenSSH", passphrase="secret")
 
     def test_compressed_curve(self):
-
         # Compressed P-384 curve (Y-point is even)
         # openssl ecparam -name secp384p1 -genkey -noout -conv_form compressed -out /tmp/a.pem
         # openssl ec -in /tmp/a.pem -text -noout
@@ -2286,7 +2282,6 @@ class TestExport_P521:
             self.ref_private.export_key(format="OpenSSH", passphrase="secret")
 
     def test_compressed_curve(self):
-
         # Compressed P-521 curve (Y-point is even)
         # openssl ecparam -name secp521r1 -genkey -noout -conv_form compressed -out /tmp/a.pem
         # openssl ec -in /tmp/a.pem -text -noout

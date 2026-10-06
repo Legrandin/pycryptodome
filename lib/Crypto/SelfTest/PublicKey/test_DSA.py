@@ -204,7 +204,6 @@ class TestDSADomain:
         assert dsa_key_1.domain() == dsa_key_2.domain()
 
     def _get_weak_domain(self):
-
         from Crypto.Math import Primality
         from Crypto.Math.Numbers import Integer
 

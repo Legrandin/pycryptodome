@@ -235,7 +235,6 @@ class TestCMAC:
 
 class TestByteArray:
     def test(self):
-
         key = b"0" * 16
         data = b"\x00\x01\x02"
 
@@ -263,7 +262,6 @@ class TestByteArray:
 
 class TestMemoryView:
     def test(self):
-
         key = b"0" * 16
         data = b"\x00\x01\x02"
 
@@ -350,7 +348,6 @@ class TestVectorsWycheproof:
 
     @pytest.mark.parametrize("tv", load_wycheproof_vectors(), ids=wycheproof_id)
     def test(self, tv):
-
         self.check_create_mac(tv)
         self.check_verify_mac(tv)
 

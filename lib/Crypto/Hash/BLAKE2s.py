@@ -86,7 +86,6 @@ class BLAKE2s_Hash:
     def __init__(
         self, data: Optional[Buffer], key: Buffer, digest_bytes: int, update_after_digest: bool
     ) -> None:
-
         # The size of the resulting hash in bytes.
         self.digest_size = digest_bytes
 

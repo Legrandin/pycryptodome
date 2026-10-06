@@ -196,7 +196,6 @@ class GcmMode:
     def __init__(
         self, factory: ModuleType, key: Buffer, nonce: Buffer, mac_len: int, cipher_params: Dict, ghash_c: Any
     ) -> None:
-
         self.block_size = factory.block_size
         if self.block_size != 16:
             raise ValueError("GCM mode is only available for ciphers that operate on 128 bits blocks")

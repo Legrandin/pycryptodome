@@ -525,7 +525,6 @@ class TestImport_Ed448:
 
 
 def _load_tests(filename):
-
     def pk(group):
         elem = group["key"]["pk"]
         return unhexlify(elem)

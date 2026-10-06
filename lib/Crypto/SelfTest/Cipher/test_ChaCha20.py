@@ -324,7 +324,6 @@ class TestByteArray:
     """Verify we can encrypt or decrypt bytearrays"""
 
     def test(self):
-
         data = b"0123"
         key = b"9" * 32
         nonce = b"t" * 8
@@ -362,7 +361,6 @@ class TestMemoryview:
     """Verify we can encrypt or decrypt bytearrays"""
 
     def test(self):
-
         data = b"0123"
         key = b"9" * 32
         nonce = b"t" * 8

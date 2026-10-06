@@ -584,7 +584,6 @@ class TestDerSequence:
             DerSequence().decode(der_bin, nr_elements=(4, 5))
 
     def test_expected_only_integers(self):
-
         der_bin1 = DerSequence([1, 2, 3]).encode()
         der_bin2 = DerSequence([1, 2, DerSequence([3, 4])]).encode()
 

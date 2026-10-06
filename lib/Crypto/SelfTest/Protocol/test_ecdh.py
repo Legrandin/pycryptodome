@@ -57,7 +57,6 @@ class TestFIPS_ECDH_Tests_KAT:
 
 
 def _load_tests_ecdh(filename):
-
     def curve(g):
         return g["curve"]
 
@@ -75,7 +74,6 @@ def _load_tests_ecdh(filename):
 
 
 def _load_tests_hex(filename):
-
     def encoding(g):
         return g["type"]
 
@@ -93,7 +91,6 @@ def _load_tests_hex(filename):
 
 
 def _load_tests_ascii(filename):
-
     def encoding(g):
         return g["type"]
 
@@ -132,7 +129,6 @@ class TestVectorsECDHWycheproof:
     desc = "Wycheproof ECDH tests"
 
     def check_verify(self, tv):
-
         if len(tv.public) == 0:
             return
 
@@ -327,7 +323,6 @@ class TestX25519:
         assert result2 == secret
 
     def test_weak(self):
-
         weak_keys = (
             "0000000000000000000000000000000000000000000000000000000000000000",
             "0100000000000000000000000000000000000000000000000000000000000000",
@@ -414,7 +409,6 @@ class TestX448:
         assert result2 == secret
 
     def test_weak(self):
-
         weak_keys = (
             "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
             "0100000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
@@ -442,7 +436,6 @@ class TestVectorsX25519Wycheproof:
     desc = "Wycheproof X25519 tests"
 
     def check_verify(self, tv):
-
         if tv.encoding == "XdhComp":
             try:
                 public_key = import_x25519_public_key(tv.public)
@@ -536,7 +529,6 @@ class TestVectorsX448Wycheproof:
     desc = "Wycheproof X448 tests"
 
     def check_verify(self, tv):
-
         if tv.encoding == "XdhComp":
             try:
                 public_key = import_x448_public_key(tv.public)

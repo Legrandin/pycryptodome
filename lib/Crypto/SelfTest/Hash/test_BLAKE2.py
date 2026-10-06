@@ -42,7 +42,6 @@ from Crypto.Util.strxor import strxor_c
 
 class Blake2Test:
     def test_new_positive(self):
-
         h = self.BLAKE2.new(digest_bits=self.max_bits)
         for new_func in self.BLAKE2.new, h.new:
             for dbits in range(8, self.max_bits + 1, 8):
@@ -63,7 +62,6 @@ class Blake2Test:
         assert hobj.digest_size == self.max_bytes
 
     def test_new_negative(self):
-
         h = self.BLAKE2.new(digest_bits=self.max_bits)
         for new_func in self.BLAKE2.new, h.new:
             with pytest.raises(TypeError):
@@ -161,7 +159,6 @@ class Blake2Test:
             h.hexverify("4556")
 
     def test_oid(self):
-
         prefix = "1.3.6.1.4.1.1722.12.2." + self.oid_variant + "."
 
         suffix = {128: "4", 160: "5", 224: "7", 256: "8", 384: "12", 512: "16"}
@@ -182,7 +179,6 @@ class Blake2Test:
                 _ = h.oid
 
     def test_bytearray(self):
-
         key = b"0" * 16
         data = b"\x00\x01\x02"
 
@@ -209,7 +205,6 @@ class Blake2Test:
         assert h1.digest() == h2.digest()
 
     def test_memoryview(self):
-
         key = b"0" * 16
         data = b"\x00\x01\x02"
 
@@ -301,7 +296,6 @@ class Blake2OfficialTestVector:
         return test_vectors
 
     def setup_method(self):
-
         dir_comps = ("Hash", self.name)
         file_name = self.name.lower() + "-test.txt"
 
@@ -371,7 +365,6 @@ class Blake2TestVector1:
         self.test_vectors = self._load_tests(full_file_name)
 
     def test(self):
-
         for tv in self.test_vectors:
             digest_bytes = len(tv)
             next_data = b""
@@ -427,7 +420,6 @@ class Blake2TestVector2:
         self.test_vectors = self._load_tests(full_file_name)
 
     def test(self):
-
         for key_size, result in self.test_vectors:
             next_data = b""
             for _ in range(100):

@@ -11,7 +11,6 @@ class TupleHashTest:
         return self.TupleHash.new(*args, **kwargs)
 
     def test_new_positive(self):
-
         h = self.new()
         for new_func in self.TupleHash.new, h.new:
             for dbits in range(64, 1024 + 1, 8):
@@ -33,7 +32,6 @@ class TupleHashTest:
         assert digest1 == digest2
 
     def test_new_negative(self):
-
         h = self.new()
         for new_func in self.TupleHash.new, h.new:
             with pytest.raises(TypeError):
@@ -120,7 +118,6 @@ class TupleHashTest:
         assert isinstance(hexdigest, str)
 
     def test_bytearray(self):
-
         data = b"\x00\x01\x02"
 
         # Data can be a bytearray (during operation)
@@ -135,7 +132,6 @@ class TupleHashTest:
         assert h1.digest() == h2.digest()
 
     def test_memoryview(self):
-
         data = b"\x00\x01\x02"
 
         def get_mv_ro(data):
@@ -271,7 +267,6 @@ class TestNISTExampleTestVectors:
         self.test_data = td
 
     def test(self):
-
         for data, custom, digest, text, module in self.test_data:
             hd1 = module.new(custom=custom, digest_bytes=len(digest))
             hd2 = module.new(custom=custom, digest_bytes=len(digest))

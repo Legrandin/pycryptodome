@@ -433,17 +433,18 @@ def set_compiler_options(extensions):
     # AVX2, BMI1 and BMI2, all together (gcc and clang only)
     # Detecting them at runtime requires cpuid.h
     avx2_bmi2_result = cpuid_h_present and compiler_supports_avx2_bmi2()
-    avx2_bmi2_mod_name = "Crypto.Hash._keccak_avx2_bmi2"
+    avx2_bmi2_mod_names = ["Crypto.Hash._keccak_avx2_bmi2", "Crypto.Hash._k12_avx2_bmi2"]
     if avx2_bmi2_result:
         print("Compiling support for AVX2 and BMI2 instructions")
-        avx2_bmi2_mods = [x for x in extensions if x.name == avx2_bmi2_mod_name]
+        avx2_bmi2_mods = [x for x in extensions if x.name in avx2_bmi2_mod_names]
         for x in avx2_bmi2_mods:
             x.extra_compile_args.extend(avx2_bmi2_result["extra_cc_options"])
             for macro in avx2_bmi2_result["extra_macros"]:
                 x.define_macros.append((macro, None))
     else:
         print("Warning: compiler does not support AVX2 and BMI2 instructions")
-        remove_extension(extensions, avx2_bmi2_mod_name)
+        for mod_name in avx2_bmi2_mod_names:
+            remove_extension(extensions, mod_name)
 
     for x in extensions:
         x.extra_compile_args.extend(extra_cc_options)

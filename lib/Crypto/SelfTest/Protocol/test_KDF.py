@@ -682,7 +682,6 @@ class TestBcrypt:
 
 
 def _load_tests_hkdf(filename):
-
     def filter_algo(root):
         algo_name = root["algorithm"]
         if algo_name == "HKDF-SHA-1":
@@ -751,7 +750,6 @@ def load_hash_by_name(hash_name):
 
 
 def _load_sp800_108_counter_vectors():
-
     test_vectors_sp800_108_counter = (
         load_test_vectors(
             ("Protocol",),

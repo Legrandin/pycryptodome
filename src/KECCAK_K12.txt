@@ -3,59 +3,52 @@ Keccak and KangarooTwelve: C sources and modules
 
 Which file includes which, and what each Python extension module is
 compiled from (see setup.py and compiler_opt.py).
+Lines from a module name go to the file it is built from;
+the other arrows are #include.
 
-  Python modules (setup.py)         C source compiled for each module
-  ─────────────────────────         ─────────────────────────────────
-
-  Crypto.Hash._keccak  ───────────────────────────────────────────────┐
-    exports keccak_*                                                  │
-                                                                      │
-  Crypto.Hash._k12  ──────────────────────────┐                       │
-    exports k12_*                             │                       │
-                                              │                       │
-  Crypto.Hash._keccak_avx2_bmi2               │                       │
-    exports keccak_* + k12_*                  │                       │
-    flags -mavx2 -mbmi -mbmi2                 │                       │
-          │                                   │                       │
-          ▼                                   ▼                       ▼
-  ┌────────────────────┐ #include   ┌───────────────┐ #include  ┌────────────┐
-  │ keccak_avx2_bmi2.c │───────────▶│     k12.c     │──────────▶│  keccak.c  │
-  │  KECCAK_MODULE=    │            │               │           │            │
-  │   keccak_avx2_bmi2 │            │ no KECCAK_    │           │ sponge +   │
-  │  K12_AVX2          │            │ MODULE →      │           │ scalar     │
-  └────────────────────┘            │ KECCAK_       │           │ Keccak-p   │
-                                    │ EMBEDDED      │           └─────┬──────┘
-                                    │               │                 │ #include
-                                    │ #ifdef        │                 ▼
-                                    │  K12_AVX2     │               common.h
-                                    └───────┬───────┘               endianess.h
-                                            │ #include
-                                            │ (only with K12_AVX2)
-                                            ▼
-                                  ┌────────────────────┐ #include
-                                  │  keccak_x4_avx2.c  │─────────▶ <immintrin.h>
-                                  │  4-way Keccak-p    │
-                                  │  (uses keccak.c's  │
-                                  │   round constants) │
-                                  └────────────────────┘
+  _keccak     _keccak_avx2_bmi2           _k12        _k12_avx2_bmi2
+     │                   ▼                   │                   ▼
+     │        ┌────────────────────┐         │        ┌────────────────────┐
+     │        │ keccak_avx2_bmi2.c │         │        │  k12_avx2_bmi2.c   │
+     │        │  KECCAK_MODULE =   │         │        │    K12_MODULE =    │
+     │        │  keccak_avx2_bmi2  │         │        │   k12_avx2_bmi2    │
+     │        └──────────┬─────────┘         │        │      K12_AVX2      │
+     │                   │                   │        └──────────┬─────────┘
+     │                   │                   │                   │
+     ▼                   ▼                   ▼                   ▼
+  ┌────────────────────────────┐          ┌────────────────────────────┐
+  │          keccak.c          │          │           k12.c            │
+  │                            │ #include │                            │
+  │     Keccak sponge and      │◀─────────┤       KangarooTwelve       │
+  │   scalar Keccak-p[1600]    │          │   (keccak.c is private)    │
+  └────────────────────────────┘          └──────────────┬─────────────┘
+                                                         │ #ifdef K12_AVX2
+                                                         ▼
+                                          ┌────────────────────────────┐
+                                          │      keccak_x4_avx2.c      │
+                                          │                            │
+                                          │  4 Keccak-p[1600] states   │
+                                          │     at once, with AVX2     │
+                                          └────────────────────────────┘
 
 
-  Module              Built from                  keccak.c functions          4-way AVX2
-  ------------------  --------------------------  --------------------------  ----------
-  _keccak             keccak.c alone              exported (KECCAK_MODULE     no
-                                                  defaults to "keccak")
-  _k12                k12.c -> keccak.c           private: static inline      no
-                                                  (KECCAK_EMBEDDED)
-  _keccak_avx2_bmi2   keccak_avx2_bmi2.c          exported from this module   yes
+  Module              Built from               Exports     Compiler flags         4-way AVX2
+  ------------------  -----------------------  ----------  ---------------------  ----------
+  _keccak             keccak.c                 keccak_*    (none)                 no
+  _keccak_avx2_bmi2   keccak_avx2_bmi2.c       keccak_*    -mavx2 -mbmi -mbmi2    no
+                      -> keccak.c
+  _k12                k12.c                    k12_*       (none)                 no
+                      -> keccak.c
+  _k12_avx2_bmi2      k12_avx2_bmi2.c          k12_*       -mavx2 -mbmi -mbmi2    yes
                       -> k12.c -> keccak.c
-                         + keccak_x4_avx2.c
+                               + keccak_x4_avx2.c
 
 Notes:
+  - keccak.c names its module after KECCAK_MODULE (default: keccak), and
+    k12.c after K12_MODULE (default: k12); so each module gets exactly
+    one FAKE_INIT. Inside k12.c, keccak.c is always private (KECCAK_EMBEDDED).
   - keccak_x4_avx2.c is included after keccak.c, because it uses the round
     constants defined there.
-  - Each module gets exactly one FAKE_INIT: keccak.c emits it for _keccak
-    and _keccak_avx2_bmi2, k12.c emits it only when KECCAK_MODULE is not
-    defined (that is, for _k12).
-  - _keccak_avx2_bmi2 is only compiled if the compiler supports AVX2, BMI1
-    and BMI2, and only loaded if the CPU supports all three
-    (lib/Crypto/Hash/keccak.py).
+  - The *_avx2_bmi2 modules are only compiled if the compiler supports AVX2,
+    BMI1 and BMI2, and only loaded if the CPU supports all three
+    (lib/Crypto/Hash/keccak.py and lib/Crypto/Hash/KangarooTwelve.py).

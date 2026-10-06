@@ -362,7 +362,6 @@ class EccKey:
         return _create_subject_public_key_info(oid, public_key, params)
 
     def _export_rfc5915_private_der(self, include_ec_params=True):
-
         assert self.has_private()
 
         # ECPrivateKey ::= SEQUENCE {
@@ -849,7 +848,6 @@ def _import_subjectPublicKeyInfo(encoded, *kwargs):
 def _import_rfc5915_der(
     encoded: bytes, passphrase: Optional[bytes], curve_oid: Optional[str] = None
 ) -> EccKey:
-
     # See RFC5915 https://tools.ietf.org/html/rfc5915
     #
     # ECPrivateKey ::= SEQUENCE {
@@ -947,13 +945,11 @@ def _import_pkcs8(encoded, passphrase):
 
 
 def _import_x509_cert(encoded, *kwargs):
-
     sp_info = _extract_subject_public_key_info(encoded)
     return _import_subjectPublicKeyInfo(sp_info)
 
 
 def _import_der(encoded, passphrase):
-
     try:
         return _import_subjectPublicKeyInfo(encoded, passphrase)
     except UnsupportedEccFeature as err:
@@ -1031,7 +1027,6 @@ def _import_openssh_public(encoded):
 
 
 def _import_openssh_private_ecc(data, password):
-
     from ._openssh import check_padding, import_openssh_private_generic, read_bytes, read_string
 
     key_type, decrypted = import_openssh_private_generic(data, password)

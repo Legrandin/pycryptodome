@@ -101,7 +101,6 @@ class ChaCha20Poly1305Cipher:
         self._authenticator.update(data)
 
     def _pad_aad(self):
-
         assert self._status == _CipherStatus.PROCESSING_AUTH_DATA
         if self._len_aad & 0x0F:
             self._authenticator.update(b"\x00" * (16 - (self._len_aad & 0x0F)))

@@ -50,7 +50,6 @@ class TupleHash:
     """
 
     def __init__(self, custom: Buffer, cshake: ModuleType, digest_size: int) -> None:
-
         self.digest_size = digest_size
 
         self._cshake_module = cshake

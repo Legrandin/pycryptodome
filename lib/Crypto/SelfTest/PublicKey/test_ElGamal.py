@@ -175,7 +175,6 @@ class TestElGamal:
         self._exercise_public_primitive(elgObj)
 
     def _check_private_key(self, elgObj):
-
         # Check capabilities
         assert elgObj.has_private()
 
@@ -186,7 +185,6 @@ class TestElGamal:
         assert pow(elgObj.g, elgObj.x, elgObj.p) == elgObj.y
 
     def _check_public_key(self, elgObj):
-
         # Check capabilities
         assert not elgObj.has_private()
 

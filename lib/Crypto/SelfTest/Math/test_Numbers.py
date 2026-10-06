@@ -362,7 +362,6 @@ class IntegerTests:
         assert v4.sqrt() == 10**50
 
     def test_sqrt_module(self):
-
         # Invalid modulus (non positive)
         with pytest.raises(ValueError):
             self.Integer(5).sqrt(0)
@@ -600,7 +599,6 @@ class IntegerTests:
             v6.size_in_bits()
 
     def test_perfect_square(self):
-
         assert not self.Integer(-9).is_perfect_square()
         assert self.Integer(0).is_perfect_square()
         assert self.Integer(1).is_perfect_square()
@@ -702,7 +700,6 @@ class IntegerTests:
         assert v5.lcm(0) == 0
 
     def test_jacobi_symbol(self):
-
         data = (
             (1001, 1, 1),
             (19, 45, 1),
@@ -826,7 +823,6 @@ class TestIntegerCustomModexp(IntegerTests):
 
 class TestIntegerRandom:
     def test_random_exact_bits(self):
-
         for _ in range(1000):
             a = IntegerNative.random(exact_bits=8)
             assert not (a < 128)
@@ -838,7 +834,6 @@ class TestIntegerRandom:
             assert not (a >= 2**bits_value)
 
     def test_random_max_bits(self):
-
         flag = False
         for _ in range(1000):
             a = IntegerNative.random(max_bits=8)
@@ -851,7 +846,6 @@ class TestIntegerRandom:
             assert not (a >= 2**bits_value)
 
     def test_random_bits_custom_rng(self):
-
         class CustomRNG:
             def __init__(self):
                 self.counter = 0
@@ -865,7 +859,6 @@ class TestIntegerRandom:
         assert custom_rng.counter == 4
 
     def test_random_range(self):
-
         func = IntegerNative.random_range
 
         for _x in range(200):

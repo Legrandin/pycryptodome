@@ -59,7 +59,6 @@ def _expand_subject_public_key_info(encoded):
 
 
 def _create_subject_public_key_info(algo_oid, public_key, params):
-
     if params is None:
         algorithm = DerSequence([DerObjectId(algo_oid)])
     else:

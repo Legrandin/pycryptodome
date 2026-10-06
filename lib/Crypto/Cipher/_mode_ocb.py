@@ -128,7 +128,6 @@ class OcbMode:
     """
 
     def __init__(self, factory: ModuleType, nonce: Buffer, mac_len: int, cipher_params: dict) -> None:
-
         if factory.block_size != 16:
             raise ValueError("OCB mode is only available for ciphers that operate on 128 bits blocks")
 
@@ -246,7 +245,6 @@ class OcbMode:
         return self
 
     def _transcrypt_aligned(self, in_data, in_data_len, trans_func, trans_desc):
-
         out_data = create_string_buffer(in_data_len)
         result = trans_func(self._state.get(), in_data, out_data, c_size_t(in_data_len))
         if result:
@@ -344,7 +342,6 @@ class OcbMode:
         return self._transcrypt(ciphertext, _raw_ocb_lib.OCB_decrypt, "decrypt")
 
     def _compute_mac_tag(self):
-
         if self._mac_tag is not None:
             return
 

@@ -59,6 +59,12 @@ ext_modules = [
         sources=["src/keccak_avx2_bmi2.c"],
         py_limited_api=True,
     ),
+    Extension(
+        "Crypto.Hash._k12_avx2_bmi2",
+        include_dirs=["src/"],
+        sources=["src/k12_avx2_bmi2.c"],
+        py_limited_api=True,
+    ),
     Extension("Crypto.Hash._BLAKE2b", include_dirs=["src/"], sources=["src/blake2b.c"], py_limited_api=True),
     Extension("Crypto.Hash._BLAKE2s", include_dirs=["src/"], sources=["src/blake2s.c"], py_limited_api=True),
     Extension(

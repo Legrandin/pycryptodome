@@ -479,7 +479,6 @@ class TestHMAC_Module_and_Instance:
 
 class TestHMAC_None:
     def test(self):
-
         key = b"\x04" * 20
         one = HMAC.new(key, b"", SHA1).digest()
         two = HMAC.new(key, None, SHA1).digest()
@@ -488,7 +487,6 @@ class TestHMAC_None:
 
 class TestByteArray:
     def test(self):
-
         key = b"0" * 16
         data = b"\x00\x01\x02"
 
@@ -516,7 +514,6 @@ class TestByteArray:
 
 class TestMemoryView:
     def test(self):
-
         key = b"0" * 16
         data = b"\x00\x01\x02"
 

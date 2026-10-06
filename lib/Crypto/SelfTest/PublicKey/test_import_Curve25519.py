@@ -342,7 +342,6 @@ class TestExport_Curve25519:
 
 class TestImport_Curve25519_Weak:
     def test_weak_pem(self):
-
         p = 2**255 - 19
         weak_x = (
             0,
