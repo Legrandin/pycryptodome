@@ -69,6 +69,7 @@ def have_bmi2() -> int:
 def available_cores() -> int:
     """Return the number of CPU cores this process can run on."""
 
+    count: int | None
     # Python 3.13+: it takes into account CPU affinity and -X cpu_count
     if hasattr(os, "process_cpu_count"):
         count = os.process_cpu_count()
