@@ -30,6 +30,7 @@
 
 """Self-test suite for Crypto.Util._raw_api"""
 
+import _thread
 import gc
 import sys
 import threading
@@ -38,6 +39,7 @@ import pytest
 
 from Crypto.Hash import SHA3_256, keccak
 from Crypto.Util import _raw_api
+from Crypto.Util.strxor import strxor
 
 
 class TestLoadLib:
@@ -82,11 +84,12 @@ class TestLoadLib:
             sys.setswitchinterval(old_interval)
 
 
-# PyPy cannot lock a buffer: a bytearray can always be resized, and a
-# memoryview released, even while a C function uses their memory
-skip_on_pypy = pytest.mark.skipif(
-    "__pypy__" in sys.builtin_module_names, reason="PyPy cannot prevent a buffer from being resized"
-)
+def _not_locked(buffer_type):
+    """Skip a test if this interpreter cannot lock buffers of that type
+    while C code uses them (PyPy 7.3: none, PyPy 8.0: only bytearray)"""
+
+    locked = not _raw_api._is_pypy or buffer_type in _raw_api._pypy_locked_types
+    return pytest.mark.skipif(not locked, reason="This PyPy cannot lock a %s" % buffer_type.__name__)
 
 
 class TestUint8Ptr:
@@ -94,7 +97,7 @@ class TestUint8Ptr:
     be able to resize or free a buffer that the C code is using.
     So, c_uint8_ptr() must hold the buffer for as long as its result lives."""
 
-    @skip_on_pypy
+    @_not_locked(bytearray)
     def test_bytearray_held(self):
         data = bytearray(b"abc")
         ptr = _raw_api.c_uint8_ptr(data)
@@ -104,7 +107,7 @@ class TestUint8Ptr:
         gc.collect()
         data.extend(b"d")
 
-    @skip_on_pypy
+    @_not_locked(memoryview)
     @pytest.mark.parametrize("data", [bytearray(b"abc"), b"abc"], ids=["writable", "read-only"])
     def test_memoryview_held(self, data):
         mv = memoryview(data)
@@ -130,7 +133,7 @@ class TestUint8Ptr:
     def test_content(self, data):
         assert SHA3_256.new(data).digest() == SHA3_256.new(bytes(data)).digest()
 
-    @skip_on_pypy
+    @_not_locked(bytearray)
     def test_resize_from_other_thread(self):
         """Resize a bytearray while another thread hashes it in C."""
 
@@ -161,3 +164,74 @@ class TestUint8Ptr:
             assert result[0] in (digest_long, digest_short)
         else:
             assert result == [digest_long]
+
+
+class _OtherThread:
+    """A second thread, alive for the duration of the with block"""
+
+    def __enter__(self):
+        self._stop = threading.Event()
+        self._thread = threading.Thread(target=self._stop.wait)
+        self._thread.start()
+
+    def __exit__(self, *args):
+        self._stop.set()
+        self._thread.join()
+
+
+@pytest.mark.skipif(_raw_api.backend != "cffi", reason="PyPy always uses cffi")
+class TestPyPyCopies:
+    """On PyPy, C code gets a private copy of the buffers that PyPy cannot
+    lock, but only if another thread exists (see _raw_api._must_copy).
+    On CPython, these tests pretend to be on a PyPy that cannot lock anything."""
+
+    @pytest.fixture(autouse=True)
+    def pypy_without_locks(self, monkeypatch):
+        if not _raw_api._is_pypy:
+            monkeypatch.setattr(_raw_api, "_is_pypy", True)
+            monkeypatch.setattr(_raw_api, "_pypy_locked_types", ())
+
+    @pytest.mark.parametrize(
+        "data", [bytearray(b"abc"), memoryview(bytearray(b"abc"))], ids=["bytearray", "memoryview"]
+    )
+    def test_input(self, data):
+        locked = isinstance(data, _raw_api._pypy_locked_types)
+        # One thread: no copy (unless a thread from another test is still alive)
+        if _thread._count() == 0:
+            assert not isinstance(_raw_api.c_uint8_ptr(data), bytes)
+        # Another thread: a private copy, unless this PyPy can lock data
+        with _OtherThread():
+            ptr = _raw_api.c_uint8_ptr(data)
+            assert isinstance(ptr, bytes) != locked
+            if isinstance(ptr, bytes):
+                assert ptr == b"abc"
+
+    @pytest.mark.parametrize("threads", [1, 2], ids=["one thread", "two threads"])
+    def test_output(self, threads):
+        # A C function writes into the buffer (strxor), with or without a copy
+        out = bytearray(3)
+        if threads == 2:
+            with _OtherThread():
+                strxor(b"abc", b"\x01\x01\x01", output=out)
+        else:
+            strxor(b"abc", b"\x01\x01\x01", output=out)
+        assert out == b"`cb"
+
+    def test_bytes_never_copied(self):
+        data = b"abc"
+        with _OtherThread():
+            assert _raw_api.c_uint8_ptr(data) is data
+
+
+@pytest.mark.skipif(not _raw_api._is_pypy, reason="PyPy only")
+def test_pypy_locked_types():
+    """The probe matches what this PyPy really does"""
+    data = bytearray(1)
+    ptr = _raw_api.ffi.from_buffer("uint8_t[]", data)
+    try:
+        data.append(0)
+        resizable = True
+    except BufferError:
+        resizable = False
+    del ptr
+    assert (bytearray in _raw_api._pypy_locked_types) == (not resizable)

@@ -30,6 +30,7 @@
 
 from __future__ import annotations
 
+import _thread
 import abc
 import os
 import sys
@@ -46,12 +47,28 @@ extension_suffixes = machinery.EXTENSION_SUFFIXES
 # Which types with buffer interface we support (apart from byte strings)
 _buffer_type = (bytearray, memoryview)
 
-# PyPy cannot lock a buffer: a bytearray can always be resized, and a
-# memoryview released, even while a C function uses their memory
-# (another thread can do it, since the GIL is released during C calls).
-# So, on PyPy, C functions never get the memory of such buffers,
-# only private copies (see c_uint8_ptr and c_uint8_ptr_out).
+# While a C function runs, the GIL is released, so another thread could
+# resize a bytearray, or release a memoryview, whose memory the C function
+# is using. CPython prevents that for as long as the object returned by
+# c_uint8_ptr() is alive, but PyPy may not: PyPy 7.3 cannot lock any buffer,
+# PyPy 8.0 can lock a bytearray but not a memoryview.
+# So, on PyPy, if another thread exists, C functions get a private copy of
+# the buffers that PyPy cannot lock (see c_uint8_ptr and c_uint8_ptr_out).
 _is_pypy = "__pypy__" in sys.builtin_module_names
+
+# The buffer types that this PyPy keeps locked (found when cffi is loaded)
+_pypy_locked_types: tuple = ()
+
+
+def _must_copy(data: Any) -> bool:
+    """Whether C code must get a private copy of the bytearray or
+    memoryview data, instead of its memory (see above).
+
+    With one thread only, nothing can change data while a C function runs:
+    C code never starts Python threads, and signal handlers only run
+    when it returns.
+    """
+    return _is_pypy and not isinstance(data, _pypy_locked_types) and _thread._count() > 0
 
 
 class _VoidPointer:
@@ -96,6 +113,33 @@ try:
     null_pointer: Any = ffi.NULL
 
     _Array = ffi.new("uint8_t[1]").__class__.__bases__
+
+    def _find_pypy_locked_types() -> tuple:
+        """Return the buffer types that cannot be resized or released
+        while ffi.from_buffer() uses them"""
+
+        locked = []
+        data = bytearray(1)
+        ptr = ffi.from_buffer("uint8_t[]", data)
+        try:
+            data.append(0)
+        except BufferError:
+            locked.append(bytearray)
+        data = bytearray(1)
+        view = memoryview(data)
+        ptr = ffi.from_buffer("uint8_t[]", view)
+        try:
+            view.release()
+        except BufferError:
+            try:
+                data.append(0)
+            except BufferError:
+                locked.append(memoryview)
+        del ptr
+        return tuple(locked)
+
+    if _is_pypy:
+        _pypy_locked_types = _find_pypy_locked_types()
 
     # Declarations already passed to ffi.cdef(), and the lock that
     # protects it when modules are imported from several threads
@@ -160,7 +204,7 @@ try:
     def c_uint8_ptr(data: Union[bytes, memoryview, bytearray]) -> Any:
         """Pass data to C code, which only reads it"""
         if isinstance(data, _buffer_type):
-            if _is_pypy:
+            if _is_pypy and _must_copy(data):
                 return bytes(data)
             # The returned object holds the buffer of data, which cannot
             # be resized or freed (e.g. by another thread, while the GIL
@@ -315,9 +359,9 @@ class c_uint8_ptr_out:
         with c_uint8_ptr_out(buf) as ptr:
             lib.function(..., ptr, ...)
 
-    Usually, ptr is just c_uint8_ptr(buf). On PyPy, if buf is a bytearray
-    or a memoryview, the C code gets a private copy instead, which is copied
-    back into buf when the C function returns (without an exception).
+    Usually, ptr is just c_uint8_ptr(buf). If the C code must not get the
+    memory of buf (see _must_copy), it gets a private copy instead, which is
+    copied back into buf when the C function returns (without an exception).
     """
 
     def __init__(self, data: Any) -> None:
@@ -325,7 +369,7 @@ class c_uint8_ptr_out:
         self._copy: Any = None
 
     def __enter__(self) -> Any:
-        if _is_pypy and isinstance(self._data, _buffer_type):
+        if _is_pypy and isinstance(self._data, _buffer_type) and _must_copy(self._data):
             self._copy = create_string_buffer(len(self._data))
             self._copy[0 : len(self._data)] = bytes(self._data)
             return self._copy
