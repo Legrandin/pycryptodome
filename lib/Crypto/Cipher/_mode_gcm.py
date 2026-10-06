@@ -196,7 +196,14 @@ class GcmMode:
     """
 
     def __init__(
-        self, factory: ModuleType, key: Buffer, nonce: Buffer, mac_len: int, cipher_params: Dict, ghash_c: Any
+        self,
+        factory: ModuleType,
+        key: Buffer,
+        nonce: Buffer,
+        mac_len: int,
+        cipher_params: Dict,
+        ghash_c: Any,
+        threads: int = 1,
     ) -> None:
         self.block_size = factory.block_size
         if self.block_size != 16:
@@ -250,7 +257,12 @@ class GcmMode:
         nonce_ctr = j0[:12]
         iv_ctr = (bytes_to_long(j0) + 1) & 0xFFFFFFFF
         self._cipher = factory.new(
-            key, self._factory.MODE_CTR, initial_value=iv_ctr, nonce=nonce_ctr, **cipher_params
+            key,
+            self._factory.MODE_CTR,
+            initial_value=iv_ctr,
+            nonce=nonce_ctr,
+            threads=threads,
+            **cipher_params,
         )
 
         # Step 5 - Bootstrap GHASH
@@ -647,6 +659,11 @@ def _create_gcm_cipher(factory, **kwargs):
       mac_len : integer
         Length of the MAC, in bytes.
         It must be no larger than 16 bytes (which is the default).
+
+      threads : integer
+        The maximum number of threads used to encrypt or decrypt long data
+        (default: 1, no extra threads; 0 for all CPU cores).
+        Authentication (GHASH) always runs in the calling thread.
     """
 
     try:
@@ -658,6 +675,7 @@ def _create_gcm_cipher(factory, **kwargs):
     if nonce is None:
         nonce = get_random_bytes(16)
     mac_len = kwargs.pop("mac_len", 16)
+    threads = kwargs.pop("threads", 1)
 
     # Not documented - only used for testing
     use_clmul = kwargs.pop("use_clmul", True)
@@ -666,4 +684,4 @@ def _create_gcm_cipher(factory, **kwargs):
     else:
         ghash_c = _ghash_portable
 
-    return GcmMode(factory, key, nonce, mac_len, kwargs, ghash_c)
+    return GcmMode(factory, key, nonce, mac_len, kwargs, ghash_c, threads)

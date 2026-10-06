@@ -32,10 +32,11 @@ from binascii import hexlify, unhexlify
 
 import pytest
 
-from Crypto.Cipher import AES, DES3
+from Crypto.Cipher import AES, DES3, _mode_ctr
 from Crypto.Hash import SHA256, SHAKE128
 from Crypto.Util import Counter
 from Crypto.Util._bytes import tobytes
+from Crypto.Util._cpu_features import available_cores
 
 
 def get_tag_random(tag, length):
@@ -330,6 +331,138 @@ class TestCtr:
         cipher = AES.new(b"4" * 16, AES.MODE_CTR, nonce=self.nonce_64)
         with pytest.raises(ValueError):
             cipher.decrypt(ct, output=shorter_output)
+
+
+class TestCtrThreads:
+    key_128 = get_tag_random("key_128", 16)
+    nonce_64 = get_tag_random("nonce_64", 8)
+
+    @pytest.fixture
+    def tiny_ranges(self, monkeypatch):
+        # Let each thread process even a single byte
+        monkeypatch.setattr(_mode_ctr, "_MIN_BYTES_PER_THREAD", 1)
+
+    def test_threads_negative(self):
+        for threads in (1.0, "2", None, True):
+            with pytest.raises(TypeError):
+                AES.new(self.key_128, AES.MODE_CTR, threads=threads)
+        for threads in (-1, -8):
+            with pytest.raises(ValueError):
+                AES.new(self.key_128, AES.MODE_CTR, threads=threads)
+
+        # Only for CTR mode
+        with pytest.raises(TypeError):
+            AES.new(self.key_128, AES.MODE_CBC, threads=2)
+
+        # Only for AES
+        key = DES3.adjust_key_parity(get_tag_random("key_des3", 24))
+        with pytest.raises(TypeError):
+            DES3.new(key, DES3.MODE_CTR, nonce=b"1234", threads=2)
+
+    def test_threads_all_cores(self):
+        cores = available_cores()
+        assert cores >= 1
+        assert AES.new(self.key_128, AES.MODE_CTR, threads=0)._threads == cores
+
+        pt = get_tag_random("plaintext", 3 * 1024 * 1024 + 5)
+        ref = AES.new(self.key_128, AES.MODE_CTR, nonce=self.nonce_64).encrypt(pt)
+        cipher = AES.new(self.key_128, AES.MODE_CTR, nonce=self.nonce_64, threads=0)
+        assert cipher.encrypt(pt) == ref
+
+    @pytest.mark.parametrize("use_aesni", (True, False))
+    @pytest.mark.parametrize(
+        "params",
+        (
+            {"nonce": nonce_64},
+            # Carry across several bytes of the counter
+            {"nonce": b"N" * 4, "initial_value": 2**64 - 3},
+            # The 128-bit counter wraps around to zero
+            {"nonce": b"", "initial_value": 2**128 - 5},
+            {"counter": Counter.new(32, prefix=b"P" * 8, suffix=b"S" * 4, initial_value=2**24 - 1)},
+            {"counter": Counter.new(64, prefix=b"P" * 8, initial_value=2**40 - 1, little_endian=True)},
+        ),
+    )
+    def test_range_boundaries(self, tiny_ranges, use_aesni, params):
+        pt = get_tag_random("plaintext", 16 * 8 * 5 + 7)
+
+        def new(threads=1):
+            return AES.new(self.key_128, AES.MODE_CTR, use_aesni=use_aesni, threads=threads, **params)
+
+        ref = new().encrypt(pt)
+        for first in (0, 1, 15, 16, 17, 127, 128, 129, 255, 256, 300):
+            for length in (0, 1, 15, 16, 17, 128, 129, 400, len(pt) - first):
+                end = first + length
+                for threads in (2, 3, 8):
+                    cipher = new(threads)
+                    res = cipher.encrypt(pt[:first]) + cipher.encrypt(pt[first:end])
+                    # The state is correct after the threaded call
+                    res += cipher.encrypt(pt[end:])
+                    assert res == ref
+
+                    cipher = new(threads)
+                    res = cipher.decrypt(ref[:first]) + cipher.decrypt(ref[first:end])
+                    res += cipher.decrypt(ref[end:])
+                    assert res == pt
+
+    def test_output_param(self, tiny_ranges):
+        pt = get_tag_random("plaintext", 1000)
+        ref = AES.new(self.key_128, AES.MODE_CTR, nonce=self.nonce_64).encrypt(pt)
+
+        output = bytearray(1000)
+        cipher = AES.new(self.key_128, AES.MODE_CTR, nonce=self.nonce_64, threads=4)
+        assert cipher.encrypt(pt, output=output) is None
+        assert output == ref
+
+        output = memoryview(bytearray(1000))
+        cipher = AES.new(self.key_128, AES.MODE_CTR, nonce=self.nonce_64, threads=4)
+        assert cipher.decrypt(ref, output=output) is None
+        assert output == pt
+
+        # In place
+        buf = bytearray(pt)
+        cipher = AES.new(self.key_128, AES.MODE_CTR, nonce=self.nonce_64, threads=4)
+        cipher.encrypt(buf, output=buf)
+        assert buf == ref
+
+    def test_wrap_around(self, tiny_ranges):
+        # Counter is only 8 bits, so we can only encrypt/decrypt 256 blocks (=4096 bytes)
+        counter = Counter.new(8, prefix=bytes([9]) * 15)
+        max_bytes = 4096
+
+        for threads in (2, 3, 8):
+            cipher = AES.new(self.key_128, AES.MODE_CTR, counter=counter, threads=threads)
+            cipher.encrypt(b"9" * 100)
+            cipher.encrypt(b"9" * (max_bytes - 100))
+            with pytest.raises(OverflowError):
+                cipher.encrypt(b"9" * 2)
+
+            cipher = AES.new(self.key_128, AES.MODE_CTR, counter=counter, threads=threads)
+            with pytest.raises(OverflowError):
+                cipher.decrypt(b"9" * (max_bytes + 1))
+            # The key stream cannot be used again
+            with pytest.raises(OverflowError):
+                cipher.decrypt(b"9" * 2)
+
+    def test_long_random_chunks(self):
+        import random
+
+        rng = random.Random(42)
+
+        pt = get_tag_random("plaintext", 5 * 1024 * 1024 + 4567)
+        ref = AES.new(self.key_128, AES.MODE_CTR, nonce=self.nonce_64).encrypt(pt)
+
+        for threads in (0, 2, 3, 4, 8):
+            cipher = AES.new(self.key_128, AES.MODE_CTR, nonce=self.nonce_64, threads=threads)
+            assert cipher.encrypt(pt) == ref
+
+            cipher = AES.new(self.key_128, AES.MODE_CTR, nonce=self.nonce_64, threads=threads)
+            res = []
+            index = 0
+            while index < len(pt):
+                size = rng.randint(1, 3 * 1024 * 1024)
+                res.append(cipher.encrypt(memoryview(pt)[index : index + size]))
+                index += size
+            assert b"".join(res) == ref
 
 
 class TestSP800TestVectors:

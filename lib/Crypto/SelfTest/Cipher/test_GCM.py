@@ -33,7 +33,7 @@ from binascii import unhexlify
 
 import pytest
 
-from Crypto.Cipher import AES
+from Crypto.Cipher import AES, _mode_ctr
 from Crypto.Hash import SHA256, SHAKE128
 from Crypto.SelfTest.loader import load_test_vectors, load_test_vectors_wycheproof, wycheproof_id
 from Crypto.SelfTest.st_common import wycheproof_warnings
@@ -885,3 +885,52 @@ class TestVariableLength:
 @pytest.mark.skipif(not _cpu_features.have_clmul(), reason="PCLMULQDQ not available")
 class TestVariableLengthNoClmul(TestVariableLength):
     _extra_params = {"use_clmul": False}
+
+
+class TestGcmThreads:
+    key_128 = get_tag_random("key_128", 16)
+    nonce_96 = get_tag_random("nonce_96", 12)
+
+    def test_threads_negative(self):
+        for threads in (1.0, "2", None, True):
+            with pytest.raises(TypeError):
+                AES.new(self.key_128, AES.MODE_GCM, threads=threads)
+        for threads in (-1, -8):
+            with pytest.raises(ValueError):
+                AES.new(self.key_128, AES.MODE_GCM, threads=threads)
+
+    @pytest.mark.parametrize("nonce", (nonce_96, b"N" * 16))
+    def test_range_boundaries(self, monkeypatch, nonce):
+        # Let each thread process even a single byte
+        monkeypatch.setattr(_mode_ctr, "_MIN_BYTES_PER_THREAD", 1)
+
+        pt = get_tag_random("plaintext", 16 * 8 * 3 + 7)
+        cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=nonce)
+        cipher.update(b"header")
+        ref_ct, ref_tag = cipher.encrypt_and_digest(pt)
+
+        for first in (0, 1, 16, 17, 128, 129):
+            for threads in (2, 3, 8):
+                cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=nonce, threads=threads)
+                cipher.update(b"header")
+                ct = cipher.encrypt(pt[:first]) + cipher.encrypt(pt[first:])
+                assert ct == ref_ct
+                assert cipher.digest() == ref_tag
+
+                cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=nonce, threads=threads)
+                cipher.update(b"header")
+                output = bytearray(len(pt))
+                cipher.decrypt(ref_ct, output=output)
+                assert output == pt
+                cipher.verify(ref_tag)
+
+    def test_long_data(self):
+        pt = get_tag_random("plaintext", 3 * 1024 * 1024 + 4567)
+        ref_ct, ref_tag = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_96).encrypt_and_digest(pt)
+
+        for threads in (0, 2, 4):
+            cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_96, threads=threads)
+            assert cipher.encrypt_and_digest(pt) == (ref_ct, ref_tag)
+
+            cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_96, threads=threads)
+            assert cipher.decrypt_and_verify(ref_ct, ref_tag) == pt

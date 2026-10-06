@@ -30,9 +30,11 @@ from typing import Optional, Union, overload
 __all__ = ["CtrMode"]
 
 import struct
+import threading
 
 from Crypto.Random import get_random_bytes
 from Crypto.Util._bytes import copy_bytes
+from Crypto.Util._cpu_features import available_cores
 from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
@@ -66,8 +68,72 @@ raw_ctr_lib = load_pycryptodome_raw_lib(
                                     const uint8_t *in,
                                     uint8_t *out,
                                     size_t data_len);
+                    int CTR_encrypt_at(const void *ctrState,
+                                       const uint8_t *in,
+                                       uint8_t *out,
+                                       size_t offset,
+                                       size_t data_len);
+                    int CTR_skip(void *ctrState,
+                                 size_t data_len);
                     int CTR_stop_operation(void *ctrState);""",
 )
+
+# Minimum amount of data (1 MiB) that each thread must process:
+# with less, starting the thread costs more than what it saves.
+_MIN_BYTES_PER_THREAD = 1024 * 1024
+
+
+def _ctr_threaded(state, in_ptr, out_ptr, data_len: int, threads: int) -> int:
+    """Encrypt or decrypt ``data_len`` bytes in CTR mode, by splitting them
+    into ``threads`` contiguous ranges, which are processed in parallel.
+    Fewer threads are used if a range would be shorter than
+    ``_MIN_BYTES_PER_THREAD`` bytes.
+    The calling thread processes the first range.
+
+    :return: the error code of the C library (0 for success)
+    """
+
+    threads = min(threads, data_len // _MIN_BYTES_PER_THREAD)
+    if threads <= 1:
+        return raw_ctr_lib.CTR_encrypt(state, in_ptr, out_ptr, c_size_t(data_len))
+
+    results = [0] * threads
+    errors = []
+
+    def worker(i, start, end):
+        try:
+            # CTR_encrypt_at() does not change the state
+            results[i] = raw_ctr_lib.CTR_encrypt_at(
+                state, in_ptr, out_ptr, c_size_t(start), c_size_t(end - start)
+            )
+        except Exception as e:
+            errors.append(e)
+
+    # Ranges differ by at most one byte
+    bounds = [data_len * i // threads for i in range(threads + 1)]
+
+    workers = []
+    for i in range(1, threads):
+        t = threading.Thread(target=worker, args=(i, bounds[i], bounds[i + 1]))
+        t.daemon = True
+        t.start()
+        workers.append(t)
+
+    worker(0, bounds[0], bounds[1])
+
+    for t in workers:
+        t.join()
+
+    # Move the state forward even after an error,
+    # so that the same key stream cannot be used again
+    result = raw_ctr_lib.CTR_skip(state, c_size_t(data_len))
+
+    if errors:
+        raise errors[0]
+    for r in results:
+        if r:
+            return r
+    return result
 
 
 class CtrMode:
@@ -106,6 +172,7 @@ class CtrMode:
         prefix_len: int,
         counter_len: int,
         little_endian: bool,
+        threads: int = 1,
     ) -> None:
         """Create a new block cipher, configured in CTR mode.
 
@@ -135,7 +202,19 @@ class CtrMode:
           little_endian : boolean
             True if the counter in the counter block is an integer encoded
             in little endian mode. If False, it is big endian.
+
+          threads : integer
+            The maximum number of threads used to process long data
+            (0 for as many as the CPU cores available).
         """
+
+        if not isinstance(threads, int) or isinstance(threads, bool):
+            raise TypeError("'threads' must be an integer")
+        if threads < 0:
+            raise ValueError("'threads' must be a non-negative integer")
+        if threads == 0:
+            threads = available_cores()
+        self._threads = threads
 
         if len(initial_counter_block) == prefix_len + counter_len:
             self.nonce = copy_bytes(None, prefix_len, initial_counter_block)
@@ -229,9 +308,14 @@ class CtrMode:
             # Check the lengths of the buffers that C code gets
             if len(ciphertext_ptr) != plaintext_len:
                 raise ValueError("output must have the same length as the input  (%d bytes)" % plaintext_len)
-            result = raw_ctr_lib.CTR_encrypt(
-                self._state.get(), plaintext_ptr, ciphertext_ptr, c_size_t(plaintext_len)
-            )
+            if self._threads > 1:
+                result = _ctr_threaded(
+                    self._state.get(), plaintext_ptr, ciphertext_ptr, plaintext_len, self._threads
+                )
+            else:
+                result = raw_ctr_lib.CTR_encrypt(
+                    self._state.get(), plaintext_ptr, ciphertext_ptr, c_size_t(plaintext_len)
+                )
         if result:
             if result == 0x60002:
                 raise OverflowError("The counter has wrapped around in CTR mode")
@@ -303,9 +387,14 @@ class CtrMode:
             # Check the lengths of the buffers that C code gets
             if len(plaintext_ptr) != ciphertext_len:
                 raise ValueError("output must have the same length as the input  (%d bytes)" % ciphertext_len)
-            result = raw_ctr_lib.CTR_decrypt(
-                self._state.get(), ciphertext_ptr, plaintext_ptr, c_size_t(ciphertext_len)
-            )
+            if self._threads > 1:
+                result = _ctr_threaded(
+                    self._state.get(), ciphertext_ptr, plaintext_ptr, ciphertext_len, self._threads
+                )
+            else:
+                result = raw_ctr_lib.CTR_decrypt(
+                    self._state.get(), ciphertext_ptr, plaintext_ptr, c_size_t(ciphertext_len)
+                )
         if result:
             if result == 0x60002:
                 raise OverflowError("The counter has wrapped around in CTR mode")
@@ -349,10 +438,21 @@ def _create_ctr_cipher(factory, **kwargs):
         of the counter block. This parameter is incompatible to both ``nonce``
         and ``initial_value``.
 
+      threads : integer
+        Only for ciphers that support it (AES).
+        The maximum number of threads used to process long data
+        (default: 1, no extra threads; 0 for all CPU cores).
+
     Any other keyword will be passed to the underlying block cipher.
     See the relevant documentation for details (at least ``key`` will need
     to be present).
     """
+
+    # Only some ciphers (AES) accept the 'threads' parameter
+    if getattr(factory, "_ctr_threads", False):
+        threads = kwargs.pop("threads", 1)
+    else:
+        threads = 1
 
     cipher_state = factory._create_base_cipher(kwargs)
 
@@ -398,8 +498,9 @@ def _create_ctr_cipher(factory, **kwargs):
             initial_counter_block,
             len(nonce),  # prefix
             counter_len,
-            False,
-        )  # little_endian
+            False,  # little_endian
+            threads,
+        )
 
     # Crypto.Util.Counter is used
 
@@ -431,4 +532,4 @@ def _create_ctr_cipher(factory, **kwargs):
             " block size (%d)" % (len(initial_counter_block), factory.block_size)
         )
 
-    return CtrMode(cipher_state, initial_counter_block, len(prefix), counter_len, little_endian)
+    return CtrMode(cipher_state, initial_counter_block, len(prefix), counter_len, little_endian, threads)

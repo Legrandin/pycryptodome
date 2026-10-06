@@ -159,7 +159,7 @@ The :func:`new` function at the module level under ``Crypto.Cipher`` instantiate
 a new CTR cipher object for the relevant base algorithm.
 In the following definition, ``<algorithm>`` could be ``AES``:
 
-.. function:: Crypto.Cipher.<algorithm>.new(key, mode, *, nonce=None, initial_value=None, counter=None)
+.. function:: Crypto.Cipher.<algorithm>.new(key, mode, *, nonce=None, initial_value=None, counter=None, threads=1)
 
   Create a new CTR object, using <algorithm> as the base block cipher.
   
@@ -175,6 +175,9 @@ In the following definition, ``<algorithm>`` could be ``AES``:
   :type initial_value: integer or bytes
   :param counter: a custom counter object created with :func:`Crypto.Util.Counter.new`.
     This allows the definition of a more complex counter block.
+  :param int threads: (only for AES) the maximum number of threads used to
+    encrypt or decrypt long data (default: 1, no extra threads).
+    Use 0 for as many threads as the CPU cores available to the process.
   :return: a CTR cipher object
 
 The methods :func:`encrypt` and :func:`decrypt` of a CTR cipher object
@@ -182,6 +185,18 @@ accept data of any length (i.e. padding is not needed).
 Both raise an ``OverflowError`` exception as soon as the counter wraps around to repeat the original value.
 
 The CTR cipher object has a read-only attribute :attr:`nonce` (*bytes*).
+
+Each block of the *keystream* only depends on its counter block,
+so AES in CTR mode can use several CPU cores.
+This is disabled by default; enable it with the ``threads`` parameter::
+
+    >>> cipher = AES.new(key, AES.MODE_CTR, nonce=nonce, threads=4)
+    >>> ciphertext = cipher.encrypt(very_long_message)
+
+With ``threads=0``, it uses as many threads as the CPU cores available to the process.
+The output does not depend on the number of threads.
+Threads only help with long data passed in large chunks:
+each thread processes at least 1 MiB of a single :func:`encrypt` or :func:`decrypt` call.
 
 Example (encryption)::
 

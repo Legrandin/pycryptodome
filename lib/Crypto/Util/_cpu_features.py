@@ -30,6 +30,8 @@
 
 from __future__ import annotations
 
+import os
+
 from Crypto.Util._raw_api import load_pycryptodome_raw_lib
 
 _raw_cpuid_lib = load_pycryptodome_raw_lib(
@@ -62,3 +64,23 @@ def have_bmi1() -> int:
 
 def have_bmi2() -> int:
     return _raw_cpuid_lib.have_bmi2()
+
+
+def available_cores() -> int:
+    """Return the number of CPU cores this process can run on."""
+
+    # Python 3.13+: it takes into account CPU affinity and -X cpu_count
+    if hasattr(os, "process_cpu_count"):
+        count = os.process_cpu_count()
+    elif hasattr(os, "sched_getaffinity"):
+        count = len(os.sched_getaffinity(0))
+    elif hasattr(os, "cpu_count"):
+        count = os.cpu_count()
+    else:
+        import multiprocessing
+
+        try:
+            count = multiprocessing.cpu_count()
+        except NotImplementedError:
+            count = None
+    return count or 1
