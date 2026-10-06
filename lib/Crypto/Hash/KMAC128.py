@@ -62,7 +62,6 @@ class KMAC_Hash:
         cshake: ModuleType,
         rate: int,
     ) -> None:
-
         # See https://tools.ietf.org/html/rfc8702
         self.oid = "2.16.840.1.101.3.4.2." + oid_variant
         self.digest_size = mac_len

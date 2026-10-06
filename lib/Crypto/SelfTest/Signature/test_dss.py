@@ -663,7 +663,6 @@ class TestDet_DSA:
         assert hexlify(signer._bits2octets(h1)) == b"01795edf0d54db760f156d0dac04c0322b3a204224"
 
     def test2(self):
-
         for sig in self.signatures:
             tk = sig.test_key
             key = DSA.construct([tk.y, tk.g, tk.p, tk.q, tk.x], False)
@@ -1247,7 +1246,6 @@ class TestVectorsDSAWycheproof:
 
 
 def _load_tests_ecdsa(filename):
-
     def filter_ecc(group):
         # These are the only curves we accept to skip
         if group["key"]["curve"] in (

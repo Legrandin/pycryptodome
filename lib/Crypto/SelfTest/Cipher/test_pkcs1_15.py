@@ -171,7 +171,6 @@ HKukWBcq9f/UOmS0oEhai/6g+Uf7VHJdWaeO5LzuvwU=
             assert pt == pt2
 
     def test_encrypt_verify_exp_pt_len(self):
-
         cipher = PKCS.new(self.key1024)
         pt = b"5" * 16
         ct = cipher.encrypt(pt)
@@ -210,7 +209,6 @@ HKukWBcq9f/UOmS0oEhai/6g+Uf7VHJdWaeO5LzuvwU=
 
 
 def _load_tests(filename):
-
     def filter_rsa(group):
         return RSA.import_key(group["privateKeyPem"])
 
@@ -258,5 +256,4 @@ class TestVectorsWycheproof:
 
     @pytest.mark.parametrize("tv", load_wycheproof_vectors(), ids=wycheproof_id)
     def test(self, tv):
-
         self.check_decrypt(tv)

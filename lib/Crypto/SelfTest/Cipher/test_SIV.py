@@ -150,7 +150,6 @@ class TestSiv:
         cipher.hexverify(mac_hex)
 
     def test_bytearray(self):
-
         # Encrypt
         key = bytearray(self.key_256)
         nonce = bytearray(self.nonce_96)
@@ -189,7 +188,6 @@ class TestSiv:
         assert self.data == pt_test
 
     def test_memoryview(self):
-
         # Encrypt
         key = memoryview(bytearray(self.key_256))
         nonce = memoryview(bytearray(self.nonce_96))
@@ -228,7 +226,6 @@ class TestSiv:
         assert self.data == pt_test
 
     def test_output_param(self):
-
         pt = b"5" * 128
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         ct, tag = cipher.encrypt_and_digest(pt)
@@ -246,7 +243,6 @@ class TestSiv:
         assert res is None
 
     def test_output_param_memoryview(self):
-
         pt = b"5" * 128
         cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
         ct, tag = cipher.encrypt_and_digest(pt)
@@ -468,7 +464,6 @@ class TestVectorsWycheproof:
 
     @pytest.mark.parametrize("tv", load_wycheproof_vectors_siv(), ids=wycheproof_id)
     def test(self, tv):
-
         self.check_encrypt(tv)
         self.check_decrypt(tv)
 
@@ -507,6 +502,5 @@ class TestVectorsWycheproof2:
 
     @pytest.mark.parametrize("tv", load_wycheproof_vectors_aead_siv(), ids=wycheproof_id)
     def test(self, tv):
-
         self.check_encrypt(tv)
         self.check_decrypt(tv)

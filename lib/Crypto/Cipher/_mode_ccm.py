@@ -134,7 +134,6 @@ class CcmMode:
         assoc_len: Optional[int],
         cipher_params: dict,
     ) -> None:
-
         self.block_size = factory.block_size
         """The block size of the underlying cipher, in bytes."""
 
@@ -197,7 +196,6 @@ class CcmMode:
             self._start_mac()
 
     def _start_mac(self):
-
         assert self._mac_status == MacStatus.NOT_STARTED
         assert None not in (self._assoc_len, self._msg_len)
         assert isinstance(self._cache, list)
@@ -234,7 +232,6 @@ class CcmMode:
         self._update(first_data_to_mac)
 
     def _pad_cache_and_update(self):
-
         assert self._mac_status != MacStatus.NOT_STARTED
         assert len(self._cache) < self.block_size
 

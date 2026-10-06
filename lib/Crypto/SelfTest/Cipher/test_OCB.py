@@ -218,7 +218,6 @@ class TestOcb:
             assert cipher.digest() == ref_mac
 
     def test_bytearray(self):
-
         # Encrypt
         key_ba = bytearray(self.key_128)
         nonce_ba = bytearray(self.nonce_96)
@@ -259,7 +258,6 @@ class TestOcb:
         assert self.data == pt_test
 
     def test_memoryview(self):
-
         # Encrypt
         key_mv = memoryview(bytearray(self.key_128))
         nonce_mv = memoryview(bytearray(self.nonce_96))
@@ -666,7 +664,6 @@ class TestOcbRfc7253:
         cipher.verify(mac_tag)
 
     def test2(self):
-
         key, nonce, aad, pt, ct = (unhexlify(x.encode("latin-1")) for x in self.tv2)
         ct, mac_tag = ct[:-12], ct[-12:]
 
@@ -717,7 +714,6 @@ class TestOcbDkg:
             assert c == c_out + tag_out
 
     def test_3(self):
-
         def check(keylen, taglen, noncelen, exp):
             result = algo_rfc7253(keylen, taglen, noncelen)
             assert result == unhexlify(exp)

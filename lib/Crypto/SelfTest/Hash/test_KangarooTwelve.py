@@ -34,8 +34,8 @@ from Crypto.Hash import KangarooTwelve as K12
 
 # Run every test with each C implementation available on this machine
 _implementations = [pytest.param(K12._raw_k12_portable_lib, id="portable")]
-if K12._raw_k12_avx2_lib is not None:
-    _implementations.append(pytest.param(K12._raw_k12_avx2_lib, id="avx2"))
+if K12._raw_k12_avx2_bmi2_lib is not None:
+    _implementations.append(pytest.param(K12._raw_k12_avx2_bmi2_lib, id="avx2_bmi2"))
 
 
 @pytest.fixture(autouse=True, params=_implementations)
@@ -50,7 +50,6 @@ class TestKangarooTwelve:
         assert K12._length_encode(65538) == b"\x01\x00\x02\x03"
 
     def test_new_positive(self):
-
         xof1 = K12.new()
         xof2 = K12.new(data=b"90")
         xof3 = K12.new().update(b"90")

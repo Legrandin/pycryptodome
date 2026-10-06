@@ -279,7 +279,6 @@ class TestCtr:
         assert digest == "96204fc470476561a3a8f3b6fe6d24be85c87510b638142d1d0fb90989f8a6a6"
 
     def test_output_param(self):
-
         pt = b"5" * 128
         cipher = AES.new(b"4" * 16, AES.MODE_CTR, nonce=self.nonce_64)
         ct = cipher.encrypt(pt)
@@ -296,7 +295,6 @@ class TestCtr:
         assert res is None
 
     def test_output_param_memoryview(self):
-
         pt = b"5" * 128
         cipher = AES.new(b"4" * 16, AES.MODE_CTR, nonce=self.nonce_64)
         ct = cipher.encrypt(pt)

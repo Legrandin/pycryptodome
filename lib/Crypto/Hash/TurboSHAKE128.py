@@ -24,7 +24,6 @@ class TurboSHAKE:
     """
 
     def __init__(self, capacity: int, domain_separation: int, data: Optional[Buffer]) -> None:
-
         state = VoidPointer()
         result = _raw_keccak_lib.keccak_init(
             state.address_of(), c_size_t(capacity), c_ubyte(12)

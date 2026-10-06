@@ -171,7 +171,6 @@ def load_test_vectors(dir_comps, file_name, description, conversions):
 
 
 def load_test_vectors_wycheproof(dir_comps, file_name, description, root_tag={}, group_tag={}, unit_tag={}):
-
     result = []
     try:
         if not test_vectors_available:

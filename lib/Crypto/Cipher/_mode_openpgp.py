@@ -68,7 +68,6 @@ class OpenPgpMode:
     """
 
     def __init__(self, factory: ModuleType, key: Buffer, iv: Buffer, cipher_params: dict) -> None:
-
         #: The block size of the underlying cipher, in bytes.
         self.block_size = factory.block_size
 

@@ -163,7 +163,6 @@ class IntegerNative(IntegerBase):
         return abs(self._value)
 
     def sqrt(self, modulus=None):
-
         value = self._value
         if modulus is None:
             if value < 0:
@@ -267,7 +266,6 @@ class IntegerNative(IntegerBase):
         return (self._value & 1) == 0
 
     def size_in_bits(self):
-
         if self._value < 0:
             raise ValueError("Conversion only valid for non-negative numbers")
 

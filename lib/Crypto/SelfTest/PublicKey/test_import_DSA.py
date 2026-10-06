@@ -37,7 +37,6 @@ class TestImportKey:
     x = 540873410045082450874416847965843801027716145253
 
     def setup_method(self):
-
         # It is easier to write test vectors in text form,
         # and convert them to byte strigs dynamically here
         for mname, mvalue in TestImportKey.__dict__.items():
@@ -387,7 +386,6 @@ eZ4k+NQDbEL8GiHmFxzDWQAuPPZKJWEEEV2p/To+WOh+kSDHQw==
 
 class TestImportKeyFromX509Cert:
     def test_x509v1(self):
-
         # Sample V1 certificate with a 1024 bit DSA key
         x509_v1_cert = """
 -----BEGIN CERTIFICATE-----
@@ -459,7 +457,6 @@ a1:e4:20:fa:55:a8:a7:5c:d2:f0:ea:9a:0c:2e:da:
         assert not key.has_private()
 
     def test_x509v3(self):
-
         # Sample V3 certificate with a 1024 bit DSA key
         x509_v3_cert = """
 -----BEGIN CERTIFICATE-----

@@ -61,7 +61,6 @@ test_data_512_other = [
 
 
 def _make_tests_SHA512():
-
     test_vectors = (
         load_test_vectors(("Hash", "SHA2"), "SHA512ShortMsg.rsp", "KAT SHA-512", {"len": lambda x: int(x)})
         or []
@@ -82,7 +81,6 @@ def _make_tests_SHA512():
 
 
 def _make_tests_SHA512_224():
-
     test_vectors = (
         load_test_vectors(
             ("Hash", "SHA2"), "SHA512_224ShortMsg.rsp", "KAT SHA-512/224", {"len": lambda x: int(x)}
@@ -112,7 +110,6 @@ def _make_tests_SHA512_224():
 
 
 def _make_tests_SHA512_256():
-
     test_vectors = (
         load_test_vectors(
             ("Hash", "SHA2"), "SHA512_256ShortMsg.rsp", "KAT SHA-512/256", {"len": lambda x: int(x)}

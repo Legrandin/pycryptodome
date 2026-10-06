@@ -96,7 +96,6 @@ class SivMode:
     """
 
     def __init__(self, factory: ModuleType, key: Buffer, nonce: Buffer, kwargs: dict) -> None:
-
         self.block_size = factory.block_size
         """The block size of the underlying cipher, in bytes."""
 

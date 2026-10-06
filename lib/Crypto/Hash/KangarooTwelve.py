@@ -64,11 +64,11 @@ _raw_k12_portable_lib = load_pycryptodome_raw_lib("Crypto.Hash._k12", _k12_cdecl
 
 
 # It also hashes 4 leaves at a time with AVX2
-_raw_k12_avx2_lib = _load_avx2_bmi2_lib(_k12_cdecl)
+_raw_k12_avx2_bmi2_lib = _load_avx2_bmi2_lib("Crypto.Hash._k12_avx2_bmi2", _k12_cdecl)
 
 # The implementation in use (the tests can replace it)
-if _raw_k12_avx2_lib is not None:
-    _raw_k12_lib = _raw_k12_avx2_lib
+if _raw_k12_avx2_bmi2_lib is not None:
+    _raw_k12_lib = _raw_k12_avx2_bmi2_lib
 else:
     _raw_k12_lib = _raw_k12_portable_lib
 
@@ -184,7 +184,6 @@ class K12_XOF:
     """
 
     def __init__(self, data: Optional[Buffer], custom: Optional[bytes], threads: int = 1) -> None:
-
         if custom is None:
             custom = b""
 

@@ -75,7 +75,6 @@ class Poly1305_MAC:
     nonce: bytes
 
     def __init__(self, r: bytes, s: bytes, data: Optional[Buffer]) -> None:
-
         if len(r) != 16:
             raise ValueError("Parameter r is not 16 bytes long")
         if len(s) != 16:

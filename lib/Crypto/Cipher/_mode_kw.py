@@ -7,7 +7,6 @@ from Crypto.Util.strxor import strxor
 
 
 def W(cipher: ModuleType, plaintext: Union[bytes, bytearray]) -> bytes:
-
     S = [plaintext[i : i + 8] for i in range(0, len(plaintext), 8)]
     n = len(S)
     s = 6 * (n - 1)
@@ -24,7 +23,6 @@ def W(cipher: ModuleType, plaintext: Union[bytes, bytearray]) -> bytes:
 
 
 def W_inverse(cipher: ModuleType, ciphertext: Union[bytes, bytearray]) -> bytes:
-
     C = [ciphertext[i : i + 8] for i in range(0, len(ciphertext), 8)]
     n = len(C)
     s = 6 * (n - 1)
@@ -58,7 +56,6 @@ class KWMode:
     """
 
     def __init__(self, factory: ModuleType, key: Union[bytes, bytearray]):
-
         self.block_size = factory.block_size
         if self.block_size != 16:
             raise ValueError("Key Wrap mode is only available for ciphers that operate on 128 bits blocks")

@@ -400,7 +400,6 @@ class IntegerGMP(IntegerBase):
         return result
 
     def inplace_pow(self, exponent, modulus=None):
-
         if modulus is None:
             if exponent < 0:
                 raise ValueError("Exponent must not be negative")
@@ -709,7 +708,6 @@ class IntegerGMP(IntegerBase):
 
     # Clean-up
     def __del__(self):
-
         try:
             if self._mpz_p is not None and self._initialized:
                 _gmp.mpz_clear(self._mpz_p)

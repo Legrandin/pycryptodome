@@ -202,7 +202,6 @@ test_data = [
 
 class TestKeyLength:
     def test(self):
-
         nonce = bytes([0]) * 8
         for key_length in (15, 30, 33):
             key = bytes([1]) * key_length
@@ -219,7 +218,6 @@ class TestNonce:
             Salsa20.new(key, bytes([0]) * 9)
 
     def test_default_nonce(self):
-
         cipher1 = Salsa20.new(bytes([1]) * 16)
         cipher2 = Salsa20.new(bytes([1]) * 16)
         assert len(cipher1.nonce) == 8
@@ -230,7 +228,6 @@ class TestByteArray:
     """Verify we can encrypt or decrypt bytearrays"""
 
     def test(self):
-
         data = b"0123"
         key = b"9" * 32
         nonce = b"t" * 8
@@ -268,7 +265,6 @@ class TestMemoryview:
     """Verify we can encrypt or decrypt bytearrays"""
 
     def test(self):
-
         data = b"0123"
         key = b"9" * 32
         nonce = b"t" * 8

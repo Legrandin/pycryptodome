@@ -164,7 +164,6 @@ class EccPoint:
     """
 
     def __init__(self, x: Union[int, Integer], y: Union[int, Integer], curve: Optional[str] = "p256") -> None:
-
         try:
             self._curve = _curves[curve]
         except KeyError:

@@ -43,7 +43,6 @@ class ExceptionModulus(ValueError):
 
 
 def monty_mult(term1, term2, modulus):
-
     if term1 >= modulus:
         term1 %= modulus
     if term2 >= modulus:

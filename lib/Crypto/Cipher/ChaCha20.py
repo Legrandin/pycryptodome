@@ -77,7 +77,6 @@ _raw_chacha20_lib = load_pycryptodome_raw_lib(
 
 
 def _HChaCha20(key: Buffer, nonce: Buffer) -> bytearray:
-
     assert len(key) == 32
     assert len(nonce) == 16
 

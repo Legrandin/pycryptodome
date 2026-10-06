@@ -45,7 +45,6 @@ class BlockCipherParams(TypedDict, total=False):
 
 
 def _create_cipher(factory, key, mode, *args, **kwargs):
-
     kwargs["key"] = key
 
     if args:

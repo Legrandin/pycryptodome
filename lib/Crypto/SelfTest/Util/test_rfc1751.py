@@ -23,6 +23,5 @@ class TestRFC1751:
             assert k2 == key_bin
 
     def test_error_key_to_english(self):
-
         with pytest.raises(ValueError):
             key_to_english(b"0" * 7)

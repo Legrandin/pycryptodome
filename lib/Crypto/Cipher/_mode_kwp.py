@@ -23,7 +23,6 @@ class KWPMode:
     """
 
     def __init__(self, factory: ModuleType, key: Union[bytes, bytearray]):
-
         self.block_size = factory.block_size
         if self.block_size != 16:
             raise ValueError(

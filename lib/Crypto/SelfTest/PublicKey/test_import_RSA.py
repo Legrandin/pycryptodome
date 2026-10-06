@@ -500,7 +500,6 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
 
 class TestImportKeyFromX509Cert:
     def test_x509v1(self):
-
         # Sample V1 certificate with a 1024 bit RSA key
         x509_v1_cert = """
 -----BEGIN CERTIFICATE-----
@@ -540,7 +539,6 @@ a3:18:d0:da:95:9f:05:d6:99:37:db:e0:81:b3:c8:
         assert not key.has_private()
 
     def test_x509v3(self):
-
         # Sample V3 certificate with a 1024 bit RSA key
         x509_v3_cert = """
 -----BEGIN CERTIFICATE-----

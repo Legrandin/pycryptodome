@@ -39,7 +39,6 @@ from Crypto.Util._bytes import tobytes
 
 class SHAKETest:
     def test_new_positive(self):
-
         xof1 = self.shake.new()
         xof2 = self.shake.new(data=b"90")
         xof3 = self.shake.new().update(b"90")

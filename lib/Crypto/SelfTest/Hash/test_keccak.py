@@ -50,7 +50,6 @@ from Crypto.Util._raw_api import (
 
 class TestKeccak:
     def test_new_positive(self):
-
         for digest_bits in (224, 256, 384, 512):
             hobj = keccak.new(digest_bits=digest_bits)
             assert hobj.digest_size == digest_bits // 8
@@ -66,13 +65,11 @@ class TestKeccak:
             assert hobj2.digest_size == digest_bytes
 
     def test_new_positive2(self):
-
         digest1 = keccak.new(data=b"\x90", digest_bytes=64).digest()
         digest2 = keccak.new(digest_bytes=64).update(b"\x90").digest()
         assert digest1 == digest2
 
     def test_new_negative(self):
-
         # keccak.new needs digest size
         with pytest.raises(TypeError):
             keccak.new()

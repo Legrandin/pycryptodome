@@ -64,7 +64,6 @@ class CMAC:
         mac_len: int,
         update_after_digest: bool,
     ) -> None:
-
         self.digest_size = mac_len
 
         self._key = copy_bytes(None, None, key)

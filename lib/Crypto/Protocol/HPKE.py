@@ -78,7 +78,6 @@ class HPKE_Cipher:
         aead_id: AEAD,
         mode: MODE,
     ):
-
         self.enc: bytes = b"" if enc is None else enc
         """The encapsulated session key."""
 
@@ -124,7 +123,6 @@ class HPKE_Cipher:
         sender_key: Optional[EccKey] = None,
         eph_key: Optional[EccKey] = None,
     ):
-
         assert (sender_key is None) or sender_key.has_private()
         assert (eph_key is None) or eph_key.has_private()
 
@@ -155,7 +153,6 @@ class HPKE_Cipher:
         hashmod: ModuleType,
         sender_key: Optional[EccKey] = None,
     ):
-
         assert receiver_key.has_private()
 
         try:
@@ -200,7 +197,6 @@ class HPKE_Cipher:
                 raise ValueError("PSK is not compatible with this mode")
 
     def _key_schedule(self, shared_secret: bytes, info: bytes, psk_id: bytes, psk: bytes):
-
         suite_id = b"HPKE" + struct.pack(">HHH", self._kem_id, self._kdf_id, self._aead_id)
 
         psk_id_hash = _labeled_extract(b"", b"psk_id_hash", psk_id, suite_id, self._hashmod)

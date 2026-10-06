@@ -39,7 +39,6 @@ from Crypto.SelfTest.loader import load_test_vectors
 
 class TestEccPoint:
     def test_mix(self):
-
         p1 = ECC.generate(curve="P-256").pointQ
         p2 = ECC.generate(curve="P-384").pointQ
 
@@ -831,7 +830,6 @@ class TestEccPoint_PAI:
 
 class TestEccKey_P192:
     def test_private_key(self):
-
         key = EccKey(curve="P-192", d=1)
         assert key.d == 1
         assert key.has_private()
@@ -849,14 +847,12 @@ class TestEccKey_P192:
         key = EccKey(curve="prime192v1", d=1)
 
     def test_public_key(self):
-
         point = EccPoint(_curves["p192"].Gx, _curves["p192"].Gy, curve="P-192")
         key = EccKey(curve="P-192", point=point)
         assert not key.has_private()
         assert key.pointQ == point
 
     def test_public_key_derived(self):
-
         priv_key = EccKey(curve="P-192", d=3)
         pub_key = priv_key.public_key()
         assert not pub_key.has_private()
@@ -873,7 +869,6 @@ class TestEccKey_P192:
             EccKey(curve="P-192", d=_curves["p192"].order)
 
     def test_equality(self):
-
         private_key = ECC.construct(d=3, curve="P-192")
         private_key2 = ECC.construct(d=3, curve="P-192")
         private_key3 = ECC.construct(d=4, curve="P-192")
@@ -899,7 +894,6 @@ class TestEccKey_P192:
 
 class TestEccKey_P224:
     def test_private_key(self):
-
         key = EccKey(curve="P-224", d=1)
         assert key.d == 1
         assert key.has_private()
@@ -917,14 +911,12 @@ class TestEccKey_P224:
         key = EccKey(curve="prime224v1", d=1)
 
     def test_public_key(self):
-
         point = EccPoint(_curves["p224"].Gx, _curves["p224"].Gy, curve="P-224")
         key = EccKey(curve="P-224", point=point)
         assert not key.has_private()
         assert key.pointQ == point
 
     def test_public_key_derived(self):
-
         priv_key = EccKey(curve="P-224", d=3)
         pub_key = priv_key.public_key()
         assert not pub_key.has_private()
@@ -941,7 +933,6 @@ class TestEccKey_P224:
             EccKey(curve="P-224", d=_curves["p224"].order)
 
     def test_equality(self):
-
         private_key = ECC.construct(d=3, curve="P-224")
         private_key2 = ECC.construct(d=3, curve="P-224")
         private_key3 = ECC.construct(d=4, curve="P-224")
@@ -967,7 +958,6 @@ class TestEccKey_P224:
 
 class TestEccKey_P256:
     def test_private_key(self):
-
         key = EccKey(curve="P-256", d=1)
         assert key.d == 1
         assert key.has_private()
@@ -989,14 +979,12 @@ class TestEccKey_P256:
             EccKey(curve="p256", seed=b"H" * 32)
 
     def test_public_key(self):
-
         point = EccPoint(_curves["p256"].Gx, _curves["p256"].Gy)
         key = EccKey(curve="P-256", point=point)
         assert not key.has_private()
         assert key.pointQ == point
 
     def test_public_key_derived(self):
-
         priv_key = EccKey(curve="P-256", d=3)
         pub_key = priv_key.public_key()
         assert not pub_key.has_private()
@@ -1013,7 +1001,6 @@ class TestEccKey_P256:
             EccKey(curve="P-256", d=_curves["p256"].order)
 
     def test_equality(self):
-
         private_key = ECC.construct(d=3, curve="P-256")
         private_key2 = ECC.construct(d=3, curve="P-256")
         private_key3 = ECC.construct(d=4, curve="P-256")
@@ -1039,7 +1026,6 @@ class TestEccKey_P256:
 
 class TestEccKey_P384:
     def test_private_key(self):
-
         p384 = _curves["p384"]
 
         key = EccKey(curve="P-384", d=1)
@@ -1060,7 +1046,6 @@ class TestEccKey_P384:
         key = EccKey(curve="prime384v1", d=1)
 
     def test_public_key(self):
-
         p384 = _curves["p384"]
         point = EccPoint(p384.Gx, p384.Gy, "p384")
         key = EccKey(curve="P-384", point=point)
@@ -1068,7 +1053,6 @@ class TestEccKey_P384:
         assert key.pointQ == point
 
     def test_public_key_derived(self):
-
         priv_key = EccKey(curve="P-384", d=3)
         pub_key = priv_key.public_key()
         assert not pub_key.has_private()
@@ -1085,7 +1069,6 @@ class TestEccKey_P384:
             EccKey(curve="P-384", d=_curves["p384"].order)
 
     def test_equality(self):
-
         private_key = ECC.construct(d=3, curve="P-384")
         private_key2 = ECC.construct(d=3, curve="P-384")
         private_key3 = ECC.construct(d=4, curve="P-384")
@@ -1111,7 +1094,6 @@ class TestEccKey_P384:
 
 class TestEccKey_P521:
     def test_private_key(self):
-
         p521 = _curves["p521"]
 
         key = EccKey(curve="P-521", d=1)
@@ -1132,7 +1114,6 @@ class TestEccKey_P521:
         key = EccKey(curve="prime521v1", d=1)
 
     def test_public_key(self):
-
         p521 = _curves["p521"]
         point = EccPoint(p521.Gx, p521.Gy, "p521")
         key = EccKey(curve="P-384", point=point)
@@ -1140,7 +1121,6 @@ class TestEccKey_P521:
         assert key.pointQ == point
 
     def test_public_key_derived(self):
-
         priv_key = EccKey(curve="P-521", d=3)
         pub_key = priv_key.public_key()
         assert not pub_key.has_private()
@@ -1157,7 +1137,6 @@ class TestEccKey_P521:
             EccKey(curve="P-521", d=_curves["p521"].order)
 
     def test_equality(self):
-
         private_key = ECC.construct(d=3, curve="P-521")
         private_key2 = ECC.construct(d=3, curve="P-521")
         private_key3 = ECC.construct(d=4, curve="P-521")
@@ -1183,7 +1162,6 @@ class TestEccKey_P521:
 
 class TestEccModule_P192:
     def test_generate(self):
-
         key = ECC.generate(curve="P-192")
         assert key.has_private()
         assert key.pointQ == EccPoint(_curves["p192"].Gx, _curves["p192"].Gy, "P-192") * key.d, "p192"
@@ -1193,7 +1171,6 @@ class TestEccModule_P192:
         ECC.generate(curve="prime192v1")
 
     def test_construct(self):
-
         key = ECC.construct(curve="P-192", d=1)
         assert key.has_private()
         assert key.pointQ == _curves["p192"].G
@@ -1219,7 +1196,6 @@ class TestEccModule_P192:
 
 class TestEccModule_P224:
     def test_generate(self):
-
         key = ECC.generate(curve="P-224")
         assert key.has_private()
         assert key.pointQ == EccPoint(_curves["p224"].Gx, _curves["p224"].Gy, "P-224") * key.d, "p224"
@@ -1229,7 +1205,6 @@ class TestEccModule_P224:
         ECC.generate(curve="prime224v1")
 
     def test_construct(self):
-
         key = ECC.construct(curve="P-224", d=1)
         assert key.has_private()
         assert key.pointQ == _curves["p224"].G
@@ -1255,7 +1230,6 @@ class TestEccModule_P224:
 
 class TestEccModule_P256:
     def test_generate(self):
-
         key = ECC.generate(curve="P-256")
         assert key.has_private()
         assert key.pointQ == EccPoint(_curves["p256"].Gx, _curves["p256"].Gy) * key.d, "p256"
@@ -1265,7 +1239,6 @@ class TestEccModule_P256:
         ECC.generate(curve="prime256v1")
 
     def test_construct(self):
-
         key = ECC.construct(curve="P-256", d=1)
         assert key.has_private()
         assert key.pointQ == _curves["p256"].G
@@ -1291,7 +1264,6 @@ class TestEccModule_P256:
 
 class TestEccModule_P384:
     def test_generate(self):
-
         curve = _curves["p384"]
         key = ECC.generate(curve="P-384")
         assert key.has_private()
@@ -1302,7 +1274,6 @@ class TestEccModule_P384:
         ECC.generate(curve="prime384v1")
 
     def test_construct(self):
-
         curve = _curves["p384"]
         key = ECC.construct(curve="P-384", d=1)
         assert key.has_private()
@@ -1329,7 +1300,6 @@ class TestEccModule_P384:
 
 class TestEccModule_P521:
     def test_generate(self):
-
         curve = _curves["p521"]
         key = ECC.generate(curve="P-521")
         assert key.has_private()
@@ -1340,7 +1310,6 @@ class TestEccModule_P521:
         ECC.generate(curve="prime521v1")
 
     def test_construct(self):
-
         curve = _curves["p521"]
         key = ECC.construct(curve="P-521", d=1)
         assert key.has_private()

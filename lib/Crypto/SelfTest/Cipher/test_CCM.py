@@ -283,7 +283,6 @@ class TestCcm:
             assert cipher.digest() == ref_mac
 
     def test_bytearray(self):
-
         # Encrypt
         key_ba = bytearray(self.key_128)
         nonce_ba = bytearray(self.nonce_96)
@@ -324,7 +323,6 @@ class TestCcm:
         assert self.data == pt_test
 
     def test_memoryview(self):
-
         # Encrypt
         key_mv = memoryview(bytearray(self.key_128))
         nonce_mv = memoryview(bytearray(self.nonce_96))
@@ -365,7 +363,6 @@ class TestCcm:
         assert self.data == pt_test
 
     def test_output_param(self):
-
         pt = b"5" * 128
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
         ct = cipher.encrypt(pt)
@@ -394,7 +391,6 @@ class TestCcm:
         assert res is None
 
     def test_output_param_memoryview(self):
-
         pt = b"5" * 128
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
         ct = cipher.encrypt(pt)
@@ -409,7 +405,6 @@ class TestCcm:
         assert pt == output
 
     def test_output_param_neg(self):
-
         pt = b"5" * 16
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
         ct = cipher.encrypt(pt)
@@ -431,7 +426,6 @@ class TestCcm:
             cipher.decrypt(ct, output=shorter_output)
 
     def test_message_too_long(self):
-
         nonce = b"N" * 13
         with pytest.raises(CCMMessageTooLongError):
             AES.new(
@@ -971,7 +965,6 @@ class TestVectorsWycheproof:
 
     @pytest.mark.parametrize("tv", load_wycheproof_vectors(), ids=wycheproof_id)
     def test(self, tv):
-
         self.check_encrypt(tv)
         self.check_decrypt(tv)
         self.check_corrupt_decrypt(tv)

@@ -54,7 +54,6 @@ class cSHAKETest:
         assert _bytepad(b"AAAAAAA", 4) == b"\x01\x04AAAAAAA\x00\x00\x00"
 
     def test_new_positive(self):
-
         xof1 = self.cshake.new()
         xof2 = self.cshake.new(data=b"90")
         xof3 = self.cshake.new().update(b"90")

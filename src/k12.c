@@ -32,29 +32,28 @@
 /*
  * KangarooTwelve (RFC 9861), in a separate module from the generic Keccak sponge.
  *
- * If K12_AVX2 is defined (see keccak_avx2_bmi2.c), the code hashes
- * 4 leaves at a time with AVX2 instructions.
+ * Another module can reuse this code by including this file:
+ *  - if K12_MODULE is defined, the functions are exported from the
+ *    module with that name (see k12_avx2_bmi2.c);
+ *  - if K12_AVX2 is defined, the code hashes 4 leaves at a time
+ *    with AVX2 instructions.
  *
  * See KECCAK_K12.txt for which file includes which, and the resulting modules.
  */
 
-/*
- * The K12 code needs the internals of keccak_state and keccak_function().
- * If KECCAK_MODULE is defined, the Keccak functions are exported too,
- * from that module; otherwise, they are private to this module.
- */
-#ifndef KECCAK_MODULE
+/* The K12 code needs the internals of keccak_state and keccak_function(),
+ * which stay private to this module */
 #define KECCAK_EMBEDDED
-#endif
 #include "keccak.c"
+
+#ifndef K12_MODULE
+#define K12_MODULE k12
+#endif
+FAKE_INIT(K12_MODULE)
 
 #define K12_LEAF_SIZE   8192
 #define K12_CV_SIZE     32
 #define K12_RATE        (KECCAK_F1600_STATE - 32)
-
-#ifndef KECCAK_MODULE
-FAKE_INIT(k12)
-#endif
 
 #ifdef K12_AVX2
 

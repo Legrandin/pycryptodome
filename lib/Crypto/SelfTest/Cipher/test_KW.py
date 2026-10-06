@@ -57,7 +57,6 @@ class TestKW:
         assert pt == pt2
 
     def test_neg1(self):
-
         cipher = AES.new(b"-" * 16, AES.MODE_KW)
 
         with pytest.raises(ValueError):
@@ -67,7 +66,6 @@ class TestKW:
             cipher.seal(b"8" * 17)
 
     def test_neg2(self):
-
         cipher = AES.new(b"-" * 16, AES.MODE_KW)
         ct = bytearray(cipher.seal(b"7" * 16))
 

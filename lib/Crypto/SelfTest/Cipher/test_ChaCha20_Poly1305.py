@@ -199,7 +199,6 @@ class TestChaCha20Poly1305:
             assert cipher.digest() == ref_mac
 
     def test_bytearray(self):
-
         # Encrypt
         key_ba = bytearray(self.key_256)
         nonce_ba = bytearray(self.nonce_96)
@@ -244,7 +243,6 @@ class TestChaCha20Poly1305:
         assert pt_test == self.data_128
 
     def test_memoryview(self):
-
         # Encrypt
         key_mv = memoryview(bytearray(self.key_256))
         nonce_mv = memoryview(bytearray(self.nonce_96))
@@ -564,7 +562,6 @@ class TestVectorsRFC:
 
 
 def _load_tests(filename):
-
     def filter_tag(group):
         return group["tagSize"] // 8
 
@@ -644,7 +641,6 @@ class TestVectorsWycheproof:
 
     @pytest.mark.parametrize("tv", load_wycheproof_vectors(), ids=wycheproof_id)
     def test(self, tv):
-
         self.check_encrypt(tv)
         self.check_decrypt(tv)
         self.check_corrupt_decrypt(tv)

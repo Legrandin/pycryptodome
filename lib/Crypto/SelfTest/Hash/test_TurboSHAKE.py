@@ -9,7 +9,6 @@ from Crypto.Hash import TurboSHAKE128, TurboSHAKE256
 
 class TurboSHAKETest:
     def test_new_positive(self):
-
         xof1 = self.TurboSHAKE.new()
         xof1.update(b"90")
 
