@@ -121,20 +121,20 @@ static void keccak_function_x4(__m256i A[25], unsigned rounds)
 /*
  * XOR n 64-bit words (n <= 25) into each of the 4 states.
  *
- * blocks[j] is the input for state j: it points to at least 8*n bytes
+ * in[j] is the input for state j: it points to at least 8*n bytes
  * (with any alignment), read as n little-endian 64-bit words.
- * Word i of blocks[j] is XOR-ed into lane i of state j.
+ * Word i of in[j] is XOR-ed into lane i of state j.
  */
-static void keccak_absorb_x4(__m256i A[25], const uint8_t *blocks[4], unsigned n)
+static void keccak_absorb_x4(__m256i A[25], const uint8_t *in[4], unsigned n)
 {
     unsigned i;
     __m256i w;
 
     for (i=0; i<n; i++) {
-        w = _mm256_set_epi64x((long long)LOAD_U64_LITTLE(blocks[3] + 8*i),
-                              (long long)LOAD_U64_LITTLE(blocks[2] + 8*i),
-                              (long long)LOAD_U64_LITTLE(blocks[1] + 8*i),
-                              (long long)LOAD_U64_LITTLE(blocks[0] + 8*i));
+        w = _mm256_set_epi64x((long long)LOAD_U64_LITTLE(in[3] + 8*i),
+                              (long long)LOAD_U64_LITTLE(in[2] + 8*i),
+                              (long long)LOAD_U64_LITTLE(in[1] + 8*i),
+                              (long long)LOAD_U64_LITTLE(in[0] + 8*i));
         A[i] = _mm256_xor_si256(A[i], w);
     }
 }
