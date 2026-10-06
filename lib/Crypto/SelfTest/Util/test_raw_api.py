@@ -165,6 +165,22 @@ class TestUint8Ptr:
         else:
             assert result == [digest_long]
 
+    def test_shrink_after_len(self):
+        """Another thread shrinks a bytearray right after its length is read,
+        but before its buffer is held (likely on free-threaded builds)"""
+
+        class ShrinkingBytearray(bytearray):
+            def __len__(self):
+                length = super().__len__()
+                if length > 16:
+                    del self[16:]
+                return length
+
+        data = ShrinkingBytearray(b"x" * 1024)
+        ptr, length = _raw_api.c_uint8_ptr_len(data)
+        assert length in (1024, 16)
+        assert bytes(ptr) == b"x" * length
+
 
 class _OtherThread:
     """A second thread, alive for the duration of the with block"""

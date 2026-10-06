@@ -310,8 +310,12 @@ except ImportError:
             # Fast path: the array holds the buffer of data until it is
             # garbage collected, so data cannot be resized or freed
             # (e.g. by another thread, while the GIL is released during
-            # a C call)
-            return (ctypes.c_ubyte * len(data)).from_buffer(data)
+            # a C call).
+            # The memoryview locks the buffer and reads its length at once:
+            # with len(data) first, another thread could shrink data
+            # before from_buffer() locks it.
+            view = memoryview(data)
+            return (ctypes.c_ubyte * view.nbytes).from_buffer(view)
         elif isinstance(data, _buffer_type):
             # memoryview objects can be read-only, which from_buffer()
             # does not accept
