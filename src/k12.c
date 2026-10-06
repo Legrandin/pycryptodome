@@ -34,6 +34,8 @@
  *
  * If K12_AVX2 is defined (see keccak_avx2_bmi2.c), the code hashes
  * 4 leaves at a time with AVX2 instructions.
+ *
+ * See KECCAK_K12.txt for which file includes which, and the resulting modules.
  */
 
 /*

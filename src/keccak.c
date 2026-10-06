@@ -38,6 +38,8 @@
  *    are inline so that unused ones raise no warnings.
  *  - if KECCAK_MODULE is defined, the functions are exported from the
  *    module with that name (see keccak_avx2_bmi2.c).
+ *
+ * See KECCAK_K12.txt for which file includes which, and the resulting modules.
  */
 #ifdef KECCAK_EMBEDDED
 #define KECCAK_API static inline
