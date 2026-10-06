@@ -29,16 +29,19 @@
 # ===================================================================
 
 
+import sys
 from binascii import unhexlify
 
 import pytest
 
-from Crypto.Cipher import AES, _mode_ctr
+from Crypto.Cipher import AES, _mode_ctr, _mode_gcm
 from Crypto.Hash import SHA256, SHAKE128
 from Crypto.SelfTest.loader import load_test_vectors, load_test_vectors_wycheproof, wycheproof_id
 from Crypto.SelfTest.st_common import wycheproof_warnings
 from Crypto.Util import _cpu_features
 from Crypto.Util._bytes import tobytes
+from Crypto.Util._cpu_features import available_cores
+from Crypto.Util._raw_api import c_size_t, create_string_buffer, get_raw_buffer
 from Crypto.Util.strxor import strxor
 
 
@@ -891,6 +894,13 @@ class TestGcmThreads:
     key_128 = get_tag_random("key_128", 16)
     nonce_96 = get_tag_random("nonce_96", 12)
 
+    @pytest.fixture
+    def tiny_ranges(self, monkeypatch):
+        # Let each thread process even a single block
+        monkeypatch.setattr(_mode_ctr, "_MIN_BYTES_PER_THREAD", 1)
+        monkeypatch.setattr(_mode_gcm, "_MIN_BYTES_PER_THREAD_CLMUL", 16)
+        monkeypatch.setattr(_mode_gcm, "_MIN_BYTES_PER_THREAD_PORTABLE", 16)
+
     def test_threads_negative(self):
         for threads in (1.0, "2", None, True):
             with pytest.raises(TypeError):
@@ -899,38 +909,122 @@ class TestGcmThreads:
             with pytest.raises(ValueError):
                 AES.new(self.key_128, AES.MODE_GCM, threads=threads)
 
+    def test_threads_all_cores(self):
+        cipher = AES.new(self.key_128, AES.MODE_GCM, threads=0)
+        assert cipher._signer._threads == available_cores()
+
+    @pytest.mark.parametrize("use_clmul", (True, False))
     @pytest.mark.parametrize("nonce", (nonce_96, b"N" * 16))
-    def test_range_boundaries(self, monkeypatch, nonce):
-        # Let each thread process even a single byte
-        monkeypatch.setattr(_mode_ctr, "_MIN_BYTES_PER_THREAD", 1)
+    def test_range_boundaries(self, tiny_ranges, use_clmul, nonce):
+        if use_clmul and not _cpu_features.have_clmul():
+            pytest.skip("PCLMULQDQ not available")
 
         pt = get_tag_random("plaintext", 16 * 8 * 3 + 7)
-        cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=nonce)
-        cipher.update(b"header")
+        header = get_tag_random("header", 16 * 5 + 3)
+
+        def new(threads=1):
+            return AES.new(self.key_128, AES.MODE_GCM, nonce=nonce, use_clmul=use_clmul, threads=threads)
+
+        cipher = new()
+        cipher.update(header)
         ref_ct, ref_tag = cipher.encrypt_and_digest(pt)
 
         for first in (0, 1, 16, 17, 128, 129):
             for threads in (2, 3, 8):
-                cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=nonce, threads=threads)
-                cipher.update(b"header")
+                cipher = new(threads)
+                cipher.update(header[:first]).update(header[first:])
                 ct = cipher.encrypt(pt[:first]) + cipher.encrypt(pt[first:])
                 assert ct == ref_ct
                 assert cipher.digest() == ref_tag
 
-                cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=nonce, threads=threads)
-                cipher.update(b"header")
+                cipher = new(threads)
+                cipher.update(header)
                 output = bytearray(len(pt))
-                cipher.decrypt(ref_ct, output=output)
+                cipher.decrypt(ref_ct[:first], output=memoryview(output)[:first])
+                cipher.decrypt(ref_ct[first:], output=memoryview(output)[first:])
                 assert output == pt
                 cipher.verify(ref_tag)
 
     def test_long_data(self):
-        pt = get_tag_random("plaintext", 3 * 1024 * 1024 + 4567)
-        ref_ct, ref_tag = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_96).encrypt_and_digest(pt)
+        pt = get_tag_random("plaintext", 5 * 1024 * 1024 + 4567)
+        header = get_tag_random("header", 5 * 1024 * 1024 + 13)
+
+        cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_96)
+        cipher.update(header)
+        ref_ct, ref_tag = cipher.encrypt_and_digest(pt)
 
         for threads in (0, 2, 4):
             cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_96, threads=threads)
+            cipher.update(header)
             assert cipher.encrypt_and_digest(pt) == (ref_ct, ref_tag)
 
             cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_96, threads=threads)
+            cipher.update(header)
             assert cipher.decrypt_and_verify(ref_ct, ref_tag) == pt
+
+
+def _ghash_implementations():
+    imps = [_mode_gcm._ghash_portable]
+    if _mode_gcm._ghash_clmul is not None:
+        imps.append(_mode_gcm._ghash_clmul)
+    return imps
+
+
+class TestGhashThreads:
+    @pytest.mark.parametrize("ghash_c", _ghash_implementations())
+    def test_random_splits(self, monkeypatch, ghash_c):
+        import random
+
+        monkeypatch.setattr(_mode_gcm, "_MIN_BYTES_PER_THREAD_CLMUL", 16)
+        monkeypatch.setattr(_mode_gcm, "_MIN_BYTES_PER_THREAD_PORTABLE", 16)
+        rng = random.Random(7)
+
+        for trial in range(100):
+            h = get_tag_random("h%d" % trial, 16)
+            y0 = get_tag_random("y%d" % trial, 16)
+            data = get_tag_random("data%d" % trial, 16 * rng.randint(0, 40))
+
+            ref = _mode_gcm._GHASH(h, ghash_c)
+            ref._last_y[0:16] = y0
+            ref.update(data)
+
+            ghash = _mode_gcm._GHASH(h, ghash_c, rng.randint(2, 9))
+            ghash._last_y[0:16] = y0
+            ghash.update(data)
+            assert ghash.digest() == ref.digest()
+
+    @pytest.mark.parametrize("ghash_c", _ghash_implementations())
+    def test_combine_small(self, ghash_c):
+        # Y * H^n + G, against the GHASH of n zero blocks
+        h = get_tag_random("h", 16)
+        y = get_tag_random("y", 16)
+        g = get_tag_random("g", 16)
+
+        for n in range(70):
+            ref = _mode_gcm._GHASH(h, ghash_c)
+            ref._last_y[0:16] = y
+            ref.update(b"\x00" * (16 * n))
+            expected = strxor(ref.digest(), g)
+
+            out = create_string_buffer(16)
+            result = ghash_c.ghash_combine(out, y, c_size_t(n), g, ref._exp_key.get())
+            assert result == 0
+            assert get_raw_buffer(out) == expected
+
+    @pytest.mark.skipif(not _cpu_features.have_clmul(), reason="PCLMULQDQ not available")
+    def test_combine_large(self):
+        # Both implementations must agree on large powers of H
+        h = get_tag_random("h", 16)
+        y = get_tag_random("y", 16)
+        g = get_tag_random("g", 16)
+        portable = _mode_gcm._GHASH(h, _mode_gcm._ghash_portable)
+        clmul = _mode_gcm._GHASH(h, _mode_gcm._ghash_clmul)
+
+        for n in (2**20 + 1, 2**32 - 1, 2**40 + 12345, 2**59 - 1):
+            if n > sys.maxsize:
+                continue  # Larger than size_t
+            out1 = create_string_buffer(16)
+            out2 = create_string_buffer(16)
+            assert portable.ghash_c.ghash_combine(out1, y, c_size_t(n), g, portable._exp_key.get()) == 0
+            assert clmul.ghash_c.ghash_combine(out2, y, c_size_t(n), g, clmul._exp_key.get()) == 0
+            assert get_raw_buffer(out1) == get_raw_buffer(out2)

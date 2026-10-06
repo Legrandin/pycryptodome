@@ -162,6 +162,90 @@ EXPORT_SYM int ghash_portable(
 }
 
 /**
+ * Like ghash_portable(), but for the len bytes at the given offset
+ * in block_data[]. Several threads can call it at the same time,
+ * with the same expanded key.
+ */
+EXPORT_SYM int ghash_at_portable(
+        uint8_t y_out[16],
+        const uint8_t block_data[],
+        size_t offset,
+        size_t len,
+        const uint8_t y_in[16],
+        const t_exp_key *exp_key
+        )
+{
+    if (NULL==block_data)
+        return ERR_NULL;
+
+    return ghash_portable(y_out, block_data + offset, len, y_in, exp_key);
+}
+
+/**
+ * Multiply two arbitrary elements of GF(2**128).
+ * out can point to the same buffer as x or y.
+ */
+static void gcm_mult(uint8_t out[16], const uint8_t x[16], const uint8_t y[16])
+{
+    t_v_tables tables;
+
+    make_v_tables(y, &tables);
+    gcm_mult2(out, &tables, x);
+}
+
+/**
+ * Combine the GHASH of two consecutive pieces of data:
+ *
+ *  y_out = y_in * H^n_blocks + g
+ *
+ * where y_in is the GHASH of the first piece, and g is the GHASH of
+ * the second piece (n_blocks long), computed with Y_0 = 0.
+ *
+ * y_out can point to the same buffer as y_in or g.
+ */
+EXPORT_SYM int ghash_combine_portable(
+        uint8_t y_out[16],
+        const uint8_t y_in[16],
+        size_t n_blocks,
+        const uint8_t g[16],
+        const t_exp_key *exp_key
+        )
+{
+    const t_v_tables *v_tables;
+    uint8_t y[16], b[16];
+    uint64_t h0, h1;
+    unsigned i;
+
+    if (NULL==y_out || NULL==y_in || NULL==g || NULL==exp_key)
+        return ERR_NULL;
+
+    v_tables = (const t_v_tables*)(exp_key->buffer + exp_key->offset);
+
+    /** H is the first entry of the V table (H*x^0) **/
+    h0 = (*v_tables)[0][1][0];
+    h1 = (*v_tables)[0][1][1];
+    STORE_U64_BIG(b, h0);
+    STORE_U64_BIG(b+8, h1);
+
+    /** Square and multiply, from the least significant bit of n_blocks **/
+    memcpy(y, y_in, 16);
+    while (n_blocks > 0) {
+        if (n_blocks & 1) {
+            gcm_mult(y, y, b);
+        }
+        n_blocks >>= 1;
+        if (n_blocks > 0) {
+            gcm_mult(b, b, b);
+        }
+    }
+
+    for (i=0; i<16; i++) {
+        y_out[i] = y[i] ^ g[i];
+    }
+    return 0;
+}
+
+/**
  * Expand the AES key into a Python (byte) string object.
  */ 
 EXPORT_SYM int ghash_expand_portable(const uint8_t h[16], t_exp_key **ghash_tables)

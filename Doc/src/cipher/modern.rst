@@ -272,9 +272,8 @@ a new GCM cipher object for the relevant base algorithm.
       
 The cipher object has a read-only attribute :attr:`nonce`.
 
-With the ``threads`` parameter, only the encryption and decryption
-(CTR mode) of long data run on several CPU cores; the authentication (GHASH)
-does not, so the speed-up is limited (about 1.5x with AES-NI).
+With the ``threads`` parameter, both the encryption (CTR mode) and
+the authentication (GHASH) of long data run on several CPU cores.
 
 Example (encryption)::
 

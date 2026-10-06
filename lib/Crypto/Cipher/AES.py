@@ -352,8 +352,6 @@ def new(key: Buffer, mode: int, *args: Any, **kwargs: Any) -> Any:
         fewer threads are used, or none at all.
         For best results, do not exceed the number of physical cores.
         The output does not depend on the number of threads.
-        With ``MODE_GCM``, only encryption and decryption use the threads,
-        not authentication.
 
     Returns:
         an AES object, of the applicable mode.

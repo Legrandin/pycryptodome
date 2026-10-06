@@ -45,8 +45,9 @@ New features
   (2x to 2.3x faster for messages of 1 MiB or more).
 * New parameter ``threads`` for ``Crypto.Cipher.AES.new()`` in CTR and GCM modes,
   to encrypt and decrypt long data on several CPU cores (``threads=0`` for all of them).
-  In GCM mode, the authentication does not use the threads.
   The output does not depend on the number of threads.
+* GCM mode is about 1.5x faster on long messages, as it does not copy the data
+  before authenticating it.
 
 3.24.0 (4 October 2026)
 ++++++++++++++++++++++++++

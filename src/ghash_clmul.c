@@ -290,6 +290,75 @@ EXPORT_SYM int ghash_clmul(
 }
 
 /**
+ * Like ghash_clmul(), but for the len bytes at the given offset
+ * in block_data[]. Several threads can call it at the same time,
+ * with the same expanded key.
+ */
+EXPORT_SYM int ghash_at_clmul(
+        uint8_t y_out[16],
+        const uint8_t block_data[],
+        size_t offset,
+        size_t len,
+        const uint8_t y_in[16],
+        struct exp_key *expanded
+        )
+{
+    if (NULL==block_data)
+        return ERR_NULL;
+
+    return ghash_clmul(y_out, block_data + offset, len, y_in, expanded);
+}
+
+/**
+ * Combine the GHASH of two consecutive pieces of data:
+ *
+ *  y_out = y_in * H^n_blocks + g
+ *
+ * where y_in is the GHASH of the first piece, and g is the GHASH of
+ * the second piece (n_blocks long), computed with Y_0 = 0.
+ *
+ * y_out can point to the same buffer as y_in or g.
+ */
+EXPORT_SYM int ghash_combine_clmul(
+        uint8_t y_out[16],
+        const uint8_t y_in[16],
+        size_t n_blocks,
+        const uint8_t g[16],
+        const struct exp_key *expanded
+        )
+{
+    __m128i y, b, prod_hi, prod_lo;
+
+    if (NULL==y_out || NULL==y_in || NULL==g || NULL==expanded)
+        return ERR_NULL;
+
+    y = swap(_mm_loadu_si128((__m128i*)y_in));
+
+    /**
+     * Square and multiply, from the least significant bit of n_blocks.
+     * B is always kept multiplied by x (like the expanded key), so that:
+     *  reduce(clmult(Y, x*B))   = Y*B
+     *  reduce(clmult(x*B, x*B)) = x*B^2
+     */
+    b = expanded->h[0];     /** x*H **/
+    while (n_blocks > 0) {
+        if (n_blocks & 1) {
+            clmult(&prod_hi, &prod_lo, y, b);
+            y = reduce(prod_hi, prod_lo);
+        }
+        n_blocks >>= 1;
+        if (n_blocks > 0) {
+            clmult(&prod_hi, &prod_lo, b, b);
+            b = reduce(prod_hi, prod_lo);
+        }
+    }
+
+    y = _mm_xor_si128(y, swap(_mm_loadu_si128((__m128i*)g)));
+    _mm_storeu_si128((__m128i*)y_out, swap(y));
+    return 0;
+}
+
+/**
  * The function reduce() computes the Montgomery reduction
  * of U (input, 256 bits) with FastREDC algorithm:
  *
