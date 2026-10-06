@@ -81,6 +81,7 @@ EXPORT_SYM int OFB_encrypt(OfbModeState *ofbState,
                            size_t data_len)
 {
     size_t block_len;
+    size_t used;
     uint8_t oldKeyStream[MAX_BLOCK_LEN];
 
     if ((NULL == ofbState) || (NULL == in) || (NULL == out))
@@ -90,11 +91,21 @@ EXPORT_SYM int OFB_encrypt(OfbModeState *ofbState,
     if (block_len > MAX_BLOCK_LEN)
         return ERR_BLOCK_SIZE;
 
+    /*
+     * Read the position in the key stream only once, and check it:
+     * if several threads used the object at once (not supported),
+     * the state could be inconsistent, but memory must never be
+     * accessed out of bounds.
+     */
+    used = ofbState->usedKeyStream;
+    if (used > block_len)
+        return ERR_STATE;
+
     while (data_len > 0) {
         size_t i;
         size_t keyStreamToUse;
 
-        if (ofbState->usedKeyStream == block_len) {
+        if (used == block_len) {
             int result;
 
             memcpy(oldKeyStream, ofbState->keyStream, block_len);
@@ -102,20 +113,23 @@ EXPORT_SYM int OFB_encrypt(OfbModeState *ofbState,
                                                oldKeyStream,
                                                ofbState->keyStream,
                                                block_len);
-            if (0 != result)
+            if (0 != result) {
+                ofbState->usedKeyStream = used;
                 return result;
+            }
 
-            ofbState->usedKeyStream = 0;
+            used = 0;
         }
 
-        keyStreamToUse = MIN(data_len, block_len - ofbState->usedKeyStream);
+        keyStreamToUse = MIN(data_len, block_len - used);
         for (i=0; i<keyStreamToUse; i++)
-            *out++ = *in++ ^ ofbState->keyStream[i + ofbState->usedKeyStream];
+            *out++ = *in++ ^ ofbState->keyStream[i + used];
 
         data_len -= keyStreamToUse;
-        ofbState->usedKeyStream += keyStreamToUse;
+        used += keyStreamToUse;
     }
 
+    ofbState->usedKeyStream = used;
     return 0;
 }
 
