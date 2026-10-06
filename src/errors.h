@@ -21,6 +21,9 @@
 #define ERR_MODULUS             17
 #define ERR_NOT_IMPLEMENTED     18
 #define ERR_EC_PAI              19
+/** The object is in an impossible state, typically because several
+ *  threads used it at the same time (which is not supported) **/
+#define ERR_STATE               20
 #define ERR_UNKNOWN             32
 
 #endif

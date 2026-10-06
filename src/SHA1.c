@@ -262,31 +262,43 @@ EXPORT_SYM int SHA1_destroy (hash_state *shaState)
 
 EXPORT_SYM int SHA1_update(hash_state *hs, const uint8_t *buf, size_t len)
 {
+    unsigned curlen;
+
     if (NULL == hs || NULL == buf) {
         return ERR_NULL;
     }
 
-    assert(hs->curlen < BLOCK_SIZE);
+    /*
+     * Read the position in buf[] only once, and check it: if several
+     * threads used the object at once (not supported), the state could
+     * be inconsistent, but buf[] must never overflow.
+     */
+    curlen = hs->curlen;
+    if (curlen >= BLOCK_SIZE) {
+        return ERR_STATE;
+    }
 
     while (len>0) {
         unsigned btc, left;
 
-        left = BLOCK_SIZE - hs->curlen;
+        left = BLOCK_SIZE - curlen;
         btc = (unsigned)MIN(left, len);
-        memcpy(&hs->buf[hs->curlen], buf, btc);
+        memcpy(&hs->buf[curlen], buf, btc);
         buf += btc;
-        hs->curlen += btc;
+        curlen += btc;
         len -= btc;
 
-        if (hs->curlen == BLOCK_SIZE) {
+        if (curlen == BLOCK_SIZE) {
             sha_compress(hs);
-            hs->curlen = 0;
+            curlen = 0;
             if (add_bits(hs, BLOCK_SIZE*8)) {
+                hs->curlen = 0;
                 return ERR_MAX_DATA;
             }
         }
     }
 
+    hs->curlen = curlen;
     return 0;
 }
 
@@ -295,7 +307,10 @@ static int sha_finalize(hash_state *hs, uint8_t *hash /** [DIGEST_SIZE] **/)
     unsigned left, i;
     uint32_t lo, high;
 
-    assert(hs->curlen < BLOCK_SIZE);
+    /* hs is a private copy, but it may come from an inconsistent state */
+    if (hs->curlen >= BLOCK_SIZE) {
+        return ERR_STATE;
+    }
 
     /* remaining length of the message */
     if (add_bits(hs, hs->curlen*8)) {
@@ -346,8 +361,7 @@ EXPORT_SYM int SHA1_digest(const hash_state *shaState, uint8_t digest[DIGEST_SIZ
     }
 
     temp = *shaState;
-    sha_finalize(&temp, digest);
-    return 0;
+    return sha_finalize(&temp, digest);
 }
 
 EXPORT_SYM int SHA1_copy(const hash_state *src, hash_state *dst)

@@ -199,37 +199,50 @@ EXPORT_SYM int blake2_update(hash_state *hs,
                              const uint8_t *in,
                              size_t len)
 {
+    unsigned buf_occ;
+
     if (NULL == hs)
         return ERR_NULL;
 
     if (len > 0 && NULL == in)
         return ERR_NULL;
 
+    /*
+     * Read the position in buf[] only once, and check it: if several
+     * threads used the object at once (not supported), the state could
+     * be inconsistent, but buf[] must never overflow.
+     * The buffer can be full (it is only processed when more data comes).
+     */
+    buf_occ = hs->buf_occ;
+    if (buf_occ > BLOCK_SIZE)
+        return ERR_STATE;
 
     while (len > 0) {
         unsigned tc, left;
         
         /** Consume input **/
-        left = (unsigned)(BLOCK_SIZE - hs->buf_occ);
+        left = (unsigned)(BLOCK_SIZE - buf_occ);
         tc = (unsigned)MIN(len, left);
-        memcpy(&hs->buf[hs->buf_occ], in, tc);
+        memcpy(&hs->buf[buf_occ], in, tc);
         len -= tc;
         in += tc;
-        hs->buf_occ += tc;
+        buf_occ += tc;
  
        /* Flush buffer if full. However, we must leave at least
         * one byte in the buffer at the end, because we don't
         * know if we are processing the last block.
         */
-        if (hs->buf_occ == BLOCK_SIZE && len>0) {
+        if (buf_occ == BLOCK_SIZE && len>0) {
             int result;
 
             result = blake2b_process_buffer(hs, BLOCK_SIZE, NON_FINAL_BLOCK);
             if (result)
                 return result;
+            buf_occ = 0;
         }
     }
 
+    hs->buf_occ = buf_occ;
     return 0;
 }
 
@@ -244,6 +257,9 @@ EXPORT_SYM int blake2_digest(const hash_state *hs,
         return ERR_NULL;
 
     temp_hs = *hs;
+    /* temp_hs is a private copy, but it may come from an inconsistent state */
+    if (temp_hs.buf_occ > BLOCK_SIZE)
+        return ERR_STATE;
 
     /** Pad buffer with zeroes, if needed. In the special case
      *  of no key and no data, we must process an all zero block.

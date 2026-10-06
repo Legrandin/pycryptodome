@@ -90,24 +90,35 @@ EXPORT_SYM int md2_copy(const hash_state *src, hash_state *dst)
 
 EXPORT_SYM int md2_update(hash_state *hs, const uint8_t *buf, size_t len)
 {
+    unsigned count;
+
     if (NULL == hs || NULL == buf)
         return ERR_NULL;
+
+    /*
+     * Read the position in buf[] only once, and check it: if several
+     * threads used the object at once (not supported), the state could
+     * be inconsistent, but buf[] must never overflow.
+     */
+    count = hs->count;
+    if (count >= 16)
+        return ERR_STATE;
 
     while (len) {
         unsigned left, tc;
 
-        left = 16 - hs->count;   /** 1..16 **/
+        left = 16 - count;   /** 1..16 **/
         tc = (unsigned)MIN(left, len);
-        memcpy(hs->buf+hs->count, buf, tc);
-        hs->count += tc;
+        memcpy(hs->buf+count, buf, tc);
+        count += tc;
         buf += tc;
         len -= tc;
         
-        if (hs->count==16) {
+        if (count==16) {
             uint8_t L, t;
             unsigned j;
       
-            hs->count = 0;
+            count = 0;
 
             L = hs->C[15];
             for(j=0; j<16; j++) {
@@ -130,6 +141,7 @@ EXPORT_SYM int md2_update(hash_state *hs, const uint8_t *buf, size_t len)
             }
         }
     }
+    hs->count = count;
     return 0;
 }
 
@@ -142,10 +154,12 @@ EXPORT_SYM int md2_digest(const hash_state *hs, uint8_t digest[16])
     if (NULL==hs || digest==NULL)
         return ERR_NULL;
 
-    assert(hs->count < 16);
-
     temp = *hs;
-    padlen = 16 - hs->count;  /** 1..16 **/
+    /* temp is a private copy, but it may come from an inconsistent state */
+    if (temp.count >= 16)
+        return ERR_STATE;
+
+    padlen = 16 - temp.count;  /** 1..16 **/
     for(i=0; i<padlen; i++) { 
         padding[i] = (uint8_t)padlen;
     }

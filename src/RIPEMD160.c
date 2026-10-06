@@ -259,34 +259,45 @@ static void ripemd160_compress(hash_state *self)
 EXPORT_SYM int ripemd160_update(hash_state *hs, const uint8_t *in, size_t len)
 {
     unsigned int bytes_needed;
+    unsigned bufpos;
 
     if (NULL==hs || NULL==in)
         return ERR_NULL;
 
+    /*
+     * Read the position in buf[] only once, and check it: if several
+     * threads used the object at once (not supported), the state could
+     * be inconsistent, but buf[] must never overflow.
+     */
+    bufpos = hs->bufpos;
+    if (bufpos >= 64)
+        return ERR_STATE;
+
     while (len > 0) {
         /* Figure out how many bytes we need to fill the internal buffer. */
-        bytes_needed = 64 - hs->bufpos;
+        bytes_needed = 64 - bufpos;
 
         if (len >= bytes_needed) {
             /* We have enough bytes, so copy them into the internal buffer and run
              * the compression function. */
-            memcpy(&hs->buf[hs->bufpos], in, bytes_needed);
-            hs->bufpos += bytes_needed;
+            memcpy(&hs->buf[bufpos], in, bytes_needed);
             hs->length += bytes_needed * 8;    /* length is in bits */
             in += bytes_needed;
             ripemd160_compress(hs);
+            bufpos = 0;
             len -= bytes_needed;
             continue;
         }
 
         /* We do not have enough bytes to fill the internal buffer.
          * Copy what's there and return. */
-        memcpy(&hs->buf[hs->bufpos], in, len);
-        hs->bufpos += (unsigned)len;
+        memcpy(&hs->buf[bufpos], in, len);
+        bufpos += (unsigned)len;
         hs->length += (unsigned)(len * 8);    /* length is in bits */
-        return 0;
+        break;
     }
 
+    hs->bufpos = bufpos;
     return 0;
 }
 
@@ -309,6 +320,9 @@ EXPORT_SYM int ripemd160_digest(const hash_state *hs, uint8_t digest[RIPEMD160_D
         return ERR_NULL;
 
     tmp = *hs;
+    /* tmp is a private copy, but it may come from an inconsistent state */
+    if (tmp.bufpos >= 64)
+        return ERR_STATE;
 
     /* Append the padding */
     tmp.buf[tmp.bufpos++] = 0x80;

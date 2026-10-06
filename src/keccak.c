@@ -160,11 +160,23 @@ KECCAK_API int keccak_absorb (keccak_state *self,
                               const uint8_t *in,
                               size_t length)
 {
+    unsigned valid_bytes;
+
     if (NULL==self || NULL==in)
         return ERR_NULL;
 
     if (self->squeezing != 0)
         return ERR_UNKNOWN;
+
+    /*
+     * Read the position in buf[] only once, and check it: if several
+     * threads used the object at once (not supported), the state could
+     * be inconsistent, but buf[] must never overflow.
+     * (The rate never changes after keccak_init()).
+     */
+    valid_bytes = self->valid_bytes;
+    if (valid_bytes >= self->rate)
+        return ERR_STATE;
 
     while (length > 0) {
         unsigned tc;
@@ -172,7 +184,7 @@ KECCAK_API int keccak_absorb (keccak_state *self,
 
         /* Fast path: XOR whole blocks straight from the input */
         /* No need to copy them into self->buf first */
-        if (self->valid_bytes == 0 && length >= self->rate) {
+        if (valid_bytes == 0 && length >= self->rate) {
             unsigned i, j;
 
             for (i=j=0; j < self->rate; ++i, j += 8) {
@@ -184,32 +196,37 @@ KECCAK_API int keccak_absorb (keccak_state *self,
             continue;
         }
 
-        left = self->rate - self->valid_bytes;
+        left = self->rate - valid_bytes;
         tc = (unsigned) MIN(length, left);
-        memcpy(self->buf + self->valid_bytes, in, tc);
+        memcpy(self->buf + valid_bytes, in, tc);
 
-        self->valid_bytes += tc;
+        valid_bytes       += tc;
         in                += tc;
         length            -= tc;
 
-        if (self->valid_bytes == self->rate) {
+        if (valid_bytes == self->rate) {
             keccak_absorb_internal (self);
             keccak_function(self->state, self->rounds);
-            self->valid_bytes = 0;
+            valid_bytes = 0;
         }
     }
 
+    self->valid_bytes = valid_bytes;
     return 0;
 }
 
-static void keccak_finish (keccak_state *self, uint8_t padding)
+static int keccak_finish (keccak_state *self, uint8_t padding)
 {
-    assert(self->squeezing == 0);
-    assert(self->valid_bytes < self->rate);
+    unsigned valid_bytes;
+
+    /* Read once and check (see keccak_absorb) */
+    valid_bytes = self->valid_bytes;
+    if (valid_bytes >= self->rate)
+        return ERR_STATE;
 
     /* Padding */
-    memset(self->buf + self->valid_bytes, 0, self->rate - self->valid_bytes);
-    self->buf[self->valid_bytes] = padding;
+    memset(self->buf + valid_bytes, 0, self->rate - valid_bytes);
+    self->buf[valid_bytes] = padding;
     self->buf[self->rate-1] |= 0x80;
 
     /* Final absorb */
@@ -220,38 +237,47 @@ static void keccak_finish (keccak_state *self, uint8_t padding)
     self->squeezing = 1;
     keccak_squeeze_internal (self);
     self->valid_bytes = self->rate;
+    return 0;
 }
 
 KECCAK_API int keccak_squeeze (keccak_state *self, uint8_t *out, size_t length, uint8_t padding)
 {
+    unsigned valid_bytes;
+
     if ((NULL == self) || (NULL == out))
         return ERR_NULL;
 
     if (self->squeezing == 0) {
-        keccak_finish (self, padding);
+        int result;
+
+        result = keccak_finish (self, padding);
+        if (result)
+            return result;
     }
 
-    assert(self->squeezing == 1);
-    assert(self->valid_bytes > 0);
-    assert(self->valid_bytes <= self->rate);
+    /* Read once and check (see keccak_absorb) */
+    valid_bytes = self->valid_bytes;
+    if (valid_bytes == 0 || valid_bytes > self->rate)
+        return ERR_STATE;
 
     while (length > 0) {
         unsigned tc;
 
-        tc = (unsigned)MIN(self->valid_bytes, length);
-        memcpy(out, self->buf + (self->rate - self->valid_bytes), tc);
+        tc = (unsigned)MIN(valid_bytes, length);
+        memcpy(out, self->buf + (self->rate - valid_bytes), tc);
 
-        self->valid_bytes -= tc;
+        valid_bytes       -= tc;
         out               += tc;
         length            -= tc;
 
-        if (self->valid_bytes == 0) {
+        if (valid_bytes == 0) {
             keccak_function (self->state, self->rounds);
             keccak_squeeze_internal (self);
-            self->valid_bytes = self->rate;
+            valid_bytes = self->rate;
         }
     }
 
+    self->valid_bytes = valid_bytes;
     return 0;
 }
 

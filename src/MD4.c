@@ -82,29 +82,39 @@ EXPORT_SYM int md4_copy(const hash_state *src, hash_state *dst)
 
 EXPORT_SYM int md4_update(hash_state *hs, const uint8_t *buf, size_t len)
 {
+    unsigned count;
+
     if (NULL == hs || NULL == buf) {
         return ERR_NULL;
     }
 
-    assert(hs->count < 64);
+    /*
+     * Read the position in buf[] only once, and check it: if several
+     * threads used the object at once (not supported), the state could
+     * be inconsistent, but buf[] must never overflow.
+     */
+    count = hs->count;
+    if (count >= 64) {
+        return ERR_STATE;
+    }
 
     hs->bitlen += (uint64_t)len * 8;
 
     while (len>0)  {
         unsigned left, tc;
 
-        left = 64 - hs->count;
+        left = 64 - count;
         tc = (unsigned)MIN(left, len);
-        memcpy(hs->buf+hs->count, buf, tc);
-        hs->count += tc;
+        memcpy(hs->buf+count, buf, tc);
+        count += tc;
         buf += tc;
         len -= tc;
 
-        if (hs->count==64)  {
+        if (count==64)  {
             uint32_t X[16], A, B, C, D;
             unsigned j;
             
-            hs->count=0;
+            count=0;
             for(j=0; j<16; j++) {
                 X[j] = LOAD_U32_LITTLE(&hs->buf[j*4]);
             }
@@ -171,12 +181,13 @@ EXPORT_SYM int md4_update(hash_state *hs, const uint8_t *buf, size_t len)
         }
     }
 
+    hs->count = count;
     return 0;
 }
 
 EXPORT_SYM int md4_digest(const hash_state *hs, uint8_t digest[16])
 {
-    static uint8_t s[8];
+    uint8_t s[8];
     uint32_t padlen;
     hash_state temp;
     unsigned i;
@@ -197,10 +208,13 @@ EXPORT_SYM int md4_digest(const hash_state *hs, uint8_t digest[16])
         return ERR_NULL;
 
     temp = *hs;
+    /* temp is a private copy, but it may come from an inconsistent state */
+    if (temp.count >= 64)
+        return ERR_STATE;
 
     bitlen = temp.bitlen;   /* Save current length */
 
-    padlen= (56<=hs->count) ? 56-hs->count+64: 56-hs->count;
+    padlen= (56<=temp.count) ? 56-temp.count+64: 56-temp.count;
     md4_update(&temp, padding, padlen);
 
     for (i=0; i<8; i++)
