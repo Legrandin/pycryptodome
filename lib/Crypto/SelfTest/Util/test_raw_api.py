@@ -82,11 +82,19 @@ class TestLoadLib:
             sys.setswitchinterval(old_interval)
 
 
+# PyPy cannot lock a buffer: a bytearray can always be resized, and a
+# memoryview released, even while a C function uses their memory
+skip_on_pypy = pytest.mark.skipif(
+    "__pypy__" in sys.builtin_module_names, reason="PyPy cannot prevent a buffer from being resized"
+)
+
+
 class TestUint8Ptr:
     """While the C code runs, the GIL is released: another thread must not
     be able to resize or free a buffer that the C code is using.
     So, c_uint8_ptr() must hold the buffer for as long as its result lives."""
 
+    @skip_on_pypy
     def test_bytearray_held(self):
         data = bytearray(b"abc")
         ptr = _raw_api.c_uint8_ptr(data)
@@ -96,6 +104,7 @@ class TestUint8Ptr:
         gc.collect()
         data.extend(b"d")
 
+    @skip_on_pypy
     @pytest.mark.parametrize("data", [bytearray(b"abc"), b"abc"], ids=["writable", "read-only"])
     def test_memoryview_held(self, data):
         mv = memoryview(data)
@@ -121,6 +130,7 @@ class TestUint8Ptr:
     def test_content(self, data):
         assert SHA3_256.new(data).digest() == SHA3_256.new(bytes(data)).digest()
 
+    @skip_on_pypy
     def test_resize_from_other_thread(self):
         """Resize a bytearray while another thread hashes it in C."""
 

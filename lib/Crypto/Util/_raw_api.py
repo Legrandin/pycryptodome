@@ -155,6 +155,8 @@ try:
             # The returned object holds the buffer of data, which cannot
             # be resized or freed (e.g. by another thread, while the GIL
             # is released during a C call) for as long as it is alive.
+            # PyPy is an exception: it cannot prevent a bytearray from being
+            # resized, or a memoryview from being released, in any case.
             return ffi.from_buffer("uint8_t[]", data)
         elif isinstance(data, (bytes, _Array)):
             return data
