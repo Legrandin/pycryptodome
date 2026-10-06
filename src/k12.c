@@ -59,6 +59,9 @@ FAKE_INIT(K12_MODULE)
 
 #include "keccak_x4_avx2.c"
 
+/* The tail of a leaf must be a whole number of 64-bit words (see below) */
+typedef char k12_tail_is_whole_words[(K12_LEAF_SIZE % K12_RATE) % 8 == 0 ? 1 : -1];
+
 /*
  * Compute the chaining values of 4 consecutive leaves,
  * with TurboSHAKE128 (domain 0x0B) on 4 parallel states.
