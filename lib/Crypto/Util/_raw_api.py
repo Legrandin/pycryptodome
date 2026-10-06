@@ -215,6 +215,9 @@ try:
         else:
             raise TypeError("Object type %s cannot be passed to C code" % type(data))
 
+    def _c_uint8_ptr_from_address(address: int) -> Any:
+        return ffi.cast("uint8_t *", address)
+
     class VoidPointer_cffi(_VoidPointer):
         """Model a newly allocated pointer to void"""
 
@@ -337,6 +340,9 @@ except ImportError:
         else:
             raise TypeError("Object type %s cannot be passed to C code" % type(data))
 
+    def _c_uint8_ptr_from_address(address: int) -> Any:
+        return c_void_p(address)
+
     # ---
 
     class VoidPointer_ctypes(_VoidPointer):
@@ -355,6 +361,51 @@ except ImportError:
         return VoidPointer_ctypes()
 
     backend = "ctypes"
+
+
+# Only on CPython, C code can write the output directly into a new bytes
+# object, which is then returned without copying it. This is what C extensions
+# do with PyBytes_FromStringAndSize(NULL, size): the content is undefined,
+# and it must be filled in before anything else gets the object.
+# Private prototypes, so that the ones in ctypes.pythonapi are not changed.
+_PyBytes_FromStringAndSize: Any = None
+_PyBytes_AsString: Any = None
+if sys.implementation.name == "cpython":
+    try:
+        import ctypes as _ctypes
+
+        _PyBytes_FromStringAndSize = _ctypes.PYFUNCTYPE(
+            _ctypes.py_object, _ctypes.c_void_p, _ctypes.c_ssize_t
+        )(("PyBytes_FromStringAndSize", _ctypes.pythonapi))
+        _PyBytes_AsString = _ctypes.PYFUNCTYPE(_ctypes.c_void_p, _ctypes.py_object)(
+            ("PyBytes_AsString", _ctypes.pythonapi)
+        )
+    except (ImportError, AttributeError):
+        _PyBytes_FromStringAndSize = None
+
+# For shorter outputs, the usual copy is cheap
+_MIN_BYTES_OUTPUT = 64 * 1024
+
+
+def create_bytes_output(size: int) -> Optional[Tuple[bytes, Any]]:
+    """Allocate a new bytes object of the given size, for C code to write
+    the output of a function into, so that it does not need to be copied.
+
+    Return the object and a pointer to its content (which is undefined),
+    or None if it is not possible (or not worth it): then, use
+    create_string_buffer() and get_raw_buffer() instead.
+
+    Nothing else can get the object (or a reference to it) until the
+    C code has completely written it; the caller must hold the object
+    for as long as the pointer is in use.
+    """
+
+    # The empty bytes object is a shared singleton
+    if _PyBytes_FromStringAndSize is None or size < max(_MIN_BYTES_OUTPUT, 1):
+        return None
+    obj = _PyBytes_FromStringAndSize(None, size)
+    address = _PyBytes_AsString(obj)
+    return obj, _c_uint8_ptr_from_address(address)
 
 
 def c_uint8_ptr_len(data: Union[bytes, memoryview, bytearray]) -> Tuple[Any, int]:

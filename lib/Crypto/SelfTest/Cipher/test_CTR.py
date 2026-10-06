@@ -34,7 +34,7 @@ import pytest
 
 from Crypto.Cipher import AES, DES3, _mode_ctr
 from Crypto.Hash import SHA256, SHAKE128
-from Crypto.Util import Counter
+from Crypto.Util import Counter, _raw_api
 from Crypto.Util._bytes import tobytes
 from Crypto.Util._cpu_features import available_cores
 
@@ -463,6 +463,59 @@ class TestCtrThreads:
                 res.append(cipher.encrypt(memoryview(pt)[index : index + size]))
                 index += size
             assert b"".join(res) == ref
+
+
+class TestCtrBytesOutput:
+    """The output is written directly into the returned bytes object"""
+
+    key_128 = get_tag_random("key_128", 16)
+    nonce_64 = get_tag_random("nonce_64", 8)
+
+    @pytest.fixture(autouse=True)
+    def direct_output(self, monkeypatch):
+        monkeypatch.setattr(_raw_api, "_MIN_BYTES_OUTPUT", 1)
+        monkeypatch.setattr(_mode_ctr, "_MIN_BYTES_PER_THREAD", 1)
+
+    @pytest.mark.parametrize("threads", (1, 3))
+    def test_encrypt_decrypt(self, threads):
+        for length in (0, 1, 15, 16, 17, 1000):
+            pt = get_tag_random("plaintext", length)
+            ref = bytearray(length)
+            AES.new(self.key_128, AES.MODE_CTR, nonce=self.nonce_64).encrypt(pt, output=ref)
+
+            cipher = AES.new(self.key_128, AES.MODE_CTR, nonce=self.nonce_64, threads=threads)
+            ct = cipher.encrypt(pt)
+            assert type(ct) is bytes
+            assert ct == ref
+
+            cipher = AES.new(self.key_128, AES.MODE_CTR, nonce=self.nonce_64, threads=threads)
+            pt2 = cipher.decrypt(memoryview(bytearray(ct)))
+            assert type(pt2) is bytes
+            assert pt2 == pt
+
+    def test_results_are_independent(self):
+        cipher = AES.new(self.key_128, AES.MODE_CTR, nonce=self.nonce_64)
+        ct1 = cipher.encrypt(b"\x00" * 100)
+        ct2 = cipher.encrypt(b"\x00" * 100)
+        assert ct1 is not ct2
+        assert ct1 != ct2
+
+    @pytest.mark.parametrize("threads", (1, 3))
+    def test_wrap_around(self, threads):
+        counter = Counter.new(8, prefix=bytes([9]) * 15)
+        cipher = AES.new(self.key_128, AES.MODE_CTR, counter=counter, threads=threads)
+        with pytest.raises(OverflowError):
+            cipher.encrypt(b"9" * 4097)
+
+    def test_gcm(self):
+        pt = get_tag_random("plaintext", 1000)
+        ref = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_64).encrypt_and_digest(pt)
+
+        result = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_64, threads=3).encrypt_and_digest(pt)
+        assert result == ref
+        assert type(result[0]) is bytes
+        cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_64)
+        assert cipher.decrypt_and_verify(*ref) == pt
 
 
 class TestSP800TestVectors:

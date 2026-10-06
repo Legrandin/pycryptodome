@@ -331,3 +331,22 @@ class TestLengthsFromHeldBuffer:
         except ValueError:
             return
         assert ct == b""
+
+
+class TestBytesOutput:
+    def test_new_objects(self, monkeypatch):
+        monkeypatch.setattr(_raw_api, "_MIN_BYTES_OUTPUT", 0)
+        if _raw_api.create_bytes_output(16) is None:
+            pytest.skip("Not available (only on CPython)")
+
+        # Never the shared empty bytes object
+        assert _raw_api.create_bytes_output(0) is None
+
+        a, _ = _raw_api.create_bytes_output(10)
+        b, _ = _raw_api.create_bytes_output(10)
+        assert type(a) is bytes
+        assert len(a) == 10
+        assert a is not b
+
+    def test_short_output(self):
+        assert _raw_api.create_bytes_output(100) is None

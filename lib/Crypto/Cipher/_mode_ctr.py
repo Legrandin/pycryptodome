@@ -41,6 +41,7 @@ from Crypto.Util._raw_api import (
     c_size_t,
     c_uint8_ptr_len,
     c_uint8_ptr_out,
+    create_bytes_output,
     create_string_buffer,
     get_raw_buffer,
     is_writeable_buffer,
@@ -292,39 +293,7 @@ class CtrMode:
             raise TypeError("encrypt() cannot be called after decrypt()")
         self._next = ["encrypt"]
 
-        if output is None:
-            ciphertext = create_string_buffer(len(plaintext))
-        else:
-            ciphertext = output
-
-            if not is_writeable_buffer(output):
-                raise TypeError("output must be a bytearray or a writeable memoryview")
-
-            if len(plaintext) != len(output):
-                raise ValueError("output must have the same length as the input  (%d bytes)" % len(plaintext))
-
-        with c_uint8_ptr_out(ciphertext) as ciphertext_ptr:
-            plaintext_ptr, plaintext_len = c_uint8_ptr_len(plaintext)
-            # Check the lengths of the buffers that C code gets
-            if len(ciphertext_ptr) != plaintext_len:
-                raise ValueError("output must have the same length as the input  (%d bytes)" % plaintext_len)
-            if self._threads > 1:
-                result = _ctr_threaded(
-                    self._state.get(), plaintext_ptr, ciphertext_ptr, plaintext_len, self._threads
-                )
-            else:
-                result = raw_ctr_lib.CTR_encrypt(
-                    self._state.get(), plaintext_ptr, ciphertext_ptr, c_size_t(plaintext_len)
-                )
-        if result:
-            if result == 0x60002:
-                raise OverflowError("The counter has wrapped around in CTR mode")
-            raise ValueError("Error %X while encrypting in CTR mode" % result)
-
-        if output is None:
-            return get_raw_buffer(ciphertext)
-        else:
-            return None
+        return self._process(plaintext, output, "encrypting")
 
     @overload
     def decrypt(self, ciphertext: Buffer) -> bytes: ...
@@ -371,39 +340,55 @@ class CtrMode:
             raise TypeError("decrypt() cannot be called after encrypt()")
         self._next = ["decrypt"]
 
+        return self._process(ciphertext, output, "decrypting")
+
+    def _process(
+        self, data: Buffer, output: Optional[Union[bytearray, memoryview]], what: str
+    ) -> Optional[bytes]:
+        """Encrypt or decrypt (which are the same operation in CTR mode)"""
+
         if output is None:
-            plaintext = create_string_buffer(len(ciphertext))
+            data_ptr, data_len = c_uint8_ptr_len(data)
+            # If possible, write directly into the bytes object to return
+            direct = create_bytes_output(data_len)
+            if direct is not None:
+                result_bytes, result_ptr = direct
+                self._check(self._ctr(data_ptr, result_ptr, data_len), what)
+                return result_bytes
+            result_buffer = create_string_buffer(data_len)
         else:
-            plaintext = output
+            result_buffer = output
 
             if not is_writeable_buffer(output):
                 raise TypeError("output must be a bytearray or a writeable memoryview")
 
-            if len(ciphertext) != len(output):
-                raise ValueError("output must have the same length as the input  (%d bytes)" % len(plaintext))
+            if len(data) != len(output):
+                raise ValueError("output must have the same length as the input  (%d bytes)" % len(data))
 
-        with c_uint8_ptr_out(plaintext) as plaintext_ptr:
-            ciphertext_ptr, ciphertext_len = c_uint8_ptr_len(ciphertext)
+        with c_uint8_ptr_out(result_buffer) as result_ptr:
+            data_ptr, data_len = c_uint8_ptr_len(data)
             # Check the lengths of the buffers that C code gets
-            if len(plaintext_ptr) != ciphertext_len:
-                raise ValueError("output must have the same length as the input  (%d bytes)" % ciphertext_len)
-            if self._threads > 1:
-                result = _ctr_threaded(
-                    self._state.get(), ciphertext_ptr, plaintext_ptr, ciphertext_len, self._threads
-                )
-            else:
-                result = raw_ctr_lib.CTR_decrypt(
-                    self._state.get(), ciphertext_ptr, plaintext_ptr, c_size_t(ciphertext_len)
-                )
+            if len(result_ptr) != data_len:
+                raise ValueError("output must have the same length as the input  (%d bytes)" % data_len)
+            result = self._ctr(data_ptr, result_ptr, data_len)
+        self._check(result, what)
+
+        if output is None:
+            return get_raw_buffer(result_buffer)
+        else:
+            return None
+
+    def _ctr(self, in_ptr, out_ptr, data_len: int) -> int:
+        if self._threads > 1:
+            return _ctr_threaded(self._state.get(), in_ptr, out_ptr, data_len, self._threads)
+        return raw_ctr_lib.CTR_encrypt(self._state.get(), in_ptr, out_ptr, c_size_t(data_len))
+
+    @staticmethod
+    def _check(result: int, what: str) -> None:
         if result:
             if result == 0x60002:
                 raise OverflowError("The counter has wrapped around in CTR mode")
-            raise ValueError("Error %X while decrypting in CTR mode" % result)
-
-        if output is None:
-            return get_raw_buffer(plaintext)
-        else:
-            return None
+            raise ValueError("Error %X while %s in CTR mode" % (result, what))
 
 
 def _create_ctr_cipher(factory, **kwargs):
