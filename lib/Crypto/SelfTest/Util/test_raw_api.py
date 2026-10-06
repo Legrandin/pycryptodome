@@ -53,6 +53,13 @@ class TestLoadLib:
         Without a lock, two of them may both pass them to ffi.cdef(),
         and the second call fails."""
 
+        def worker(barrier, cdecl, errors):
+            barrier.wait()
+            try:
+                _raw_api.load_pycryptodome_raw_lib("Crypto.Hash._keccak", cdecl)
+            except Exception as e:
+                errors.append(e)
+
         n_threads = 8
         old_interval = sys.getswitchinterval()
         # Switch threads as often as possible, to make the race likely
@@ -63,15 +70,9 @@ class TestLoadLib:
                 cdecl = "".join("int not_called_%d_%d(void);" % (trial, i) for i in range(50))
                 barrier = threading.Barrier(n_threads)
                 errors = []
-
-                def worker():
-                    barrier.wait()
-                    try:
-                        _raw_api.load_pycryptodome_raw_lib("Crypto.Hash._keccak", cdecl)
-                    except Exception as e:
-                        errors.append(e)
-
-                threads = [threading.Thread(target=worker) for _ in range(n_threads)]
+                threads = [
+                    threading.Thread(target=worker, args=(barrier, cdecl, errors)) for _ in range(n_threads)
+                ]
                 for t in threads:
                     t.start()
                 for t in threads:
@@ -107,7 +108,14 @@ class TestUint8Ptr:
 
     @pytest.mark.parametrize(
         "data",
-        [b"", bytearray(), b"abc", bytearray(b"abc"), memoryview(b"xabcx")[1:4], memoryview(bytearray(b"abc"))],
+        [
+            b"",
+            bytearray(),
+            b"abc",
+            bytearray(b"abc"),
+            memoryview(b"xabcx")[1:4],
+            memoryview(bytearray(b"abc")),
+        ],
         ids=["bytes0", "bytearray0", "bytes", "bytearray", "memoryview-ro", "memoryview-rw"],
     )
     def test_content(self, data):
