@@ -38,6 +38,8 @@
  *   (ANDN computes ~a & b in one instruction) and BMI2 (RORX rotates
  *   without changing the flags, into a different register).
  * - KangarooTwelve also hashes 4 leaves at a time with AVX2.
+ *
+ * See KECCAK_K12.txt for which file includes which, and the resulting modules.
  */
 
 #define KECCAK_MODULE keccak_avx2_bmi2

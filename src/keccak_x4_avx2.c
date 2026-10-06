@@ -40,6 +40,8 @@
  *
  * This file is not a module: it must be included after keccak.c,
  * whose round constants it uses, and compiled with AVX2 enabled.
+ *
+ * See KECCAK_K12.txt for which file includes which, and the resulting modules.
  */
 
 #include <immintrin.h>
