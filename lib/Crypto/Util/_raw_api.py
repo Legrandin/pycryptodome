@@ -71,6 +71,19 @@ def _must_copy(data: Any) -> bool:
     return _is_pypy and not isinstance(data, _pypy_locked_types) and _thread._count() > 0
 
 
+class _BytesOutput:
+    """A new bytes object that C code writes into (see create_output_buffer)"""
+
+    __slots__ = ("obj", "ptr")
+
+    def __init__(self, obj: bytes, ptr: Any) -> None:
+        self.obj = obj
+        self.ptr = ptr
+
+    def __len__(self) -> int:
+        return len(self.obj)
+
+
 class _VoidPointer:
     @abc.abstractmethod
     def get(self) -> Any:
@@ -199,6 +212,8 @@ try:
 
     def get_raw_buffer(buf: Any) -> bytes:
         """Convert a C buffer into a Python byte sequence"""
+        if isinstance(buf, _BytesOutput):
+            return buf.obj
         return ffi.buffer(buf)[:]
 
     def c_uint8_ptr(data: Union[bytes, memoryview, bytearray]) -> Any:
@@ -215,8 +230,9 @@ try:
         else:
             raise TypeError("Object type %s cannot be passed to C code" % type(data))
 
-    def _c_uint8_ptr_from_address(address: int) -> Any:
-        return ffi.cast("uint8_t *", address)
+    def _c_uint8_ptr_into_bytes(obj: bytes) -> Any:
+        # On CPython, it points to the content of obj (no copy)
+        return ffi.from_buffer("uint8_t[]", obj)
 
     class VoidPointer_cffi(_VoidPointer):
         """Model a newly allocated pointer to void"""
@@ -277,6 +293,8 @@ except ImportError:
         return c_string.value
 
     def get_raw_buffer(buf: Any) -> bytes:
+        if isinstance(buf, _BytesOutput):
+            return buf.obj
         return buf.raw
 
     # ---- Get raw pointer ---
@@ -340,8 +358,8 @@ except ImportError:
         else:
             raise TypeError("Object type %s cannot be passed to C code" % type(data))
 
-    def _c_uint8_ptr_from_address(address: int) -> Any:
-        return c_void_p(address)
+    def _c_uint8_ptr_into_bytes(obj: bytes) -> Any:
+        return (ctypes.c_ubyte * len(obj)).from_address(_PyBytes_AsString(obj))
 
     # ---
 
@@ -387,25 +405,26 @@ if sys.implementation.name == "cpython":
 _MIN_BYTES_OUTPUT = 64 * 1024
 
 
-def create_bytes_output(size: int) -> Optional[Tuple[bytes, Any]]:
-    """Allocate a new bytes object of the given size, for C code to write
-    the output of a function into, so that it does not need to be copied.
+def create_output_buffer(size: int) -> Any:
+    """Allocate the memory where C code writes the output of a function
+    into, of the given size::
 
-    Return the object and a pointer to its content (which is undefined),
-    or None if it is not possible (or not worth it): then, use
-    create_string_buffer() and get_raw_buffer() instead.
+        out = create_output_buffer(size)
+        with c_uint8_ptr_out(out) as ptr:
+            lib.function(..., ptr, ...)
+        return get_raw_buffer(out)
 
-    Nothing else can get the object (or a reference to it) until the
-    C code has completely written it; the caller must hold the object
-    for as long as the pointer is in use.
+    Usually, it is create_string_buffer(size), which get_raw_buffer() copies.
+    On CPython, for long outputs, it is a new bytes object instead, which C code
+    writes directly into, and which get_raw_buffer() returns as it is.
+    Nothing else gets that bytes object until the C code has written it.
     """
 
     # The empty bytes object is a shared singleton
     if _PyBytes_FromStringAndSize is None or size < max(_MIN_BYTES_OUTPUT, 1):
-        return None
+        return create_string_buffer(size)
     obj = _PyBytes_FromStringAndSize(None, size)
-    address = _PyBytes_AsString(obj)
-    return obj, _c_uint8_ptr_from_address(address)
+    return _BytesOutput(obj, _c_uint8_ptr_into_bytes(obj))
 
 
 def c_uint8_ptr_len(data: Union[bytes, memoryview, bytearray]) -> Tuple[Any, int]:
@@ -434,6 +453,8 @@ class c_uint8_ptr_out:
         self._copy: Any = None
 
     def __enter__(self) -> Any:
+        if isinstance(self._data, _BytesOutput):
+            return self._data.ptr
         if _is_pypy and isinstance(self._data, _buffer_type) and _must_copy(self._data):
             self._copy = create_string_buffer(len(self._data))
             self._copy[0 : len(self._data)] = bytes(self._data)

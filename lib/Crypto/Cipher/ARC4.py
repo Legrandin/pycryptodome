@@ -28,7 +28,8 @@ from Crypto.Util._raw_api import (
     VoidPointer,
     c_size_t,
     c_uint8_ptr_len,
-    create_string_buffer,
+    c_uint8_ptr_out,
+    create_output_buffer,
     get_raw_buffer,
     load_pycryptodome_raw_lib,
 )
@@ -86,11 +87,15 @@ class ARC4Cipher:
           plaintext.
         """
 
-        ciphertext = create_string_buffer(len(plaintext))
-        plaintext_ptr, plaintext_len = c_uint8_ptr_len(plaintext)
-        result = _raw_arc4_lib.ARC4_stream_encrypt(
-            self._state.get(), plaintext_ptr, ciphertext, c_size_t(plaintext_len)
-        )
+        ciphertext = create_output_buffer(len(plaintext))
+        with c_uint8_ptr_out(ciphertext) as ciphertext_ptr:
+            plaintext_ptr, plaintext_len = c_uint8_ptr_len(plaintext)
+            # Check the lengths of the buffers that C code gets
+            if len(ciphertext_ptr) != plaintext_len:
+                raise ValueError("The plaintext changed length while being encrypted")
+            result = _raw_arc4_lib.ARC4_stream_encrypt(
+                self._state.get(), plaintext_ptr, ciphertext_ptr, c_size_t(plaintext_len)
+            )
         if result:
             raise ValueError("Error %d while encrypting with RC4" % result)
         return get_raw_buffer(ciphertext)

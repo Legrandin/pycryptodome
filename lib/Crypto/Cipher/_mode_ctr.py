@@ -41,8 +41,7 @@ from Crypto.Util._raw_api import (
     c_size_t,
     c_uint8_ptr_len,
     c_uint8_ptr_out,
-    create_bytes_output,
-    create_string_buffer,
+    create_output_buffer,
     get_raw_buffer,
     is_writeable_buffer,
     load_pycryptodome_raw_lib,
@@ -348,14 +347,7 @@ class CtrMode:
         """Encrypt or decrypt (which are the same operation in CTR mode)"""
 
         if output is None:
-            data_ptr, data_len = c_uint8_ptr_len(data)
-            # If possible, write directly into the bytes object to return
-            direct = create_bytes_output(data_len)
-            if direct is not None:
-                result_bytes, result_ptr = direct
-                self._check(self._ctr(data_ptr, result_ptr, data_len), what)
-                return result_bytes
-            result_buffer = create_string_buffer(data_len)
+            result_buffer = create_output_buffer(len(data))
         else:
             result_buffer = output
 

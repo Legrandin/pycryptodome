@@ -333,20 +333,83 @@ class TestLengthsFromHeldBuffer:
         assert ct == b""
 
 
+def _new_ciphers():
+    from Crypto.Cipher import AES, ARC4, ChaCha20, Salsa20
+
+    key = b"k" * 16
+    return {
+        "ECB": lambda: AES.new(key, AES.MODE_ECB),
+        "CBC": lambda: AES.new(key, AES.MODE_CBC, iv=bytes(16)),
+        "CFB": lambda: AES.new(key, AES.MODE_CFB, iv=bytes(16)),
+        "OFB": lambda: AES.new(key, AES.MODE_OFB, iv=bytes(16)),
+        "CTR": lambda: AES.new(key, AES.MODE_CTR, nonce=bytes(8)),
+        "OCB": lambda: AES.new(key, AES.MODE_OCB, nonce=bytes(15)),
+        "GCM": lambda: AES.new(key, AES.MODE_GCM, nonce=bytes(12)),
+        "ARC4": lambda: ARC4.new(key),
+        "ChaCha20": lambda: ChaCha20.new(key=key * 2, nonce=bytes(8)),
+        "Salsa20": lambda: Salsa20.new(key=key * 2, nonce=bytes(8)),
+    }
+
+
 class TestBytesOutput:
-    def test_new_objects(self, monkeypatch):
+    """On CPython, C code writes directly into the bytes object
+    that is returned (see create_output_buffer)"""
+
+    @pytest.fixture
+    def always_direct(self, monkeypatch):
         monkeypatch.setattr(_raw_api, "_MIN_BYTES_OUTPUT", 0)
-        if _raw_api.create_bytes_output(16) is None:
-            pytest.skip("Not available (only on CPython)")
+        if not isinstance(_raw_api.create_output_buffer(16), _raw_api._BytesOutput):
+            pytest.skip("Only on CPython")
 
+    def test_new_objects(self, always_direct):
         # Never the shared empty bytes object
-        assert _raw_api.create_bytes_output(0) is None
+        assert not isinstance(_raw_api.create_output_buffer(0), _raw_api._BytesOutput)
 
-        a, _ = _raw_api.create_bytes_output(10)
-        b, _ = _raw_api.create_bytes_output(10)
-        assert type(a) is bytes
+        a = _raw_api.create_output_buffer(10)
+        b = _raw_api.create_output_buffer(10)
         assert len(a) == 10
-        assert a is not b
+        with _raw_api.c_uint8_ptr_out(a) as ptr:
+            assert len(ptr) == 10
+        assert type(_raw_api.get_raw_buffer(a)) is bytes
+        assert _raw_api.get_raw_buffer(a) is not _raw_api.get_raw_buffer(b)
 
     def test_short_output(self):
-        assert _raw_api.create_bytes_output(100) is None
+        assert not isinstance(_raw_api.create_output_buffer(100), _raw_api._BytesOutput)
+
+    @pytest.mark.parametrize("name", sorted(_new_ciphers()))
+    def test_ciphers(self, monkeypatch, name):
+        new = _new_ciphers()[name]
+
+        def encrypt(data):
+            cipher = new()
+            # OCB returns the last partial block only at the end
+            return cipher.encrypt(data) + (cipher.encrypt() if name == "OCB" else b"")
+
+        def decrypt(data):
+            cipher = new()
+            return cipher.decrypt(data) + (cipher.decrypt() if name == "OCB" else b"")
+
+        lengths = (16, 32, 160, 4096) if name in ("ECB", "CBC") else (1, 15, 16, 17, 160, 4097)
+
+        refs = []
+        for length in lengths:
+            data = bytes(range(256)) * (length // 256) + bytes(range(length % 256))
+            enc = encrypt(data)
+            refs.append((data, enc, decrypt(enc)))
+
+        monkeypatch.setattr(_raw_api, "_MIN_BYTES_OUTPUT", 0)
+        for data, ref_enc, ref_dec in refs:
+            enc = encrypt(data)
+            assert type(enc) is bytes
+            assert enc == ref_enc
+            dec = decrypt(memoryview(bytearray(enc)))
+            assert type(dec) is bytes
+            assert dec == ref_dec == data
+
+    def test_lying_input(self, always_direct):
+        from Crypto.Cipher import AES, ARC4
+
+        data = _LyingBytearray(0, 64)  # 0 bytes, but len() says 64
+        for cipher in (ARC4.new(b"k" * 16), AES.new(b"k" * 16, AES.MODE_CTR, nonce=bytes(8))):
+            with pytest.raises(ValueError):
+                cipher.encrypt(data)

@@ -82,6 +82,8 @@ from Crypto.Util._raw_api import (
     VoidPointer,
     c_size_t,
     c_uint8_ptr_len,
+    c_uint8_ptr_out,
+    create_output_buffer,
     create_string_buffer,
     get_raw_buffer,
     is_buffer,
@@ -250,8 +252,9 @@ class OcbMode:
         return self
 
     def _transcrypt_aligned(self, in_data, in_data_len, trans_func, trans_desc):
-        out_data = create_string_buffer(in_data_len)
-        result = trans_func(self._state.get(), in_data, out_data, c_size_t(in_data_len))
+        out_data = create_output_buffer(in_data_len)
+        with c_uint8_ptr_out(out_data) as out_data_ptr:
+            result = trans_func(self._state.get(), in_data, out_data_ptr, c_size_t(in_data_len))
         if result:
             raise ValueError("Error %d while %sing in OCB mode" % (result, trans_desc))
         return get_raw_buffer(out_data)

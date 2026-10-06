@@ -48,9 +48,11 @@ New features
   The output does not depend on the number of threads.
 * GCM mode is about 1.5x faster on long messages, as it does not copy the data
   before authenticating it.
-* On CPython, CTR and GCM modes write the result of ``encrypt()`` and ``decrypt()``
-  directly into the returned ``bytes`` object, without copying it (for 64 KiB or more).
-  For long data, this is 1.3x to 3x faster (more with threads).
+* On CPython, the ``encrypt()`` and ``decrypt()`` methods of most ciphers
+  (block cipher modes ECB, CBC, CFB, OFB, CTR, GCM and OCB, plus ChaCha20, Salsa20
+  and ARC4) write their result directly into the returned ``bytes`` object,
+  without copying it (for 64 KiB or more). For long data, this is 1.3x to 1.8x faster,
+  and up to 3x with threads.
 
 3.24.0 (4 October 2026)
 ++++++++++++++++++++++++++
