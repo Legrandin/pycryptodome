@@ -35,6 +35,7 @@ from typing import Any, Optional, Union, overload
 from Crypto.Util._raw_api import (
     c_size_t,
     c_uint8_ptr,
+    c_uint8_ptr_out,
     create_string_buffer,
     get_raw_buffer,
     is_writeable_buffer,
@@ -103,7 +104,8 @@ def strxor(
         if len(term1) != len(output):
             raise ValueError("output must have the same length as the input  (%d bytes)" % len(term1))
 
-    _raw_strxor.strxor(c_uint8_ptr(term1), c_uint8_ptr(term2), c_uint8_ptr(result), c_size_t(len(term1)))
+    with c_uint8_ptr_out(result) as result_ptr:
+        _raw_strxor.strxor(c_uint8_ptr(term1), c_uint8_ptr(term2), result_ptr, c_size_t(len(term1)))
 
     if output is None:
         return get_raw_buffer(result)
@@ -154,7 +156,8 @@ def strxor_c(term: Buffer, c: int, output: Optional[Union[bytearray, memoryview]
         if len(term) != len(output):
             raise ValueError("output must have the same length as the input  (%d bytes)" % len(term))
 
-    _raw_strxor.strxor_c(c_uint8_ptr(term), c, c_uint8_ptr(result), c_size_t(len(term)))
+    with c_uint8_ptr_out(result) as result_ptr:
+        _raw_strxor.strxor_c(c_uint8_ptr(term), c, result_ptr, c_size_t(len(term)))
 
     if output is None:
         return get_raw_buffer(result)

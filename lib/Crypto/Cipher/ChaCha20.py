@@ -39,6 +39,7 @@ from Crypto.Util._raw_api import (
     VoidPointer,
     c_size_t,
     c_uint8_ptr,
+    c_uint8_ptr_out,
     c_ulong,
     create_string_buffer,
     get_raw_buffer,
@@ -81,7 +82,8 @@ def _HChaCha20(key: Buffer, nonce: Buffer) -> bytearray:
     assert len(nonce) == 16
 
     subkey = bytearray(32)
-    result = _raw_chacha20_lib.hchacha20(c_uint8_ptr(key), c_uint8_ptr(nonce), c_uint8_ptr(subkey))
+    with c_uint8_ptr_out(subkey) as subkey_ptr:
+        result = _raw_chacha20_lib.hchacha20(c_uint8_ptr(key), c_uint8_ptr(nonce), subkey_ptr)
     if result:
         raise ValueError("Error %d when deriving subkey with HChaCha20" % result)
 
@@ -170,9 +172,10 @@ class ChaCha20Cipher:
             if len(plaintext) != len(output):
                 raise ValueError("output must have the same length as the input  (%d bytes)" % len(plaintext))
 
-        result = _raw_chacha20_lib.chacha20_encrypt(
-            self._state.get(), c_uint8_ptr(plaintext), c_uint8_ptr(ciphertext), c_size_t(len(plaintext))
-        )
+        with c_uint8_ptr_out(ciphertext) as ciphertext_ptr:
+            result = _raw_chacha20_lib.chacha20_encrypt(
+                self._state.get(), c_uint8_ptr(plaintext), ciphertext_ptr, c_size_t(len(plaintext))
+            )
         if result:
             raise ValueError("Error %d while encrypting with %s" % (result, self._name))
 

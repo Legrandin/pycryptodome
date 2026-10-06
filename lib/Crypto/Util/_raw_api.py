@@ -46,6 +46,13 @@ extension_suffixes = machinery.EXTENSION_SUFFIXES
 # Which types with buffer interface we support (apart from byte strings)
 _buffer_type = (bytearray, memoryview)
 
+# PyPy cannot lock a buffer: a bytearray can always be resized, and a
+# memoryview released, even while a C function uses their memory
+# (another thread can do it, since the GIL is released during C calls).
+# So, on PyPy, C functions never get the memory of such buffers,
+# only private copies (see c_uint8_ptr and c_uint8_ptr_out).
+_is_pypy = "__pypy__" in sys.builtin_module_names
+
 
 class _VoidPointer:
     @abc.abstractmethod
@@ -151,12 +158,13 @@ try:
         return ffi.buffer(buf)[:]
 
     def c_uint8_ptr(data: Union[bytes, memoryview, bytearray]) -> Any:
+        """Pass data to C code, which only reads it"""
         if isinstance(data, _buffer_type):
+            if _is_pypy:
+                return bytes(data)
             # The returned object holds the buffer of data, which cannot
             # be resized or freed (e.g. by another thread, while the GIL
             # is released during a C call) for as long as it is alive.
-            # PyPy is an exception: it cannot prevent a bytearray from being
-            # resized, or a memoryview from being released, in any case.
             return ffi.from_buffer("uint8_t[]", data)
         elif isinstance(data, (bytes, _Array)):
             return data
@@ -299,6 +307,33 @@ except ImportError:
         return VoidPointer_ctypes()
 
     backend = "ctypes"
+
+
+class c_uint8_ptr_out:
+    """Pass a buffer to C code that writes into it::
+
+        with c_uint8_ptr_out(buf) as ptr:
+            lib.function(..., ptr, ...)
+
+    Usually, ptr is just c_uint8_ptr(buf). On PyPy, if buf is a bytearray
+    or a memoryview, the C code gets a private copy instead, which is copied
+    back into buf when the C function returns (without an exception).
+    """
+
+    def __init__(self, data: Any) -> None:
+        self._data = data
+        self._copy: Any = None
+
+    def __enter__(self) -> Any:
+        if _is_pypy and isinstance(self._data, _buffer_type):
+            self._copy = create_string_buffer(len(self._data))
+            self._copy[0 : len(self._data)] = bytes(self._data)
+            return self._copy
+        return c_uint8_ptr(self._data)
+
+    def __exit__(self, exc_type: Any, exc_value: Any, traceback: Any) -> None:
+        if self._copy is not None and exc_type is None:
+            self._data[:] = get_raw_buffer(self._copy)
 
 
 class SmartPointer:

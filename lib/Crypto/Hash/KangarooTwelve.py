@@ -37,6 +37,7 @@ from typing import Optional, Union
 from Crypto.Util._raw_api import (
     c_size_t,
     c_uint8_ptr,
+    c_uint8_ptr_out,
     create_string_buffer,
     get_raw_buffer,
     load_pycryptodome_raw_lib,
@@ -99,7 +100,8 @@ def _hash_leaves(leaves: memoryview, cvs: memoryview) -> None:
     if n_leaves == 0:
         return
 
-    result = _raw_k12_lib.k12_leaves(c_uint8_ptr(leaves), c_size_t(n_leaves), c_uint8_ptr(cvs))
+    with c_uint8_ptr_out(cvs) as cvs_ptr:
+        result = _raw_k12_lib.k12_leaves(c_uint8_ptr(leaves), c_size_t(n_leaves), cvs_ptr)
     if result:
         raise ValueError("Error %d while hashing K12 leaves" % result)
 
