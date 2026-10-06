@@ -8,6 +8,27 @@ No. Support for Python 2.7 was removed in version 4.0.
 The minimum supported version is now Python 3.8.
 If you are stuck with Python 2.7, you can still use PyCryptodome 3.x.
 
+Why is PyCryptodome slower with ``bytearray`` data on PyPy?
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+While PyCryptodome processes data in C code, other Python threads keep running.
+On CPython, they cannot resize or free a ``bytearray`` or ``memoryview``
+that the C code is still working on.
+PyPy 7.3 cannot prevent that, and PyPy 8.0 can only do it for ``bytearray``.
+
+So, on PyPy, if your program has more than one thread,
+PyCryptodome gives C code a private copy of any ``bytearray`` or ``memoryview``
+that it cannot protect, both for the input data and for any ``output`` buffer.
+With large buffers, the extra copies make encryption and hashing
+noticeably slower and briefly need twice the memory.
+
+To avoid the copies, pass the data as ``bytes``,
+or use PyPy 8.0 or newer with ``bytearray`` objects.
+Single-threaded programs are not affected.
+
+Only threads started from Python count: if native code calls into Python
+from threads of its own, pass data shared with them as ``bytes``.
+
 How can I encrypt using an ECC key?
 ++++++++++++++++++++++++++++++++++++
 
