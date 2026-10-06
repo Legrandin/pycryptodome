@@ -33,6 +33,7 @@ from __future__ import annotations
 
 from typing import Optional, Union
 
+from Crypto.Util import _cpu_features
 from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
@@ -43,7 +44,6 @@ from Crypto.Util._raw_api import (
     get_raw_buffer,
     load_pycryptodome_raw_lib,
 )
-from Crypto.Util import _cpu_features
 
 Buffer = Union[bytes, bytearray, memoryview]
 
