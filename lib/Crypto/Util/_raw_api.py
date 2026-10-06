@@ -118,7 +118,7 @@ try:
         """Return the buffer types that cannot be resized or released
         while ffi.from_buffer() uses them"""
 
-        locked = []
+        locked: list[type] = []
         data = bytearray(1)
         ptr = ffi.from_buffer("uint8_t[]", data)
         try:
