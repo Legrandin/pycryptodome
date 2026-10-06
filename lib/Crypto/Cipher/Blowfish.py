@@ -36,7 +36,13 @@ import sys
 from typing import TYPE_CHECKING, Iterable, Union
 
 from Crypto.Cipher import _create_cipher
-from Crypto.Util._raw_api import SmartPointer, VoidPointer, c_size_t, c_uint8_ptr, load_pycryptodome_raw_lib
+from Crypto.Util._raw_api import (
+    SmartPointer,
+    VoidPointer,
+    c_size_t,
+    c_uint8_ptr_len,
+    load_pycryptodome_raw_lib,
+)
 
 if TYPE_CHECKING:
     from typing_extensions import Unpack
@@ -89,7 +95,8 @@ def _create_base_cipher(dict_parameters):
     stop_operation = _raw_blowfish_lib.Blowfish_stop_operation
 
     void_p = VoidPointer()
-    result = start_operation(c_uint8_ptr(key), c_size_t(len(key)), void_p.address_of())
+    key_ptr, key_len = c_uint8_ptr_len(key)
+    result = start_operation(key_ptr, c_size_t(key_len), void_p.address_of())
     if result:
         raise ValueError("Error %X while instantiating the Blowfish cipher" % result)
     return SmartPointer(void_p.get(), stop_operation)

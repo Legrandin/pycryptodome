@@ -13,6 +13,7 @@ from Crypto.Util._raw_api import (
     VoidPointer,
     c_size_t,
     c_uint8_ptr,
+    c_uint8_ptr_len,
     c_uint8_ptr_out,
     c_ulonglong,
     null_pointer,
@@ -326,9 +327,8 @@ class EccPoint:
         if scalar < 0:
             raise ValueError("Scalar multiplication is only defined for non-negative integers")
         sb = long_to_bytes(scalar)
-        result = scalar_func(
-            self._point.get(), c_uint8_ptr(sb), c_size_t(len(sb)), c_ulonglong(getrandbits(64))
-        )
+        sb_ptr, sb_len = c_uint8_ptr_len(sb)
+        result = scalar_func(self._point.get(), sb_ptr, c_size_t(sb_len), c_ulonglong(getrandbits(64)))
         if result:
             raise ValueError("Error %d during scalar multiplication" % result)
         return self
@@ -476,9 +476,8 @@ class EccXPoint:
         if scalar < 0:
             raise ValueError("Scalar multiplication is only defined for non-negative integers")
         sb = long_to_bytes(scalar)
-        result = scalar_func(
-            self._point.get(), c_uint8_ptr(sb), c_size_t(len(sb)), c_ulonglong(getrandbits(64))
-        )
+        sb_ptr, sb_len = c_uint8_ptr_len(sb)
+        result = scalar_func(self._point.get(), sb_ptr, c_size_t(sb_len), c_ulonglong(getrandbits(64)))
         if result:
             raise ValueError("Error %d during scalar multiplication" % result)
         return self

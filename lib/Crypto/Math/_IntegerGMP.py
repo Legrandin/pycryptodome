@@ -31,7 +31,7 @@
 import struct
 import sys
 
-from Crypto.Util._raw_api import backend, c_size_t, c_uint8_ptr, c_ulong, load_lib
+from Crypto.Util._raw_api import backend, c_size_t, c_uint8_ptr_len, c_ulong, load_lib
 
 from ._IntegerBase import IntegerBase
 
@@ -302,14 +302,15 @@ class IntegerGMP(IntegerBase):
             byte_string.reverse()
         else:
             raise ValueError("Incorrect byteorder")
+        byte_string_ptr, byte_string_len = c_uint8_ptr_len(byte_string)
         _gmp.mpz_import(
             result._mpz_p,
-            c_size_t(len(byte_string)),  # Amount of words to read
+            c_size_t(byte_string_len),  # Amount of words to read
             1,  # Big endian
             c_size_t(1),  # Each word is 1 byte long
             0,  # Endianess within a word - not relevant
             c_size_t(0),  # No nails
-            c_uint8_ptr(byte_string),
+            byte_string_ptr,
         )
         return result
 

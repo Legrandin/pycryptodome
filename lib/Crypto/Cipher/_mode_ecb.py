@@ -33,7 +33,7 @@ from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
     c_size_t,
-    c_uint8_ptr,
+    c_uint8_ptr_len,
     c_uint8_ptr_out,
     create_string_buffer,
     get_raw_buffer,
@@ -150,8 +150,12 @@ class EcbMode:
                 raise ValueError("output must have the same length as the input  (%d bytes)" % len(plaintext))
 
         with c_uint8_ptr_out(ciphertext) as ciphertext_ptr:
+            plaintext_ptr, plaintext_len = c_uint8_ptr_len(plaintext)
+            # Check the lengths of the buffers that C code gets
+            if len(ciphertext_ptr) != plaintext_len:
+                raise ValueError("output must have the same length as the input  (%d bytes)" % plaintext_len)
             result = raw_ecb_lib.ECB_encrypt(
-                self._state.get(), c_uint8_ptr(plaintext), ciphertext_ptr, c_size_t(len(plaintext))
+                self._state.get(), plaintext_ptr, ciphertext_ptr, c_size_t(plaintext_len)
             )
         if result:
             if result == 3:
@@ -212,8 +216,12 @@ class EcbMode:
                 raise ValueError("output must have the same length as the input  (%d bytes)" % len(plaintext))
 
         with c_uint8_ptr_out(plaintext) as plaintext_ptr:
+            ciphertext_ptr, ciphertext_len = c_uint8_ptr_len(ciphertext)
+            # Check the lengths of the buffers that C code gets
+            if len(plaintext_ptr) != ciphertext_len:
+                raise ValueError("output must have the same length as the input  (%d bytes)" % ciphertext_len)
             result = raw_ecb_lib.ECB_decrypt(
-                self._state.get(), c_uint8_ptr(ciphertext), plaintext_ptr, c_size_t(len(ciphertext))
+                self._state.get(), ciphertext_ptr, plaintext_ptr, c_size_t(ciphertext_len)
             )
         if result:
             if result == 3:

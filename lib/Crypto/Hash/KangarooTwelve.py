@@ -36,7 +36,7 @@ from typing import Optional, Union
 
 from Crypto.Util._raw_api import (
     c_size_t,
-    c_uint8_ptr,
+    c_uint8_ptr_len,
     c_uint8_ptr_out,
     create_string_buffer,
     get_raw_buffer,
@@ -94,14 +94,15 @@ def _hash_leaves(leaves: memoryview, cvs: memoryview) -> None:
         cvs (memoryview): writeable output buffer, ``32 * n`` bytes
     """
 
-    n_leaves = len(leaves) // 8192
-    assert len(leaves) == 8192 * n_leaves
-    assert len(cvs) == 32 * n_leaves
+    leaves_ptr, leaves_len = c_uint8_ptr_len(leaves)
+    n_leaves = leaves_len // 8192
+    assert leaves_len == 8192 * n_leaves
     if n_leaves == 0:
         return
 
     with c_uint8_ptr_out(cvs) as cvs_ptr:
-        result = _raw_k12_lib.k12_leaves(c_uint8_ptr(leaves), c_size_t(n_leaves), cvs_ptr)
+        assert len(cvs_ptr) == 32 * n_leaves
+        result = _raw_k12_lib.k12_leaves(leaves_ptr, c_size_t(n_leaves), cvs_ptr)
     if result:
         raise ValueError("Error %d while hashing K12 leaves" % result)
 
@@ -441,11 +442,13 @@ def digest(data: Buffer, *, length: int, custom: Optional[bytes] = None) -> byte
         raise ValueError("'length' must be a non-negative integer")
 
     out = create_string_buffer(length)
+    data_ptr, data_len = c_uint8_ptr_len(data)
+    custom_ptr, custom_len = c_uint8_ptr_len(custom)
     result = _raw_k12_lib.k12_oneshot(
-        c_uint8_ptr(data),
-        c_size_t(len(data)),
-        c_uint8_ptr(custom),
-        c_size_t(len(custom)),
+        data_ptr,
+        c_size_t(data_len),
+        custom_ptr,
+        c_size_t(custom_len),
         out,
         c_size_t(length),
     )

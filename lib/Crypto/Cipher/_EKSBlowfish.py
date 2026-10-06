@@ -39,7 +39,7 @@ from Crypto.Util._raw_api import (
     VoidPointer,
     c_size_t,
     c_uint,
-    c_uint8_ptr,
+    c_uint8_ptr_len,
     load_pycryptodome_raw_lib,
 )
 
@@ -91,11 +91,13 @@ def _create_base_cipher(dict_parameters):
     stop_operation = _raw_blowfish_lib.EKSBlowfish_stop_operation
 
     void_p = VoidPointer()
+    key_ptr, key_len = c_uint8_ptr_len(key)
+    salt_ptr, salt_len = c_uint8_ptr_len(salt)
     result = start_operation(
-        c_uint8_ptr(key),
-        c_size_t(len(key)),
-        c_uint8_ptr(salt),
-        c_size_t(len(salt)),
+        key_ptr,
+        c_size_t(key_len),
+        salt_ptr,
+        c_size_t(salt_len),
         c_uint(cost),
         c_uint(int(invert)),
         void_p.address_of(),

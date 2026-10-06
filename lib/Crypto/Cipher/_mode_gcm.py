@@ -49,6 +49,7 @@ from Crypto.Util._raw_api import (
     VoidPointer,
     c_size_t,
     c_uint8_ptr,
+    c_uint8_ptr_len,
     create_string_buffer,
     get_raw_buffer,
     is_buffer,
@@ -145,10 +146,11 @@ class _GHASH:
     def update(self, block_data):
         assert len(block_data) % 16 == 0
 
+        block_data_ptr, block_data_len = c_uint8_ptr_len(block_data)
         result = self.ghash_c.ghash(
             self._last_y,
-            c_uint8_ptr(block_data),
-            c_size_t(len(block_data)),
+            block_data_ptr,
+            c_size_t(block_data_len),
             self._last_y,
             self._exp_key.get(),
         )

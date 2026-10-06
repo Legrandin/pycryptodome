@@ -37,7 +37,7 @@ from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
     c_size_t,
-    c_uint8_ptr,
+    c_uint8_ptr_len,
     create_string_buffer,
     get_raw_buffer,
     load_pycryptodome_raw_lib,
@@ -99,9 +99,8 @@ class RIPEMD160Hash:
             data (byte string/byte array/memoryview): The next chunk of the message being hashed.
         """
 
-        result = _raw_ripemd160_lib.ripemd160_update(
-            self._state.get(), c_uint8_ptr(data), c_size_t(len(data))
-        )
+        data_ptr, data_len = c_uint8_ptr_len(data)
+        result = _raw_ripemd160_lib.ripemd160_update(self._state.get(), data_ptr, c_size_t(data_len))
         if result:
             raise ValueError("Error %d while instantiating ripemd160" % result)
 

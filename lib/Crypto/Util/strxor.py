@@ -34,7 +34,7 @@ from typing import Any, Optional, Union, overload
 
 from Crypto.Util._raw_api import (
     c_size_t,
-    c_uint8_ptr,
+    c_uint8_ptr_len,
     c_uint8_ptr_out,
     create_string_buffer,
     get_raw_buffer,
@@ -105,7 +105,14 @@ def strxor(
             raise ValueError("output must have the same length as the input  (%d bytes)" % len(term1))
 
     with c_uint8_ptr_out(result) as result_ptr:
-        _raw_strxor.strxor(c_uint8_ptr(term1), c_uint8_ptr(term2), result_ptr, c_size_t(len(term1)))
+        term1_ptr, term1_len = c_uint8_ptr_len(term1)
+        term2_ptr, term2_len = c_uint8_ptr_len(term2)
+        # Check the lengths of the buffers that C code gets
+        if term2_len != term1_len:
+            raise ValueError("Only byte strings of equal length can be xored")
+        if len(result_ptr) != term1_len:
+            raise ValueError("output must have the same length as the input  (%d bytes)" % term1_len)
+        _raw_strxor.strxor(term1_ptr, term2_ptr, result_ptr, c_size_t(term1_len))
 
     if output is None:
         return get_raw_buffer(result)
@@ -157,7 +164,11 @@ def strxor_c(term: Buffer, c: int, output: Optional[Union[bytearray, memoryview]
             raise ValueError("output must have the same length as the input  (%d bytes)" % len(term))
 
     with c_uint8_ptr_out(result) as result_ptr:
-        _raw_strxor.strxor_c(c_uint8_ptr(term), c, result_ptr, c_size_t(len(term)))
+        term_ptr, term_len = c_uint8_ptr_len(term)
+        # Check the lengths of the buffers that C code gets
+        if len(result_ptr) != term_len:
+            raise ValueError("output must have the same length as the input  (%d bytes)" % term_len)
+        _raw_strxor.strxor_c(term_ptr, c, result_ptr, c_size_t(term_len))
 
     if output is None:
         return get_raw_buffer(result)

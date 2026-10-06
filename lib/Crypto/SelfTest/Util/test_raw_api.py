@@ -235,3 +235,83 @@ def test_pypy_locked_types():
         resizable = False
     del ptr
     assert (bytearray in _raw_api._pypy_locked_types) == (not resizable)
+
+
+class _LyingBytearray(bytearray):
+    """A bytearray that claims to be 'extra' bytes longer than it is, like
+    a bytearray that another thread shrinks right after its length is read"""
+
+    def __init__(self, data, extra):
+        super().__init__(data)
+        self.extra = extra
+
+    def __len__(self):
+        return super().__len__() + self.extra
+
+
+class TestLengthsFromHeldBuffer:
+    """C code must get the length of the buffer it actually uses,
+    never one read separately through len()"""
+
+    def test_hash_input(self):
+        data = _LyingBytearray(b"abc", 64)
+        try:
+            digest = SHA3_256.new(data).digest()
+        except ValueError:
+            return
+        assert digest == SHA3_256.new(b"abc").digest()
+
+    def test_cipher_input(self):
+        from Crypto.Cipher import AES
+
+        data = _LyingBytearray(16, 64)
+        try:
+            ct = AES.new(b"k" * 16, AES.MODE_ECB).encrypt(data)
+        except ValueError:
+            return
+        assert ct == AES.new(b"k" * 16, AES.MODE_ECB).encrypt(bytes(16))
+
+    @pytest.mark.parametrize("mode", ["ECB", "CBC", "CTR", "CFB", "OFB"])
+    def test_cipher_output(self, mode):
+        from Crypto.Cipher import AES
+
+        kwargs = {"ECB": {}, "CTR": {"nonce": bytes(8)}}.get(mode, {"iv": bytes(16)})
+        cipher = AES.new(b"k" * 16, getattr(AES, "MODE_" + mode), **kwargs)
+        out = _LyingBytearray(0, 32)  # 0 bytes, but len() says 32
+        with pytest.raises(ValueError):
+            cipher.encrypt(bytes(32), output=out)
+
+    def test_stream_cipher_output(self):
+        from Crypto.Cipher import ChaCha20, Salsa20
+
+        for cipher in (
+            ChaCha20.new(key=bytes(32), nonce=bytes(8)),
+            Salsa20.new(key=bytes(32), nonce=bytes(8)),
+        ):
+            with pytest.raises(ValueError):
+                cipher.encrypt(bytes(64), output=_LyingBytearray(0, 64))
+
+    def test_strxor(self):
+        from Crypto.Util.strxor import strxor, strxor_c
+
+        with pytest.raises(ValueError):
+            strxor(bytes(64), _LyingBytearray(0, 64))
+        with pytest.raises(ValueError):
+            strxor(bytes(64), bytes(64), output=_LyingBytearray(0, 64))
+        with pytest.raises(ValueError):
+            strxor_c(bytes(64), 1, output=_LyingBytearray(0, 64))
+
+    def test_ocb(self):
+        from Crypto.Cipher import AES
+
+        cipher = AES.new(b"k" * 16, AES.MODE_OCB, nonce=bytes(15))
+        try:
+            cipher.update(_LyingBytearray(0, 64))
+        except ValueError:
+            pass
+        cipher = AES.new(b"k" * 16, AES.MODE_OCB, nonce=bytes(15))
+        try:
+            ct = cipher.encrypt(_LyingBytearray(0, 64))
+        except ValueError:
+            return
+        assert ct == b""

@@ -39,7 +39,7 @@ from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
     c_size_t,
-    c_uint8_ptr,
+    c_uint8_ptr_len,
     create_string_buffer,
     get_raw_buffer,
     load_pycryptodome_raw_lib,
@@ -97,8 +97,9 @@ class BLAKE2b_Hash:
             self.oid = "1.3.6.1.4.1.1722.12.2.1." + str(digest_bytes // 4)
 
         state = VoidPointer()
+        key_ptr, key_len = c_uint8_ptr_len(key)
         result = _raw_blake2b_lib.blake2b_init(
-            state.address_of(), c_uint8_ptr(key), c_size_t(len(key)), c_size_t(digest_bytes)
+            state.address_of(), key_ptr, c_size_t(key_len), c_size_t(digest_bytes)
         )
         if result:
             raise ValueError("Error %d while instantiating BLAKE2b" % result)
@@ -116,7 +117,8 @@ class BLAKE2b_Hash:
         if self._digest_done and not self._update_after_digest:
             raise TypeError("You can only call 'digest' or 'hexdigest' on this object")
 
-        result = _raw_blake2b_lib.blake2b_update(self._state.get(), c_uint8_ptr(data), c_size_t(len(data)))
+        data_ptr, data_len = c_uint8_ptr_len(data)
+        result = _raw_blake2b_lib.blake2b_update(self._state.get(), data_ptr, c_size_t(data_len))
         if result:
             raise ValueError("Error %d while hashing BLAKE2b data" % result)
         return self

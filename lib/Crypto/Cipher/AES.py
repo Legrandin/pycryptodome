@@ -27,7 +27,13 @@ from typing import TYPE_CHECKING, Any, Dict, Literal, Optional, Tuple, Union, ov
 from Crypto.Cipher import _create_cipher
 from Crypto.Random import get_random_bytes
 from Crypto.Util import _cpu_features
-from Crypto.Util._raw_api import SmartPointer, VoidPointer, c_size_t, c_uint8_ptr, load_pycryptodome_raw_lib
+from Crypto.Util._raw_api import (
+    SmartPointer,
+    VoidPointer,
+    c_size_t,
+    c_uint8_ptr_len,
+    load_pycryptodome_raw_lib,
+)
 
 if TYPE_CHECKING:
     from Crypto.Cipher._mode_cbc import CbcMode
@@ -113,7 +119,8 @@ def _create_base_cipher(dict_parameters):
         stop_operation = _raw_aes_lib.AES_stop_operation
 
     cipher = VoidPointer()
-    result = start_operation(c_uint8_ptr(key), c_size_t(len(key)), cipher.address_of())
+    key_ptr, key_len = c_uint8_ptr_len(key)
+    result = start_operation(key_ptr, c_size_t(key_len), cipher.address_of())
     if result:
         raise ValueError("Error %X while instantiating the AES cipher" % result)
     return SmartPointer(cipher.get(), stop_operation)

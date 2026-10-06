@@ -37,7 +37,7 @@ import sys
 import threading
 import weakref
 from importlib import machinery
-from typing import Any, List, Optional, Union
+from typing import Any, List, Optional, Tuple, Union
 
 from Crypto.Util._file_system import pycryptodome_filename
 
@@ -351,6 +351,16 @@ except ImportError:
         return VoidPointer_ctypes()
 
     backend = "ctypes"
+
+
+def c_uint8_ptr_len(data: Union[bytes, memoryview, bytearray]) -> Tuple[Any, int]:
+    """Like c_uint8_ptr(), but also return the length of the memory that
+    C code gets. Pass C code that length, never len(data): another thread
+    could resize data in the meantime, but not the memory that C code gets,
+    for as long as the returned pointer is in use."""
+
+    ptr = c_uint8_ptr(data)
+    return ptr, len(ptr)
 
 
 class c_uint8_ptr_out:

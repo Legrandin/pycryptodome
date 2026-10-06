@@ -31,7 +31,7 @@ from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
     c_size_t,
-    c_uint8_ptr,
+    c_uint8_ptr_len,
     create_string_buffer,
     get_raw_buffer,
     load_pycryptodome_raw_lib,
@@ -83,8 +83,10 @@ class Poly1305_MAC:
         self._mac_tag: Optional[bytes] = None
 
         state = VoidPointer()
+        r_ptr, r_len = c_uint8_ptr_len(r)
+        s_ptr, s_len = c_uint8_ptr_len(s)
         result = _raw_poly1305.poly1305_init(
-            state.address_of(), c_uint8_ptr(r), c_size_t(len(r)), c_uint8_ptr(s), c_size_t(len(s))
+            state.address_of(), r_ptr, c_size_t(r_len), s_ptr, c_size_t(s_len)
         )
         if result:
             raise ValueError("Error %d while instantiating Poly1305" % result)
@@ -102,7 +104,8 @@ class Poly1305_MAC:
         if self._mac_tag:
             raise TypeError("You can only call 'digest' or 'hexdigest' on this object")
 
-        result = _raw_poly1305.poly1305_update(self._state.get(), c_uint8_ptr(data), c_size_t(len(data)))
+        data_ptr, data_len = c_uint8_ptr_len(data)
+        result = _raw_poly1305.poly1305_update(self._state.get(), data_ptr, c_size_t(data_len))
         if result:
             raise ValueError("Error %d while hashing Poly1305 data" % result)
         return self

@@ -1,4 +1,4 @@
-from Crypto.Util._raw_api import c_size_t, c_uint8_ptr, load_pycryptodome_raw_lib
+from Crypto.Util._raw_api import c_size_t, c_uint8_ptr, c_uint8_ptr_len, load_pycryptodome_raw_lib
 
 _raw_pkcs1_decode = load_pycryptodome_raw_lib(
     "Crypto.Cipher._pkcs1_decode",
@@ -22,11 +22,13 @@ def pkcs1_decode(em, sentinel, expected_pt_len, output):
     if len(em) != len(output):
         raise ValueError("Incorrect output length")
 
+    em_ptr, em_len = c_uint8_ptr_len(em)
+    sentinel_ptr, sentinel_len = c_uint8_ptr_len(sentinel)
     ret = _raw_pkcs1_decode.pkcs1_decode(
-        c_uint8_ptr(em),
-        c_size_t(len(em)),
-        c_uint8_ptr(sentinel),
-        c_size_t(len(sentinel)),
+        em_ptr,
+        c_size_t(em_len),
+        sentinel_ptr,
+        c_size_t(sentinel_len),
         c_size_t(expected_pt_len),
         c_uint8_ptr(output),
     )
@@ -34,12 +36,15 @@ def pkcs1_decode(em, sentinel, expected_pt_len, output):
 
 
 def oaep_decode(em, lHash, db):
+    em_ptr, em_len = c_uint8_ptr_len(em)
+    lHash_ptr, lHash_len = c_uint8_ptr_len(lHash)
+    db_ptr, db_len = c_uint8_ptr_len(db)
     ret = _raw_pkcs1_decode.oaep_decode(
-        c_uint8_ptr(em),
-        c_size_t(len(em)),
-        c_uint8_ptr(lHash),
-        c_size_t(len(lHash)),
-        c_uint8_ptr(db),
-        c_size_t(len(db)),
+        em_ptr,
+        c_size_t(em_len),
+        lHash_ptr,
+        c_size_t(lHash_len),
+        db_ptr,
+        c_size_t(db_len),
     )
     return ret

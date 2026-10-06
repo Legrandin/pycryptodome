@@ -27,7 +27,7 @@ from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
     c_size_t,
-    c_uint8_ptr,
+    c_uint8_ptr_len,
     create_string_buffer,
     get_raw_buffer,
     load_pycryptodome_raw_lib,
@@ -62,7 +62,8 @@ class ARC4Cipher:
             raise ValueError("Incorrect ARC4 key length (%d bytes)" % len(key))
 
         state = VoidPointer()
-        result = _raw_arc4_lib.ARC4_stream_init(c_uint8_ptr(key), c_size_t(len(key)), state.address_of())
+        key_ptr, key_len = c_uint8_ptr_len(key)
+        result = _raw_arc4_lib.ARC4_stream_init(key_ptr, c_size_t(key_len), state.address_of())
         if result != 0:
             raise ValueError("Error %d while creating the ARC4 cipher" % result)
         self._state = SmartPointer(state.get(), _raw_arc4_lib.ARC4_stream_destroy)
@@ -86,8 +87,9 @@ class ARC4Cipher:
         """
 
         ciphertext = create_string_buffer(len(plaintext))
+        plaintext_ptr, plaintext_len = c_uint8_ptr_len(plaintext)
         result = _raw_arc4_lib.ARC4_stream_encrypt(
-            self._state.get(), c_uint8_ptr(plaintext), ciphertext, c_size_t(len(plaintext))
+            self._state.get(), plaintext_ptr, ciphertext, c_size_t(plaintext_len)
         )
         if result:
             raise ValueError("Error %d while encrypting with RC4" % result)

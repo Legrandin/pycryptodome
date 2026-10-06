@@ -38,7 +38,7 @@ from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
     c_size_t,
-    c_uint8_ptr,
+    c_uint8_ptr_len,
     c_uint8_ptr_out,
     c_ulong,
     create_string_buffer,
@@ -78,12 +78,14 @@ _raw_chacha20_lib = load_pycryptodome_raw_lib(
 
 
 def _HChaCha20(key: Buffer, nonce: Buffer) -> bytearray:
-    assert len(key) == 32
-    assert len(nonce) == 16
-
     subkey = bytearray(32)
     with c_uint8_ptr_out(subkey) as subkey_ptr:
-        result = _raw_chacha20_lib.hchacha20(c_uint8_ptr(key), c_uint8_ptr(nonce), subkey_ptr)
+        # The C function reads exactly 32 bytes of key and 16 of nonce
+        key_ptr, key_len = c_uint8_ptr_len(key)
+        nonce_ptr, nonce_len = c_uint8_ptr_len(nonce)
+        if key_len != 32 or nonce_len != 16:
+            raise ValueError("Incorrect key or nonce length for HChaCha20")
+        result = _raw_chacha20_lib.hchacha20(key_ptr, nonce_ptr, subkey_ptr)
     if result:
         raise ValueError("Error %d when deriving subkey with HChaCha20" % result)
 
@@ -120,8 +122,9 @@ class ChaCha20Cipher:
         self._next: Tuple[str, ...] = ("encrypt", "decrypt")
 
         state = VoidPointer()
+        key_ptr, key_len = c_uint8_ptr_len(key)
         result = _raw_chacha20_lib.chacha20_init(
-            state.address_of(), c_uint8_ptr(key), c_size_t(len(key)), nonce, c_size_t(len(nonce))
+            state.address_of(), key_ptr, c_size_t(key_len), nonce, c_size_t(len(nonce))
         )
         if result:
             raise ValueError("Error %d instantiating a %s cipher" % (result, self._name))
@@ -173,8 +176,12 @@ class ChaCha20Cipher:
                 raise ValueError("output must have the same length as the input  (%d bytes)" % len(plaintext))
 
         with c_uint8_ptr_out(ciphertext) as ciphertext_ptr:
+            plaintext_ptr, plaintext_len = c_uint8_ptr_len(plaintext)
+            # Check the lengths of the buffers that C code gets
+            if len(ciphertext_ptr) != plaintext_len:
+                raise ValueError("output must have the same length as the input  (%d bytes)" % plaintext_len)
             result = _raw_chacha20_lib.chacha20_encrypt(
-                self._state.get(), c_uint8_ptr(plaintext), ciphertext_ptr, c_size_t(len(plaintext))
+                self._state.get(), plaintext_ptr, ciphertext_ptr, c_size_t(plaintext_len)
             )
         if result:
             raise ValueError("Error %d while encrypting with %s" % (result, self._name))

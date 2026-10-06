@@ -81,7 +81,7 @@ from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
     c_size_t,
-    c_uint8_ptr,
+    c_uint8_ptr_len,
     create_string_buffer,
     get_raw_buffer,
     is_buffer,
@@ -197,7 +197,12 @@ class OcbMode:
         raw_cipher.release()
 
     def _update(self, assoc_data, assoc_data_len):
-        result = _raw_ocb_lib.OCB_update(self._state.get(), c_uint8_ptr(assoc_data), c_size_t(assoc_data_len))
+        # assoc_data_len was computed before C code got assoc_data,
+        # which another thread may have shrunk in the meantime
+        assoc_data_ptr, held_len = c_uint8_ptr_len(assoc_data)
+        if assoc_data_len > held_len:
+            raise ValueError("The associated data changed while being processed")
+        result = _raw_ocb_lib.OCB_update(self._state.get(), assoc_data_ptr, c_size_t(assoc_data_len))
         if result:
             raise ValueError("Error %d while computing MAC in OCB mode" % result)
 
@@ -275,8 +280,9 @@ class OcbMode:
             self._cache_P = b""
 
         # Process data in multiples of the block size
-        trans_len = len(in_data) // 16 * 16
-        result = self._transcrypt_aligned(c_uint8_ptr(in_data), trans_len, trans_func, trans_desc)
+        in_data_ptr, in_data_len = c_uint8_ptr_len(in_data)
+        trans_len = in_data_len // 16 * 16
+        result = self._transcrypt_aligned(in_data_ptr, trans_len, trans_func, trans_desc)
         if prefix:
             result = prefix + result
 

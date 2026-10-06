@@ -8,6 +8,7 @@ from Crypto.Util._raw_api import (
     VoidPointer,
     c_size_t,
     c_uint8_ptr,
+    c_uint8_ptr_len,
     c_ulonglong,
     load_pycryptodome_raw_lib,
 )
@@ -76,12 +77,13 @@ def p192_curve():
     p192_order = long_to_bytes(order, 24)
 
     ec_p192_context = VoidPointer()
+    p192_modulus_ptr, p192_modulus_len = c_uint8_ptr_len(p192_modulus)
     result = _ec_lib.ec_ws_new_context(
         ec_p192_context.address_of(),
-        c_uint8_ptr(p192_modulus),
+        p192_modulus_ptr,
         c_uint8_ptr(p192_b),
         c_uint8_ptr(p192_order),
-        c_size_t(len(p192_modulus)),
+        c_size_t(p192_modulus_len),
         c_ulonglong(getrandbits(64)),
     )
     if result:
@@ -117,12 +119,13 @@ def p224_curve():
     p224_order = long_to_bytes(order, 28)
 
     ec_p224_context = VoidPointer()
+    p224_modulus_ptr, p224_modulus_len = c_uint8_ptr_len(p224_modulus)
     result = _ec_lib.ec_ws_new_context(
         ec_p224_context.address_of(),
-        c_uint8_ptr(p224_modulus),
+        p224_modulus_ptr,
         c_uint8_ptr(p224_b),
         c_uint8_ptr(p224_order),
-        c_size_t(len(p224_modulus)),
+        c_size_t(p224_modulus_len),
         c_ulonglong(getrandbits(64)),
     )
     if result:
@@ -158,12 +161,13 @@ def p256_curve():
     p256_order = long_to_bytes(order, 32)
 
     ec_p256_context = VoidPointer()
+    p256_modulus_ptr, p256_modulus_len = c_uint8_ptr_len(p256_modulus)
     result = _ec_lib.ec_ws_new_context(
         ec_p256_context.address_of(),
-        c_uint8_ptr(p256_modulus),
+        p256_modulus_ptr,
         c_uint8_ptr(p256_b),
         c_uint8_ptr(p256_order),
-        c_size_t(len(p256_modulus)),
+        c_size_t(p256_modulus_len),
         c_ulonglong(getrandbits(64)),
     )
     if result:
@@ -199,12 +203,13 @@ def p384_curve():
     p384_order = long_to_bytes(order, 48)
 
     ec_p384_context = VoidPointer()
+    p384_modulus_ptr, p384_modulus_len = c_uint8_ptr_len(p384_modulus)
     result = _ec_lib.ec_ws_new_context(
         ec_p384_context.address_of(),
-        c_uint8_ptr(p384_modulus),
+        p384_modulus_ptr,
         c_uint8_ptr(p384_b),
         c_uint8_ptr(p384_order),
-        c_size_t(len(p384_modulus)),
+        c_size_t(p384_modulus_len),
         c_ulonglong(getrandbits(64)),
     )
     if result:
@@ -240,12 +245,13 @@ def p521_curve():
     p521_order = long_to_bytes(order, 66)
 
     ec_p521_context = VoidPointer()
+    p521_modulus_ptr, p521_modulus_len = c_uint8_ptr_len(p521_modulus)
     result = _ec_lib.ec_ws_new_context(
         ec_p521_context.address_of(),
-        c_uint8_ptr(p521_modulus),
+        p521_modulus_ptr,
         c_uint8_ptr(p521_b),
         c_uint8_ptr(p521_order),
-        c_size_t(len(p521_modulus)),
+        c_size_t(p521_modulus_len),
         c_ulonglong(getrandbits(64)),
     )
     if result:

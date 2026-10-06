@@ -31,7 +31,7 @@ from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
     c_size_t,
-    c_uint8_ptr,
+    c_uint8_ptr_len,
     c_uint8_ptr_out,
     create_string_buffer,
     get_raw_buffer,
@@ -77,8 +77,10 @@ class Salsa20Cipher:
         self.nonce = copy_bytes(None, None, nonce)
 
         state = VoidPointer()
+        key_ptr, key_len = c_uint8_ptr_len(key)
+        nonce_ptr, nonce_len = c_uint8_ptr_len(nonce)
         result = _raw_salsa20_lib.Salsa20_stream_init(
-            c_uint8_ptr(key), c_size_t(len(key)), c_uint8_ptr(nonce), c_size_t(len(nonce)), state.address_of()
+            key_ptr, c_size_t(key_len), nonce_ptr, c_size_t(nonce_len), state.address_of()
         )
         if result:
             raise ValueError("Error %d instantiating a Salsa20 cipher")
@@ -125,8 +127,12 @@ class Salsa20Cipher:
                 raise ValueError("output must have the same length as the input  (%d bytes)" % len(plaintext))
 
         with c_uint8_ptr_out(ciphertext) as ciphertext_ptr:
+            plaintext_ptr, plaintext_len = c_uint8_ptr_len(plaintext)
+            # Check the lengths of the buffers that C code gets
+            if len(ciphertext_ptr) != plaintext_len:
+                raise ValueError("output must have the same length as the input  (%d bytes)" % plaintext_len)
             result = _raw_salsa20_lib.Salsa20_stream_encrypt(
-                self._state.get(), c_uint8_ptr(plaintext), ciphertext_ptr, c_size_t(len(plaintext))
+                self._state.get(), plaintext_ptr, ciphertext_ptr, c_size_t(plaintext_len)
             )
         if result:
             raise ValueError("Error %d while encrypting with Salsa20" % result)
