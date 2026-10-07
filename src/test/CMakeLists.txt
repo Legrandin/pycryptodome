@@ -153,6 +153,15 @@ if (SSE)
   add_test(NAME test_clmul COMMAND test_clmul)
 endif()
 
+# GHASH: portable, and CLMUL when available
+if (SSE)
+  add_executable(test_ghash test_ghash.c ../ghash_portable.c ../ghash_clmul.c)
+  target_compile_definitions(test_ghash PRIVATE TEST_CLMUL)
+else()
+  add_executable(test_ghash test_ghash.c ../ghash_portable.c)
+endif()
+add_test(NAME test_ghash COMMAND test_ghash)
+
 # poly1305
 add_library(poly1305 OBJECT ../poly1305.c)
 foreach (f reduce load_r load_m multiply accumulate)
