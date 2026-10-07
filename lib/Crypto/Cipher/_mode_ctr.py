@@ -75,6 +75,8 @@ raw_ctr_lib = load_pycryptodome_raw_lib(
                                        size_t data_len);
                     int CTR_skip(void *ctrState,
                                  size_t data_len);
+                    int CTR_check(const void *ctrState,
+                                  size_t data_len);
                     int CTR_stop_operation(void *ctrState);""",
 )
 
@@ -96,6 +98,11 @@ def _ctr_threaded(state, in_ptr, out_ptr, data_len: int, threads: int) -> int:
     threads = min(threads, data_len // _MIN_BYTES_PER_THREAD)
     if threads <= 1:
         return raw_ctr_lib.CTR_encrypt(state, in_ptr, out_ptr, c_size_t(data_len))
+
+    # Like CTR_encrypt(), process nothing if the key stream runs out
+    result = raw_ctr_lib.CTR_check(state, c_size_t(data_len))
+    if result:
+        return result
 
     results = [0] * threads
     errors = []
@@ -131,8 +138,8 @@ def _ctr_threaded(state, in_ptr, out_ptr, data_len: int, threads: int) -> int:
     for t in workers:
         t.join()
 
-    # Move the state forward even after an error,
-    # so that the same key stream cannot be used again
+    # Move the state forward even after an error in a thread (some ranges may
+    # be processed already), so that the same key stream cannot be used again
     result = raw_ctr_lib.CTR_skip(state, c_size_t(data_len))
 
     if errors:

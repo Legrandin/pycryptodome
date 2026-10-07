@@ -169,6 +169,10 @@ endforeach()
 add_executable(test_pkcs1 test_pkcs1.c ../pkcs1_decode.c)
 add_test(NAME test_pkcs1 COMMAND test_pkcs1)
 
+# CTR mode
+add_executable(test_raw_ctr test_raw_ctr.c ../raw_ctr.c)
+add_test(NAME test_raw_ctr COMMAND test_raw_ctr)
+
 # curve25519
 add_library(mod25519 OBJECT ../mod25519.c ../multiply_32.c)
 add_library(curve25519 OBJECT ../curve25519.c ../multiply_32.c)

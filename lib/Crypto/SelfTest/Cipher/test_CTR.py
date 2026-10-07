@@ -431,12 +431,24 @@ class TestCtrThreads:
             with pytest.raises(OverflowError):
                 cipher.encrypt(b"9" * 2)
 
-            cipher = AES.new(self.key_128, AES.MODE_CTR, counter=counter, threads=threads)
-            with pytest.raises(OverflowError):
-                cipher.decrypt(b"9" * (max_bytes + 1))
-            # The key stream cannot be used again
-            with pytest.raises(OverflowError):
-                cipher.decrypt(b"9" * 2)
+    @pytest.mark.parametrize("threads", (1, 2, 3, 8))
+    def test_wrap_around_nothing_processed(self, tiny_ranges, threads):
+        # If the data does not fit in the counter, nothing is processed
+        # (not even the part that fits) and the state does not change
+        counter = Counter.new(8, prefix=bytes([9]) * 15)
+        max_bytes = 4096
+        ref = AES.new(self.key_128, AES.MODE_CTR, counter=counter).encrypt(b"9" * max_bytes)
+
+        cipher = AES.new(self.key_128, AES.MODE_CTR, counter=counter, threads=threads)
+        cipher.encrypt(b"9" * 100)
+        output = bytearray(max_bytes - 99)
+        with pytest.raises(OverflowError):
+            cipher.encrypt(b"9" * (max_bytes - 99), output=output)
+        assert output == bytearray(max_bytes - 99)
+
+        assert cipher.encrypt(b"9" * (max_bytes - 100)) == ref[100:]
+        with pytest.raises(OverflowError):
+            cipher.encrypt(b"9")
 
     @pytest.mark.parametrize("name", ["DES", "DES3", "ARC2", "Blowfish", "CAST"])
     def test_other_ciphers(self, tiny_ranges, name):

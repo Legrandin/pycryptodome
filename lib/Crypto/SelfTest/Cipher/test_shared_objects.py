@@ -63,10 +63,11 @@ class _Salsa20State(ctypes.Structure):
 class _CtrState(ctypes.Structure):
     _fields_ = [
         ("cipher", ctypes.c_void_p),
+        ("block_len", ctypes.c_size_t),
         ("counter_blocks", ctypes.c_void_p),
-        ("counter", ctypes.c_void_p),
+        ("counter_offset", ctypes.c_size_t),
         ("counter_len", ctypes.c_size_t),
-        ("little_endian", ctypes.c_uint),
+        ("add", ctypes.c_void_p),
         ("keystream", ctypes.c_void_p),
         ("used_ks", ctypes.c_size_t),
     ]
