@@ -102,14 +102,20 @@ def _ctr_threaded(state, in_ptr, out_ptr, data_len: int, threads: int) -> int:
 
     def worker(i, start, end):
         try:
-            # CTR_encrypt_at() does not change the state
+            # CTR_encrypt_at() does not change the state, and writes only
+            # out_ptr[start:end] (no two threads write the same bytes)
             results[i] = raw_ctr_lib.CTR_encrypt_at(
                 state, in_ptr, out_ptr, c_size_t(start), c_size_t(end - start)
             )
         except Exception as e:
             errors.append(e)
 
-    # Ranges differ by at most one byte
+    # List of byte positions where each range starts ('threads' ranges).
+    # Each range is data_len // threads bytes long or one byte more.
+    # The first item is the first byte of the first range (always 0).
+    # The last item is the first byte beyond the last range (always data_len).
+    # Ranges may start in the middle of a cipher block: in CTR mode, each byte
+    # of the key stream only depends on its position (see CTR_encrypt_at).
     bounds = [data_len * i // threads for i in range(threads + 1)]
 
     workers = []

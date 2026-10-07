@@ -421,6 +421,8 @@ EXPORT_SYM int CTR_encrypt_at(const CtrModeState *ctr_state,
     }
     used_ks = (size_t)(pos % ks_size);
 
+    /** Write only out[offset..offset+data_len-1]: the key stream is private, and
+     *  a block shared with another range is computed twice but used for different bytes **/
     in += offset;
     out += offset;
     while (data_len > 0) {
