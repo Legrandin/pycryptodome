@@ -30,10 +30,8 @@
 
 from __future__ import annotations
 
-import threading
 from typing import Optional, Union
 
-from Crypto.Util._cpu_features import available_cores as _available_cores
 from Crypto.Util._raw_api import (
     c_size_t,
     c_uint8_ptr_len,
@@ -42,6 +40,7 @@ from Crypto.Util._raw_api import (
     get_raw_buffer,
     load_pycryptodome_raw_lib,
 )
+from Crypto.Util._threads import run_in_threads, split, threads_param
 from Crypto.Util.number import long_to_bytes
 
 from . import TurboSHAKE128
@@ -126,31 +125,14 @@ def _hash_leaves_threaded(leaves: memoryview, cvs: memoryview, threads: int) -> 
         _hash_leaves(leaves, cvs)
         return
 
-    errors = []
-
-    def worker(start, end):
-        try:
-            _hash_leaves(leaves[8192 * start : 8192 * end], cvs[32 * start : 32 * end])
-        except Exception as e:
-            errors.append(e)
-
     # Ranges differ by at most one leaf
-    bounds = [n_leaves * i // threads for i in range(threads + 1)]
+    bounds = split(n_leaves, threads)
 
-    workers = []
-    for i in range(1, threads):
-        t = threading.Thread(target=worker, args=(bounds[i], bounds[i + 1]))
-        t.daemon = True
-        t.start()
-        workers.append(t)
+    def worker(i):
+        start, end = bounds[i], bounds[i + 1]
+        _hash_leaves(leaves[8192 * start : 8192 * end], cvs[32 * start : 32 * end])
 
-    worker(bounds[0], bounds[1])
-
-    for t in workers:
-        t.join()
-
-    if errors:
-        raise errors[0]
+    run_in_threads(worker, threads)
 
 
 # Possible states for a KangarooTwelve instance, which depend on the amount of data processed so far.
@@ -170,13 +152,7 @@ class K12_XOF:
         if custom is None:
             custom = b""
 
-        if not isinstance(threads, int) or isinstance(threads, bool):
-            raise TypeError("'threads' must be an integer")
-        if threads < 0:
-            raise ValueError("'threads' must be a non-negative integer")
-        if threads == 0:
-            threads = _available_cores()
-        self._threads = threads
+        self._threads = threads_param(threads)
 
         self._custom = custom + _length_encode(len(custom))
         self._state = SHORT_MSG

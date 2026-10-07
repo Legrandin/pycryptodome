@@ -34,7 +34,6 @@ Galois/Counter Mode (GCM).
 
 from __future__ import annotations
 
-import threading
 from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple, Union, overload
 
 __all__ = ["GcmMode"]
@@ -56,6 +55,7 @@ from Crypto.Util._raw_api import (
     is_buffer,
     load_pycryptodome_raw_lib,
 )
+from Crypto.Util._threads import run_in_threads, split
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 
 if TYPE_CHECKING:
@@ -197,44 +197,24 @@ class _GHASH:
         """Hash the data in ``threads`` contiguous ranges, in parallel.
         The calling thread processes the first range."""
 
-        n_blocks = block_data_len // 16
         # Ranges differ by at most one block
-        bounds = [16 * (n_blocks * i // threads) for i in range(threads + 1)]
+        bounds = split(block_data_len, threads, 16)
 
         # The first range continues from the current value;
         # the others start from zero, and are combined later
         partials = [self._last_y] + [create_string_buffer(16) for _ in range(1, threads)]
-        results = [0] * threads
-        errors = []
 
         def worker(i):
-            try:
-                results[i] = self.ghash_c.ghash_at(
-                    partials[i],
-                    block_data_ptr,
-                    c_size_t(bounds[i]),
-                    c_size_t(bounds[i + 1] - bounds[i]),
-                    partials[i],
-                    self._exp_key.get(),
-                )
-            except Exception as e:
-                errors.append(e)
+            return self.ghash_c.ghash_at(
+                partials[i],
+                block_data_ptr,
+                c_size_t(bounds[i]),
+                c_size_t(bounds[i + 1] - bounds[i]),
+                partials[i],
+                self._exp_key.get(),
+            )
 
-        workers = []
-        for i in range(1, threads):
-            t = threading.Thread(target=worker, args=(i,))
-            t.daemon = True
-            t.start()
-            workers.append(t)
-
-        worker(0)
-
-        for t in workers:
-            t.join()
-
-        if errors:
-            raise errors[0]
-        for result in results:
+        for result in run_in_threads(worker, threads):
             if result:
                 raise ValueError("Error %d while updating GHASH" % result)
 

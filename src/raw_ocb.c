@@ -298,45 +298,119 @@ static int range_start(uint64_t counter, size_t offset, size_t data_len, uint64_
     return check_blocks(*first, data_len / BLOCK_SIZE);
 }
 
+/**
+ * Compute Offset_0 from the nonce (RFC 7253, section 4.2).
+ *
+ * The nonce is formatted into a block, with the tag length (in bits, modulo 128)
+ * in the top 7 bits, then zeroes, a single 1 bit, and the nonce itself.
+ * Ktop is the encryption of that block, with the bottom 6 bits cleared.
+ * Stretch is Ktop || (Ktop[0..63] xor Ktop[8..71]), 192 bits.
+ * Offset_0 is made of the 128 bits of Stretch that start at bit "bottom"
+ * (the 6 bits cleared before, counting from the most significant bit).
+ */
+static int compute_offset_0(const OcbModeState *state,
+                            const uint8_t *nonce,
+                            size_t nonce_len,
+                            size_t tag_len,
+                            DataBlock offset_0)
+{
+    DataBlock formatted;
+    uint8_t stretch[BLOCK_SIZE + 8];
+    unsigned bottom, byte_shift, bit_shift, i;
+    int result;
+
+    memset(formatted, 0, BLOCK_SIZE);
+    formatted[0] = (uint8_t)(((tag_len * 8) % 128) << 1);
+    formatted[BLOCK_SIZE - 1 - nonce_len] |= 1;
+    memcpy(formatted + BLOCK_SIZE - nonce_len, nonce, nonce_len);
+
+    bottom = formatted[BLOCK_SIZE - 1] & 0x3F;
+    formatted[BLOCK_SIZE - 1] &= 0xC0;
+
+    result = state->cipher->encrypt(state->cipher, formatted, stretch, BLOCK_SIZE);
+    if (result)
+        return result;
+    for (i=0; i<8; i++)
+        stretch[BLOCK_SIZE + i] = stretch[i] ^ stretch[i + 1];
+
+    byte_shift = bottom / 8;
+    bit_shift = bottom % 8;
+    for (i=0; i<BLOCK_SIZE; i++) {
+        unsigned two_bytes;
+
+        /** byte_shift + i + 1 is at most 7 + 15 + 1, within stretch **/
+        two_bytes = (unsigned)stretch[byte_shift + i] << 8 | stretch[byte_shift + i + 1];
+        offset_0[i] = (uint8_t)(two_bytes >> (8 - bit_shift));
+    }
+
+    return 0;
+}
+
+/**
+ * Create the state for an OCB encryption or decryption.
+ *
+ * @cipher     The block cipher (with 16 byte blocks), which the state then owns.
+ * @nonce      The nonce (1 to 15 bytes).
+ * @tag_len    The length of the tag, in bytes (1 to 16).
+ * @pState     Where to store the new state.
+ */
 EXPORT_SYM int OCB_start_operation(BlockBase *cipher,
-                                   const uint8_t *offset_0,
-                                   size_t offset_0_len,
+                                   const uint8_t *nonce,
+                                   size_t nonce_len,
+                                   size_t tag_len,
                                    OcbModeState **pState)
 {
-
     OcbModeState *state;
+    DataBlock zero;
     int result;
     unsigned i;
 
-    if ((NULL == cipher) || (NULL == pState)) {
+    if ((NULL == cipher) || (NULL == nonce) || (NULL == pState)) {
         return ERR_NULL;
     }
 
-    if ((BLOCK_SIZE != cipher->block_len) || (BLOCK_SIZE != offset_0_len)) {
+    if (BLOCK_SIZE != cipher->block_len) {
         return ERR_BLOCK_SIZE;
     }
 
-    *pState = state = calloc(1, sizeof(OcbModeState));
+    if ((nonce_len == 0) || (nonce_len >= BLOCK_SIZE)) {
+        return ERR_NONCE_SIZE;
+    }
+
+    if ((tag_len == 0) || (tag_len > BLOCK_SIZE)) {
+        return ERR_TAG_SIZE;
+    }
+
+    state = calloc(1, sizeof(OcbModeState));
     if (NULL == state) {
         return ERR_MEMORY;
     }
 
     state->cipher = cipher;
 
-    result = state->cipher->encrypt(state->cipher, state->checksum, state->L_star, BLOCK_SIZE);
+    memset(zero, 0, BLOCK_SIZE);
+    result = state->cipher->encrypt(state->cipher, zero, state->L_star, BLOCK_SIZE);
     if (result)
-        return result;
+        goto error;
 
     double_L(&state->L_dollar, &state->L_star);
     double_L(&state->L[0], &state->L_dollar);
     for (i=1; i<=64; i++)
         double_L(&state->L[i], &state->L[i-1]);
 
-    memcpy(state->offset_P, offset_0, BLOCK_SIZE);
+    result = compute_offset_0(state, nonce, nonce_len, tag_len, state->offset_P);
+    if (result)
+        goto error;
 
     state->counter_A = state->counter_P = 1;
 
+    *pState = state;
     return 0;
+
+error:
+    /** The caller still owns the cipher **/
+    free(state);
+    return result;
 }
 
 EXPORT_SYM int OCB_transcrypt(OcbModeState *state,
@@ -577,69 +651,6 @@ EXPORT_SYM int OCB_update(OcbModeState *state,
         for (i=0; i<BLOCK_SIZE; i++)
             state->sum[i] ^= ct[i];
     }
-
-    return 0;
-}
-
-/**
- * Like OCB_update(), for the data_len bytes at offset in in[], as if all
- * associated data before offset had been processed already.
- * Both offset and data_len must be multiple of 16 bytes.
- * The state is not changed: the sum of the range goes into sum[].
- *
- * Several threads can call it at the same time on the same state
- * (see OCB_encrypt_at()). Afterwards, OCB_skip_update() moves the state
- * past all the ranges.
- */
-EXPORT_SYM int OCB_update_at(const OcbModeState *state,
-                             const uint8_t *in,
-                             size_t offset,
-                             size_t data_len,
-                             uint8_t sum[BLOCK_SIZE])
-{
-    DataBlock offset_A;
-    uint64_t first;
-    int result;
-
-    if ((NULL == state) || (NULL == in) || (NULL == sum))
-        return ERR_NULL;
-
-    if (offset + data_len < offset)
-        return ERR_MAX_DATA;
-
-    result = range_start(state->counter_A, offset, data_len, &first);
-    if (result)
-        return result;
-
-    memset(sum, 0, BLOCK_SIZE);
-    memcpy(offset_A, state->offset_A, BLOCK_SIZE);
-    move_offset(state, offset_A, state->counter_A - 1, first - 1);
-
-    return hash_blocks(state, in + offset, data_len / BLOCK_SIZE, first, offset_A, sum);
-}
-
-/**
- * Move the state data_len bytes (multiple of 16) forward in the associated
- * data, as if OCB_update() had processed them. sum[] is the XOR of the sums
- * computed by OCB_update_at() for all ranges.
- */
-EXPORT_SYM int OCB_skip_update(OcbModeState *state, size_t data_len, const uint8_t sum[BLOCK_SIZE])
-{
-    uint64_t first;
-    int result;
-    unsigned i;
-
-    if ((NULL == state) || (NULL == sum))
-        return ERR_NULL;
-
-    result = range_start(state->counter_A, 0, data_len, &first);
-    if (result)
-        return result;
-
-    state->counter_A += data_len / BLOCK_SIZE;
-    move_offset(state, state->offset_A, first - 1, state->counter_A - 1);
-    for (i=0; i<BLOCK_SIZE; i++)
-        state->sum[i] ^= sum[i];
 
     return 0;
 }

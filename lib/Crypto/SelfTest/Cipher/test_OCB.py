@@ -955,18 +955,27 @@ class TestOcbThreads:
 
         for offset, length in ((0, 16), (16, 32), (48, 0)):
             assert lib.OCB_encrypt_at(state, data, out, c_size_t(offset), c_size_t(length), partial) == 0
-            assert lib.OCB_update_at(state, data, c_size_t(offset), c_size_t(length), partial) == 0
 
         # A range must start at a block boundary
         for offset in (1, 15, 17):
             assert lib.OCB_encrypt_at(state, data, out, c_size_t(offset), c_size_t(16), partial) != 0
             assert lib.OCB_decrypt_at(state, data, out, c_size_t(offset), c_size_t(16), partial) != 0
-            assert lib.OCB_update_at(state, data, c_size_t(offset), c_size_t(16), partial) != 0
 
-        # A range of plaintext/ciphertext can end with the last piece, but not one of associated data
+        # A range can end with the last piece of the message
         for offset, length in ((0, 15), (16, 17), (32, 31)):
             assert lib.OCB_encrypt_at(state, data, out, c_size_t(offset), c_size_t(length), partial) == 0
             assert lib.OCB_decrypt_at(state, data, out, c_size_t(offset), c_size_t(length), partial) == 0
-            assert lib.OCB_update_at(state, data, c_size_t(offset), c_size_t(length), partial) != 0
-        assert lib.OCB_skip_update(state, c_size_t(17), partial) != 0
         assert lib.OCB_skip(state, c_size_t(15), partial) == 0
+
+    def test_c_start_operation(self):
+        # The C code checks the parameters too
+        from Crypto.Util._raw_api import VoidPointer
+
+        lib = _mode_ocb._raw_ocb_lib
+        for nonce, tag_len in ((b"", 16), (b"n" * 16, 16), (b"n" * 15, 0), (b"n" * 15, 17)):
+            raw_cipher = AES._create_base_cipher({"key": self.key_128})
+            state = VoidPointer()
+            result = lib.OCB_start_operation(
+                raw_cipher.get(), nonce, c_size_t(len(nonce)), c_size_t(tag_len), state.address_of()
+            )
+            assert result != 0
