@@ -44,7 +44,7 @@ from Crypto.Util._raw_api import (
     is_writeable_buffer,
     load_pycryptodome_raw_lib,
 )
-from Crypto.Util._threads import run_in_threads, split, threads_param
+from Crypto.Util._threads import range_boundaries, run_in_threads, threads_param
 from Crypto.Util.number import long_to_bytes
 
 Buffer = Union[bytes, bytearray, memoryview]
@@ -105,7 +105,7 @@ def _ctr_threaded(state, in_ptr, out_ptr, data_len: int, threads: int) -> int:
 
     # Ranges may start in the middle of a cipher block: in CTR mode, each byte
     # of the key stream only depends on its position (see CTR_encrypt_at)
-    bounds = split(data_len, threads)
+    bounds = range_boundaries(data_len, threads)
 
     def worker(i):
         # CTR_encrypt_at() does not change the state, and writes only

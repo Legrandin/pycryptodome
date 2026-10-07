@@ -55,7 +55,7 @@ def threads_param(threads: Any) -> int:
     return threads
 
 
-def split(length: int, parts: int, unit: int = 1) -> List[int]:
+def range_boundaries(length: int, parts: int, unit: int = 1) -> List[int]:
     """Split ``length`` into ``parts`` contiguous ranges that start at
     a multiple of ``unit``, and differ by at most one unit.
 

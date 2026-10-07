@@ -55,7 +55,7 @@ from Crypto.Util._raw_api import (
     is_buffer,
     load_pycryptodome_raw_lib,
 )
-from Crypto.Util._threads import run_in_threads, split
+from Crypto.Util._threads import range_boundaries, run_in_threads
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 
 if TYPE_CHECKING:
@@ -198,7 +198,7 @@ class _GHASH:
         The calling thread processes the first range."""
 
         # Ranges differ by at most one block
-        bounds = split(block_data_len, threads, 16)
+        bounds = range_boundaries(block_data_len, threads, 16)
 
         # The first range continues from the current value;
         # the others start from zero, and are combined later

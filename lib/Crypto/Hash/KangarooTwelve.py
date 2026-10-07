@@ -40,7 +40,7 @@ from Crypto.Util._raw_api import (
     get_raw_buffer,
     load_pycryptodome_raw_lib,
 )
-from Crypto.Util._threads import run_in_threads, split, threads_param
+from Crypto.Util._threads import range_boundaries, run_in_threads, threads_param
 from Crypto.Util.number import long_to_bytes
 
 from . import TurboSHAKE128
@@ -126,7 +126,7 @@ def _hash_leaves_threaded(leaves: memoryview, cvs: memoryview, threads: int) -> 
         return
 
     # Ranges differ by at most one leaf
-    bounds = split(n_leaves, threads)
+    bounds = range_boundaries(n_leaves, threads)
 
     def worker(i):
         start, end = bounds[i], bounds[i + 1]

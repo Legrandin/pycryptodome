@@ -88,7 +88,7 @@ from Crypto.Util._raw_api import (
     is_buffer,
     load_pycryptodome_raw_lib,
 )
-from Crypto.Util._threads import run_in_threads, split, threads_param
+from Crypto.Util._threads import range_boundaries, run_in_threads, threads_param
 from Crypto.Util.strxor import strxor
 
 if TYPE_CHECKING:
@@ -155,7 +155,7 @@ def _transcrypt_threaded(state, at_func, in_ptr, out_ptr, data_len: int, threads
     :return: the error code of the C library (0 for success)
     """
 
-    bounds = split(data_len, threads, 16)
+    bounds = range_boundaries(data_len, threads, 16)
     partials = [create_string_buffer(16) for _ in range(threads)]
 
     def worker(i):

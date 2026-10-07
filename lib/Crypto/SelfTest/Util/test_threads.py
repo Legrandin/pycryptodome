@@ -5,7 +5,7 @@ import threading
 import pytest
 
 from Crypto.Util._cpu_features import available_cores
-from Crypto.Util._threads import run_in_threads, split, threads_param
+from Crypto.Util._threads import range_boundaries, run_in_threads, threads_param
 
 
 def test_threads_param():
@@ -21,10 +21,10 @@ def test_threads_param():
 
 
 @pytest.mark.parametrize("unit", (1, 16, 8192))
-def test_split(unit):
+def test_range_boundaries(unit):
     for length in (0, 1, unit - 1, unit, unit + 1, 5 * unit, 5 * unit + 3, 1000 * unit + 7):
         for parts in (1, 2, 3, 8):
-            bounds = split(length, parts, unit)
+            bounds = range_boundaries(length, parts, unit)
             assert len(bounds) == parts + 1
             assert bounds[0] == 0
             assert bounds[-1] == length
