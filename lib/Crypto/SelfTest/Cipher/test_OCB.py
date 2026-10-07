@@ -32,10 +32,12 @@ from binascii import unhexlify
 
 import pytest
 
-from Crypto.Cipher import AES
+from Crypto.Cipher import AES, _mode_ocb
 from Crypto.Hash import SHAKE128
 from Crypto.SelfTest.loader import load_test_vectors
 from Crypto.Util._bytes import tobytes
+from Crypto.Util._cpu_features import available_cores
+from Crypto.Util._raw_api import c_size_t, create_string_buffer
 from Crypto.Util.number import long_to_bytes
 
 
@@ -776,3 +778,195 @@ class TestOcbDkg:
         cipher.update(A)
         C_out2, tag_out2 = cipher.encrypt_and_digest(P)
         assert buggy_result == C_out2 + tag_out2
+
+
+class TestOcbThreads:
+    key_128 = get_tag_random("key_128", 16)
+    nonce_96 = get_tag_random("nonce_96", 12)
+
+    @pytest.fixture
+    def tiny_ranges(self, monkeypatch):
+        # Let each thread process even a single block
+        monkeypatch.setattr(_mode_ocb, "_MIN_BYTES_PER_THREAD", 1)
+
+    def new(self, threads=1, **kwargs):
+        return AES.new(self.key_128, AES.MODE_OCB, nonce=self.nonce_96, threads=threads, **kwargs)
+
+    def test_threads_negative(self):
+        for threads in (1.0, "2", None, True):
+            with pytest.raises(TypeError):
+                self.new(threads=threads)
+        for threads in (-1, -8):
+            with pytest.raises(ValueError):
+                self.new(threads=threads)
+
+    def test_threads_all_cores(self):
+        cores = available_cores()
+        assert self.new(threads=0)._threads == cores
+
+        pt = get_tag_random("plaintext", 3 * 1024 * 1024 + 5)
+        ref = self.new().encrypt_and_digest(pt)
+        assert self.new(threads=0).encrypt_and_digest(pt) == ref
+
+    @pytest.mark.parametrize("use_aesni", (True, False))
+    def test_range_boundaries(self, tiny_ranges, use_aesni):
+        pt = get_tag_random("plaintext", 16 * 8 * 5 + 7)
+        aad = get_tag_random("aad", 16 * 8 * 3 + 5)
+
+        ref_cipher = self.new(use_aesni=use_aesni)
+        ref_cipher.update(aad)
+        ref, ref_tag = ref_cipher.encrypt_and_digest(pt)
+
+        for first in (0, 1, 15, 16, 17, 127, 128, 129, 255, 256, 300):
+            for length in (0, 1, 15, 16, 17, 128, 129, 400, len(pt) - first):
+                end = first + length
+                for threads in (2, 3, 8):
+                    # Associated data and plaintext, split at the same points
+                    cipher = self.new(threads, use_aesni=use_aesni)
+                    for piece in (aad[:first], aad[first:end], aad[end:]):
+                        cipher.update(piece)
+                    res = cipher.encrypt(pt[:first]) + cipher.encrypt(pt[first:end])
+                    # The state is correct after the threaded call
+                    res += cipher.encrypt(pt[end:]) + cipher.encrypt()
+                    assert res == ref
+                    assert cipher.digest() == ref_tag
+
+                    cipher = self.new(threads, use_aesni=use_aesni)
+                    cipher.update(aad)
+                    res = cipher.decrypt(ref[:first]) + cipher.decrypt(ref[first:end])
+                    res += cipher.decrypt(ref[end:]) + cipher.decrypt()
+                    assert res == pt
+                    cipher.verify(ref_tag)
+
+    @pytest.mark.parametrize("threads", (2, 3, 8))
+    def test_fewer_blocks_than_threads(self, tiny_ranges, threads):
+        # Some ranges are empty
+        for n_blocks in range(1, 9):
+            pt = get_tag_random("plaintext", 16 * n_blocks)
+            ref = self.new().encrypt_and_digest(pt)
+            assert self.new(threads).encrypt_and_digest(pt) == ref
+
+    def test_tampered(self, tiny_ranges):
+        pt = get_tag_random("plaintext", 1000)
+        cipher = self.new()
+        cipher.update(b"header" * 100)
+        ct, tag = cipher.encrypt_and_digest(pt)
+
+        for i in (0, 500, 999):
+            bad_ct = bytearray(ct)
+            bad_ct[i] ^= 1
+            cipher = self.new(4)
+            cipher.update(b"header" * 100)
+            with pytest.raises(ValueError):
+                cipher.decrypt_and_verify(bytes(bad_ct), tag)
+
+        cipher = self.new(4)
+        cipher.update(b"header" * 99 + b"headex")
+        with pytest.raises(ValueError):
+            cipher.decrypt_and_verify(ct, tag)
+
+    def test_long_random_chunks(self):
+        import random
+
+        rng = random.Random(42)
+
+        pt = get_tag_random("plaintext", 5 * 1024 * 1024 + 4567)
+        aad = get_tag_random("aad", 3 * 1024 * 1024 + 33)
+        cipher = self.new()
+        cipher.update(aad)
+        ref = cipher.encrypt_and_digest(pt)
+
+        for threads in (0, 2, 3, 4, 8):
+            cipher = self.new(threads)
+            cipher.update(aad)
+            assert cipher.encrypt_and_digest(pt) == ref
+
+            cipher = self.new(threads)
+            index = 0
+            while index < len(aad):
+                size = rng.randint(1, 2 * 1024 * 1024)
+                cipher.update(memoryview(aad)[index : index + size])
+                index += size
+            res = []
+            index = 0
+            while index < len(pt):
+                size = rng.randint(1, 3 * 1024 * 1024)
+                res.append(cipher.encrypt(memoryview(pt)[index : index + size]))
+                index += size
+            res.append(cipher.encrypt())
+            assert (b"".join(res), cipher.digest()) == ref
+
+    @pytest.mark.parametrize("threads", (1, 2, 3, 8))
+    def test_one_shot(self, tiny_ranges, threads):
+        # encrypt_and_digest() and decrypt_and_verify() process the whole
+        # message at once, including the last piece
+        for length in list(range(50)) + [16 * 40, 16 * 40 + 1, 16 * 40 + 15]:
+            pt = get_tag_random("plaintext", length)
+            cipher = self.new()
+            ref = cipher.encrypt(pt) + cipher.encrypt(), cipher.digest()
+
+            for data in (pt, bytearray(pt), memoryview(pt)):
+                assert self.new(threads).encrypt_and_digest(data) == ref
+                assert self.new(threads).decrypt_and_verify(memoryview(ref[0]), ref[1]) == pt
+
+    def test_one_shot_after_encrypt(self, tiny_ranges):
+        pt = get_tag_random("plaintext", 1000)
+        ref = self.new().encrypt_and_digest(pt)
+
+        # After whole blocks (nothing in the cache), and after a partial block
+        for first in (0, 16, 160, 7, 100):
+            cipher = self.new(4)
+            res = cipher.encrypt(pt[:first])
+            ct, tag = cipher.encrypt_and_digest(pt[first:])
+            assert (res + ct, tag) == ref
+
+            cipher = self.new(4)
+            res = cipher.decrypt(ref[0][:first])
+            res += cipher.decrypt_and_verify(ref[0][first:], ref[1])
+            assert res == pt
+
+    def test_one_shot_state_machine(self):
+        cipher = self.new(4)
+        cipher.encrypt_and_digest(b"data")
+        with pytest.raises(TypeError):
+            cipher.encrypt_and_digest(b"data")
+        with pytest.raises(TypeError):
+            cipher.encrypt(b"data")
+        cipher.digest()
+
+        cipher = self.new(4)
+        ct, tag = self.new().encrypt_and_digest(b"data")
+        cipher.decrypt_and_verify(ct, tag)
+        with pytest.raises(TypeError):
+            cipher.decrypt_and_verify(ct, tag)
+
+        cipher = self.new(4)
+        cipher.encrypt(b"data")
+        with pytest.raises(TypeError):
+            cipher.decrypt_and_verify(ct, tag)
+
+    def test_c_ranges(self):
+        lib = _mode_ocb._raw_ocb_lib
+        cipher = self.new()  # Keep a reference: it owns the state
+        state = cipher._state.get()
+        data = bytes(64)
+        out = create_string_buffer(64)
+        partial = create_string_buffer(16)
+
+        for offset, length in ((0, 16), (16, 32), (48, 0)):
+            assert lib.OCB_encrypt_at(state, data, out, c_size_t(offset), c_size_t(length), partial) == 0
+            assert lib.OCB_update_at(state, data, c_size_t(offset), c_size_t(length), partial) == 0
+
+        # A range must start at a block boundary
+        for offset in (1, 15, 17):
+            assert lib.OCB_encrypt_at(state, data, out, c_size_t(offset), c_size_t(16), partial) != 0
+            assert lib.OCB_decrypt_at(state, data, out, c_size_t(offset), c_size_t(16), partial) != 0
+            assert lib.OCB_update_at(state, data, c_size_t(offset), c_size_t(16), partial) != 0
+
+        # A range of plaintext/ciphertext can end with the last piece, but not one of associated data
+        for offset, length in ((0, 15), (16, 17), (32, 31)):
+            assert lib.OCB_encrypt_at(state, data, out, c_size_t(offset), c_size_t(length), partial) == 0
+            assert lib.OCB_decrypt_at(state, data, out, c_size_t(offset), c_size_t(length), partial) == 0
+            assert lib.OCB_update_at(state, data, c_size_t(offset), c_size_t(length), partial) != 0
+        assert lib.OCB_skip_update(state, c_size_t(17), partial) != 0
+        assert lib.OCB_skip(state, c_size_t(15), partial) == 0

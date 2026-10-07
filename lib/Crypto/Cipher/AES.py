@@ -230,7 +230,12 @@ def new(
 
 @overload
 def new(
-    key: Buffer, mode: Literal[12], nonce: Optional[Buffer] = ..., mac_len: int = ..., use_aesni: bool = ...
+    key: Buffer,
+    mode: Literal[12],
+    nonce: Optional[Buffer] = ...,
+    mac_len: int = ...,
+    use_aesni: bool = ...,
+    threads: int = ...,
 ) -> OcbMode: ...
 
 
@@ -339,7 +344,7 @@ def new(key: Buffer, mode: int, *args: Any, **kwargs: Any) -> Any:
         Use Intel AES-NI hardware extensions (default: use if available).
 
       threads (integer):
-        (Only ``MODE_CTR`` and ``MODE_GCM``).
+        (Only ``MODE_CTR``, ``MODE_GCM`` and ``MODE_OCB``).
         The maximum number of threads used to encrypt or decrypt long data
         (default: 1, no extra threads).
         Use 0 for as many threads as the CPU cores available

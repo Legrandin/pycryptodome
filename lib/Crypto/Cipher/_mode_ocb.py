@@ -71,12 +71,14 @@ Example:
 from __future__ import annotations
 
 import struct
+import threading
 from binascii import unhexlify
 from typing import TYPE_CHECKING, Optional, Tuple, Union
 
 from Crypto.Hash import BLAKE2s
 from Crypto.Random import get_random_bytes
 from Crypto.Util._bytes import copy_bytes
+from Crypto.Util._cpu_features import available_cores
 from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
@@ -115,12 +117,100 @@ _raw_ocb_lib = load_pycryptodome_raw_lib(
                                     int OCB_update(void *state,
                                         const uint8_t *in,
                                         size_t data_len);
+                                    int OCB_encrypt_at(const void *state,
+                                        const uint8_t *in,
+                                        uint8_t *out,
+                                        size_t offset,
+                                        size_t data_len,
+                                        uint8_t *checksum);
+                                    int OCB_decrypt_at(const void *state,
+                                        const uint8_t *in,
+                                        uint8_t *out,
+                                        size_t offset,
+                                        size_t data_len,
+                                        uint8_t *checksum);
+                                    int OCB_skip(void *state,
+                                        size_t data_len,
+                                        const uint8_t *checksum);
+                                    int OCB_update_at(const void *state,
+                                        const uint8_t *in,
+                                        size_t offset,
+                                        size_t data_len,
+                                        uint8_t *sum);
+                                    int OCB_skip_update(void *state,
+                                        size_t data_len,
+                                        const uint8_t *sum);
                                     int OCB_digest(void *state,
                                         uint8_t *tag,
                                         size_t tag_len);
                                     int OCB_stop_operation(void *state);
                                     """,
 )
+
+# Minimum amount of data (1 MiB) that each thread must process:
+# with less, starting the thread costs more than what it saves.
+_MIN_BYTES_PER_THREAD = 1024 * 1024
+
+
+def _how_many_threads(max_threads: int, data_len: int) -> int:
+    """Number of threads for data_len bytes"""
+    return min(max_threads, data_len // _MIN_BYTES_PER_THREAD)
+
+
+def _ocb_threaded(process_range, data_len: int, threads: int):
+    """Process ``data_len`` bytes by splitting them into ``threads``
+    contiguous ranges, which are processed in parallel.
+    Each range starts at a block boundary: if ``data_len`` is not a multiple
+    of 16, the last range ends with the last piece of the message.
+    The calling thread processes the first range.
+
+    ``process_range(start, length, partial)`` processes one range without
+    changing the state, and writes into ``partial`` (16 bytes) its share of
+    the checksum or of the sum, which are XORs over all blocks.
+
+    :return: a tuple: the first error code of the C library (0 for success),
+      and the XOR of the partial results of all ranges
+    """
+
+    partials = [create_string_buffer(16) for _ in range(threads)]
+    results = [0] * threads
+    errors = []
+
+    def worker(i, start, end):
+        try:
+            results[i] = process_range(c_size_t(start), c_size_t(end - start), partials[i])
+        except Exception as e:
+            errors.append(e)
+
+    # List of byte positions where each range starts ('threads' ranges),
+    # always at a block boundary. The last item is data_len.
+    n_blocks = data_len // 16
+    bounds = [16 * (n_blocks * i // threads) for i in range(threads)] + [data_len]
+
+    workers = []
+    for i in range(1, threads):
+        t = threading.Thread(target=worker, args=(i, bounds[i], bounds[i + 1]))
+        t.daemon = True
+        t.start()
+        workers.append(t)
+
+    # The calling thread processes the first range, while the others run
+    worker(0, bounds[0], bounds[1])
+
+    for t in workers:
+        t.join()
+
+    if errors:
+        raise errors[0]
+
+    total = bytes(16)
+    for partial in partials:
+        total = strxor(total, get_raw_buffer(partial))
+
+    for r in results:
+        if r:
+            return r, total
+    return 0, total
 
 
 class OcbMode:
@@ -129,7 +219,9 @@ class OcbMode:
     :undocumented: __init__
     """
 
-    def __init__(self, factory: ModuleType, nonce: Buffer, mac_len: int, cipher_params: dict) -> None:
+    def __init__(
+        self, factory: ModuleType, nonce: Buffer, mac_len: int, cipher_params: dict, threads: int = 1
+    ) -> None:
         if factory.block_size != 16:
             raise ValueError("OCB mode is only available for ciphers that operate on 128 bits blocks")
 
@@ -144,6 +236,14 @@ class OcbMode:
             raise TypeError("Nonce must be bytes, bytearray or memoryview")
 
         self._mac_len = mac_len
+
+        if not isinstance(threads, int) or isinstance(threads, bool):
+            raise TypeError("'threads' must be an integer")
+        if threads < 0:
+            raise ValueError("'threads' must be a non-negative integer")
+        if threads == 0:
+            threads = available_cores()
+        self._threads = threads
         if not 8 <= mac_len <= 16:
             raise ValueError("MAC tag must be between 8 and 16 bytes long")
 
@@ -204,7 +304,22 @@ class OcbMode:
         assoc_data_ptr, held_len = c_uint8_ptr_len(assoc_data)
         if assoc_data_len > held_len:
             raise ValueError("The associated data changed while being processed")
-        result = _raw_ocb_lib.OCB_update(self._state.get(), assoc_data_ptr, c_size_t(assoc_data_len))
+
+        # Only whole blocks: the last piece (the cache) is processed alone
+        threads = _how_many_threads(self._threads, assoc_data_len)
+        if threads > 1 and assoc_data_len % 16 == 0:
+            state = self._state.get()
+
+            def process_range(start, length, partial):
+                return _raw_ocb_lib.OCB_update_at(state, assoc_data_ptr, start, length, partial)
+
+            result, total = _ocb_threaded(process_range, assoc_data_len, threads)
+            # Move the state forward even after an error in a thread
+            # (some ranges may be processed already)
+            skip_result = _raw_ocb_lib.OCB_skip_update(state, c_size_t(assoc_data_len), total)
+            result = result or skip_result
+        else:
+            result = _raw_ocb_lib.OCB_update(self._state.get(), assoc_data_ptr, c_size_t(assoc_data_len))
         if result:
             raise ValueError("Error %d while computing MAC in OCB mode" % result)
 
@@ -251,18 +366,45 @@ class OcbMode:
         self._update(assoc_data, update_len)
         return self
 
-    def _transcrypt_aligned(self, in_data, in_data_len, trans_func, trans_desc):
+    def _transcrypt_buffer(self, in_data, in_data_len, trans_func, trans_desc):
+        """Encrypt or decrypt in_data_len bytes into a new buffer.
+        If in_data_len is not a multiple of 16, they end with the last
+        piece of the message."""
+
         out_data = create_output_buffer(in_data_len)
+        threads = _how_many_threads(self._threads, in_data_len)
         with c_uint8_ptr_out(out_data) as out_data_ptr:
-            result = trans_func(self._state.get(), in_data, out_data_ptr, c_size_t(in_data_len))
+            if threads > 1:
+                result = self._transcrypt_threaded(in_data, out_data_ptr, in_data_len, trans_desc, threads)
+            else:
+                result = trans_func(self._state.get(), in_data, out_data_ptr, c_size_t(in_data_len))
         if result:
             raise ValueError("Error %d while %sing in OCB mode" % (result, trans_desc))
         return get_raw_buffer(out_data)
 
+    def _transcrypt_threaded(self, in_ptr, out_ptr, data_len, trans_desc, threads):
+        """Encrypt or decrypt ``data_len`` bytes with ``threads`` threads.
+        Each one writes a different range of ``out_ptr``.
+
+        :return: the error code of the C library (0 for success)
+        """
+
+        state = self._state.get()
+        at_func = getattr(_raw_ocb_lib, "OCB_%s_at" % trans_desc)
+
+        def process_range(start, length, partial):
+            return at_func(state, in_ptr, out_ptr, start, length, partial)
+
+        result, total = _ocb_threaded(process_range, data_len, threads)
+        # Move the state forward even after an error in a thread (some ranges
+        # may be processed already), so that the same offsets are not used again
+        skip_result = _raw_ocb_lib.OCB_skip(state, c_size_t(data_len), total)
+        return result or skip_result
+
     def _transcrypt(self, in_data, trans_func, trans_desc):
         # Last piece to encrypt/decrypt
         if in_data is None:
-            out_data = self._transcrypt_aligned(self._cache_P, len(self._cache_P), trans_func, trans_desc)
+            out_data = self._transcrypt_buffer(self._cache_P, len(self._cache_P), trans_func, trans_desc)
             self._cache_P = b""
             return out_data
 
@@ -279,13 +421,13 @@ class OcbMode:
                 return b""
 
             # Clear the cache, and proceeding with any other aligned data
-            prefix = self._transcrypt_aligned(self._cache_P, len(self._cache_P), trans_func, trans_desc)
+            prefix = self._transcrypt_buffer(self._cache_P, len(self._cache_P), trans_func, trans_desc)
             self._cache_P = b""
 
         # Process data in multiples of the block size
         in_data_ptr, in_data_len = c_uint8_ptr_len(in_data)
         trans_len = in_data_len // 16 * 16
-        result = self._transcrypt_aligned(in_data_ptr, trans_len, trans_func, trans_desc)
+        result = self._transcrypt_buffer(in_data_ptr, trans_len, trans_func, trans_desc)
         if prefix:
             result = prefix + result
 
@@ -457,6 +599,14 @@ class OcbMode:
             - the MAC
         """
 
+        if "encrypt" in self._next and not self._cache_P:
+            # The whole message in one go, into a single buffer
+            # (it avoids copying the ciphertext to add the last piece)
+            self._next = ["digest"]
+            in_ptr, in_len = c_uint8_ptr_len(plaintext)
+            ciphertext = self._transcrypt_buffer(in_ptr, in_len, _raw_ocb_lib.OCB_encrypt, "encrypt")
+            return ciphertext, self.digest()
+
         return self.encrypt(plaintext) + self.encrypt(), self.digest()
 
     def decrypt_and_verify(self, ciphertext: Buffer, received_mac_tag: Buffer) -> bytes:
@@ -474,7 +624,13 @@ class OcbMode:
             or the key is incorrect.
         """
 
-        plaintext = self.decrypt(ciphertext) + self.decrypt()
+        if "decrypt" in self._next and not self._cache_P:
+            # The whole message in one go (see encrypt_and_digest)
+            self._next = ["verify"]
+            in_ptr, in_len = c_uint8_ptr_len(ciphertext)
+            plaintext = self._transcrypt_buffer(in_ptr, in_len, _raw_ocb_lib.OCB_decrypt, "decrypt")
+        else:
+            plaintext = self.decrypt(ciphertext) + self.decrypt()
         self.verify(received_mac_tag)
         return plaintext
 
@@ -498,6 +654,10 @@ def _create_ocb_cipher(factory, **kwargs):
         It must be in the range ``[8..16]``.
         The default is 16 (128 bits).
 
+      threads : integer
+        The maximum number of threads used to process long data
+        (default: 1, no extra threads; 0 for all CPU cores).
+
     Any other keyword will be passed to the underlying block cipher.
     See the relevant documentation for details (at least ``key`` will need
     to be present).
@@ -508,7 +668,8 @@ def _create_ocb_cipher(factory, **kwargs):
         if nonce is None:
             nonce = get_random_bytes(15)
         mac_len = kwargs.pop("mac_len", 16)
+        threads = kwargs.pop("threads", 1)
     except KeyError as e:
         raise TypeError("Keyword missing: " + str(e))
 
-    return OcbMode(factory, nonce, mac_len, kwargs)
+    return OcbMode(factory, nonce, mac_len, kwargs, threads)

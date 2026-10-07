@@ -43,11 +43,14 @@ New features
   SHA-3, SHAKE, cSHAKE, KMAC, TupleHash and TurboSHAKE are about 1.25x-1.4x faster
   on long messages, and KangarooTwelve hashes 4 leaves in parallel
   (2x to 2.3x faster for messages of 1 MiB or more).
-* New parameter ``threads`` for the CTR mode (all block ciphers) and for the GCM mode,
+* New parameter ``threads`` for the CTR mode (all block ciphers) and for the GCM and OCB modes,
   to encrypt and decrypt long data on several CPU cores (``threads=0`` for all of them).
   The output does not depend on the number of threads.
 * GCM mode is about 1.5x faster on long messages, as it does not copy the data
   before authenticating it.
+* OCB mode is about 1.15x faster on long messages with AES-NI, as it encrypts
+  8 blocks at a time. Also, ``encrypt_and_digest()`` and ``decrypt_and_verify()``
+  no longer copy the output when the message is not a multiple of 16 bytes long.
 * The portable GHASH (GCM mode, for CPUs without PCLMULQDQ) no longer uses
   key-dependent tables: it is now constant-time, with the technique
   described by Thomas Pornin for BearSSL. It is also faster: about 2.8x
