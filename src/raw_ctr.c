@@ -38,9 +38,7 @@ FAKE_INIT(raw_ctr)
 #define ERR_CTR_COUNTER_BLOCK_LEN   ((6 << 16) | 1)
 #define ERR_CTR_REPEATED_KEY_STREAM ((6 << 16) | 2)
 
-/** The key stream is computed in batches of NR_BLOCKS cipher blocks.
- *  More blocks per call to the cipher are faster (AES-NI: +22% from 8 to 16),
- *  but short messages with slow ciphers pay for a whole first batch. **/
+/** The key stream is computed in batches of NR_BLOCKS cipher blocks. **/
 #define NR_BLOCKS 16
 
 /** Memory alignment for counter blocks and key stream (any block size works) **/
@@ -122,11 +120,23 @@ static void compute_keystream(const CtrModeState *ctr_state, const uint8_t *bloc
 }
 
 /*
- * Check that the key stream can be used for extra more bytes, starting from
- * byte used_ks of the batch with the given index, without using any counter
- * value twice.
- * Each cipher block of key stream (even if only partially used)
- * takes one counter value.
+ * Check that the next 'extra' bytes can be encrypted without using any
+ * counter value twice. Reusing a counter value means reusing key stream,
+ * which breaks confidentiality.
+ *
+ * 'batch' and 'used_ks' give the current position in the key stream
+ * (byte 'used_ks' of batch 'batch'), as read once from the state by the caller.
+ * 'used_ks' is 0 only before the first byte; a fully used batch is ks_size.
+ *
+ * Each cipher block of key stream takes one counter value, even if only some
+ * of its bytes are used. So the function counts the blocks from the start of
+ * the key stream up to the end of the extra bytes, rounding up, and compares
+ * them with max_blocks: the 2^(8*counter_len) values of the counter. When
+ * max_blocks is 0 (a counter of 8 bytes or more), the only limit is the 64-bit
+ * block count itself.
+ *
+ * The state is not changed. Callers check before processing anything, so that
+ * either all data is processed, or nothing is (ERR_CTR_REPEATED_KEY_STREAM).
  */
 static int check_limit(const CtrModeState *ctr_state, uint64_t batch, size_t used_ks, uint64_t extra)
 {
@@ -134,15 +144,27 @@ static int check_limit(const CtrModeState *ctr_state, uint64_t batch, size_t use
 
     ks_size = ctr_state->block_len * NR_BLOCKS;
 
-    /** Position after the extra bytes, as batch and byte within that batch **/
-    end_batch = batch + extra / ks_size;
-    end_used = used_ks + extra % ks_size;
+    /**
+     * The position just after the extra bytes (the first byte not used),
+     * in the same form as the current one:
+     * - end_batch: index of the batch that position falls into
+     * - end_used:  bytes of that batch used up to that position (0..ks_size-1)
+     * The key stream up to there is end_batch * ks_size + end_used bytes long.
+     **/
+    end_batch = batch + (extra / ks_size);
+    end_used = used_ks + (extra % ks_size);
     end_batch += end_used / ks_size;
     end_used %= ks_size;
+    /** Unreachable in practice (2^64 batches), but a wrap would undercount **/
     if (end_batch < batch)
         return ERR_CTR_REPEATED_KEY_STREAM;
 
-    /** Counter values used up to that position **/
+    /**
+     * Counter values used by all bytes before that position, up to and
+     * including the last extra byte: the cipher blocks they fall into, rounded
+     * up. The byte at that position is not counted (it may never be used).
+     **/
+    /** Unreachable in practice (2^64 blocks), but blocks must not overflow **/
     if (end_batch > (UINT64_MAX - NR_BLOCKS) / NR_BLOCKS)
         return ERR_CTR_REPEATED_KEY_STREAM;
     blocks = end_batch * NR_BLOCKS + (end_used + ctr_state->block_len - 1) / ctr_state->block_len;
