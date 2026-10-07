@@ -416,7 +416,6 @@ def _create_ctr_cipher(factory, **kwargs):
         and ``initial_value``.
 
       threads : integer
-        Only for ciphers that support it (AES).
         The maximum number of threads used to process long data
         (default: 1, no extra threads; 0 for all CPU cores).
 
@@ -425,11 +424,7 @@ def _create_ctr_cipher(factory, **kwargs):
     to be present).
     """
 
-    # Only some ciphers (AES) accept the 'threads' parameter
-    if getattr(factory, "_ctr_threads", False):
-        threads = kwargs.pop("threads", 1)
-    else:
-        threads = 1
+    threads = kwargs.pop("threads", 1)
 
     cipher_state = factory._create_base_cipher(kwargs)
 

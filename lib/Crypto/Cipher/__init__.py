@@ -42,6 +42,7 @@ class BlockCipherParams(TypedDict, total=False):
     assoc_len: int
     initial_value: Union[int, Buffer]
     counter: Dict
+    threads: int
 
 
 def _create_cipher(factory, key, mode, *args, **kwargs):

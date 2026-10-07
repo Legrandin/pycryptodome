@@ -175,7 +175,7 @@ In the following definition, ``<algorithm>`` could be ``AES``:
   :type initial_value: integer or bytes
   :param counter: a custom counter object created with :func:`Crypto.Util.Counter.new`.
     This allows the definition of a more complex counter block.
-  :param int threads: (only for AES) the maximum number of threads used to
+  :param int threads: the maximum number of threads used to
     encrypt or decrypt long data (default: 1, no extra threads).
     Use 0 for as many threads as the CPU cores available to the process.
   :return: a CTR cipher object
@@ -187,7 +187,7 @@ Both raise an ``OverflowError`` exception as soon as the counter wraps around to
 The CTR cipher object has a read-only attribute :attr:`nonce` (*bytes*).
 
 Each block of the *keystream* only depends on its counter block,
-so AES in CTR mode can use several CPU cores.
+so the CTR mode can use several CPU cores.
 This is disabled by default; enable it with the ``threads`` parameter::
 
     >>> cipher = AES.new(key, AES.MODE_CTR, nonce=nonce, threads=4)

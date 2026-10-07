@@ -66,9 +66,6 @@ MODE_OCB: Literal[12] = 12  #: Offset Code Book (:ref:`ocb_mode`)
 MODE_KW: Literal[13] = 13  #: Key Wrap (:ref:`kw_mode`)
 MODE_KWP: Literal[14] = 14  #: Key Wrap with Padding (:ref:`kwp_mode`)
 
-# The CTR mode accepts the 'threads' parameter
-_ctr_threads = True
-
 _cproto = """
         int AES_start_operation(const uint8_t key[],
                                 size_t key_len,

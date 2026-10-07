@@ -32,7 +32,7 @@ from binascii import hexlify, unhexlify
 
 import pytest
 
-from Crypto.Cipher import AES, DES3, _mode_ctr
+from Crypto.Cipher import AES, DES, DES3, _mode_ctr
 from Crypto.Hash import SHA256, SHAKE128
 from Crypto.Util import Counter, _raw_api
 from Crypto.Util._bytes import tobytes
@@ -354,11 +354,6 @@ class TestCtrThreads:
         with pytest.raises(TypeError):
             AES.new(self.key_128, AES.MODE_CBC, threads=2)
 
-        # Only for AES
-        key = DES3.adjust_key_parity(get_tag_random("key_des3", 24))
-        with pytest.raises(TypeError):
-            DES3.new(key, DES3.MODE_CTR, nonce=b"1234", threads=2)
-
     def test_threads_all_cores(self):
         cores = available_cores()
         assert cores >= 1
@@ -442,6 +437,27 @@ class TestCtrThreads:
             # The key stream cannot be used again
             with pytest.raises(OverflowError):
                 cipher.decrypt(b"9" * 2)
+
+    @pytest.mark.parametrize("name", ["DES", "DES3", "ARC2", "Blowfish", "CAST"])
+    def test_other_ciphers(self, tiny_ranges, name):
+        # The threaded code is the same for all ciphers: same output as without threads
+        module = __import__("Crypto.Cipher." + name, fromlist=["new"])
+        key = {"DES": b"k" * 8, "DES3": DES3.adjust_key_parity(get_tag_random("key_des3", 24))}.get(
+            name, b"k" * 16
+        )
+
+        pt = get_tag_random("plaintext", 1000)
+        ref = module.new(key, module.MODE_CTR, nonce=b"n" * 4).encrypt(pt)
+        for threads in (2, 3, 8):
+            cipher = module.new(key, module.MODE_CTR, nonce=b"n" * 4, threads=threads)
+            assert cipher.encrypt(pt[:13]) + cipher.encrypt(pt[13:]) == ref
+
+    def test_wrap_around_8_byte_block(self, tiny_ranges):
+        # 1-byte counter with a 64-bit block: 256 blocks (2048 bytes)
+        cipher = DES.new(b"k" * 8, DES.MODE_CTR, nonce=b"n" * 7, threads=4)
+        cipher.encrypt(b"9" * 2048)
+        with pytest.raises(OverflowError):
+            cipher.encrypt(b"9" * 8)
 
     def test_long_random_chunks(self):
         import random

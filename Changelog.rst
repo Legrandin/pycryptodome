@@ -43,7 +43,7 @@ New features
   SHA-3, SHAKE, cSHAKE, KMAC, TupleHash and TurboSHAKE are about 1.25x-1.4x faster
   on long messages, and KangarooTwelve hashes 4 leaves in parallel
   (2x to 2.3x faster for messages of 1 MiB or more).
-* New parameter ``threads`` for ``Crypto.Cipher.AES.new()`` in CTR and GCM modes,
+* New parameter ``threads`` for the CTR mode (all block ciphers) and for the GCM mode,
   to encrypt and decrypt long data on several CPU cores (``threads=0`` for all of them).
   The output does not depend on the number of threads.
 * GCM mode is about 1.5x faster on long messages, as it does not copy the data
