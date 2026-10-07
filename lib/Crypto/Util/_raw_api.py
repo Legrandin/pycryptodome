@@ -71,6 +71,19 @@ def _must_copy(data: Any) -> bool:
     return _is_pypy and not isinstance(data, _pypy_locked_types) and _thread._count() > 0
 
 
+class _BytesOutput:
+    """A new bytes object that C code writes into (see create_output_buffer)"""
+
+    __slots__ = ("obj", "ptr")
+
+    def __init__(self, obj: bytes, ptr: Any) -> None:
+        self.obj = obj
+        self.ptr = ptr
+
+    def __len__(self) -> int:
+        return len(self.obj)
+
+
 class _VoidPointer:
     @abc.abstractmethod
     def get(self) -> Any:
@@ -199,6 +212,8 @@ try:
 
     def get_raw_buffer(buf: Any) -> bytes:
         """Convert a C buffer into a Python byte sequence"""
+        if isinstance(buf, _BytesOutput):
+            return buf.obj
         return ffi.buffer(buf)[:]
 
     def c_uint8_ptr(data: Union[bytes, memoryview, bytearray]) -> Any:
@@ -214,6 +229,10 @@ try:
             return data
         else:
             raise TypeError("Object type %s cannot be passed to C code" % type(data))
+
+    def _c_uint8_ptr_into_bytes(obj: bytes) -> Any:
+        # On CPython, it points to the content of obj (no copy)
+        return ffi.from_buffer("uint8_t[]", obj)
 
     class VoidPointer_cffi(_VoidPointer):
         """Model a newly allocated pointer to void"""
@@ -274,6 +293,8 @@ except ImportError:
         return c_string.value
 
     def get_raw_buffer(buf: Any) -> bytes:
+        if isinstance(buf, _BytesOutput):
+            return buf.obj
         return buf.raw
 
     # ---- Get raw pointer ---
@@ -337,6 +358,9 @@ except ImportError:
         else:
             raise TypeError("Object type %s cannot be passed to C code" % type(data))
 
+    def _c_uint8_ptr_into_bytes(obj: bytes) -> Any:
+        return (ctypes.c_ubyte * len(obj)).from_address(_PyBytes_AsString(obj))
+
     # ---
 
     class VoidPointer_ctypes(_VoidPointer):
@@ -355,6 +379,52 @@ except ImportError:
         return VoidPointer_ctypes()
 
     backend = "ctypes"
+
+
+# Only on CPython, C code can write the output directly into a new bytes
+# object, which is then returned without copying it. This is what C extensions
+# do with PyBytes_FromStringAndSize(NULL, size): the content is undefined,
+# and it must be filled in before anything else gets the object.
+# Private prototypes, so that the ones in ctypes.pythonapi are not changed.
+_PyBytes_FromStringAndSize: Any = None
+_PyBytes_AsString: Any = None
+if sys.implementation.name == "cpython":
+    try:
+        import ctypes as _ctypes
+
+        _PyBytes_FromStringAndSize = _ctypes.PYFUNCTYPE(
+            _ctypes.py_object, _ctypes.c_void_p, _ctypes.c_ssize_t
+        )(("PyBytes_FromStringAndSize", _ctypes.pythonapi))
+        _PyBytes_AsString = _ctypes.PYFUNCTYPE(_ctypes.c_void_p, _ctypes.py_object)(
+            ("PyBytes_AsString", _ctypes.pythonapi)
+        )
+    except (ImportError, AttributeError):
+        _PyBytes_FromStringAndSize = None
+
+# For shorter outputs, the usual copy is cheap
+_MIN_BYTES_OUTPUT = 64 * 1024
+
+
+def create_output_buffer(size: int) -> Any:
+    """Allocate the memory where C code writes the output of a function
+    into, of the given size::
+
+        out = create_output_buffer(size)
+        with c_uint8_ptr_out(out) as ptr:
+            lib.function(..., ptr, ...)
+        return get_raw_buffer(out)
+
+    Usually, it is create_string_buffer(size), which get_raw_buffer() copies.
+    On CPython, for long outputs, it is a new bytes object instead, which C code
+    writes directly into, and which get_raw_buffer() returns as it is.
+    Nothing else gets that bytes object until the C code has written it.
+    """
+
+    # The empty bytes object is a shared singleton
+    if _PyBytes_FromStringAndSize is None or size < max(_MIN_BYTES_OUTPUT, 1):
+        return create_string_buffer(size)
+    obj = _PyBytes_FromStringAndSize(None, size)
+    return _BytesOutput(obj, _c_uint8_ptr_into_bytes(obj))
 
 
 def c_uint8_ptr_len(data: Union[bytes, memoryview, bytearray]) -> Tuple[Any, int]:
@@ -383,6 +453,8 @@ class c_uint8_ptr_out:
         self._copy: Any = None
 
     def __enter__(self) -> Any:
+        if isinstance(self._data, _BytesOutput):
+            return self._data.ptr
         if _is_pypy and isinstance(self._data, _buffer_type) and _must_copy(self._data):
             self._copy = create_string_buffer(len(self._data))
             self._copy[0 : len(self._data)] = bytes(self._data)

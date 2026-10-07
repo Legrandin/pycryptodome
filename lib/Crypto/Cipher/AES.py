@@ -184,6 +184,7 @@ def new(
     initial_value: Union[int, Buffer] = ...,
     counter: Dict = ...,
     use_aesni: bool = ...,
+    threads: int = ...,
 ) -> CtrMode: ...
 
 
@@ -218,7 +219,12 @@ def new(key: Buffer, mode: Literal[10], nonce: Optional[Buffer] = ..., use_aesni
 
 @overload
 def new(
-    key: Buffer, mode: Literal[11], nonce: Optional[Buffer] = ..., mac_len: int = ..., use_aesni: bool = ...
+    key: Buffer,
+    mode: Literal[11],
+    nonce: Optional[Buffer] = ...,
+    mac_len: int = ...,
+    use_aesni: bool = ...,
+    threads: int = ...,
 ) -> GcmMode: ...
 
 
@@ -331,6 +337,18 @@ def new(key: Buffer, mode: int, *args: Any, **kwargs: Any) -> Any:
 
       use_aesni: (boolean):
         Use Intel AES-NI hardware extensions (default: use if available).
+
+      threads (integer):
+        (Only ``MODE_CTR`` and ``MODE_GCM``).
+        The maximum number of threads used to encrypt or decrypt long data
+        (default: 1, no extra threads).
+        Use 0 for as many threads as the CPU cores available
+        to this process.
+        Each thread processes at least 1 MiB of a single call to
+        ``encrypt()`` or ``decrypt()``: with shorter inputs,
+        fewer threads are used, or none at all.
+        For best results, do not exceed the number of physical cores.
+        The output does not depend on the number of threads.
 
     Returns:
         an AES object, of the applicable mode.

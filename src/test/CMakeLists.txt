@@ -153,6 +153,15 @@ if (SSE)
   add_test(NAME test_clmul COMMAND test_clmul)
 endif()
 
+# GHASH: portable, and CLMUL when available
+if (SSE)
+  add_executable(test_ghash test_ghash.c ../ghash_portable.c ../ghash_clmul.c)
+  target_compile_definitions(test_ghash PRIVATE TEST_CLMUL)
+else()
+  add_executable(test_ghash test_ghash.c ../ghash_portable.c)
+endif()
+add_test(NAME test_ghash COMMAND test_ghash)
+
 # poly1305
 add_library(poly1305 OBJECT ../poly1305.c)
 foreach (f reduce load_r load_m multiply accumulate)
@@ -168,6 +177,10 @@ endforeach()
 # pkcs1
 add_executable(test_pkcs1 test_pkcs1.c ../pkcs1_decode.c)
 add_test(NAME test_pkcs1 COMMAND test_pkcs1)
+
+# CTR mode
+add_executable(test_raw_ctr test_raw_ctr.c ../raw_ctr.c)
+add_test(NAME test_raw_ctr COMMAND test_raw_ctr)
 
 # curve25519
 add_library(mod25519 OBJECT ../mod25519.c ../multiply_32.c)

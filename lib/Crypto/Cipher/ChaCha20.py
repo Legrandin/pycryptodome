@@ -41,7 +41,7 @@ from Crypto.Util._raw_api import (
     c_uint8_ptr_len,
     c_uint8_ptr_out,
     c_ulong,
-    create_string_buffer,
+    create_output_buffer,
     get_raw_buffer,
     is_writeable_buffer,
     load_pycryptodome_raw_lib,
@@ -165,7 +165,7 @@ class ChaCha20Cipher:
         """Encrypt without FSM checks"""
 
         if output is None:
-            ciphertext = create_string_buffer(len(plaintext))
+            ciphertext = create_output_buffer(len(plaintext))
         else:
             ciphertext = output
 

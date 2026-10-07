@@ -30,15 +30,15 @@
 
 from __future__ import annotations
 
-import os
 import threading
 from typing import Optional, Union
 
+from Crypto.Util._cpu_features import available_cores as _available_cores
 from Crypto.Util._raw_api import (
     c_size_t,
     c_uint8_ptr_len,
     c_uint8_ptr_out,
-    create_string_buffer,
+    create_output_buffer,
     get_raw_buffer,
     load_pycryptodome_raw_lib,
 )
@@ -110,26 +110,6 @@ def _hash_leaves(leaves: memoryview, cvs: memoryview) -> None:
 # Minimum amount of whole leaves (256 KiB) that each thread must hash:
 # with less, starting the thread costs more than what it saves.
 _MIN_LEAVES_PER_THREAD = 32
-
-
-def _available_cores():
-    """Return the number of CPU cores this process can run on."""
-
-    # Python 3.13+: it takes into account CPU affinity and -X cpu_count
-    if hasattr(os, "process_cpu_count"):
-        count = os.process_cpu_count()
-    elif hasattr(os, "sched_getaffinity"):
-        count = len(os.sched_getaffinity(0))
-    elif hasattr(os, "cpu_count"):
-        count = os.cpu_count()
-    else:
-        import multiprocessing
-
-        try:
-            count = multiprocessing.cpu_count()
-        except NotImplementedError:
-            count = None
-    return count or 1
 
 
 def _hash_leaves_threaded(leaves: memoryview, cvs: memoryview, threads: int) -> None:
@@ -441,17 +421,18 @@ def digest(data: Buffer, *, length: int, custom: Optional[bytes] = None) -> byte
     if length < 0:
         raise ValueError("'length' must be a non-negative integer")
 
-    out = create_string_buffer(length)
+    out = create_output_buffer(length)
     data_ptr, data_len = c_uint8_ptr_len(data)
     custom_ptr, custom_len = c_uint8_ptr_len(custom)
-    result = _raw_k12_lib.k12_oneshot(
-        data_ptr,
-        c_size_t(data_len),
-        custom_ptr,
-        c_size_t(custom_len),
-        out,
-        c_size_t(length),
-    )
+    with c_uint8_ptr_out(out) as out_ptr:
+        result = _raw_k12_lib.k12_oneshot(
+            data_ptr,
+            c_size_t(data_len),
+            custom_ptr,
+            c_size_t(custom_len),
+            out_ptr,
+            c_size_t(length),
+        )
     if result:
         raise ValueError("Error %d while computing KangarooTwelve" % result)
     return get_raw_buffer(out)

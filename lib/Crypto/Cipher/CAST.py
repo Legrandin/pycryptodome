@@ -161,6 +161,13 @@ def new(
             (Only ``MODE_CTR``). The initial value for the counter within
             the counter block. By default it is **0**.
 
+        *   **threads** : (*integer*) --
+            (Only ``MODE_CTR``). The maximum number of threads used to
+            encrypt or decrypt long data (default: 1, no extra threads;
+            0 for as many as the CPU cores available to this process).
+            Each thread processes at least 1 MiB of a single call.
+            The output does not depend on the number of threads.
+
     :Return: a CAST object, of the applicable mode.
     """
 

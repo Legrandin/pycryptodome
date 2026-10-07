@@ -253,7 +253,7 @@ It only works in combination with a 128 bits cipher like AES.
 The :func:`new` function at the module level under ``Crypto.Cipher`` instantiates
 a new GCM cipher object for the relevant base algorithm.
 
-.. function:: Crypto.Cipher.<algorithm>.new(key, mode, *, nonce=None, mac_len=None)
+.. function:: Crypto.Cipher.<algorithm>.new(key, mode, *, nonce=None, mac_len=None, threads=1)
 
   Create a new GCM object, using <algorithm> as the base block cipher.
   
@@ -264,9 +264,16 @@ a new GCM cipher object for the relevant base algorithm.
     If not present, the library creates a random nonce (16 bytes long for AES).
   :param integer mac_len: the desired length of the 
     MAC tag, from 4 to 16 bytes (default: 16).
+  :param int threads: (only for AES) the maximum number of threads used to
+    encrypt or decrypt long data (default: 1, no extra threads).
+    Use 0 for as many threads as the CPU cores available to the process.
+    See the same parameter for the :ref:`ctr_mode`.
   :return: a GCM cipher object
       
 The cipher object has a read-only attribute :attr:`nonce`.
+
+With the ``threads`` parameter, both the encryption (CTR mode) and
+the authentication (GHASH) of long data run on several CPU cores.
 
 Example (encryption)::
 

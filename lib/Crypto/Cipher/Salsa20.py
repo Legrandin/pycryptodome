@@ -33,7 +33,7 @@ from Crypto.Util._raw_api import (
     c_size_t,
     c_uint8_ptr_len,
     c_uint8_ptr_out,
-    create_string_buffer,
+    create_output_buffer,
     get_raw_buffer,
     is_writeable_buffer,
     load_pycryptodome_raw_lib,
@@ -116,7 +116,7 @@ class Salsa20Cipher:
         """
 
         if output is None:
-            ciphertext = create_string_buffer(len(plaintext))
+            ciphertext = create_output_buffer(len(plaintext))
         else:
             ciphertext = output
 

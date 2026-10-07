@@ -30,16 +30,18 @@ from typing import Optional, Union, overload
 __all__ = ["CtrMode"]
 
 import struct
+import threading
 
 from Crypto.Random import get_random_bytes
 from Crypto.Util._bytes import copy_bytes
+from Crypto.Util._cpu_features import available_cores
 from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
     c_size_t,
     c_uint8_ptr_len,
     c_uint8_ptr_out,
-    create_string_buffer,
+    create_output_buffer,
     get_raw_buffer,
     is_writeable_buffer,
     load_pycryptodome_raw_lib,
@@ -66,8 +68,86 @@ raw_ctr_lib = load_pycryptodome_raw_lib(
                                     const uint8_t *in,
                                     uint8_t *out,
                                     size_t data_len);
+                    int CTR_encrypt_at(const void *ctrState,
+                                       const uint8_t *in,
+                                       uint8_t *out,
+                                       size_t offset,
+                                       size_t data_len);
+                    int CTR_skip(void *ctrState,
+                                 size_t data_len);
+                    int CTR_check(const void *ctrState,
+                                  size_t data_len);
                     int CTR_stop_operation(void *ctrState);""",
 )
+
+# Minimum amount of data (1 MiB) that each thread must process:
+# with less, starting the thread costs more than what it saves.
+_MIN_BYTES_PER_THREAD = 1024 * 1024
+
+
+def _ctr_threaded(state, in_ptr, out_ptr, data_len: int, threads: int) -> int:
+    """Encrypt or decrypt ``data_len`` bytes in CTR mode, by splitting them
+    into ``threads`` contiguous ranges, which are processed in parallel.
+    Fewer threads are used if a range would be shorter than
+    ``_MIN_BYTES_PER_THREAD`` bytes.
+    The calling thread processes the first range.
+
+    :return: the error code of the C library (0 for success)
+    """
+
+    threads = min(threads, data_len // _MIN_BYTES_PER_THREAD)
+    if threads <= 1:
+        return raw_ctr_lib.CTR_encrypt(state, in_ptr, out_ptr, c_size_t(data_len))
+
+    # Like CTR_encrypt(), process nothing if the key stream runs out
+    result = raw_ctr_lib.CTR_check(state, c_size_t(data_len))
+    if result:
+        return result
+
+    results = [0] * threads
+    errors = []
+
+    def worker(i, start, end):
+        try:
+            # CTR_encrypt_at() does not change the state, and writes only
+            # out_ptr[start:end] (no two threads write the same bytes)
+            results[i] = raw_ctr_lib.CTR_encrypt_at(
+                state, in_ptr, out_ptr, c_size_t(start), c_size_t(end - start)
+            )
+        except Exception as e:
+            errors.append(e)
+
+    # List of byte positions where each range starts ('threads' ranges).
+    # Each range is data_len // threads bytes long or one byte more.
+    # The first item is the first byte of the first range (always 0).
+    # The last item is the first byte beyond the last range (always data_len).
+    # Ranges may start in the middle of a cipher block: in CTR mode, each byte
+    # of the key stream only depends on its position (see CTR_encrypt_at).
+    bounds = [data_len * i // threads for i in range(threads + 1)]
+
+    workers = []
+    for i in range(1, threads):
+        t = threading.Thread(target=worker, args=(i, bounds[i], bounds[i + 1]))
+        t.daemon = True
+        t.start()
+        workers.append(t)
+
+    # The calling thread processes the first range, while the others run
+    worker(0, bounds[0], bounds[1])
+
+    for t in workers:
+        t.join()
+
+    # Move the state forward even after an error in a thread (some ranges may
+    # be processed already), so that the same key stream cannot be used again
+    result = raw_ctr_lib.CTR_skip(state, c_size_t(data_len))
+
+    if errors:
+        raise errors[0]
+    for r in results:
+        if r:
+            return r
+    return result
 
 
 class CtrMode:
@@ -106,6 +186,7 @@ class CtrMode:
         prefix_len: int,
         counter_len: int,
         little_endian: bool,
+        threads: int = 1,
     ) -> None:
         """Create a new block cipher, configured in CTR mode.
 
@@ -135,7 +216,19 @@ class CtrMode:
           little_endian : boolean
             True if the counter in the counter block is an integer encoded
             in little endian mode. If False, it is big endian.
+
+          threads : integer
+            The maximum number of threads used to process long data
+            (0 for as many as the CPU cores available).
         """
+
+        if not isinstance(threads, int) or isinstance(threads, bool):
+            raise TypeError("'threads' must be an integer")
+        if threads < 0:
+            raise ValueError("'threads' must be a non-negative integer")
+        if threads == 0:
+            threads = available_cores()
+        self._threads = threads
 
         if len(initial_counter_block) == prefix_len + counter_len:
             self.nonce = copy_bytes(None, prefix_len, initial_counter_block)
@@ -213,34 +306,7 @@ class CtrMode:
             raise TypeError("encrypt() cannot be called after decrypt()")
         self._next = ["encrypt"]
 
-        if output is None:
-            ciphertext = create_string_buffer(len(plaintext))
-        else:
-            ciphertext = output
-
-            if not is_writeable_buffer(output):
-                raise TypeError("output must be a bytearray or a writeable memoryview")
-
-            if len(plaintext) != len(output):
-                raise ValueError("output must have the same length as the input  (%d bytes)" % len(plaintext))
-
-        with c_uint8_ptr_out(ciphertext) as ciphertext_ptr:
-            plaintext_ptr, plaintext_len = c_uint8_ptr_len(plaintext)
-            # Check the lengths of the buffers that C code gets
-            if len(ciphertext_ptr) != plaintext_len:
-                raise ValueError("output must have the same length as the input  (%d bytes)" % plaintext_len)
-            result = raw_ctr_lib.CTR_encrypt(
-                self._state.get(), plaintext_ptr, ciphertext_ptr, c_size_t(plaintext_len)
-            )
-        if result:
-            if result == 0x60002:
-                raise OverflowError("The counter has wrapped around in CTR mode")
-            raise ValueError("Error %X while encrypting in CTR mode" % result)
-
-        if output is None:
-            return get_raw_buffer(ciphertext)
-        else:
-            return None
+        return self._process(plaintext, output, "encrypting")
 
     @overload
     def decrypt(self, ciphertext: Buffer) -> bytes: ...
@@ -287,34 +353,48 @@ class CtrMode:
             raise TypeError("decrypt() cannot be called after encrypt()")
         self._next = ["decrypt"]
 
+        return self._process(ciphertext, output, "decrypting")
+
+    def _process(
+        self, data: Buffer, output: Optional[Union[bytearray, memoryview]], what: str
+    ) -> Optional[bytes]:
+        """Encrypt or decrypt (which are the same operation in CTR mode)"""
+
         if output is None:
-            plaintext = create_string_buffer(len(ciphertext))
+            result_buffer = create_output_buffer(len(data))
         else:
-            plaintext = output
+            result_buffer = output
 
             if not is_writeable_buffer(output):
                 raise TypeError("output must be a bytearray or a writeable memoryview")
 
-            if len(ciphertext) != len(output):
-                raise ValueError("output must have the same length as the input  (%d bytes)" % len(plaintext))
+            if len(data) != len(output):
+                raise ValueError("output must have the same length as the input  (%d bytes)" % len(data))
 
-        with c_uint8_ptr_out(plaintext) as plaintext_ptr:
-            ciphertext_ptr, ciphertext_len = c_uint8_ptr_len(ciphertext)
+        with c_uint8_ptr_out(result_buffer) as result_ptr:
+            data_ptr, data_len = c_uint8_ptr_len(data)
             # Check the lengths of the buffers that C code gets
-            if len(plaintext_ptr) != ciphertext_len:
-                raise ValueError("output must have the same length as the input  (%d bytes)" % ciphertext_len)
-            result = raw_ctr_lib.CTR_decrypt(
-                self._state.get(), ciphertext_ptr, plaintext_ptr, c_size_t(ciphertext_len)
-            )
+            if len(result_ptr) != data_len:
+                raise ValueError("output must have the same length as the input  (%d bytes)" % data_len)
+            result = self._ctr(data_ptr, result_ptr, data_len)
+        self._check(result, what)
+
+        if output is None:
+            return get_raw_buffer(result_buffer)
+        else:
+            return None
+
+    def _ctr(self, in_ptr, out_ptr, data_len: int) -> int:
+        if self._threads > 1:
+            return _ctr_threaded(self._state.get(), in_ptr, out_ptr, data_len, self._threads)
+        return raw_ctr_lib.CTR_encrypt(self._state.get(), in_ptr, out_ptr, c_size_t(data_len))
+
+    @staticmethod
+    def _check(result: int, what: str) -> None:
         if result:
             if result == 0x60002:
                 raise OverflowError("The counter has wrapped around in CTR mode")
-            raise ValueError("Error %X while decrypting in CTR mode" % result)
-
-        if output is None:
-            return get_raw_buffer(plaintext)
-        else:
-            return None
+            raise ValueError("Error %X while %s in CTR mode" % (result, what))
 
 
 def _create_ctr_cipher(factory, **kwargs):
@@ -349,10 +429,16 @@ def _create_ctr_cipher(factory, **kwargs):
         of the counter block. This parameter is incompatible to both ``nonce``
         and ``initial_value``.
 
+      threads : integer
+        The maximum number of threads used to process long data
+        (default: 1, no extra threads; 0 for all CPU cores).
+
     Any other keyword will be passed to the underlying block cipher.
     See the relevant documentation for details (at least ``key`` will need
     to be present).
     """
+
+    threads = kwargs.pop("threads", 1)
 
     cipher_state = factory._create_base_cipher(kwargs)
 
@@ -398,8 +484,9 @@ def _create_ctr_cipher(factory, **kwargs):
             initial_counter_block,
             len(nonce),  # prefix
             counter_len,
-            False,
-        )  # little_endian
+            False,  # little_endian
+            threads,
+        )
 
     # Crypto.Util.Counter is used
 
@@ -431,4 +518,4 @@ def _create_ctr_cipher(factory, **kwargs):
             " block size (%d)" % (len(initial_counter_block), factory.block_size)
         )
 
-    return CtrMode(cipher_state, initial_counter_block, len(prefix), counter_len, little_endian)
+    return CtrMode(cipher_state, initial_counter_block, len(prefix), counter_len, little_endian, threads)

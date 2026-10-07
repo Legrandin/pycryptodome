@@ -36,7 +36,7 @@ from Crypto.Util._raw_api import (
     c_size_t,
     c_uint8_ptr_len,
     c_uint8_ptr_out,
-    create_string_buffer,
+    create_output_buffer,
     get_raw_buffer,
     is_writeable_buffer,
     load_pycryptodome_raw_lib,
@@ -93,7 +93,7 @@ def strxor(
         raise ValueError("Only byte strings of equal length can be xored")
 
     if output is None:
-        result = create_string_buffer(len(term1))
+        result = create_output_buffer(len(term1))
     else:
         # Note: output may overlap with either input
         result = output
@@ -152,7 +152,7 @@ def strxor_c(term: Buffer, c: int, output: Optional[Union[bytearray, memoryview]
         raise ValueError("c must be in range(256)")
 
     if output is None:
-        result = create_string_buffer(len(term))
+        result = create_output_buffer(len(term))
     else:
         # Note: output may overlap with either input
         result = output

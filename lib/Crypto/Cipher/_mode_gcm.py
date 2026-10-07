@@ -34,6 +34,7 @@ Galois/Counter Mode (GCM).
 
 from __future__ import annotations
 
+import threading
 from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple, Union, overload
 
 __all__ = ["GcmMode"]
@@ -73,18 +74,29 @@ _ghash_api_template = """
     int ghash_expand_%imp%(const uint8_t h[16],
                            void **ghash_tables);
     int ghash_destroy_%imp%(void *ghash_tables);
+    int ghash_at_%imp%(uint8_t y_out[16],
+                       const uint8_t block_data[],
+                       size_t offset,
+                       size_t len,
+                       const uint8_t y_in[16],
+                       const void *exp_key);
+    int ghash_combine_%imp%(uint8_t y_out[16],
+                            const uint8_t y_in[16],
+                            size_t n_blocks,
+                            const uint8_t g[16],
+                            const void *exp_key);
 """
 
 
 def _build_impl(lib, postfix):
     from collections import namedtuple
 
-    funcs = ("ghash", "ghash_expand", "ghash_destroy")
+    funcs = ("ghash", "ghash_expand", "ghash_destroy", "ghash_at", "ghash_combine")
     GHASH_Imp = namedtuple("_GHash_Imp", funcs)
     try:
         imp_funcs = [getattr(lib, x + "_" + postfix) for x in funcs]
     except AttributeError:  # Make sphinx stop complaining with its mocklib
-        imp_funcs = [None] * 3
+        imp_funcs = [None] * len(funcs)
     params = dict(zip(funcs, imp_funcs))
     return GHASH_Imp(**params)
 
@@ -115,6 +127,12 @@ def _get_ghash_clmul():
 
 _ghash_clmul = _get_ghash_clmul()
 
+# Minimum amount of data that each thread must authenticate:
+# with less, starting the thread costs more than what it saves.
+# The CLMUL implementation is much faster, so it needs more data.
+_MIN_BYTES_PER_THREAD_CLMUL = 2 * 1024 * 1024
+_MIN_BYTES_PER_THREAD_PORTABLE = 256 * 1024
+
 
 class _GHASH:
     """GHASH function defined in NIST SP 800-38D, Algorithm 2.
@@ -126,12 +144,18 @@ class _GHASH:
 
     in the Galois field GF(2^256) using the reducing polynomial
     (x^128 + x^7 + x^2 + x + 1).
+
+    With more than one thread, long data is split into ranges,
+    which are hashed in parallel and then combined with:
+
+       GHASH(A || B) = GHASH(A) * H^{len(B)} + GHASH(B)
     """
 
-    def __init__(self, subkey, ghash_c):
+    def __init__(self, subkey, ghash_c, threads=1):
         assert len(subkey) == 16
 
         self.ghash_c = ghash_c
+        self._threads = threads
 
         self._exp_key = VoidPointer()
         result = ghash_c.ghash_expand(c_uint8_ptr(subkey), self._exp_key.address_of())
@@ -147,6 +171,16 @@ class _GHASH:
         assert len(block_data) % 16 == 0
 
         block_data_ptr, block_data_len = c_uint8_ptr_len(block_data)
+
+        if self.ghash_c is _ghash_clmul:
+            min_bytes = _MIN_BYTES_PER_THREAD_CLMUL
+        else:
+            min_bytes = _MIN_BYTES_PER_THREAD_PORTABLE
+        threads = min(self._threads, block_data_len // min_bytes)
+        if threads > 1:
+            self._update_threaded(block_data_ptr, block_data_len, threads)
+            return self
+
         result = self.ghash_c.ghash(
             self._last_y,
             block_data_ptr,
@@ -158,6 +192,62 @@ class _GHASH:
             raise ValueError("Error %d while updating GHASH" % result)
 
         return self
+
+    def _update_threaded(self, block_data_ptr, block_data_len, threads):
+        """Hash the data in ``threads`` contiguous ranges, in parallel.
+        The calling thread processes the first range."""
+
+        n_blocks = block_data_len // 16
+        # Ranges differ by at most one block
+        bounds = [16 * (n_blocks * i // threads) for i in range(threads + 1)]
+
+        # The first range continues from the current value;
+        # the others start from zero, and are combined later
+        partials = [self._last_y] + [create_string_buffer(16) for _ in range(1, threads)]
+        results = [0] * threads
+        errors = []
+
+        def worker(i):
+            try:
+                results[i] = self.ghash_c.ghash_at(
+                    partials[i],
+                    block_data_ptr,
+                    c_size_t(bounds[i]),
+                    c_size_t(bounds[i + 1] - bounds[i]),
+                    partials[i],
+                    self._exp_key.get(),
+                )
+            except Exception as e:
+                errors.append(e)
+
+        workers = []
+        for i in range(1, threads):
+            t = threading.Thread(target=worker, args=(i,))
+            t.daemon = True
+            t.start()
+            workers.append(t)
+
+        worker(0)
+
+        for t in workers:
+            t.join()
+
+        if errors:
+            raise errors[0]
+        for result in results:
+            if result:
+                raise ValueError("Error %d while updating GHASH" % result)
+
+        for i in range(1, threads):
+            result = self.ghash_c.ghash_combine(
+                self._last_y,
+                self._last_y,
+                c_size_t((bounds[i + 1] - bounds[i]) // 16),
+                partials[i],
+                self._exp_key.get(),
+            )
+            if result:
+                raise ValueError("Error %d while combining GHASH" % result)
 
     def digest(self):
         return get_raw_buffer(self._last_y)
@@ -196,7 +286,14 @@ class GcmMode:
     """
 
     def __init__(
-        self, factory: ModuleType, key: Buffer, nonce: Buffer, mac_len: int, cipher_params: Dict, ghash_c: Any
+        self,
+        factory: ModuleType,
+        key: Buffer,
+        nonce: Buffer,
+        mac_len: int,
+        cipher_params: Dict,
+        ghash_c: Any,
+        threads: int = 1,
     ) -> None:
         self.block_size = factory.block_size
         if self.block_size != 16:
@@ -250,11 +347,17 @@ class GcmMode:
         nonce_ctr = j0[:12]
         iv_ctr = (bytes_to_long(j0) + 1) & 0xFFFFFFFF
         self._cipher = factory.new(
-            key, self._factory.MODE_CTR, initial_value=iv_ctr, nonce=nonce_ctr, **cipher_params
+            key,
+            self._factory.MODE_CTR,
+            initial_value=iv_ctr,
+            nonce=nonce_ctr,
+            threads=threads,
+            **cipher_params,
         )
 
         # Step 5 - Bootstrap GHASH
-        self._signer = _GHASH(hash_subkey, ghash_c)
+        # (it uses as many threads as the CTR cipher, which checks the parameter)
+        self._signer = _GHASH(hash_subkey, ghash_c, self._cipher._threads)
 
         # Step 6 - Prepare GCTR cipher for GMAC
         self._tag_cipher = factory.new(
@@ -321,7 +424,10 @@ class GcmMode:
         update_len = len(data) // 16 * 16
         self._cache = copy_bytes(update_len, None, data)
         if update_len > 0:
-            self._signer.update(data[:update_len])
+            if update_len < len(data):
+                # Do not copy the data
+                data = memoryview(data)[:update_len]
+            self._signer.update(data)
 
     def _pad_cache_and_update(self):
         assert len(self._cache) < 16
@@ -647,6 +753,10 @@ def _create_gcm_cipher(factory, **kwargs):
       mac_len : integer
         Length of the MAC, in bytes.
         It must be no larger than 16 bytes (which is the default).
+
+      threads : integer
+        The maximum number of threads used to encrypt or decrypt long data
+        (default: 1, no extra threads; 0 for all CPU cores).
     """
 
     try:
@@ -658,6 +768,7 @@ def _create_gcm_cipher(factory, **kwargs):
     if nonce is None:
         nonce = get_random_bytes(16)
     mac_len = kwargs.pop("mac_len", 16)
+    threads = kwargs.pop("threads", 1)
 
     # Not documented - only used for testing
     use_clmul = kwargs.pop("use_clmul", True)
@@ -666,4 +777,4 @@ def _create_gcm_cipher(factory, **kwargs):
     else:
         ghash_c = _ghash_portable
 
-    return GcmMode(factory, key, nonce, mac_len, kwargs, ghash_c)
+    return GcmMode(factory, key, nonce, mac_len, kwargs, ghash_c, threads)

@@ -36,7 +36,7 @@ from Crypto.Util._raw_api import (
     c_size_t,
     c_uint8_ptr_len,
     c_uint8_ptr_out,
-    create_string_buffer,
+    create_output_buffer,
     get_raw_buffer,
     is_writeable_buffer,
     load_pycryptodome_raw_lib,
@@ -177,7 +177,7 @@ class CfbMode:
         self._next = ["encrypt"]
 
         if output is None:
-            ciphertext = create_string_buffer(len(plaintext))
+            ciphertext = create_output_buffer(len(plaintext))
         else:
             ciphertext = output
 
@@ -249,7 +249,7 @@ class CfbMode:
         self._next = ["decrypt"]
 
         if output is None:
-            plaintext = create_string_buffer(len(ciphertext))
+            plaintext = create_output_buffer(len(ciphertext))
         else:
             plaintext = output
 
