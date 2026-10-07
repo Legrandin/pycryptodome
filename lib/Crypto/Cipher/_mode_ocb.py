@@ -70,8 +70,9 @@ Example:
 from __future__ import annotations
 
 from binascii import unhexlify
-from typing import TYPE_CHECKING, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple, Union
 
+from Crypto.Cipher._state_machine import Method
 from Crypto.Hash import BLAKE2s
 from Crypto.Random import get_random_bytes
 from Crypto.Util._bytes import copy_bytes
@@ -141,7 +142,9 @@ _raw_ocb_lib = load_pycryptodome_raw_lib(
 _MIN_BYTES_PER_THREAD = 1024 * 1024
 
 
-def _process_threaded(state, at_func, in_ptr, out_ptr, data_len: int, threads: int) -> int:
+def _process_threaded(
+    state: Any, at_func: Callable[..., int], in_ptr: Any, out_ptr: Any, data_len: int, threads: int
+) -> int:
     """Encrypt or decrypt ``data_len`` bytes by splitting them into ``threads``
     contiguous ranges, which are processed in parallel.
     Each range starts at a block boundary: if ``data_len`` is not a multiple
@@ -152,16 +155,19 @@ def _process_threaded(state, at_func, in_ptr, out_ptr, data_len: int, threads: i
     which is an XOR over all blocks. Then, the state moves past all ranges.
 
     :return: the error code of the C library (0 for success)
+
+    ``state``, ``in_ptr`` and ``out_ptr`` are C pointers, whose types depend
+    on the backend (cffi or ctypes): see :mod:`Crypto.Util._raw_api`.
     """
 
     bounds = range_boundaries(data_len, threads, 16)
     partials = [create_string_buffer(16) for _ in range(threads)]
 
-    def worker(i):
+    def worker(i: int) -> int:
         start, end = bounds[i], bounds[i + 1]
         return at_func(state, in_ptr, out_ptr, c_size_t(start), c_size_t(end - start), partials[i])
 
-    results = []
+    results: List[int] = []
     try:
         results = run_in_threads(worker, threads)
     finally:
@@ -170,9 +176,13 @@ def _process_threaded(state, at_func, in_ptr, out_ptr, data_len: int, threads: i
         checksum = bytes(16)
         for partial in partials:
             checksum = strxor(checksum, get_raw_buffer(partial))
-        result = _raw_ocb_lib.OCB_skip(state, c_size_t(data_len), checksum)
+        skip_result = _raw_ocb_lib.OCB_skip(state, c_size_t(data_len), checksum)
 
-    return next((r for r in results if r), result)
+    # Report the first error of a thread, if any
+    for result in results:
+        if result:
+            return result
+    return skip_result
 
 
 class OcbMode:
@@ -212,7 +222,7 @@ class OcbMode:
         self._cache_P = b""
 
         # Allowed transitions after initialization
-        self._next = ["update", "encrypt", "decrypt", "digest", "verify"]
+        self._next = [Method.UPDATE, Method.ENCRYPT, Method.DECRYPT, Method.DIGEST, Method.VERIFY]
 
         # Create low-level cipher instance
         raw_cipher = factory._create_base_cipher(cipher_params)
@@ -270,10 +280,10 @@ class OcbMode:
             A piece of associated data.
         """
 
-        if "update" not in self._next:
+        if Method.UPDATE not in self._next:
             raise TypeError("update() can only be called immediately after initialization")
 
-        self._next = ["encrypt", "decrypt", "digest", "verify", "update"]
+        self._next = [Method.ENCRYPT, Method.DECRYPT, Method.DIGEST, Method.VERIFY, Method.UPDATE]
 
         if len(self._cache_A) > 0:
             filler = min(16 - len(self._cache_A), len(assoc_data))
@@ -365,13 +375,13 @@ class OcbMode:
             Its length may not match the length of the *plaintext*.
         """
 
-        if "encrypt" not in self._next:
+        if Method.ENCRYPT not in self._next:
             raise TypeError("encrypt() can only be called after initialization or an update()")
 
         if plaintext is None:
-            self._next = ["digest"]
+            self._next = [Method.DIGEST]
         else:
-            self._next = ["encrypt"]
+            self._next = [Method.ENCRYPT]
         return self._process(plaintext, _raw_ocb_lib.OCB_encrypt, "encrypt")
 
     def decrypt(self, ciphertext: Optional[Buffer] = None) -> bytes:
@@ -393,13 +403,13 @@ class OcbMode:
             Its length may not match the length of the *ciphertext*.
         """
 
-        if "decrypt" not in self._next:
+        if Method.DECRYPT not in self._next:
             raise TypeError("decrypt() can only be called after initialization or an update()")
 
         if ciphertext is None:
-            self._next = ["verify"]
+            self._next = [Method.VERIFY]
         else:
-            self._next = ["decrypt"]
+            self._next = [Method.DECRYPT]
         return self._process(ciphertext, _raw_ocb_lib.OCB_decrypt, "decrypt")
 
     def _compute_mac_tag(self):
@@ -428,12 +438,12 @@ class OcbMode:
         :Return: the MAC, as a byte string.
         """
 
-        if "digest" not in self._next:
+        if Method.DIGEST not in self._next:
             raise TypeError("digest() cannot be called now for this cipher")
 
         assert len(self._cache_P) == 0
 
-        self._next = ["digest"]
+        self._next = [Method.DIGEST]
 
         if self._mac_tag is None:
             self._compute_mac_tag()
@@ -464,12 +474,12 @@ class OcbMode:
             or the key is incorrect.
         """
 
-        if "verify" not in self._next:
+        if Method.VERIFY not in self._next:
             raise TypeError("verify() cannot be called now for this cipher")
 
         assert len(self._cache_P) == 0
 
-        self._next = ["verify"]
+        self._next = [Method.VERIFY]
 
         if self._mac_tag is None:
             self._compute_mac_tag()
@@ -509,10 +519,10 @@ class OcbMode:
             - the MAC
         """
 
-        if "encrypt" in self._next and not self._cache_P:
+        if Method.ENCRYPT in self._next and not self._cache_P:
             # The whole message in one go, into a single buffer
             # (it avoids copying the ciphertext to add the last piece)
-            self._next = ["digest"]
+            self._next = [Method.DIGEST]
             in_ptr, in_len = c_uint8_ptr_len(plaintext)
             ciphertext = self._process_buffer(in_ptr, in_len, _raw_ocb_lib.OCB_encrypt, "encrypt")
             return ciphertext, self.digest()
@@ -534,9 +544,9 @@ class OcbMode:
             or the key is incorrect.
         """
 
-        if "decrypt" in self._next and not self._cache_P:
+        if Method.DECRYPT in self._next and not self._cache_P:
             # The whole message in one go (see encrypt_and_digest)
-            self._next = ["verify"]
+            self._next = [Method.VERIFY]
             in_ptr, in_len = c_uint8_ptr_len(ciphertext)
             plaintext = self._process_buffer(in_ptr, in_len, _raw_ocb_lib.OCB_decrypt, "decrypt")
         else:

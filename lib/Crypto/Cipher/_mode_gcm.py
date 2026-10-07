@@ -34,12 +34,13 @@ Galois/Counter Mode (GCM).
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, Optional, Tuple, Union, overload
+from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union, overload
 
 __all__ = ["GcmMode"]
 
 from binascii import unhexlify
 
+from Crypto.Cipher._state_machine import Method
 from Crypto.Hash import BLAKE2s
 from Crypto.Random import get_random_bytes
 from Crypto.Util import _cpu_features
@@ -193,18 +194,21 @@ class _GHASH:
 
         return self
 
-    def _update_threaded(self, block_data_ptr, block_data_len, threads):
+    def _update_threaded(self, block_data_ptr: Any, block_data_len: int, threads: int) -> None:
         """Hash the data in ``threads`` contiguous ranges, in parallel.
-        The calling thread processes the first range."""
+        The calling thread processes the first range.
+
+        ``block_data_ptr`` is a C pointer, whose type depends on the
+        backend (cffi or ctypes): see :mod:`Crypto.Util._raw_api`."""
 
         # Ranges differ by at most one block
         bounds = range_boundaries(block_data_len, threads, 16)
 
         # The first range continues from the current value;
         # the others start from zero, and are combined later
-        partials = [self._last_y] + [create_string_buffer(16) for _ in range(1, threads)]
+        partials: List[Any] = [self._last_y] + [create_string_buffer(16) for _ in range(1, threads)]
 
-        def worker(i):
+        def worker(i: int) -> int:
             return self.ghash_c.ghash_at(
                 partials[i],
                 block_data_ptr,
@@ -301,7 +305,7 @@ class GcmMode:
             raise ValueError("Parameter 'mac_len' must be in the range 4..16")
 
         # Allowed transitions after initialization
-        self._next = ["update", "encrypt", "decrypt", "digest", "verify"]
+        self._next = [Method.UPDATE, Method.ENCRYPT, Method.DECRYPT, Method.DIGEST, Method.VERIFY]
 
         self._no_more_assoc_data = False
 
@@ -372,10 +376,10 @@ class GcmMode:
             A piece of associated data. There are no restrictions on its size.
         """
 
-        if "update" not in self._next:
+        if Method.UPDATE not in self._next:
             raise TypeError("update() can only be called immediately after initialization")
 
-        self._next = ["update", "encrypt", "decrypt", "digest", "verify"]
+        self._next = [Method.UPDATE, Method.ENCRYPT, Method.DECRYPT, Method.DIGEST, Method.VERIFY]
 
         self._update(assoc_data)
         self._auth_len += len(assoc_data)
@@ -468,9 +472,9 @@ class GcmMode:
           Otherwise, ``None``.
         """
 
-        if "encrypt" not in self._next:
+        if Method.ENCRYPT not in self._next:
             raise TypeError("encrypt() can only be called after initialization or an update()")
-        self._next = ["encrypt", "digest"]
+        self._next = [Method.ENCRYPT, Method.DIGEST]
 
         ciphertext = self._cipher.encrypt(plaintext, output=output)
 
@@ -534,9 +538,9 @@ class GcmMode:
           Otherwise, ``None``.
         """
 
-        if "decrypt" not in self._next:
+        if Method.DECRYPT not in self._next:
             raise TypeError("decrypt() can only be called after initialization or an update()")
-        self._next = ["decrypt", "verify"]
+        self._next = [Method.DECRYPT, Method.VERIFY]
 
         if self._status == MacStatus.PROCESSING_AUTH_DATA:
             self._pad_cache_and_update()
@@ -558,9 +562,9 @@ class GcmMode:
         :Return: the MAC, as a byte string.
         """
 
-        if "digest" not in self._next:
+        if Method.DIGEST not in self._next:
             raise TypeError("digest() cannot be called when decrypting or validating a message")
-        self._next = ["digest"]
+        self._next = [Method.DIGEST]
 
         return self._compute_mac()
 
@@ -607,9 +611,9 @@ class GcmMode:
             or the key is incorrect.
         """
 
-        if "verify" not in self._next:
+        if Method.VERIFY not in self._next:
             raise TypeError("verify() cannot be called when encrypting a message")
-        self._next = ["verify"]
+        self._next = [Method.VERIFY]
 
         secret = get_random_bytes(16)
 

@@ -41,6 +41,7 @@ __all__ = ["EaxMode"]
 import struct
 from binascii import unhexlify
 
+from Crypto.Cipher._state_machine import Method
 from Crypto.Hash import CMAC, BLAKE2s
 from Crypto.Random import get_random_bytes
 from Crypto.Util._bytes import copy_bytes
@@ -98,7 +99,7 @@ class EaxMode:
         self._mac_tag: Optional[bytes] = None  # Cache for MAC tag
 
         # Allowed transitions after initialization
-        self._next = ["update", "encrypt", "decrypt", "digest", "verify"]
+        self._next = [Method.UPDATE, Method.ENCRYPT, Method.DECRYPT, Method.DIGEST, Method.VERIFY]
 
         # MAC tag length
         if not (2 <= self._mac_len <= self.block_size):
@@ -151,10 +152,10 @@ class EaxMode:
             A piece of associated data. There are no restrictions on its size.
         """
 
-        if "update" not in self._next:
+        if Method.UPDATE not in self._next:
             raise TypeError("update() can only be called immediately after initialization")
 
-        self._next = ["update", "encrypt", "decrypt", "digest", "verify"]
+        self._next = [Method.UPDATE, Method.ENCRYPT, Method.DECRYPT, Method.DIGEST, Method.VERIFY]
 
         self._signer.update(assoc_data)
         return self
@@ -205,9 +206,9 @@ class EaxMode:
           Otherwise, ``None``.
         """
 
-        if "encrypt" not in self._next:
+        if Method.ENCRYPT not in self._next:
             raise TypeError("encrypt() can only be called after initialization or an update()")
-        self._next = ["encrypt", "digest"]
+        self._next = [Method.ENCRYPT, Method.DIGEST]
         ct = self._cipher.encrypt(plaintext, output=output)
         if output is None:
             self._omac[2].update(ct)
@@ -261,9 +262,9 @@ class EaxMode:
           Otherwise, ``None``.
         """
 
-        if "decrypt" not in self._next:
+        if Method.DECRYPT not in self._next:
             raise TypeError("decrypt() can only be called after initialization or an update()")
-        self._next = ["decrypt", "verify"]
+        self._next = [Method.DECRYPT, Method.VERIFY]
         self._omac[2].update(ciphertext)
         return self._cipher.decrypt(ciphertext, output=output)
 
@@ -278,9 +279,9 @@ class EaxMode:
         :Return: the MAC, as a byte string.
         """
 
-        if "digest" not in self._next:
+        if Method.DIGEST not in self._next:
             raise TypeError("digest() cannot be called when decrypting or validating a message")
-        self._next = ["digest"]
+        self._next = [Method.DIGEST]
 
         if not self._mac_tag:
             tag = b"\x00" * self.block_size
@@ -316,9 +317,9 @@ class EaxMode:
             or the key is incorrect.
         """
 
-        if "verify" not in self._next:
+        if Method.VERIFY not in self._next:
             raise TypeError("verify() cannot be called when encrypting a message")
-        self._next = ["verify"]
+        self._next = [Method.VERIFY]
 
         if not self._mac_tag:
             tag = b"\x00" * self.block_size

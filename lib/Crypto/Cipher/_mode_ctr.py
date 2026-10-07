@@ -25,12 +25,13 @@ Counter (CTR) mode.
 
 from __future__ import annotations
 
-from typing import Optional, Union, overload
+from typing import Any, List, Optional, Union, overload
 
 __all__ = ["CtrMode"]
 
 import struct
 
+from Crypto.Cipher._state_machine import Method
 from Crypto.Random import get_random_bytes
 from Crypto.Util._bytes import copy_bytes
 from Crypto.Util._raw_api import (
@@ -84,12 +85,15 @@ raw_ctr_lib = load_pycryptodome_raw_lib(
 _MIN_BYTES_PER_THREAD = 1024 * 1024
 
 
-def _ctr_threaded(state, in_ptr, out_ptr, data_len: int, threads: int) -> int:
+def _ctr_threaded(state: Any, in_ptr: Any, out_ptr: Any, data_len: int, threads: int) -> int:
     """Encrypt or decrypt ``data_len`` bytes in CTR mode, by splitting them
     into ``threads`` contiguous ranges, which are processed in parallel.
     Fewer threads are used if a range would be shorter than
     ``_MIN_BYTES_PER_THREAD`` bytes.
     The calling thread processes the first range.
+
+    ``state``, ``in_ptr`` and ``out_ptr`` are C pointers, whose types depend
+    on the backend (cffi or ctypes): see :mod:`Crypto.Util._raw_api`.
 
     :return: the error code of the C library (0 for success)
     """
@@ -107,21 +111,25 @@ def _ctr_threaded(state, in_ptr, out_ptr, data_len: int, threads: int) -> int:
     # of the key stream only depends on its position (see CTR_encrypt_at)
     bounds = range_boundaries(data_len, threads)
 
-    def worker(i):
+    def worker(i: int) -> int:
         # CTR_encrypt_at() does not change the state, and writes only
         # out_ptr[start:end] (no two threads write the same bytes)
         start, end = bounds[i], bounds[i + 1]
         return raw_ctr_lib.CTR_encrypt_at(state, in_ptr, out_ptr, c_size_t(start), c_size_t(end - start))
 
-    results = []
+    results: List[int] = []
     try:
         results = run_in_threads(worker, threads)
     finally:
         # Move the state forward even after an error in a thread (some ranges may
         # be processed already), so that the same key stream cannot be used again
-        result = raw_ctr_lib.CTR_skip(state, c_size_t(data_len))
+        skip_result = raw_ctr_lib.CTR_skip(state, c_size_t(data_len))
 
-    return next((r for r in results if r), result)
+    # Report the first error of a thread, if any
+    for result in results:
+        if result:
+            return result
+    return skip_result
 
 
 class CtrMode:
@@ -227,7 +235,7 @@ class CtrMode:
         self.block_size = len(initial_counter_block)
         """The block size of the underlying cipher, in bytes."""
 
-        self._next = ["encrypt", "decrypt"]
+        self._next = [Method.ENCRYPT, Method.DECRYPT]
 
     @overload
     def encrypt(self, plaintext: Buffer) -> bytes: ...
@@ -270,9 +278,9 @@ class CtrMode:
           Otherwise, ``None``.
         """
 
-        if "encrypt" not in self._next:
+        if Method.ENCRYPT not in self._next:
             raise TypeError("encrypt() cannot be called after decrypt()")
-        self._next = ["encrypt"]
+        self._next = [Method.ENCRYPT]
 
         return self._process(plaintext, output, "encrypting")
 
@@ -317,9 +325,9 @@ class CtrMode:
           Otherwise, ``None``.
         """
 
-        if "decrypt" not in self._next:
+        if Method.DECRYPT not in self._next:
             raise TypeError("decrypt() cannot be called after encrypt()")
-        self._next = ["decrypt"]
+        self._next = [Method.DECRYPT]
 
         return self._process(ciphertext, output, "decrypting")
 
