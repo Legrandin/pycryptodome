@@ -48,6 +48,10 @@ New features
   The output does not depend on the number of threads.
 * GCM mode is about 1.5x faster on long messages, as it does not copy the data
   before authenticating it.
+* The portable GHASH (GCM mode, for CPUs without PCLMULQDQ) no longer uses
+  key-dependent tables: it is now constant-time, with the technique
+  described by Thomas Pornin for BearSSL. It is also faster: about 2.8x
+  on 64-bit and 3.2x on 32-bit systems.
 * On CPython, the ``encrypt()`` and ``decrypt()`` methods of most ciphers
   (block cipher modes ECB, CBC, CFB, OFB, CTR, GCM and OCB, plus ChaCha20, Salsa20
   and ARC4) write their result directly into the returned ``bytes`` object,
