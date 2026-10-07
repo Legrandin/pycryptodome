@@ -125,6 +125,7 @@ def _ctr_threaded(state, in_ptr, out_ptr, data_len: int, threads: int) -> int:
         t.start()
         workers.append(t)
 
+    # The calling thread processes the first range, while the others run
     worker(0, bounds[0], bounds[1])
 
     for t in workers:
