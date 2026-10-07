@@ -41,8 +41,7 @@ or decryption can start before the end of the message is available).
 This module implements the third and last variant of OCB (OCB3) and it only
 works in combination with a 128-bit block symmetric cipher, like AES.
 
-OCB is patented in US but `free licenses`_ exist for software implementations
-meant for non-military purposes.
+OCB was patented in USA but the author eventually `abandoned`_ the patents.
 
 Example:
     >>> from Crypto.Cipher import AES
@@ -65,7 +64,7 @@ Example:
 :undocumented: __package__
 
 .. _RFC7253: http://www.rfc-editor.org/info/rfc7253
-.. _free licenses: http://web.cs.ucdavis.edu/~rogaway/ocb/license.htm
+.. _abandoned: https://mailarchive.ietf.org/arch/msg/cfrg/qLTveWOdTJcLn4HP3ev-vrj05Vg/
 """
 
 from __future__ import annotations
@@ -142,7 +141,7 @@ _raw_ocb_lib = load_pycryptodome_raw_lib(
 _MIN_BYTES_PER_THREAD = 1024 * 1024
 
 
-def _transcrypt_threaded(state, at_func, in_ptr, out_ptr, data_len: int, threads: int) -> int:
+def _process_threaded(state, at_func, in_ptr, out_ptr, data_len: int, threads: int) -> int:
     """Encrypt or decrypt ``data_len`` bytes by splitting them into ``threads``
     contiguous ranges, which are processed in parallel.
     Each range starts at a block boundary: if ``data_len`` is not a multiple
@@ -293,7 +292,7 @@ class OcbMode:
         self._update(assoc_data, update_len)
         return self
 
-    def _transcrypt_buffer(self, in_data, in_data_len, trans_func, trans_desc):
+    def _process_buffer(self, in_data, in_data_len, trans_func, trans_desc):
         """Encrypt or decrypt in_data_len bytes into a new buffer.
         If in_data_len is not a multiple of 16, they end with the last
         piece of the message."""
@@ -303,7 +302,7 @@ class OcbMode:
         with c_uint8_ptr_out(out_data) as out_data_ptr:
             if threads > 1:
                 at_func = getattr(_raw_ocb_lib, "OCB_%s_at" % trans_desc)
-                result = _transcrypt_threaded(
+                result = _process_threaded(
                     self._state.get(), at_func, in_data, out_data_ptr, in_data_len, threads
                 )
             else:
@@ -312,10 +311,10 @@ class OcbMode:
             raise ValueError("Error %d while %sing in OCB mode" % (result, trans_desc))
         return get_raw_buffer(out_data)
 
-    def _transcrypt(self, in_data, trans_func, trans_desc):
+    def _process(self, in_data, trans_func, trans_desc):
         # Last piece to encrypt/decrypt
         if in_data is None:
-            out_data = self._transcrypt_buffer(self._cache_P, len(self._cache_P), trans_func, trans_desc)
+            out_data = self._process_buffer(self._cache_P, len(self._cache_P), trans_func, trans_desc)
             self._cache_P = b""
             return out_data
 
@@ -332,13 +331,13 @@ class OcbMode:
                 return b""
 
             # Clear the cache, and proceeding with any other aligned data
-            prefix = self._transcrypt_buffer(self._cache_P, len(self._cache_P), trans_func, trans_desc)
+            prefix = self._process_buffer(self._cache_P, len(self._cache_P), trans_func, trans_desc)
             self._cache_P = b""
 
         # Process data in multiples of the block size
         in_data_ptr, in_data_len = c_uint8_ptr_len(in_data)
         trans_len = in_data_len // 16 * 16
-        result = self._transcrypt_buffer(in_data_ptr, trans_len, trans_func, trans_desc)
+        result = self._process_buffer(in_data_ptr, trans_len, trans_func, trans_desc)
         if prefix:
             result = prefix + result
 
@@ -373,7 +372,7 @@ class OcbMode:
             self._next = ["digest"]
         else:
             self._next = ["encrypt"]
-        return self._transcrypt(plaintext, _raw_ocb_lib.OCB_encrypt, "encrypt")
+        return self._process(plaintext, _raw_ocb_lib.OCB_encrypt, "encrypt")
 
     def decrypt(self, ciphertext: Optional[Buffer] = None) -> bytes:
         """Decrypt the next piece of ciphertext.
@@ -401,7 +400,7 @@ class OcbMode:
             self._next = ["verify"]
         else:
             self._next = ["decrypt"]
-        return self._transcrypt(ciphertext, _raw_ocb_lib.OCB_decrypt, "decrypt")
+        return self._process(ciphertext, _raw_ocb_lib.OCB_decrypt, "decrypt")
 
     def _compute_mac_tag(self):
         if self._mac_tag is not None:
@@ -515,7 +514,7 @@ class OcbMode:
             # (it avoids copying the ciphertext to add the last piece)
             self._next = ["digest"]
             in_ptr, in_len = c_uint8_ptr_len(plaintext)
-            ciphertext = self._transcrypt_buffer(in_ptr, in_len, _raw_ocb_lib.OCB_encrypt, "encrypt")
+            ciphertext = self._process_buffer(in_ptr, in_len, _raw_ocb_lib.OCB_encrypt, "encrypt")
             return ciphertext, self.digest()
 
         return self.encrypt(plaintext) + self.encrypt(), self.digest()
@@ -539,7 +538,7 @@ class OcbMode:
             # The whole message in one go (see encrypt_and_digest)
             self._next = ["verify"]
             in_ptr, in_len = c_uint8_ptr_len(ciphertext)
-            plaintext = self._transcrypt_buffer(in_ptr, in_len, _raw_ocb_lib.OCB_decrypt, "decrypt")
+            plaintext = self._process_buffer(in_ptr, in_len, _raw_ocb_lib.OCB_decrypt, "decrypt")
         else:
             plaintext = self.decrypt(ciphertext) + self.decrypt()
         self.verify(received_mac_tag)

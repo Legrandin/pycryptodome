@@ -22,14 +22,26 @@ def test_threads_param():
 
 @pytest.mark.parametrize("unit", (1, 16, 8192))
 def test_range_boundaries(unit):
-    for length in (0, 1, unit - 1, unit, unit + 1, 5 * unit, 5 * unit + 3, 1000 * unit + 7):
+    for length in (
+        0,
+        1,
+        unit - 1,
+        unit,
+        unit + 1,
+        5 * unit,
+        5 * unit + 3,
+        7 * unit + unit - 1,
+        1000 * unit + 7,
+    ):
         for parts in (1, 2, 3, 8):
             bounds = range_boundaries(length, parts, unit)
             assert len(bounds) == parts + 1
             assert bounds[0] == 0
             assert bounds[-1] == length
             assert bounds == sorted(bounds)
-            # Ranges start at a multiple of the unit, and differ by at most one unit
+            # Ranges start at a multiple of the unit, and their numbers of
+            # whole units differ by at most one (the last range also gets
+            # the bytes beyond the last whole unit)
             assert all(b % unit == 0 for b in bounds[:-1])
             sizes = [(bounds[i + 1] - bounds[i]) // unit for i in range(parts - 1)]
             sizes.append((length // unit * unit - bounds[-2]) // unit)
