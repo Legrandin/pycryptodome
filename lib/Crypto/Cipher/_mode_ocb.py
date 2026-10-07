@@ -75,7 +75,6 @@ from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple, Union
 from Crypto.Cipher._state_machine import Method
 from Crypto.Hash import BLAKE2s
 from Crypto.Random import get_random_bytes
-from Crypto.Util._bytes import copy_bytes
 from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
@@ -200,7 +199,7 @@ class OcbMode:
         self.block_size = 16
         """The block size of the underlying cipher, in bytes."""
 
-        self.nonce = copy_bytes(None, None, nonce)
+        self.nonce = bytes(nonce)
         """Nonce used for this session."""
         if len(nonce) not in range(1, 16):
             raise ValueError("Nonce must be at most 15 bytes long")
@@ -287,7 +286,7 @@ class OcbMode:
 
         if len(self._cache_A) > 0:
             filler = min(16 - len(self._cache_A), len(assoc_data))
-            self._cache_A += copy_bytes(None, filler, assoc_data)
+            self._cache_A += bytes(assoc_data[:filler])
             assoc_data = assoc_data[filler:]
 
             if len(self._cache_A) < 16:
@@ -298,7 +297,7 @@ class OcbMode:
             self.update(seg)
 
         update_len = len(assoc_data) // 16 * 16
-        self._cache_A = copy_bytes(update_len, None, assoc_data)
+        self._cache_A = bytes(assoc_data[update_len:])
         self._update(assoc_data, update_len)
         return self
 
@@ -332,7 +331,7 @@ class OcbMode:
         prefix = b""
         if len(self._cache_P) > 0:
             filler = min(16 - len(self._cache_P), len(in_data))
-            self._cache_P += copy_bytes(None, filler, in_data)
+            self._cache_P += bytes(in_data[:filler])
             in_data = in_data[filler:]
 
             if len(self._cache_P) < 16:
@@ -352,7 +351,7 @@ class OcbMode:
             result = prefix + result
 
         # Left-over
-        self._cache_P = copy_bytes(trans_len, None, in_data)
+        self._cache_P = bytes(in_data[trans_len:])
 
         return result
 

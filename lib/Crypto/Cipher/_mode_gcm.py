@@ -44,7 +44,6 @@ from Crypto.Cipher._state_machine import Method
 from Crypto.Hash import BLAKE2s
 from Crypto.Random import get_random_bytes
 from Crypto.Util import _cpu_features
-from Crypto.Util._bytes import copy_bytes
 from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
@@ -293,11 +292,11 @@ class GcmMode:
         if len(nonce) > 2**64 - 1:
             raise ValueError("Nonce exceeds maximum length")
 
-        self.nonce = copy_bytes(None, None, nonce)
+        self.nonce = bytes(nonce)
         """Nonce"""
 
         self._factory = factory
-        self._key = copy_bytes(None, None, key)
+        self._key = bytes(key)
         self._tag: Optional[bytes] = None  # Cache for MAC tag
 
         self._mac_len = mac_len
@@ -395,7 +394,7 @@ class GcmMode:
 
         if len(self._cache) > 0:
             filler = min(16 - len(self._cache), len(data))
-            self._cache += copy_bytes(None, filler, data)
+            self._cache += bytes(data[:filler])
             data = data[filler:]
 
             if len(self._cache) < 16:
@@ -406,7 +405,7 @@ class GcmMode:
             self._cache = b""
 
         update_len = len(data) // 16 * 16
-        self._cache = copy_bytes(update_len, None, data)
+        self._cache = bytes(data[update_len:])
         if update_len > 0:
             if update_len < len(data):
                 # Do not copy the data

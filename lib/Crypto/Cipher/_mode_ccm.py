@@ -44,7 +44,6 @@ from binascii import unhexlify
 from Crypto.Cipher._state_machine import Method
 from Crypto.Hash import BLAKE2s
 from Crypto.Random import get_random_bytes
-from Crypto.Util._bytes import copy_bytes
 from Crypto.Util._raw_api import is_writeable_buffer
 from Crypto.Util.number import long_to_bytes
 from Crypto.Util.strxor import strxor
@@ -138,11 +137,11 @@ class CcmMode:
         self.block_size = factory.block_size
         """The block size of the underlying cipher, in bytes."""
 
-        self.nonce = copy_bytes(None, None, nonce)
+        self.nonce = bytes(nonce)
         """The nonce used for this cipher instance"""
 
         self._factory = factory
-        self._key = copy_bytes(None, None, key)
+        self._key = bytes(key)
         self._mac_len = mac_len
         self._msg_len = msg_len
         self._assoc_len = assoc_len
@@ -286,7 +285,7 @@ class CcmMode:
         # If the data is mutable, we create a copy and store that instead.
         if self._mac_status == MacStatus.NOT_STARTED:
             if is_writeable_buffer(assoc_data_pt):
-                assoc_data_pt = copy_bytes(None, None, assoc_data_pt)
+                assoc_data_pt = bytes(assoc_data_pt)
             self._cache.append(assoc_data_pt)
             return
 
@@ -294,8 +293,8 @@ class CcmMode:
 
         if len(self._cache) > 0:
             filler = min(self.block_size - len(self._cache), len(assoc_data_pt))
-            self._cache += copy_bytes(None, filler, assoc_data_pt)
-            assoc_data_pt = copy_bytes(filler, None, assoc_data_pt)
+            self._cache += bytes(assoc_data_pt[:filler])
+            assoc_data_pt = bytes(assoc_data_pt[filler:])
 
             if len(self._cache) < self.block_size:
                 return
@@ -305,7 +304,7 @@ class CcmMode:
             self._cache = b""
 
         update_len = len(assoc_data_pt) // self.block_size * self.block_size
-        self._cache = copy_bytes(update_len, None, assoc_data_pt)
+        self._cache = bytes(assoc_data_pt[update_len:])
         if update_len > 0:
             self._t = self._mac.encrypt(assoc_data_pt[:update_len])[-16:]
 

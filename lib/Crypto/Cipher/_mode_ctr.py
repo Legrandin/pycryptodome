@@ -33,7 +33,6 @@ import struct
 
 from Crypto.Cipher._state_machine import Method
 from Crypto.Random import get_random_bytes
-from Crypto.Util._bytes import copy_bytes
 from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
@@ -207,7 +206,7 @@ class CtrMode:
         self._threads = threads_param(threads)
 
         if len(initial_counter_block) == prefix_len + counter_len:
-            self.nonce = copy_bytes(None, prefix_len, initial_counter_block)
+            self.nonce = bytes(initial_counter_block[:prefix_len])
             """Nonce; not available if there is a fixed suffix"""
 
         state = VoidPointer()

@@ -30,7 +30,6 @@ from typing import Optional, Union, overload
 __all__ = ["OfbMode"]
 from Crypto.Cipher._state_machine import Method
 from Crypto.Random import get_random_bytes
-from Crypto.Util._bytes import copy_bytes
 from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
@@ -120,7 +119,7 @@ class OfbMode:
         self.block_size = len(iv)
         """The block size of the underlying cipher, in bytes."""
 
-        self.iv = copy_bytes(None, None, iv)
+        self.iv = bytes(iv)
         """The Initialization Vector originally used to create the object.
         The value does not change."""
 

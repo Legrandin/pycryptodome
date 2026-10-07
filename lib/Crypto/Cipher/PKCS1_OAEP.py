@@ -27,7 +27,7 @@ import Crypto.Hash.SHA1
 import Crypto.Util.number
 from Crypto import Random
 from Crypto.Signature.pss import MGF1
-from Crypto.Util._bytes import copy_bytes
+from Crypto.Util._raw_api import is_buffer
 from Crypto.Util.number import bytes_to_long, ceil_div, long_to_bytes
 from Crypto.Util.strxor import strxor
 
@@ -104,7 +104,9 @@ class PKCS1OAEP_Cipher:
         else:
             self._mgf = lambda x, y: MGF1(x, y, self._hashObj)
 
-        self._label = copy_bytes(None, None, label)
+        if not is_buffer(label):
+            raise TypeError("Label must be bytes, bytearray or memoryview")
+        self._label = bytes(label)
         self._randfunc = randfunc
 
     def can_encrypt(self) -> bool:
@@ -152,7 +154,7 @@ class PKCS1OAEP_Cipher:
         # Step 2b
         ps = b"\x00" * ps_len
         # Step 2c
-        db = lHash + ps + b"\x01" + copy_bytes(None, None, message)
+        db = lHash + ps + b"\x01" + bytes(message)
         # Step 2d
         ros = self._randfunc(hLen)
         # Step 2e

@@ -34,7 +34,6 @@ from typing import Optional, Tuple, Union, overload
 
 from Crypto.Cipher._state_machine import Method
 from Crypto.Random import get_random_bytes
-from Crypto.Util._bytes import copy_bytes
 from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
@@ -108,7 +107,7 @@ class ChaCha20Cipher:
 
         See also `new()` at the module level."""
 
-        self.nonce = copy_bytes(None, None, nonce)
+        self.nonce = bytes(nonce)
 
         # XChaCha20 requires a key derivation with HChaCha20
         # See 2.3 in https://tools.ietf.org/html/draft-arciszewski-xchacha-03

@@ -38,7 +38,6 @@ from Crypto.Cipher._state_machine import Method
 from Crypto.Cipher.ChaCha20 import _HChaCha20
 from Crypto.Hash import BLAKE2s, Poly1305
 from Crypto.Random import get_random_bytes
-from Crypto.Util._bytes import copy_bytes
 from Crypto.Util._raw_api import is_buffer
 from Crypto.Util.number import long_to_bytes
 
@@ -340,7 +339,7 @@ def new(*, key: Buffer, nonce: Optional[Buffer] = None) -> ChaCha20Poly1305Ciphe
         raise TypeError("nonce must be bytes, bytearray or memoryview")
 
     cipher = ChaCha20Poly1305Cipher(key, chacha20_poly1305_nonce)
-    cipher.nonce = copy_bytes(None, None, nonce)
+    cipher.nonce = bytes(nonce)
     return cipher
 
 

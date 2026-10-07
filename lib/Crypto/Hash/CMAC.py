@@ -26,7 +26,7 @@ from typing import TYPE_CHECKING, Any, Dict, Optional, Union
 
 from Crypto.Hash import BLAKE2s
 from Crypto.Random import get_random_bytes
-from Crypto.Util._bytes import copy_bytes, tobytes
+from Crypto.Util._bytes import tobytes
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 from Crypto.Util.strxor import strxor
 
@@ -66,7 +66,7 @@ class CMAC:
     ) -> None:
         self.digest_size = mac_len
 
-        self._key = copy_bytes(None, None, key)
+        self._key = bytes(key)
         self._factory = ciphermod
         self._cipher_params = cipher_params
         self._block_size = bs = ciphermod.block_size

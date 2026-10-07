@@ -32,7 +32,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union
+from typing import Union
 
 Buffer = Union[bytes, bytearray, memoryview]
 
@@ -48,12 +48,3 @@ def tobytes(s: Union[str, Buffer], encoding: str = "latin-1") -> bytes:
     elif isinstance(s, (bytearray, memoryview)):
         return bytes(s)
     raise TypeError("Expected a string or a bytes-like object, not %s" % type(s).__name__)
-
-
-def copy_bytes(start: Optional[int], end: Optional[int], seq: Buffer) -> bytes:
-    """Return an immutable copy of the slice ``[start:end]`` of
-    a byte string, a bytearray or a memoryview."""
-
-    if isinstance(seq, bytes):
-        return seq[start:end]
-    return bytes(seq[start:end])

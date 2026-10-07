@@ -44,7 +44,6 @@ from Crypto.Cipher._state_machine import Method
 from Crypto.Hash import BLAKE2s
 from Crypto.Protocol.KDF import _S2V
 from Crypto.Random import get_random_bytes
-from Crypto.Util._bytes import copy_bytes
 from Crypto.Util._raw_api import is_buffer
 from Crypto.Util.number import bytes_to_long
 
@@ -114,7 +113,7 @@ class SivMode:
             if len(nonce) == 0:
                 raise ValueError("When provided, the nonce must be non-empty")
 
-            self.nonce = copy_bytes(None, None, nonce)
+            self.nonce = bytes(nonce)
             """Public attribute is only available in case of non-deterministic
             encryption."""
 

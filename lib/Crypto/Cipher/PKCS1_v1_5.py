@@ -26,7 +26,6 @@ from typing import TYPE_CHECKING, Callable, List, Optional, TypeVar, Union
 __all__ = ["new", "PKCS115_Cipher"]
 
 from Crypto import Random
-from Crypto.Util._bytes import copy_bytes
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 
 from ._pkcs1_oaep_decode import pkcs1_decode
@@ -101,7 +100,7 @@ class PKCS115_Cipher:
             ps_bytes.append(new_byte)
         ps = b"".join(ps_bytes)
         # Step 2b
-        em = b"\x00\x02" + ps + b"\x00" + copy_bytes(None, None, message)
+        em = b"\x00\x02" + ps + b"\x00" + bytes(message)
         # Step 3a (OS2IP)
         em_int = bytes_to_long(em)
         # Step 3b (RSAEP)
