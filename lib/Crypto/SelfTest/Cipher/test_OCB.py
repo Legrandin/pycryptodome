@@ -945,6 +945,17 @@ class TestOcbThreads:
         with pytest.raises(TypeError):
             cipher.decrypt_and_verify(ct, tag)
 
+    def test_assoc_data_shrunk(self):
+        # Another thread shrinks the associated data after update() has
+        # measured it: an error, rather than authenticating fewer bytes
+        class Shrunk(bytearray):
+            def __len__(self):
+                return super().__len__() + 16
+
+        cipher = self.new()
+        with pytest.raises(ValueError, match="changed while being processed"):
+            cipher.update(Shrunk(b"a" * 20))
+
     def test_c_ranges(self):
         lib = _mode_ocb._raw_ocb_lib
         cipher = self.new()  # Keep a reference: it owns the state
