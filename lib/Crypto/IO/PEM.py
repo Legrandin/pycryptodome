@@ -33,7 +33,7 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, Optional, Tuple
+from typing import Any, Callable, Optional
 
 __all__ = ["encode", "decode"]
 
@@ -112,7 +112,7 @@ def _EVP_BytesToKey(data, salt, key_len):
     return b"".join(d)[:key_len]
 
 
-def decode(pem_data: str, passphrase: Optional[bytes] = None) -> Tuple[bytes, str, bool]:
+def decode(pem_data: str, passphrase: Optional[bytes] = None) -> tuple[bytes, str, bool]:
     """Decode a PEM block into binary.
 
     Args:

@@ -26,7 +26,7 @@ from __future__ import annotations
 import re
 import struct
 from functools import reduce
-from typing import TYPE_CHECKING, Any, Callable, Dict, List, Literal, Optional, Union, overload
+from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, Union, overload
 
 from Crypto.Hash import CMAC, HMAC, SHA1, SHA256, BLAKE2s
 from Crypto.Random import get_random_bytes
@@ -186,7 +186,7 @@ def PBKDF2(
         if prf is None:
             prf = lambda p, s: HMAC.new(p, s, hmac_hash_module).digest()
 
-        def link(s: List[bytes]) -> bytes:
+        def link(s: list[bytes]) -> bytes:
             s[0], s[1] = s[1], prf(password, s[1])
             return s[0]
 
@@ -220,7 +220,7 @@ class _S2V:
     """
 
     def __init__(
-        self, key: Buffer, ciphermod: ModuleType, cipher_params: Optional[Dict[Any, Any]] = None
+        self, key: Buffer, ciphermod: ModuleType, cipher_params: Optional[dict[Any, Any]] = None
     ) -> None:
         """Initialize the S2V PRF.
 
@@ -345,7 +345,7 @@ def HKDF(
     hashmod: ModuleType,
     num_keys: int,
     context: Optional[Buffer] = None,
-) -> Union[bytes, List[bytes]]: ...
+) -> Union[bytes, list[bytes]]: ...
 
 
 def HKDF(
@@ -355,7 +355,7 @@ def HKDF(
     hashmod: ModuleType,
     num_keys: int = 1,
     context: Optional[Buffer] = None,
-) -> Union[bytes, List[bytes]]:
+) -> Union[bytes, list[bytes]]:
     """Derive one or more keys from a master secret using
     the HMAC-based KDF defined in RFC5869_.
 
@@ -425,7 +425,7 @@ def scrypt(
     r: int,
     p: int,
     num_keys: int,
-) -> Union[bytes, List[bytes]]: ...
+) -> Union[bytes, list[bytes]]: ...
 
 
 def scrypt(
@@ -436,7 +436,7 @@ def scrypt(
     r: int,
     p: int,
     num_keys: int = 1,
-) -> Union[bytes, List[bytes]]:
+) -> Union[bytes, list[bytes]]:
     """Derive one or more keys from a passphrase.
 
     Args:
@@ -667,7 +667,7 @@ def SP800_108_Counter(
 @overload
 def SP800_108_Counter(
     master: bytes, key_len: int, prf: PRF, num_keys: int, label: bytes = b"", context: bytes = b""
-) -> List[bytes]: ...
+) -> list[bytes]: ...
 
 
 def SP800_108_Counter(
@@ -677,7 +677,7 @@ def SP800_108_Counter(
     num_keys: Optional[int] = None,
     label: bytes = b"",
     context: bytes = b"",
-) -> Union[bytes, List[bytes]]:
+) -> Union[bytes, list[bytes]]:
     """Derive one or more keys from a master secret using
     a pseudorandom function in Counter Mode, as specified in
     `NIST SP 800-108r1 <https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-108r1.pdf>`_.

@@ -30,13 +30,13 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict
+from typing import TYPE_CHECKING, Any
 
 __all__ = ["Integer"]
 
 import os
 
-_implementation: Dict[str, Any]
+_implementation: dict[str, Any]
 
 if TYPE_CHECKING:
     # The actual class is only known at runtime

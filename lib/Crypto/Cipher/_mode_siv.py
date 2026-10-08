@@ -34,7 +34,7 @@ Synthetic Initialization Vector (SIV) mode.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, Tuple, Union, overload
+from typing import TYPE_CHECKING, Optional, Union, overload
 
 __all__ = ["SivMode"]
 
@@ -267,16 +267,16 @@ class SivMode:
         self.verify(unhexlify(hex_mac_tag))
 
     @overload
-    def encrypt_and_digest(self, plaintext: Buffer) -> Tuple[bytes, bytes]: ...
+    def encrypt_and_digest(self, plaintext: Buffer) -> tuple[bytes, bytes]: ...
 
     @overload
     def encrypt_and_digest(
         self, plaintext: Buffer, output: Union[bytearray, memoryview]
-    ) -> Tuple[None, bytes]: ...
+    ) -> tuple[None, bytes]: ...
 
     def encrypt_and_digest(
         self, plaintext: Buffer, output: Optional[Union[bytearray, memoryview]] = None
-    ) -> Tuple[Optional[bytes], bytes]:
+    ) -> tuple[Optional[bytes], bytes]:
         """Perform encrypt() and digest() in one step.
 
         :Parameters:

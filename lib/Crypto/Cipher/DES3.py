@@ -33,7 +33,7 @@ Module's constants for the modes of operation supported with Triple DES:
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING, Tuple, Union
+from typing import TYPE_CHECKING, Union
 
 from Crypto.Cipher import _create_cipher
 from Crypto.Util._bytes import tobytes
@@ -207,4 +207,4 @@ MODE_EAX: DES3Mode = 9
 # Size of a data block (in bytes)
 block_size: int = 8
 # Size of a key (in bytes)
-key_size: Tuple[int, int] = (16, 24)
+key_size: tuple[int, int] = (16, 24)

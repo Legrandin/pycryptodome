@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 import threading
-from typing import Any, Dict, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 from Crypto.Math.Numbers import Integer
 from Crypto.Random.random import getrandbits
@@ -34,7 +34,7 @@ class CurveID:
 
 
 class _Curves:
-    curves: Dict[str, Any] = {}
+    curves: dict[str, Any] = {}
     curves_lock = threading.RLock()
 
     p192_names = ["p192", "NIST P-192", "P-192", "prime192v1", "secp192r1", "nistp192"]
@@ -269,7 +269,7 @@ class EccPoint:
         return self.xy[1]
 
     @property
-    def xy(self) -> Tuple[Integer, Integer]:
+    def xy(self) -> tuple[Integer, Integer]:
         modulus_bytes = self.size_in_bytes()
         xb = bytearray(modulus_bytes)
         yb = bytearray(modulus_bytes)

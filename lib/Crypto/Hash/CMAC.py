@@ -22,7 +22,7 @@
 from __future__ import annotations
 
 from binascii import unhexlify
-from typing import TYPE_CHECKING, Any, Dict, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional, Union
 
 from Crypto.Hash import BLAKE2s
 from Crypto.Random import get_random_bytes
@@ -60,7 +60,7 @@ class CMAC:
         key: Buffer,
         msg: Optional[Buffer],
         ciphermod: ModuleType,
-        cipher_params: Dict[str, Any],
+        cipher_params: dict[str, Any],
         mac_len: int,
         update_after_digest: bool,
     ) -> None:
@@ -264,7 +264,7 @@ def new(
     key: Buffer,
     msg: Optional[Buffer] = None,
     ciphermod: Optional[ModuleType] = None,
-    cipher_params: Optional[Dict[str, Any]] = None,
+    cipher_params: Optional[dict[str, Any]] = None,
     mac_len: Optional[int] = None,
     update_after_digest: bool = False,
 ) -> CMAC:

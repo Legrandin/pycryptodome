@@ -22,7 +22,8 @@
 from __future__ import annotations
 
 import struct
-from typing import Any, Iterable, Iterator, List, Optional, Sequence, TypeVar, Union, cast
+from collections.abc import Iterable, Iterator, Sequence
+from typing import Any, Optional, TypeVar, Union, cast
 
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 
@@ -538,11 +539,11 @@ class DerSequence(DerObject):
         """
 
         DerObject.__init__(self, 0x10, b"", implicit, True, explicit)
-        self._seq: List[Any]
+        self._seq: list[Any]
         if startSeq is None:
             self._seq = []
         else:
-            self._seq = cast(List[Any], startSeq)
+            self._seq = cast(list[Any], startSeq)
 
     # A few methods to make it behave like a python sequence
 
@@ -995,7 +996,7 @@ class DerSetOf(DerObject):
             It overrides the universal tag for SET OF (17).
         """
         DerObject.__init__(self, 0x11, b"", implicit, True)
-        self._seq: List[Any] = []
+        self._seq: list[Any] = []
 
         # All elements must be of the same type (and therefore have the
         # same leading octet)

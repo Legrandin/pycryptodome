@@ -27,9 +27,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, List
-
-binary: Dict[int, str] = {
+binary: dict[int, str] = {
     0: "0000",
     1: "0001",
     2: "0010",
@@ -153,7 +151,7 @@ def english_to_key(s: str) -> bytes:
 
 
 # fmt: off
-wordlist: List[str] = [
+wordlist: list[str] = [
    "A", "ABE", "ACE", "ACT", "AD", "ADA", "ADD",
    "AGO", "AID", "AIM", "AIR", "ALL", "ALP", "AM", "AMY", "AN", "ANA",
    "AND", "ANN", "ANT", "ANY", "APE", "APS", "APT", "ARC", "ARE", "ARK",

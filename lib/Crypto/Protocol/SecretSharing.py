@@ -33,7 +33,7 @@
 
 from __future__ import annotations
 
-from typing import List, Optional, Tuple, Union
+from typing import Optional, Union
 
 from Crypto.Random import get_random_bytes as rng
 from Crypto.Util import number
@@ -55,7 +55,7 @@ def _mult_gf2(f1: int, f2: int) -> int:
     return z
 
 
-def _div_gf2(a: int, b: int) -> Tuple[int, int]:
+def _div_gf2(a: int, b: int) -> tuple[int, int]:
     """
     Compute division of polynomials over GF(2).
     Given a and b, it finds two polynomials q and r such that:
@@ -171,7 +171,7 @@ class Shamir:
     """
 
     @staticmethod
-    def split(k: int, n: int, secret: bytes, ssss: Optional[bool] = False) -> List[Tuple[int, bytes]]:
+    def split(k: int, n: int, secret: bytes, ssss: Optional[bool] = False) -> list[tuple[int, bytes]]:
         """Split a secret into ``n`` shares.
 
         The secret can be reconstructed later using just ``k`` shares
@@ -235,7 +235,7 @@ class Shamir:
         return [(i, make_share(i, coeffs, ssss)) for i in range(1, n + 1)]
 
     @staticmethod
-    def combine(shares: List[Tuple[int, bytes]], ssss: Optional[bool] = False) -> bytes:
+    def combine(shares: list[tuple[int, bytes]], ssss: Optional[bool] = False) -> bytes:
         """Recombine a secret, if enough shares are presented.
 
         Args:
@@ -274,7 +274,7 @@ class Shamir:
 
         k = len(shares)
 
-        gf_shares: List[Tuple[_Element, _Element]] = []
+        gf_shares: list[tuple[_Element, _Element]] = []
         for x in shares:
             idx = _Element(x[0])
             value = _Element(x[1])

@@ -35,7 +35,7 @@
 
 from __future__ import annotations
 
-from typing import Callable, Optional, Set, Union
+from typing import Callable, Optional, Union
 
 from Crypto import Random
 from Crypto.Math.Numbers import Integer
@@ -220,7 +220,7 @@ def lucas_test(candidate: Union[int, Integer]) -> PrimeResult:
 
 ## The optimal number of small primes to use for the sieve
 ## is probably dependent on the platform and the candidate size
-_sieve_base: Set[int] = set(_sieve_base_large[:100])
+_sieve_base: set[int] = set(_sieve_base_large[:100])
 
 
 def test_probable_prime(

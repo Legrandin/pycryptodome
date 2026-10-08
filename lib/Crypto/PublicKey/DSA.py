@@ -23,7 +23,8 @@
 
 from __future__ import annotations
 
-from typing import Callable, Mapping, Optional, Sequence, Tuple, Union
+from collections.abc import Mapping, Sequence
+from typing import Callable, Optional, Union
 
 __all__ = ["generate", "construct", "DsaKey", "import_key"]
 
@@ -179,7 +180,7 @@ class DsaKey:
 
         raise PicklingError
 
-    def domain(self) -> Tuple[int, int, int]:
+    def domain(self) -> tuple[int, int, int]:
         """The DSA domain parameters.
 
         Returns
@@ -410,7 +411,7 @@ def _generate_domain(L, randfunc):
 
 
 def generate(
-    bits: int, randfunc: Optional[RNG] = None, domain: Optional[Tuple[int, int, int]] = None
+    bits: int, randfunc: Optional[RNG] = None, domain: Optional[tuple[int, int, int]] = None
 ) -> DsaKey:
     """Generate a new DSA key pair.
 
@@ -482,7 +483,7 @@ def generate(
 
 
 def construct(
-    tup: Union[Tuple[Int, Int, Int, Int], Tuple[Int, Int, Int, Int, Int], Sequence[Int]],
+    tup: Union[tuple[Int, Int, Int, Int], tuple[Int, Int, Int, Int, Int], Sequence[Int]],
     consistency_check: bool = True,
 ) -> DsaKey:
     """Construct a DSA key from a tuple of valid DSA components.

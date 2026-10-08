@@ -25,7 +25,7 @@ Counter (CTR) mode.
 
 from __future__ import annotations
 
-from typing import Any, List, Optional, Union, overload
+from typing import Any, Optional, Union, overload
 
 __all__ = ["CtrMode"]
 
@@ -116,7 +116,7 @@ def _ctr_threaded(state: Any, in_ptr: Any, out_ptr: Any, data_len: int, threads:
         start, end = bounds[i], bounds[i + 1]
         return raw_ctr_lib.CTR_encrypt_at(state, in_ptr, out_ptr, c_size_t(start), c_size_t(end - start))
 
-    results: List[int] = []
+    results: list[int] = []
     try:
         results = run_in_threads(worker, threads)
     finally:

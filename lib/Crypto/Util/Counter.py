@@ -23,7 +23,7 @@
 
 from __future__ import annotations
 
-from typing import Dict, Union
+from typing import Union
 
 
 def new(
@@ -33,7 +33,7 @@ def new(
     initial_value: int = 1,
     little_endian: bool = False,
     allow_wraparound: bool = False,
-) -> Dict[str, Union[int, bytes, bool]]:
+) -> dict[str, Union[int, bytes, bool]]:
     """Create a stateful counter block function suitable for CTR encryption modes.
 
     Each call to the function returns the next counter block.

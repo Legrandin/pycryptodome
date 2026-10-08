@@ -21,7 +21,8 @@
 
 from __future__ import annotations
 
-from typing import Iterable, Union
+from collections.abc import Iterable
+from typing import Union
 
 from Crypto.Util._raw_api import (
     SmartPointer,

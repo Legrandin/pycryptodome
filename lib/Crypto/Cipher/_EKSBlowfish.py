@@ -31,7 +31,8 @@
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING, Iterable, Union
+from collections.abc import Iterable
+from typing import TYPE_CHECKING, Union
 
 from Crypto.Cipher import _create_cipher
 from Crypto.Util._raw_api import (

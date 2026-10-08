@@ -30,7 +30,8 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Optional, Sequence, Tuple, Union
+from collections.abc import Sequence
+from typing import TYPE_CHECKING, Callable, Optional, Union
 
 __all__ = ["generate", "construct", "import_key", "RsaKey", "oid"]
 
@@ -554,10 +555,10 @@ def generate(bits: int, randfunc: Optional[RNG] = None, e: Int = 65537) -> RsaKe
 
 def construct(
     rsa_components: Union[
-        Tuple[Int, Int],  # n, e
-        Tuple[Int, Int, Int],  # n, e, d
-        Tuple[Int, Int, Int, Int, Int],  # n, e, d, p, q
-        Tuple[Int, Int, Int, Int, Int, Int],  # n, e, d, p, q, crt_q
+        tuple[Int, Int],  # n, e
+        tuple[Int, Int, Int],  # n, e, d
+        tuple[Int, Int, Int, Int, Int],  # n, e, d, p, q
+        tuple[Int, Int, Int, Int, Int, Int],  # n, e, d, p, q, crt_q
         Sequence[Int],
     ],
     consistency_check: bool = True,

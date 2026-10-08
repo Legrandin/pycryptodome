@@ -65,8 +65,6 @@ extend-exclude = ["Doc/sphinx_rtd_theme", "build", "ve3"]
 select = ["E", "W", "F", "I", "UP", "B", "C4", "SIM", "PIE", "RUF"]
 ignore = [
     "E501",     # line length is left to the formatter
-    "UP006",    # keep typing.List/Dict/Tuple
-    "UP035",    # keep importing List/Dict/Tuple... from typing
     "UP007",    # keep typing.Union, valid for Python 3.9
     "UP045",    # keep typing.Optional, valid for Python 3.9
     "UP031",    # keep printf-style string formatting

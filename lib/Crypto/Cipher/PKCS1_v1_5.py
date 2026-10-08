@@ -21,7 +21,7 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, List, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Callable, Optional, TypeVar, Union
 
 __all__ = ["new", "PKCS115_Cipher"]
 
@@ -92,7 +92,7 @@ class PKCS115_Cipher:
         if mLen > k - 11:
             raise ValueError("Plaintext is too long.")
         # Step 2a
-        ps_bytes: List[bytes] = []
+        ps_bytes: list[bytes] = []
         while len(ps_bytes) != k - mLen - 3:
             new_byte = self._randfunc(1)
             if new_byte[0] == 0x00:

@@ -31,7 +31,7 @@
 from __future__ import annotations
 
 from binascii import unhexlify
-from typing import Optional, Tuple, Union, overload
+from typing import Optional, Union, overload
 
 from Crypto.Cipher import ChaCha20
 from Crypto.Cipher._state_machine import Method
@@ -66,7 +66,7 @@ class ChaCha20Poly1305Cipher:
 
         See also `new()` at the module level."""
 
-        self._next: Tuple[Method, ...] = (
+        self._next: tuple[Method, ...] = (
             Method.UPDATE,
             Method.ENCRYPT,
             Method.DECRYPT,
@@ -269,7 +269,7 @@ class ChaCha20Poly1305Cipher:
 
         self.verify(unhexlify(hex_mac_tag))
 
-    def encrypt_and_digest(self, plaintext: Buffer) -> Tuple[bytes, bytes]:
+    def encrypt_and_digest(self, plaintext: Buffer) -> tuple[bytes, bytes]:
         """Perform :meth:`encrypt` and :meth:`digest` in one step.
 
         :param plaintext: The data to encrypt, of any size.

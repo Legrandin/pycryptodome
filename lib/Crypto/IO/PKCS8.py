@@ -34,7 +34,7 @@
 
 from __future__ import annotations
 
-from typing import Callable, Optional, Tuple, Union
+from typing import Callable, Optional, Union
 
 from Crypto.IO._PBES import PBES1, PBES2, PbesError, ProtParams
 from Crypto.Util._bytes import tobytes
@@ -134,7 +134,7 @@ def unwrap(
     p8_private_key: bytes,
     passphrase: Optional[Union[bytes, str]] = None,
     max_iteration_count: Optional[int] = None,
-) -> Tuple[str, bytes, Optional[bytes]]:
+) -> tuple[str, bytes, Optional[bytes]]:
     """Unwrap a private key from a PKCS#8 blob (clear or encrypted).
 
     Args:

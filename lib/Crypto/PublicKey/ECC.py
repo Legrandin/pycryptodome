@@ -38,10 +38,8 @@ from typing import (
     TYPE_CHECKING,
     Any,
     Callable,
-    Dict,
     Literal,
     Optional,
-    Tuple,
     TypedDict,
     Union,
     cast,
@@ -691,7 +689,7 @@ def construct(**kwargs: Unpack[ConstructParams]) -> EccKey:
       :class:`EccKey` : a new ECC key object
     """
 
-    params = cast(Dict[str, Any], kwargs)
+    params = cast(dict[str, Any], kwargs)
 
     curve_name = params["curve"]
     curve = _curves[curve_name]
@@ -1077,7 +1075,7 @@ def _import_openssh_private_ecc(data, password):
     return construct(point_x=point_x, point_y=point_y, **params)
 
 
-def _import_ed25519_public_key(encoded: bytes) -> Tuple[Int, Int]:
+def _import_ed25519_public_key(encoded: bytes) -> tuple[Int, Int]:
     """Import an Ed25519 ECC public key, encoded as raw bytes as described
     in RFC8032_.
 
@@ -1175,7 +1173,7 @@ def _import_curve448_public_key(encoded):
     return point_x
 
 
-def _import_ed448_public_key(encoded: bytes) -> Tuple[Int, Int]:
+def _import_ed448_public_key(encoded: bytes) -> tuple[Int, Int]:
     """Import an Ed448 ECC public key, encoded as raw bytes as described
     in RFC8032_.
 

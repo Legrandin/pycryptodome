@@ -1,7 +1,7 @@
 import struct
 from enum import IntEnum
 from types import ModuleType
-from typing import Optional, Tuple
+from typing import Optional
 
 from Crypto.Cipher import AES, ChaCha20_Poly1305
 from Crypto.Hash import SHA256, SHA384, SHA512
@@ -73,7 +73,7 @@ class HPKE_Cipher:
         receiver_key: EccKey,
         enc: Optional[bytes],
         sender_key: Optional[EccKey],
-        psk_pair: Tuple[bytes, bytes],
+        psk_pair: tuple[bytes, bytes],
         info: bytes,
         aead_id: AEAD,
         mode: MODE,
@@ -181,7 +181,7 @@ class HPKE_Cipher:
         return shared_secret
 
     @staticmethod
-    def _verify_psk_inputs(mode: MODE, psk_pair: Tuple[bytes, bytes]):
+    def _verify_psk_inputs(mode: MODE, psk_pair: tuple[bytes, bytes]):
         psk_id, psk = psk_pair
 
         if (psk == b"") ^ (psk_id == b""):
@@ -304,7 +304,7 @@ def new(
     aead_id: AEAD,
     enc: Optional[bytes] = None,
     sender_key: Optional[EccKey] = None,
-    psk: Optional[Tuple[bytes, bytes]] = None,
+    psk: Optional[tuple[bytes, bytes]] = None,
     info: Optional[bytes] = None,
 ) -> HPKE_Cipher:
     """Create an HPKE context which can be used:

@@ -23,7 +23,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, Tuple, Union, overload
+from typing import Optional, Union, overload
 
 from Crypto.Random import get_random_bytes
 from Crypto.Util._raw_api import (
@@ -200,4 +200,4 @@ def new(key: Buffer, nonce: Optional[Buffer] = None) -> Salsa20Cipher:
 block_size: int = 1
 
 # Size of a key (in bytes)
-key_size: Tuple[int, int] = (16, 32)
+key_size: tuple[int, int] = (16, 32)
