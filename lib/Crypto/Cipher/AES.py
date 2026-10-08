@@ -49,6 +49,7 @@ if TYPE_CHECKING:
     from Crypto.Cipher._mode_ofb import OfbMode
     from Crypto.Cipher._mode_openpgp import OpenPgpMode
     from Crypto.Cipher._mode_siv import SivMode
+    from Crypto.Util.Counter import CounterParams
 
 Buffer = Union[bytes, bytearray, memoryview]
 
@@ -182,7 +183,7 @@ def new(
     mode: Literal[6],
     nonce: Optional[Buffer] = ...,
     initial_value: Union[int, Buffer] = ...,
-    counter: dict = ...,
+    counter: CounterParams = ...,
     use_aesni: bool = ...,
     threads: int = ...,
 ) -> CtrMode: ...

@@ -24,7 +24,10 @@
 
 from __future__ import annotations
 
-from typing import TypedDict, Union
+from typing import TYPE_CHECKING, TypedDict, Union
+
+if TYPE_CHECKING:
+    from Crypto.Util.Counter import CounterParams
 
 Buffer = Union[bytes, bytearray, memoryview]
 
@@ -41,7 +44,7 @@ class BlockCipherParams(TypedDict, total=False):
     msg_len: int
     assoc_len: int
     initial_value: Union[int, Buffer]
-    counter: dict
+    counter: CounterParams
     threads: int
 
 

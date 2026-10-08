@@ -16,7 +16,7 @@ class Hash(Protocol):
 
 
 class XOF(Protocol):
-    def read(self, len: int) -> bytes: ...
+    def read(self, length: int) -> bytes: ...
 
 
 def import_public_key(encoded: bytes) -> EccKey:

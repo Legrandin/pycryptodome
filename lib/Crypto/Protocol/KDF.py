@@ -666,8 +666,14 @@ def SP800_108_Counter(
 
 @overload
 def SP800_108_Counter(
+    master: bytes, key_len: int, prf: PRF, num_keys: Literal[1], label: bytes = b"", context: bytes = b""
+) -> bytes: ...
+
+
+@overload
+def SP800_108_Counter(
     master: bytes, key_len: int, prf: PRF, num_keys: int, label: bytes = b"", context: bytes = b""
-) -> list[bytes]: ...
+) -> Union[bytes, list[bytes]]: ...
 
 
 def SP800_108_Counter(
@@ -707,8 +713,8 @@ def SP800_108_Counter(
         It can contain any byte value.
 
     Return:
-        - a byte string (if ``num_keys`` is not specified), or
-        - a tuple of byte strings (if ``num_key`` is specified).
+        - a byte string (if ``num_keys`` is not specified, or it is 1), or
+        - a list of byte strings (if ``num_keys`` is 2 or more).
     """
 
     if num_keys is None:

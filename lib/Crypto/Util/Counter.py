@@ -23,7 +23,17 @@
 
 from __future__ import annotations
 
-from typing import Union
+from typing import TypedDict
+
+
+class CounterParams(TypedDict):
+    """The description of a CTR mode counter, as returned by :func:`new`."""
+
+    counter_len: int
+    prefix: bytes
+    suffix: bytes
+    initial_value: int
+    little_endian: bool
 
 
 def new(
@@ -33,7 +43,7 @@ def new(
     initial_value: int = 1,
     little_endian: bool = False,
     allow_wraparound: bool = False,
-) -> dict[str, Union[int, bytes, bool]]:
+) -> CounterParams:
     """Create a stateful counter block function suitable for CTR encryption modes.
 
     Each call to the function returns the next counter block.
