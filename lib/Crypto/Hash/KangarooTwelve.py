@@ -101,9 +101,15 @@ def _hash_leaves_threaded(leaves: memoryview, cvs: memoryview, threads: int) -> 
     # Ranges differ by at most one leaf
     bounds = range_boundaries(n_leaves, threads)
 
+    # Slice the memoryviews here, not in the workers: with free-threaded Python,
+    # creating or freeing views of the same memoryview from several threads
+    # at once can wrongly mark it as released. The lists keep all slices
+    # alive until the workers have finished.
+    leaves_slices = [leaves[8192 * bounds[i] : 8192 * bounds[i + 1]] for i in range(threads)]
+    cvs_slices = [cvs[32 * bounds[i] : 32 * bounds[i + 1]] for i in range(threads)]
+
     def worker(i):
-        start, end = bounds[i], bounds[i + 1]
-        _hash_leaves(leaves[8192 * start : 8192 * end], cvs[32 * start : 32 * end])
+        _hash_leaves(leaves_slices[i], cvs_slices[i])
 
     run_in_threads(worker, threads)
 
