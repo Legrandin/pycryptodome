@@ -4,6 +4,10 @@ and partially released under the BSD 2-Clause license.
 In either case, there are minimal if no restrictions on the redistribution,
 modification and usage of the software.
 
+Files that do not include the license text refer to it with an SPDX tag:
+``SPDX-License-Identifier: BSD-2-Clause`` for the BSD license below
+(``SPDX-FileCopyrightText`` gives the copyright notice).
+
 Public domain
 =============
 
