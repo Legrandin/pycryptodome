@@ -5,7 +5,7 @@ Is Python 2.7 supported?
 ++++++++++++++++++++++++
 
 No. Support for Python 2.7 was removed in version 4.0.
-The minimum supported version is now Python 3.8.
+The minimum supported version is now Python 3.9.
 If you are stuck with Python 2.7, you can still use PyCryptodome 3.x.
 
 Why is PyCryptodome slower with ``bytearray`` data on PyPy?

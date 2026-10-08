@@ -6,7 +6,7 @@ Changelog
 
 Breaking changes
 ----------------
-* Remove support for Python 2.7. The minimum supported version is now Python 3.8.
+* Remove support for Python 2.7 and 3.8. The minimum supported version is now Python 3.9.
 * The ``pycryptodomex`` package (``Cryptodome`` namespace) is no longer released.
   The library is only available as ``pycryptodome``, under the ``Crypto`` namespace.
 * The self-tests are now run by ``pytest``, which must be installed for
@@ -32,6 +32,10 @@ Resolved issues
   keys shorter than the 32 bytes required for KMAC256).
 * Added the missing documentation for ``Crypto.Hash.MD4``.
 * Salsa20 never returned when encrypting or decrypting 4 GiB or more in a single call.
+* The package metadata declares the license as an SPDX expression
+  (``BSD-2-Clause AND Unlicense``, PEP 639), which tools can process.
+  SipHash (used internally for side-channel countermeasures) has been
+  reimplemented, as the previous code was under the CC0 license.
 
 New features
 ------------

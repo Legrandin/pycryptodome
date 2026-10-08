@@ -1,18 +1,21 @@
 [build-system]
-requires = ["setuptools>=61"]
+# 77: license as an SPDX expression (PEP 639)
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [project]
 name = "pycryptodome"
-dynamic = ["version", "license"]
+dynamic = ["version"]
 description = "Cryptographic library for Python"
 readme = "README.rst"
 authors = [{name = "Helder Eijs", email = "helderijs@gmail.com"}]
-requires-python = ">=3.8"
+# See LICENSE.rst: the code from PyCrypto is in the public domain (Unlicense),
+# the rest is under the BSD 2-Clause license
+license = "BSD-2-Clause AND Unlicense"
+license-files = ["LICENSE.rst"]
+requires-python = ">=3.9"
 classifiers = [
     "Development Status :: 5 - Production/Stable",
-    "License :: OSI Approved :: BSD License",
-    "License :: Public Domain",
     "Intended Audience :: Developers",
     "Operating System :: Unix",
     "Operating System :: Microsoft :: Windows",
@@ -20,7 +23,6 @@ classifiers = [
     "Topic :: Security :: Cryptography",
     "Typing :: Typed",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -56,16 +58,17 @@ ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 110
-target-version = "py38"
+target-version = "py39"
 extend-exclude = ["Doc/sphinx_rtd_theme", "build", "ve3"]
 
 [tool.ruff.lint]
 select = ["E", "W", "F", "I", "UP", "B", "C4", "SIM", "PIE", "RUF"]
 ignore = [
     "E501",     # line length is left to the formatter
-    "UP006",    # keep typing.List/Dict/Tuple, valid for Python 3.8
-    "UP007",    # keep typing.Union, valid for Python 3.8
-    "UP045",    # keep typing.Optional, valid for Python 3.8
+    "UP006",    # keep typing.List/Dict/Tuple
+    "UP035",    # keep importing List/Dict/Tuple... from typing
+    "UP007",    # keep typing.Union, valid for Python 3.9
+    "UP045",    # keep typing.Optional, valid for Python 3.9
     "UP031",    # keep printf-style string formatting
     "RUF012",   # mutable class attributes are not annotated with ClassVar
     "RUF022",   # keep the order of __all__ as written

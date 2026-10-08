@@ -38,7 +38,7 @@ Contribute and support
 - If you add or modify a public interface, make sure it has
   inline type annotations.
 - Ensure that your code does not use constructs or includes modules not
-  present in Python 3.8.
+  present in Python 3.9.
 - Add a short summary of the change to the file ``Changelog.rst``.
 - Add your name to the list of contributors in the file ``AUTHORS.rst``.
 

@@ -192,17 +192,14 @@ ext_modules = [
 # Add compiler specific options.
 set_compiler_options(ext_modules)
 
-# Set the minimum ABI3 version for bdist_wheel to 3.8
+# Set the minimum ABI3 version for bdist_wheel to 3.9
 # unless Python is running without GIL (as there is no established way yet to
 # specify multiple ABI levels)
 setup_options = {}
 if not sysconfig.get_config_var("Py_GIL_DISABLED"):
-    setup_options["options"] = {"bdist_wheel": {"py_limited_api": "cp38"}}
+    setup_options["options"] = {"bdist_wheel": {"py_limited_api": "cp39"}}
 
 setup(
-    # Not in pyproject.toml: a license as a TOML table is deprecated, and an
-    # SPDX expression requires a version of setuptools without Python 3.8 support
-    license="BSD, Public Domain",
     cmdclass={"build_ext": PCTBuildExt},
     ext_modules=ext_modules,
     **setup_options,

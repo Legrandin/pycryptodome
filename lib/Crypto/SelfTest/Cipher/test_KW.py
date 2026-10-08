@@ -1,11 +1,7 @@
-import sys
-
 import pytest
 
 from Crypto.Cipher import AES
 from Crypto.SelfTest.loader import load_test_vectors_wycheproof, wycheproof_id
-
-pytestmark = pytest.mark.skipif(sys.version_info < (3, 9), reason="requires Python 3.9")
 
 
 class TestKW:
