@@ -723,6 +723,9 @@ def SP800_108_Counter(
     # The zero byte after the label separates it from the context. With no zero
     # byte in the label, different (label, context) pairs always give different
     # inputs to the PRF, as NIST SP 800-108r1 requires (Section 6.4, Input Data Encoding).
+    # The label is first converted to bytes, because "in" does not
+    # look for byte strings in a memoryview.
+    label = bytes(label)
     if b"\x00" in label:
         raise ValueError("Null byte found in label")
 

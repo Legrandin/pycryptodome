@@ -797,13 +797,18 @@ class TestSP800_108_Counter:
             return HMAC.new(s, x, SHA256).digest()
 
         # The zero byte after the label separates it from the context
-        with pytest.raises(ValueError):
-            SP800_108_Counter(b"0" * 16, 1, prf, label=b"A\x00B")
+        for label in (b"A\x00B", bytearray(b"A\x00B"), memoryview(b"A\x00B")):
+            with pytest.raises(ValueError):
+                SP800_108_Counter(b"0" * 16, 1, prf, label=label)
 
         # The context can contain zero bytes: PRF([1] || Label || 0x00 || Context || [L])
         key = SP800_108_Counter(b"0" * 16, 16, prf, label=b"L", context=b"A\x00B")
         expected = prf(b"0" * 16, b"\x00\x00\x00\x01" + b"L" + b"\x00" + b"A\x00B" + b"\x00\x00\x00\x80")
         assert key == expected[:16]
+
+        # A label without zero bytes gives the same key whatever its type
+        for label in (bytearray(b"L"), memoryview(b"L")):
+            assert SP800_108_Counter(b"0" * 16, 16, prf, label=label, context=b"A\x00B") == key
 
     def test_multiple_keys(self):
         def prf(s, x):
