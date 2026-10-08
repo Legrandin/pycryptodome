@@ -48,10 +48,6 @@ New features
   The output does not depend on the number of threads.
 * GCM mode is about 1.5x faster on long messages, as it does not copy the data
   before authenticating it.
-* OCB mode is about 1.15x faster on long messages with AES-NI, as it encrypts
-  8 blocks at a time. Also, ``encrypt_and_digest()`` and ``decrypt_and_verify()``
-  no longer copy the output when the message is not a multiple of 16 bytes long.
-  Creating an OCB cipher object is about 3x faster (2x for a whole 64-byte message).
 * The portable GHASH (GCM mode, for CPUs without PCLMULQDQ) no longer uses
   key-dependent tables: it is now constant-time, with the technique
   described by Thomas Pornin for BearSSL. It is also faster: about 2.8x
