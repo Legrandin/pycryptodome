@@ -112,10 +112,6 @@ def decode(pem_data: str, passphrase: Optional[bytes] = None) -> tuple[bytes, st
     marker = m.group(1)
 
     # Verify Post-Encapsulation Boundary.
-    # The marker is already known from the pre-boundary, so the boundary can be
-    # matched directly. Searching for it with r"-----END (.*)-----\s*$" was
-    # quadratic in len(pem_data): every "-----END " is a start position for the
-    # search, and the greedy (.*) backtracks the whole remainder at each one.
     if not pem_data.rstrip().endswith("-----END %s-----" % marker):
         raise ValueError("Not a valid PEM post boundary")
 

@@ -40,6 +40,7 @@ Resolved issues
   (``BSD-2-Clause AND Unlicense``, PEP 639), which tools can process.
   SipHash (used internally for side-channel countermeasures) has been
   reimplemented, as the previous code was under the CC0 license.
+* GH#937: Importing a malformed PEM key could take quadratic time. Thanks to Brian Willows.
 
 New features
 ------------
