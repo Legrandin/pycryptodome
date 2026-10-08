@@ -303,7 +303,7 @@ class TestHPKE:
         assert pt_X1 == pt
 
     def test_x25519_export_only_mode_0(self):
-        # RFC x9180, A.7.1
+        # RFC 9180, A.7.1
 
         keyR_hex = "33d196c830a12f9ac65d6e565a590d80f04ee9b19c83c87f2c170d972a812848"
         keyR = DH.import_x25519_private_key(bytes.fromhex(keyR_hex))
@@ -326,7 +326,7 @@ class TestHPKE:
             "ffaabc85a776136ca0c378e5d084c9140ab552b78f039d2e8775f26efff4c70e"
         )
 
-    def test_export_only_accepts_integer_aead_id(self):
+    def test_integer_aead_id(self):
         keyR_hex = "33d196c830a12f9ac65d6e565a590d80f04ee9b19c83c87f2c170d972a812848"
         keyR = DH.import_x25519_private_key(bytes.fromhex(keyR_hex))
 
@@ -380,8 +380,7 @@ def _load_test_vectors():
     return [
         pytest.param(vector, id="%d-kem%x-aead%x" % (idx, vector["kem_id"], vector["aead_id"]))
         for idx, vector in enumerate(vectors)
-        # No export-only pseudo-cipher
-        if vector["aead_id"] != 0xFFFF and (vector["kem_id"], vector["kdf_id"]) in _supported_kdf
+        if (vector["kem_id"], vector["kdf_id"]) in _supported_kdf
     ]
 
 
@@ -424,7 +423,7 @@ class TestHPKE_TestVectors:
 
     @pytest.mark.parametrize("vector", test_vectors)
     def test_hpke_unseal(self, vector):
-        """Test HPKE encryption and decryption using test vectors."""
+        """Test HPKE decryption and secret export using test vectors."""
 
         kem_id = vector["kem_id"]
         receiver_priv = import_private_key(vector["skRm"], kem_id)
@@ -457,3 +456,7 @@ class TestHPKE_TestVectors:
             # Decrypt (unseal)
             decrypted = receiver_hpke.unseal(ciphertext, aad)
             assert decrypted == plaintext, "Decryption failed"
+
+        for export in vector["exports"]:
+            exported = receiver_hpke.export(unhexlify(export["exporter_context"]), export["L"])
+            assert exported == unhexlify(export["exported_value"])

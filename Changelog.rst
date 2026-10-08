@@ -41,6 +41,8 @@ Resolved issues
   SipHash (used internally for side-channel countermeasures) has been
   reimplemented, as the previous code was under the CC0 license.
 * GH#937: Importing a malformed PEM key could take quadratic time. Thanks to Brian Willows.
+* ``Crypto.Protocol.HPKE.new()`` raised ``TypeError`` with Python 3.9 to 3.11
+  when ``aead_id`` was a plain integer, and not an ``HPKE.AEAD`` member.
 
 New features
 ------------
@@ -69,6 +71,9 @@ New features
   SHAKE256, cSHAKE, TurboSHAKE and KangarooTwelve, to
   ``Crypto.Hash.KangarooTwelve.digest()``, and to ``Crypto.Util.strxor.strxor()``
   and ``strxor_c()`` (up to 3.6x faster).
+* GH#911: New method ``export()`` for HPKE contexts, to derive secrets
+  (RFC 9180, Section 5.3). With the new ``HPKE.AEAD.EXPORT_ONLY``,
+  a context can only export secrets. Thanks to sebastian.
 
 3.24.0 (4 October 2026)
 ++++++++++++++++++++++++++

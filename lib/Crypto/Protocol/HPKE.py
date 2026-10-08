@@ -94,12 +94,7 @@ class HPKE_Cipher:
             raise ValueError(f"Curve {self._curve} is not supported by HPKE") from ke
 
         self._suite_id = b"HPKE" + struct.pack(">HHH", self._kem_id, self._kdf_id, self._aead_id)
-        if self._aead_id == AEAD.EXPORT_ONLY:
-            self._Nk = 0
-        elif self._aead_id == AEAD.AES128_GCM:
-            self._Nk = 16
-        else:
-            self._Nk = 32
+        self._Nk = 16 if self._aead_id == AEAD.AES128_GCM else 32
         self._Nn = 12
         self._Nt = 16
         self._Nh = self._hashmod.digest_size
@@ -212,17 +207,20 @@ class HPKE_Cipher:
 
         secret = _labeled_extract(shared_secret, b"secret", psk, self._suite_id, self._hashmod)
 
+        if self._aead_id == AEAD.EXPORT_ONLY:
+            # There is no AEAD key nor nonce
+            key = base_nonce = b""
+        else:
+            key = _labeled_expand(
+                secret, b"key", key_schedule_context, self._Nk, self._suite_id, self._hashmod
+            )
+
+            base_nonce = _labeled_expand(
+                secret, b"base_nonce", key_schedule_context, self._Nn, self._suite_id, self._hashmod
+            )
+
         exporter_secret = _labeled_expand(
             secret, b"exp", key_schedule_context, self._Nh, self._suite_id, self._hashmod
-        )
-
-        if self._aead_id == AEAD.EXPORT_ONLY:
-            return b"", b"", exporter_secret
-
-        key = _labeled_expand(secret, b"key", key_schedule_context, self._Nk, self._suite_id, self._hashmod)
-
-        base_nonce = _labeled_expand(
-            secret, b"base_nonce", key_schedule_context, self._Nn, self._suite_id, self._hashmod
         )
 
         return key, base_nonce, exporter_secret
@@ -309,21 +307,29 @@ class HPKE_Cipher:
             raise ValueError("Invalid message (wrong MAC tag)")
         return pt
 
-    def export(self, exporter_context: Optional[bytes], length: int):
+    def export(self, exporter_context: bytes, length: int) -> bytes:
         """Export a secret from this HPKE context.
+
+        This method can be invoked multiple times,
+        with different contexts, to derive independent secrets.
 
         Arguments:
           exporter_context: bytes
-            Optional. Context for the exported secret.
+            Context for the exported secret (it can be empty).
           length: int
             The desired length of the secret, in bytes.
+            It must not be larger than 255 times the digest size
+            of the hash for the curve (e.g., 8160 bytes for ``NIST P-256``).
 
         Returns:
            The exported secret.
-        """
 
-        if exporter_context is None:
-            exporter_context = b""
+        .. warning::
+            Unlike ``unseal()``, this method never detects if sender and
+            receiver used different keys or parameters: it simply returns
+            a different secret. If needed, the application must
+            confirm that both parties derived the same secret.
+        """
 
         if length < 0 or length > 255 * self._Nh:
             raise ValueError("Incorrect length for exported secret")
@@ -409,10 +415,13 @@ def new(
     Returns:
         An object that can be used for
         sealing (if ``receiver_key`` is a public key) or
-        unsealing (if ``receiver_key`` is a private key).
-        In the latter case,
+        unsealing (if ``receiver_key`` is a private key),
+        and in both cases for exporting secrets
+        (with ``HPKE.AEAD.EXPORT_ONLY``, only for that).
+        For the receiver,
         correctness of all the keys and parameters will only
-        be assessed with the first call to ``unseal()``.
+        be assessed with the first call to ``unseal()``,
+        and never by ``export()``.
     """
 
     try:
