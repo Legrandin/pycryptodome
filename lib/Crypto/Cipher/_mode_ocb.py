@@ -70,7 +70,7 @@ Example:
 from __future__ import annotations
 
 from binascii import unhexlify
-from typing import TYPE_CHECKING, Any, Callable, List, Optional, Tuple, Union
+from typing import TYPE_CHECKING, Any, Callable, Optional, Union
 
 from Crypto.Cipher._state_machine import Method
 from Crypto.Hash import BLAKE2s
@@ -166,7 +166,7 @@ def _process_threaded(
         start, end = bounds[i], bounds[i + 1]
         return at_func(state, in_ptr, out_ptr, c_size_t(start), c_size_t(end - start), partials[i])
 
-    results: List[int] = []
+    results: list[int] = []
     try:
         results = run_in_threads(worker, threads)
     finally:
@@ -511,7 +511,7 @@ class OcbMode:
 
         self.verify(unhexlify(hex_mac_tag))
 
-    def encrypt_and_digest(self, plaintext: Buffer) -> Tuple[bytes, bytes]:
+    def encrypt_and_digest(self, plaintext: Buffer) -> tuple[bytes, bytes]:
         """Encrypt the message and create the MAC tag in one step.
 
         :Parameters:

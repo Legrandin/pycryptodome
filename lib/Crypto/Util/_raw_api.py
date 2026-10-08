@@ -37,7 +37,7 @@ import sys
 import threading
 import weakref
 from importlib import machinery
-from typing import Any, List, Optional, Tuple, Union
+from typing import Any, Optional, Union
 
 from Crypto.Util._file_system import pycryptodome_filename
 
@@ -267,7 +267,7 @@ except ImportError:
     from ctypes.util import find_library
 
     null_pointer = None
-    cached_architecture: List[str] = []
+    cached_architecture: list[str] = []
 
     def c_ubyte(c: int) -> Any:  # type: ignore[misc]
         if not (0 <= c < 256):
@@ -427,7 +427,7 @@ def create_output_buffer(size: int) -> Any:
     return _BytesOutput(obj, _c_uint8_ptr_into_bytes(obj))
 
 
-def c_uint8_ptr_len(data: Union[bytes, memoryview, bytearray]) -> Tuple[Any, int]:
+def c_uint8_ptr_len(data: Union[bytes, memoryview, bytearray]) -> tuple[Any, int]:
     """Like c_uint8_ptr(), but also return the length of the memory that
     C code gets. Pass C code that length, never len(data): another thread
     could resize data in the meantime, but not the memory that C code gets,

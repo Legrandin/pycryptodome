@@ -25,7 +25,7 @@
 
 from __future__ import annotations
 
-from typing import Callable, Optional, Tuple, Union
+from typing import Callable, Optional, Union
 
 __all__ = ["generate", "construct", "ElGamalKey"]
 
@@ -97,7 +97,7 @@ def generate(bits: int, randfunc: RNG) -> ElGamalKey:
     return obj
 
 
-def construct(tup: Union[Tuple[Int, Int, Int], Tuple[Int, Int, Int, Int]]) -> ElGamalKey:
+def construct(tup: Union[tuple[Int, Int, Int], tuple[Int, Int, Int, Int]]) -> ElGamalKey:
     r"""Construct an ElGamal key from a tuple of valid ElGamal components.
 
     The modulus *p* must be a prime.

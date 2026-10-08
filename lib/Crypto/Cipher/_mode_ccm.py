@@ -34,7 +34,7 @@ Counter with CBC-MAC (CCM) mode.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Optional, Tuple, Union, overload
+from typing import TYPE_CHECKING, Any, Optional, Union, overload
 
 __all__ = ["CcmMode"]
 
@@ -600,16 +600,16 @@ class CcmMode:
         self.verify(unhexlify(hex_mac_tag))
 
     @overload
-    def encrypt_and_digest(self, plaintext: Buffer) -> Tuple[bytes, bytes]: ...
+    def encrypt_and_digest(self, plaintext: Buffer) -> tuple[bytes, bytes]: ...
 
     @overload
     def encrypt_and_digest(
         self, plaintext: Buffer, output: Union[bytearray, memoryview]
-    ) -> Tuple[None, bytes]: ...
+    ) -> tuple[None, bytes]: ...
 
     def encrypt_and_digest(
         self, plaintext: Buffer, output: Optional[Union[bytearray, memoryview]] = None
-    ) -> Tuple[Optional[bytes], bytes]:
+    ) -> tuple[Optional[bytes], bytes]:
         """Perform encrypt() and digest() in one step.
 
         :Parameters:

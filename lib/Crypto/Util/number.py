@@ -29,7 +29,7 @@ from __future__ import annotations
 import math
 import struct
 import warnings
-from typing import Callable, List, Optional, Tuple, Union
+from typing import Callable, Optional, Union
 
 from Crypto import Random
 
@@ -396,7 +396,7 @@ def long_to_bytes(n: int, blocksize: int = 0) -> bytes:
     if n < 0 or blocksize < 0:
         raise ValueError("Values must be non-negative")
 
-    result: List[bytes] = []
+    result: list[bytes] = []
     pack = struct.pack
 
     # Fill the first block independently from the value of n
@@ -479,7 +479,7 @@ def str2long(s: bytes) -> int:
 # This should be enough to eliminate most of the odd
 # numbers before needing to do a Rabin-Miller test at all.
 # fmt: off
-sieve_base: Tuple[int, ...] = (
+sieve_base: tuple[int, ...] = (
      2,      3,      5,      7,     11,     13,     17,     19,     23,     29,
     31,     37,     41,     43,     47,     53,     59,     61,     67,     71,
     73,     79,     83,     89,     97,    101,    103,    107,    109,    113,

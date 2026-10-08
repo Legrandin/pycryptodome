@@ -30,7 +30,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, Tuple, Union, overload
+from typing import Optional, Union, overload
 
 from Crypto.Cipher._state_machine import Method
 from Crypto.Random import get_random_bytes
@@ -119,7 +119,7 @@ class ChaCha20Cipher:
             self._name = "ChaCha20"
             nonce = self.nonce
 
-        self._next: Tuple[Method, ...] = (Method.ENCRYPT, Method.DECRYPT)
+        self._next: tuple[Method, ...] = (Method.ENCRYPT, Method.DECRYPT)
 
         state = VoidPointer()
         key_ptr, key_len = c_uint8_ptr_len(key)

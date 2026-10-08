@@ -37,7 +37,7 @@ time, each one on a different range of the data."""
 from __future__ import annotations
 
 import threading
-from typing import Callable, Dict, List, TypeVar
+from typing import Callable, TypeVar
 
 from Crypto.Util._cpu_features import available_cores
 
@@ -58,7 +58,7 @@ def threads_param(threads: int) -> int:
     return threads
 
 
-def range_boundaries(data_length: int, parts: int, block_size: int = 1) -> List[int]:
+def range_boundaries(data_length: int, parts: int, block_size: int = 1) -> list[int]:
     """Given a piece of data of a certain length in bytes (``data_length``),
     split it into ``parts`` intervals, and return the position
     of the first byte of each interval, plus the end position.
@@ -97,7 +97,7 @@ def range_boundaries(data_length: int, parts: int, block_size: int = 1) -> List[
     return [block_size * (blocks * i // parts) for i in range(parts)] + [data_length]
 
 
-def run_in_threads(worker: Callable[[int], T], count: int) -> List[T]:
+def run_in_threads(worker: Callable[[int], T], count: int) -> list[T]:
     """Create ``count-1`` threads, each with a unique number from 1 to
     ``count-1``.
 
@@ -112,8 +112,8 @@ def run_in_threads(worker: Callable[[int], T], count: int) -> List[T]:
     """
 
     # Each thread stores its result under its own key
-    results: Dict[int, T] = {}
-    errors: List[BaseException] = []
+    results: dict[int, T] = {}
+    errors: list[BaseException] = []
 
     def run(i: int) -> None:
         try:

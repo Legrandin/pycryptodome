@@ -34,7 +34,7 @@ Galois/Counter Mode (GCM).
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Dict, List, Optional, Tuple, Union, overload
+from typing import TYPE_CHECKING, Any, Optional, Union, overload
 
 __all__ = ["GcmMode"]
 
@@ -205,7 +205,7 @@ class _GHASH:
 
         # The first range continues from the current value;
         # the others start from zero, and are combined later
-        partials: List[Any] = [self._last_y] + [create_string_buffer(16) for _ in range(1, threads)]
+        partials: list[Any] = [self._last_y] + [create_string_buffer(16) for _ in range(1, threads)]
 
         def worker(i: int) -> int:
             return self.ghash_c.ghash_at(
@@ -274,7 +274,7 @@ class GcmMode:
         key: Buffer,
         nonce: Buffer,
         mac_len: int,
-        cipher_params: Dict,
+        cipher_params: dict,
         ghash_c: Any,
         threads: int = 1,
     ) -> None:
@@ -638,16 +638,16 @@ class GcmMode:
         self.verify(unhexlify(hex_mac_tag))
 
     @overload
-    def encrypt_and_digest(self, plaintext: Buffer) -> Tuple[bytes, bytes]: ...
+    def encrypt_and_digest(self, plaintext: Buffer) -> tuple[bytes, bytes]: ...
 
     @overload
     def encrypt_and_digest(
         self, plaintext: Buffer, output: Union[bytearray, memoryview]
-    ) -> Tuple[None, bytes]: ...
+    ) -> tuple[None, bytes]: ...
 
     def encrypt_and_digest(
         self, plaintext: Buffer, output: Optional[Union[bytearray, memoryview]] = None
-    ) -> Tuple[Optional[bytes], bytes]:
+    ) -> tuple[Optional[bytes], bytes]:
         """Perform encrypt() and digest() in one step.
 
         :Parameters:

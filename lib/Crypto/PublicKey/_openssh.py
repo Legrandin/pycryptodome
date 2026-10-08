@@ -31,7 +31,6 @@
 from __future__ import annotations
 
 import struct
-from typing import Tuple
 
 from Crypto.Cipher import AES
 from Crypto.Hash import SHA512
@@ -39,21 +38,21 @@ from Crypto.Protocol.KDF import _bcrypt_hash
 from Crypto.Util.strxor import strxor
 
 
-def read_int4(data: bytes) -> Tuple[int, bytes]:
+def read_int4(data: bytes) -> tuple[int, bytes]:
     if len(data) < 4:
         raise ValueError("Insufficient data")
     value = struct.unpack(">I", data[:4])[0]
     return value, data[4:]
 
 
-def read_bytes(data: bytes) -> Tuple[bytes, bytes]:
+def read_bytes(data: bytes) -> tuple[bytes, bytes]:
     size, data = read_int4(data)
     if len(data) < size:
         raise ValueError("Insufficient data (V)")
     return data[:size], data[size:]
 
 
-def read_string(data: bytes) -> Tuple[str, bytes]:
+def read_string(data: bytes) -> tuple[str, bytes]:
     s, d = read_bytes(data)
     return s.decode("latin-1"), d
 
@@ -64,7 +63,7 @@ def check_padding(pad: bytes) -> None:
             raise ValueError("Incorrect padding")
 
 
-def import_openssh_private_generic(data: bytes, password: bytes) -> Tuple[str, bytes]:
+def import_openssh_private_generic(data: bytes, password: bytes) -> tuple[str, bytes]:
     # https://cvsweb.openbsd.org/cgi-bin/cvsweb/src/usr.bin/ssh/PROTOCOL.key?annotate=HEAD
     # https://github.com/openssh/openssh-portable/blob/master/sshkey.c
     # https://coolaj86.com/articles/the-openssh-private-key-format/

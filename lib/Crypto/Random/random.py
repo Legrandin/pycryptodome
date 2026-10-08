@@ -23,7 +23,8 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, MutableSequence, Optional, Sequence, TypeVar
+from collections.abc import MutableSequence, Sequence
+from typing import Any, Callable, Optional, TypeVar
 
 __all__ = ["StrongRandom", "getrandbits", "randrange", "randint", "choice", "shuffle", "sample"]
 

@@ -22,7 +22,7 @@
 from __future__ import annotations
 
 import sys
-from typing import TYPE_CHECKING, Any, Dict, Literal, Optional, Tuple, Union, overload
+from typing import TYPE_CHECKING, Any, Literal, Optional, Union, overload
 
 from Crypto.Cipher import _create_cipher
 from Crypto.Random import get_random_bytes
@@ -182,7 +182,7 @@ def new(
     mode: Literal[6],
     nonce: Optional[Buffer] = ...,
     initial_value: Union[int, Buffer] = ...,
-    counter: Dict = ...,
+    counter: dict = ...,
     use_aesni: bool = ...,
     threads: int = ...,
 ) -> CtrMode: ...
@@ -366,4 +366,4 @@ def new(key: Buffer, mode: int, *args: Any, **kwargs: Any) -> Any:
 # Size of a data block (in bytes)
 block_size: int = 16
 # Size of a key (in bytes)
-key_size: Tuple[int, int, int] = (16, 24, 32)
+key_size: tuple[int, int, int] = (16, 24, 32)
