@@ -41,9 +41,9 @@ __all__ = ["CcmMode"]
 import struct
 from binascii import unhexlify
 
+from Crypto.Cipher._state_machine import Method
 from Crypto.Hash import BLAKE2s
 from Crypto.Random import get_random_bytes
-from Crypto.Util._bytes import copy_bytes
 from Crypto.Util._raw_api import is_writeable_buffer
 from Crypto.Util.number import long_to_bytes
 from Crypto.Util.strxor import strxor
@@ -137,11 +137,11 @@ class CcmMode:
         self.block_size = factory.block_size
         """The block size of the underlying cipher, in bytes."""
 
-        self.nonce = copy_bytes(None, None, nonce)
+        self.nonce = bytes(nonce)
         """The nonce used for this cipher instance"""
 
         self._factory = factory
-        self._key = copy_bytes(None, None, key)
+        self._key = bytes(key)
         self._mac_len = mac_len
         self._msg_len = msg_len
         self._assoc_len = assoc_len
@@ -172,7 +172,7 @@ class CcmMode:
         self._t = None
 
         # Allowed transitions after initialization
-        self._next = ["update", "encrypt", "decrypt", "digest", "verify"]
+        self._next = [Method.UPDATE, Method.ENCRYPT, Method.DECRYPT, Method.DIGEST, Method.VERIFY]
 
         # Cumulative lengths
         self._cumul_assoc_len = 0
@@ -265,10 +265,10 @@ class CcmMode:
             A piece of associated data. There are no restrictions on its size.
         """
 
-        if "update" not in self._next:
+        if Method.UPDATE not in self._next:
             raise TypeError("update() can only be called immediately after initialization")
 
-        self._next = ["update", "encrypt", "decrypt", "digest", "verify"]
+        self._next = [Method.UPDATE, Method.ENCRYPT, Method.DECRYPT, Method.DIGEST, Method.VERIFY]
 
         self._cumul_assoc_len += len(assoc_data)
         if self._assoc_len is not None and self._cumul_assoc_len > self._assoc_len:
@@ -285,7 +285,7 @@ class CcmMode:
         # If the data is mutable, we create a copy and store that instead.
         if self._mac_status == MacStatus.NOT_STARTED:
             if is_writeable_buffer(assoc_data_pt):
-                assoc_data_pt = copy_bytes(None, None, assoc_data_pt)
+                assoc_data_pt = bytes(assoc_data_pt)
             self._cache.append(assoc_data_pt)
             return
 
@@ -293,8 +293,8 @@ class CcmMode:
 
         if len(self._cache) > 0:
             filler = min(self.block_size - len(self._cache), len(assoc_data_pt))
-            self._cache += copy_bytes(None, filler, assoc_data_pt)
-            assoc_data_pt = copy_bytes(filler, None, assoc_data_pt)
+            self._cache += bytes(assoc_data_pt[:filler])
+            assoc_data_pt = bytes(assoc_data_pt[filler:])
 
             if len(self._cache) < self.block_size:
                 return
@@ -304,7 +304,7 @@ class CcmMode:
             self._cache = b""
 
         update_len = len(assoc_data_pt) // self.block_size * self.block_size
-        self._cache = copy_bytes(update_len, None, assoc_data_pt)
+        self._cache = bytes(assoc_data_pt[update_len:])
         if update_len > 0:
             self._t = self._mac.encrypt(assoc_data_pt[:update_len])[-16:]
 
@@ -358,9 +358,9 @@ class CcmMode:
           Otherwise, ``None``.
         """
 
-        if "encrypt" not in self._next:
+        if Method.ENCRYPT not in self._next:
             raise TypeError("encrypt() can only be called after initialization or an update()")
-        self._next = ["encrypt", "digest"]
+        self._next = [Method.ENCRYPT, Method.DIGEST]
 
         # No more associated data allowed from now
         if self._assoc_len is None:
@@ -381,7 +381,7 @@ class CcmMode:
 
             self._msg_len = len(plaintext)
             self._start_mac()
-            self._next = ["digest"]
+            self._next = [Method.DIGEST]
 
         self._cumul_msg_len += len(plaintext)
         if self._cumul_msg_len > self._msg_len:
@@ -451,9 +451,9 @@ class CcmMode:
           Otherwise, ``None``.
         """
 
-        if "decrypt" not in self._next:
+        if Method.DECRYPT not in self._next:
             raise TypeError("decrypt() can only be called after initialization or an update()")
-        self._next = ["decrypt", "verify"]
+        self._next = [Method.DECRYPT, Method.VERIFY]
 
         # No more associated data allowed from now
         if self._assoc_len is None:
@@ -474,7 +474,7 @@ class CcmMode:
 
             self._msg_len = len(ciphertext)
             self._start_mac()
-            self._next = ["verify"]
+            self._next = [Method.VERIFY]
 
         self._cumul_msg_len += len(ciphertext)
         if self._cumul_msg_len > self._msg_len:
@@ -510,9 +510,9 @@ class CcmMode:
         :Return: the MAC, as a byte string.
         """
 
-        if "digest" not in self._next:
+        if Method.DIGEST not in self._next:
             raise TypeError("digest() cannot be called when decrypting or validating a message")
-        self._next = ["digest"]
+        self._next = [Method.DIGEST]
         return self._digest()
 
     def _digest(self):
@@ -571,9 +571,9 @@ class CcmMode:
             or the key is incorrect.
         """
 
-        if "verify" not in self._next:
+        if Method.VERIFY not in self._next:
             raise TypeError("verify() cannot be called when encrypting a message")
-        self._next = ["verify"]
+        self._next = [Method.VERIFY]
 
         self._digest()
         secret = get_random_bytes(16)

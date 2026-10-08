@@ -449,7 +449,7 @@ a new OCB cipher object for the relevant base algorithm.
     State diagram for the OCB mode
 
 
-.. function:: Crypto.Cipher.<algorithm>.new(key, mode, *, nonce=None, mac_len=None)
+.. function:: Crypto.Cipher.<algorithm>.new(key, mode, *, nonce=None, mac_len=None, threads=1)
 
   Create a new OCB object, using <algorithm> as the base block cipher.
 
@@ -461,9 +461,17 @@ a new OCB cipher object for the relevant base algorithm.
     If not present, the library creates a 15 bytes random nonce.
   :param integer mac_len: the desired length of the
     MAC tag (default if not present: 16 bytes).
+  :param int threads: (only for AES) the maximum number of threads used to
+    encrypt or decrypt long data (default: 1, no extra threads).
+    Use 0 for as many threads as the CPU cores available to the process.
+    See the same parameter for the :ref:`ctr_mode`.
   :return: an OCB cipher object
 
 The cipher object has two read-only attributes: :attr:`nonce` and :attr:`block_size`.
+
+With the ``threads`` parameter, the encryption and the decryption of long data
+run on several CPU cores (each block is processed independently of the others).
+The associated data is always processed by the calling thread.
 
 Example (encryption as a once-off operation)::
 

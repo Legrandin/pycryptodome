@@ -30,8 +30,14 @@ from typing import TYPE_CHECKING, Any, Callable, Dict, List, Literal, Optional, 
 
 from Crypto.Hash import CMAC, HMAC, SHA1, SHA256, BLAKE2s
 from Crypto.Random import get_random_bytes
-from Crypto.Util._bytes import copy_bytes, tobytes
-from Crypto.Util._raw_api import c_size_t, create_string_buffer, get_raw_buffer, load_pycryptodome_raw_lib
+from Crypto.Util._bytes import tobytes
+from Crypto.Util._raw_api import (
+    c_size_t,
+    create_string_buffer,
+    get_raw_buffer,
+    is_buffer,
+    load_pycryptodome_raw_lib,
+)
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 from Crypto.Util.number import size as bit_size
 from Crypto.Util.strxor import strxor
@@ -228,7 +234,9 @@ class _S2V:
             A set of extra parameters to use to create a cipher instance.
         """
 
-        self._key = copy_bytes(None, None, key)
+        if not is_buffer(key):
+            raise TypeError("Key must be bytes, bytearray or memoryview")
+        self._key = bytes(key)
         self._ciphermod = ciphermod
         self._last_string = self._cache = b"\x00" * ciphermod.block_size
 
@@ -271,6 +279,8 @@ class _S2V:
         :Raise TypeError: when the limit on the number of components has been reached.
         """
 
+        if not is_buffer(item):
+            raise TypeError("Component must be bytes, bytearray or memoryview")
         if self._n_updates == 0:
             raise TypeError("Too many components passed to S2V")
         self._n_updates -= 1
@@ -279,7 +289,7 @@ class _S2V:
             self._key, msg=self._last_string, ciphermod=self._ciphermod, cipher_params=self._cipher_params
         )
         self._cache = strxor(self._double(self._cache), mac.digest())
-        self._last_string = copy_bytes(None, None, item)
+        self._last_string = bytes(item)
 
     def derive(self) -> bytes:
         """ "Derive a secret from the vector of components.

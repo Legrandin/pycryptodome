@@ -38,7 +38,7 @@ from typing import TYPE_CHECKING, Union
 
 __all__ = ["OpenPgpMode"]
 from Crypto.Random import get_random_bytes
-from Crypto.Util._bytes import copy_bytes
+from Crypto.Util._raw_api import is_buffer
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -82,7 +82,9 @@ class OpenPgpMode:
             **cipher_params,
         )
 
-        iv = copy_bytes(None, None, iv)
+        if not is_buffer(iv):
+            raise TypeError("IV must be bytes, bytearray or memoryview")
+        iv = bytes(iv)
 
         # The cipher will be used for...
         if len(iv) == self.block_size:

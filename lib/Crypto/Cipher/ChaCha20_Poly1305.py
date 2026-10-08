@@ -34,10 +34,10 @@ from binascii import unhexlify
 from typing import Optional, Tuple, Union, overload
 
 from Crypto.Cipher import ChaCha20
+from Crypto.Cipher._state_machine import Method
 from Crypto.Cipher.ChaCha20 import _HChaCha20
 from Crypto.Hash import BLAKE2s, Poly1305
 from Crypto.Random import get_random_bytes
-from Crypto.Util._bytes import copy_bytes
 from Crypto.Util._raw_api import is_buffer
 from Crypto.Util.number import long_to_bytes
 
@@ -66,7 +66,13 @@ class ChaCha20Poly1305Cipher:
 
         See also `new()` at the module level."""
 
-        self._next: Tuple[str, ...] = ("update", "encrypt", "decrypt", "digest", "verify")
+        self._next: Tuple[Method, ...] = (
+            Method.UPDATE,
+            Method.ENCRYPT,
+            Method.DECRYPT,
+            Method.DIGEST,
+            Method.VERIFY,
+        )
 
         self._authenticator = Poly1305.new(key=key, nonce=nonce, cipher=ChaCha20)
 
@@ -94,7 +100,7 @@ class ChaCha20Poly1305Cipher:
             A piece of associated data. There are no restrictions on its size.
         """
 
-        if "update" not in self._next:
+        if Method.UPDATE not in self._next:
             raise TypeError("update() method cannot be called")
 
         self._len_aad += len(data)
@@ -127,13 +133,13 @@ class ChaCha20Poly1305Cipher:
           Otherwise, ``None``.
         """
 
-        if "encrypt" not in self._next:
+        if Method.ENCRYPT not in self._next:
             raise TypeError("encrypt() method cannot be called")
 
         if self._status == _CipherStatus.PROCESSING_AUTH_DATA:
             self._pad_aad()
 
-        self._next = ("encrypt", "digest")
+        self._next = (Method.ENCRYPT, Method.DIGEST)
 
         result: Optional[bytes]
         if output is None:
@@ -166,13 +172,13 @@ class ChaCha20Poly1305Cipher:
           Otherwise, ``None``.
         """
 
-        if "decrypt" not in self._next:
+        if Method.DECRYPT not in self._next:
             raise TypeError("decrypt() method cannot be called")
 
         if self._status == _CipherStatus.PROCESSING_AUTH_DATA:
             self._pad_aad()
 
-        self._next = ("decrypt", "verify")
+        self._next = (Method.DECRYPT, Method.VERIFY)
 
         self._len_ct += len(ciphertext)
         self._authenticator.update(ciphertext)
@@ -206,9 +212,9 @@ class ChaCha20Poly1305Cipher:
         :Return: the MAC tag, as 16 ``bytes``.
         """
 
-        if "digest" not in self._next:
+        if Method.DIGEST not in self._next:
             raise TypeError("digest() method cannot be called")
-        self._next = ("digest",)
+        self._next = (Method.DIGEST,)
 
         return self._compute_mac()
 
@@ -235,9 +241,9 @@ class ChaCha20Poly1305Cipher:
             or the key is incorrect.
         """
 
-        if "verify" not in self._next:
+        if Method.VERIFY not in self._next:
             raise TypeError("verify() cannot be called when encrypting a message")
-        self._next = ("verify",)
+        self._next = (Method.VERIFY,)
 
         secret = get_random_bytes(16)
 
@@ -333,7 +339,7 @@ def new(*, key: Buffer, nonce: Optional[Buffer] = None) -> ChaCha20Poly1305Ciphe
         raise TypeError("nonce must be bytes, bytearray or memoryview")
 
     cipher = ChaCha20Poly1305Cipher(key, chacha20_poly1305_nonce)
-    cipher.nonce = copy_bytes(None, None, nonce)
+    cipher.nonce = bytes(nonce)
     return cipher
 
 

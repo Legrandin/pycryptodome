@@ -26,7 +26,7 @@ from typing import TYPE_CHECKING, Optional, Union
 
 from Crypto.Hash import BLAKE2s
 from Crypto.Random import get_random_bytes
-from Crypto.Util._bytes import copy_bytes, tobytes
+from Crypto.Util._bytes import tobytes
 from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
@@ -213,5 +213,5 @@ def new(
     r, s, nonce = cipher._derive_Poly1305_key_pair(key, nonce)
 
     new_mac = Poly1305_MAC(r, s, data)
-    new_mac.nonce = copy_bytes(None, None, nonce)  # nonce may still be just a memoryview
+    new_mac.nonce = bytes(nonce)  # nonce may still be just a memoryview
     return new_mac

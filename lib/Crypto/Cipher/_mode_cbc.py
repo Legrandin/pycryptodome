@@ -37,8 +37,8 @@ from __future__ import annotations
 from typing import Optional, Union, overload
 
 __all__ = ["CbcMode"]
+from Crypto.Cipher._state_machine import Method
 from Crypto.Random import get_random_bytes
-from Crypto.Util._bytes import copy_bytes
 from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
@@ -124,14 +124,14 @@ class CbcMode:
         self.block_size = len(iv)
         """The block size of the underlying cipher, in bytes."""
 
-        self.iv = copy_bytes(None, None, iv)
+        self.iv = bytes(iv)
         """The Initialization Vector originally used to create the object.
         The value does not change."""
 
         self.IV = self.iv
         """Alias for `iv`"""
 
-        self._next = ["encrypt", "decrypt"]
+        self._next = [Method.ENCRYPT, Method.DECRYPT]
 
     @overload
     def encrypt(self, plaintext: Buffer) -> bytes: ...
@@ -177,9 +177,9 @@ class CbcMode:
           Otherwise, ``None``.
         """
 
-        if "encrypt" not in self._next:
+        if Method.ENCRYPT not in self._next:
             raise TypeError("encrypt() cannot be called after decrypt()")
-        self._next = ["encrypt"]
+        self._next = [Method.ENCRYPT]
 
         if output is None:
             ciphertext = create_output_buffer(len(plaintext))
@@ -251,9 +251,9 @@ class CbcMode:
           Otherwise, ``None``.
         """
 
-        if "decrypt" not in self._next:
+        if Method.DECRYPT not in self._next:
             raise TypeError("decrypt() cannot be called after encrypt()")
-        self._next = ["decrypt"]
+        self._next = [Method.DECRYPT]
 
         if output is None:
             plaintext = create_output_buffer(len(ciphertext))

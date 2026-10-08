@@ -1,6 +1,6 @@
 # ===================================================================
 #
-# Copyright (c) 2026, Legrandin <helderijs@gmail.com>
+# Copyright (c) 2026, Helder Eijs <helderijs@gmail.com>
 # All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
@@ -28,23 +28,21 @@
 # POSSIBILITY OF SUCH DAMAGE.
 # ===================================================================
 
-"""Internal helpers for handling byte sequences."""
+"""The order in which the methods of a cipher object can be called.
 
-from __future__ import annotations
+Each cipher object keeps in ``self._next`` the methods that the caller
+may invoke next. Each method checks that it is in ``self._next`` (or raises
+``TypeError``), and then sets ``self._next`` to the methods allowed after it.
+"""
 
-from typing import Union
-
-Buffer = Union[bytes, bytearray, memoryview]
+from enum import Enum
 
 
-def tobytes(s: Union[str, Buffer], encoding: str = "latin-1") -> bytes:
-    """Return an immutable byte string out of a text string
-    (encoded with ``encoding``), a byte string, a bytearray or a memoryview."""
+class Method(Enum):
+    """A method of a cipher object"""
 
-    if isinstance(s, bytes):
-        return s
-    elif isinstance(s, str):
-        return s.encode(encoding)
-    elif isinstance(s, (bytearray, memoryview)):
-        return bytes(s)
-    raise TypeError("Expected a string or a bytes-like object, not %s" % type(s).__name__)
+    UPDATE = "update"
+    ENCRYPT = "encrypt"
+    DECRYPT = "decrypt"
+    DIGEST = "digest"
+    VERIFY = "verify"

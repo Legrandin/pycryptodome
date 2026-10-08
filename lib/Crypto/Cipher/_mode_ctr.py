@@ -25,16 +25,14 @@ Counter (CTR) mode.
 
 from __future__ import annotations
 
-from typing import Optional, Union, overload
+from typing import Any, List, Optional, Union, overload
 
 __all__ = ["CtrMode"]
 
 import struct
-import threading
 
+from Crypto.Cipher._state_machine import Method
 from Crypto.Random import get_random_bytes
-from Crypto.Util._bytes import copy_bytes
-from Crypto.Util._cpu_features import available_cores
 from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
@@ -46,6 +44,7 @@ from Crypto.Util._raw_api import (
     is_writeable_buffer,
     load_pycryptodome_raw_lib,
 )
+from Crypto.Util._threads import range_boundaries, run_in_threads, threads_param
 from Crypto.Util.number import long_to_bytes
 
 Buffer = Union[bytes, bytearray, memoryview]
@@ -85,12 +84,15 @@ raw_ctr_lib = load_pycryptodome_raw_lib(
 _MIN_BYTES_PER_THREAD = 1024 * 1024
 
 
-def _ctr_threaded(state, in_ptr, out_ptr, data_len: int, threads: int) -> int:
+def _ctr_threaded(state: Any, in_ptr: Any, out_ptr: Any, data_len: int, threads: int) -> int:
     """Encrypt or decrypt ``data_len`` bytes in CTR mode, by splitting them
     into ``threads`` contiguous ranges, which are processed in parallel.
     Fewer threads are used if a range would be shorter than
     ``_MIN_BYTES_PER_THREAD`` bytes.
     The calling thread processes the first range.
+
+    ``state``, ``in_ptr`` and ``out_ptr`` are C pointers, whose types depend
+    on the backend (cffi or ctypes): see :mod:`Crypto.Util._raw_api`.
 
     :return: the error code of the C library (0 for success)
     """
@@ -104,50 +106,29 @@ def _ctr_threaded(state, in_ptr, out_ptr, data_len: int, threads: int) -> int:
     if result:
         return result
 
-    results = [0] * threads
-    errors = []
-
-    def worker(i, start, end):
-        try:
-            # CTR_encrypt_at() does not change the state, and writes only
-            # out_ptr[start:end] (no two threads write the same bytes)
-            results[i] = raw_ctr_lib.CTR_encrypt_at(
-                state, in_ptr, out_ptr, c_size_t(start), c_size_t(end - start)
-            )
-        except Exception as e:
-            errors.append(e)
-
-    # List of byte positions where each range starts ('threads' ranges).
-    # Each range is data_len // threads bytes long or one byte more.
-    # The first item is the first byte of the first range (always 0).
-    # The last item is the first byte beyond the last range (always data_len).
     # Ranges may start in the middle of a cipher block: in CTR mode, each byte
-    # of the key stream only depends on its position (see CTR_encrypt_at).
-    bounds = [data_len * i // threads for i in range(threads + 1)]
+    # of the key stream only depends on its position (see CTR_encrypt_at)
+    bounds = range_boundaries(data_len, threads)
 
-    workers = []
-    for i in range(1, threads):
-        t = threading.Thread(target=worker, args=(i, bounds[i], bounds[i + 1]))
-        t.daemon = True
-        t.start()
-        workers.append(t)
+    def worker(i: int) -> int:
+        # CTR_encrypt_at() does not change the state, and writes only
+        # out_ptr[start:end] (no two threads write the same bytes)
+        start, end = bounds[i], bounds[i + 1]
+        return raw_ctr_lib.CTR_encrypt_at(state, in_ptr, out_ptr, c_size_t(start), c_size_t(end - start))
 
-    # The calling thread processes the first range, while the others run
-    worker(0, bounds[0], bounds[1])
+    results: List[int] = []
+    try:
+        results = run_in_threads(worker, threads)
+    finally:
+        # Move the state forward even after an error in a thread (some ranges may
+        # be processed already), so that the same key stream cannot be used again
+        skip_result = raw_ctr_lib.CTR_skip(state, c_size_t(data_len))
 
-    for t in workers:
-        t.join()
-
-    # Move the state forward even after an error in a thread (some ranges may
-    # be processed already), so that the same key stream cannot be used again
-    result = raw_ctr_lib.CTR_skip(state, c_size_t(data_len))
-
-    if errors:
-        raise errors[0]
-    for r in results:
-        if r:
-            return r
-    return result
+    # Report the first error of a thread, if any
+    for result in results:
+        if result:
+            return result
+    return skip_result
 
 
 class CtrMode:
@@ -222,16 +203,10 @@ class CtrMode:
             (0 for as many as the CPU cores available).
         """
 
-        if not isinstance(threads, int) or isinstance(threads, bool):
-            raise TypeError("'threads' must be an integer")
-        if threads < 0:
-            raise ValueError("'threads' must be a non-negative integer")
-        if threads == 0:
-            threads = available_cores()
-        self._threads = threads
+        self._threads = threads_param(threads)
 
         if len(initial_counter_block) == prefix_len + counter_len:
-            self.nonce = copy_bytes(None, prefix_len, initial_counter_block)
+            self.nonce = bytes(initial_counter_block[:prefix_len])
             """Nonce; not available if there is a fixed suffix"""
 
         state = VoidPointer()
@@ -259,7 +234,7 @@ class CtrMode:
         self.block_size = len(initial_counter_block)
         """The block size of the underlying cipher, in bytes."""
 
-        self._next = ["encrypt", "decrypt"]
+        self._next = [Method.ENCRYPT, Method.DECRYPT]
 
     @overload
     def encrypt(self, plaintext: Buffer) -> bytes: ...
@@ -302,9 +277,9 @@ class CtrMode:
           Otherwise, ``None``.
         """
 
-        if "encrypt" not in self._next:
+        if Method.ENCRYPT not in self._next:
             raise TypeError("encrypt() cannot be called after decrypt()")
-        self._next = ["encrypt"]
+        self._next = [Method.ENCRYPT]
 
         return self._process(plaintext, output, "encrypting")
 
@@ -349,9 +324,9 @@ class CtrMode:
           Otherwise, ``None``.
         """
 
-        if "decrypt" not in self._next:
+        if Method.DECRYPT not in self._next:
             raise TypeError("decrypt() cannot be called after encrypt()")
-        self._next = ["decrypt"]
+        self._next = [Method.DECRYPT]
 
         return self._process(ciphertext, output, "decrypting")
 

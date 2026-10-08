@@ -26,7 +26,6 @@ from __future__ import annotations
 from typing import Optional, Tuple, Union, overload
 
 from Crypto.Random import get_random_bytes
-from Crypto.Util._bytes import copy_bytes
 from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
@@ -74,7 +73,7 @@ class Salsa20Cipher:
         if len(nonce) != 8:
             raise ValueError("Incorrect nonce length for Salsa20 (%d bytes)" % len(nonce))
 
-        self.nonce = copy_bytes(None, None, nonce)
+        self.nonce = bytes(nonce)
 
         state = VoidPointer()
         key_ptr, key_len = c_uint8_ptr_len(key)

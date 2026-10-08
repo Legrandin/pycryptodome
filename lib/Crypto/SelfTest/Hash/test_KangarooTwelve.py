@@ -31,6 +31,7 @@ from binascii import unhexlify
 import pytest
 
 from Crypto.Hash import KangarooTwelve as K12
+from Crypto.Util._cpu_features import available_cores
 
 # Run every test with each C implementation available on this machine
 _implementations = [pytest.param(K12._raw_k12_portable_lib, id="portable")]
@@ -460,7 +461,7 @@ class TestKangarooTwelveThreads:
             xof.new(threads=-1)
 
     def test_threads_all_cores(self):
-        cores = K12._available_cores()
+        cores = available_cores()
         assert cores >= 1
         assert K12.new(threads=0)._threads == cores
         assert K12.new().new(threads=0)._threads == cores

@@ -40,10 +40,10 @@ __all__ = ["SivMode"]
 
 from binascii import unhexlify
 
+from Crypto.Cipher._state_machine import Method
 from Crypto.Hash import BLAKE2s
 from Crypto.Protocol.KDF import _S2V
 from Crypto.Random import get_random_bytes
-from Crypto.Util._bytes import copy_bytes
 from Crypto.Util._raw_api import is_buffer
 from Crypto.Util.number import bytes_to_long
 
@@ -113,7 +113,7 @@ class SivMode:
             if len(nonce) == 0:
                 raise ValueError("When provided, the nonce must be non-empty")
 
-            self.nonce = copy_bytes(None, None, nonce)
+            self.nonce = bytes(nonce)
             """Public attribute is only available in case of non-deterministic
             encryption."""
 
@@ -127,7 +127,7 @@ class SivMode:
         factory.new(key[:subkey_size], factory.MODE_ECB, **kwargs)
 
         # Allowed transitions after initialization
-        self._next = ["update", "encrypt", "decrypt", "digest", "verify"]
+        self._next = [Method.UPDATE, Method.ENCRYPT, Method.DECRYPT, Method.DIGEST, Method.VERIFY]
 
     def _create_ctr_cipher(self, v):
         """Create a new CTR cipher from V in SIV mode"""
@@ -164,10 +164,10 @@ class SivMode:
             The next associated data component.
         """
 
-        if "update" not in self._next:
+        if Method.UPDATE not in self._next:
             raise TypeError("update() can only be called immediately after initialization")
 
-        self._next = ["update", "encrypt", "decrypt", "digest", "verify"]
+        self._next = [Method.UPDATE, Method.ENCRYPT, Method.DECRYPT, Method.DIGEST, Method.VERIFY]
 
         self._kdf.update(component)
         return self
@@ -203,9 +203,9 @@ class SivMode:
         :Return: the MAC, as a byte string.
         """
 
-        if "digest" not in self._next:
+        if Method.DIGEST not in self._next:
             raise TypeError("digest() cannot be called when decrypting or validating a message")
-        self._next = ["digest"]
+        self._next = [Method.DIGEST]
         if self._mac_tag is None:
             self._mac_tag = self._kdf.derive()
         return self._mac_tag
@@ -236,9 +236,9 @@ class SivMode:
             or the key is incorrect.
         """
 
-        if "verify" not in self._next:
+        if Method.VERIFY not in self._next:
             raise TypeError("verify() cannot be called when encrypting a message")
-        self._next = ["verify"]
+        self._next = [Method.VERIFY]
 
         if self._mac_tag is None:
             self._mac_tag = self._kdf.derive()
@@ -296,10 +296,10 @@ class SivMode:
             specified a location for the result.
         """
 
-        if "encrypt" not in self._next:
+        if Method.ENCRYPT not in self._next:
             raise TypeError("encrypt() can only be called after initialization or an update()")
 
-        self._next = ["digest"]
+        self._next = [Method.DIGEST]
 
         # Compute V (MAC)
         if hasattr(self, "nonce"):
@@ -350,9 +350,9 @@ class SivMode:
             or the key is incorrect.
         """
 
-        if "decrypt" not in self._next:
+        if Method.DECRYPT not in self._next:
             raise TypeError("decrypt() can only be called after initialization or an update()")
-        self._next = ["verify"]
+        self._next = [Method.VERIFY]
 
         # Take the MAC and start the cipher for decryption
         self._cipher = self._create_ctr_cipher(mac_tag)
