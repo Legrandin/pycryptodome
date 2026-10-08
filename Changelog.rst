@@ -17,6 +17,10 @@ Breaking changes
   of SHAKE, cSHAKE, TurboSHAKE and KangarooTwelve objects, and for
   ``digest_bytes`` and ``digest_bits`` of BLAKE2b and BLAKE2s.
   Before, ``True`` was accepted as 1 and produced a 1-byte output.
+* In ``Crypto.Protocol.KDF.SP800_108_Counter()``, the ``label`` can no longer
+  contain zero bytes, while the ``context`` now can (for instance, a binary nonce).
+  The zero byte between them still separates the two unambiguously,
+  as required by NIST SP 800-108r1 (GH#896).
 
 Resolved issues
 ---------------

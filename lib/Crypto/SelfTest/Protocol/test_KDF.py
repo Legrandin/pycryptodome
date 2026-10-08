@@ -796,14 +796,14 @@ class TestSP800_108_Counter:
         def prf(s, x):
             return HMAC.new(s, x, SHA256).digest()
 
-        try:
-            _ = SP800_108_Counter(b"0" * 16, 1, prf, label=b"A\x00B")
-        except ValueError:
-            pytest.fail("SP800_108_Counter failed with zero in label")
-        try:
-            _ = SP800_108_Counter(b"0" * 16, 1, prf, context=b"A\x00B")
-        except ValueError:
-            pytest.fail("SP800_108_Counter failed with zero in context")
+        # The zero byte after the label separates it from the context
+        with pytest.raises(ValueError):
+            SP800_108_Counter(b"0" * 16, 1, prf, label=b"A\x00B")
+
+        # The context can contain zero bytes: PRF([1] || Label || 0x00 || Context || [L])
+        key = SP800_108_Counter(b"0" * 16, 16, prf, label=b"L", context=b"A\x00B")
+        expected = prf(b"0" * 16, b"\x00\x00\x00\x01" + b"L" + b"\x00" + b"A\x00B" + b"\x00\x00\x00\x80")
+        assert key == expected[:16]
 
     def test_multiple_keys(self):
         def prf(s, x):

@@ -697,11 +697,14 @@ def SP800_108_Counter(
         The number of keys to derive. Every key is :data:`key_len` bytes long.
         By default, only 1 key is derived.
      label (byte string):
-        Optional description of the purpose of the derived keys.
+        Optional description of the purpose of the derived keys
+        (for instance, an ASCII string).
+        It must not contain zero bytes.
      context (byte string):
         Optional information pertaining to
         the protocol that uses the keys, such as the identity of the
         participants, nonces, session IDs, etc.
+        It can contain any byte value.
 
     Return:
         - a byte string (if ``num_keys`` is not specified), or
@@ -710,6 +713,12 @@ def SP800_108_Counter(
 
     if num_keys is None:
         num_keys = 1
+
+    # The zero byte after the label separates it from the context. With no zero
+    # byte in the label, different (label, context) pairs always give different
+    # inputs to the PRF, as NIST SP 800-108r1 requires (Section 6.4, Input Data Encoding).
+    if b"\x00" in label:
+        raise ValueError("Null byte found in label")
 
     key_len_enc = long_to_bytes(key_len * num_keys * 8, 4)
     output_len = key_len * num_keys
