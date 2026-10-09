@@ -63,8 +63,8 @@ class IntegerCustom(IntegerNative):
         if mod_value == 0:
             raise ZeroDivisionError("Modulus cannot be zero")
 
-        # C extension only works with odd moduli
-        if (mod_value & 1) == 0:
+        # C extension only works with odd moduli larger than 1
+        if (mod_value & 1) == 0 or mod_value == 1:
             self._value = pow(self._value, exp_value, mod_value)
             return self
 
