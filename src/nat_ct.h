@@ -92,6 +92,45 @@ static inline uint64_t ct_select(uint64_t mask, uint64_t x, uint64_t y)
     return y ^ (mask & (x ^ y));
 }
 
+#if defined(HAVE_UINT128)
+
+/*
+ * With a 128-bit type, the compiler uses the carry flag (add/adc, sub/sbb),
+ * which is both faster and constant time.
+ */
+
+/** a + b + carry_in, with the carry out (0 or 1) in *carry_out **/
+static inline uint64_t ct_add(uint64_t a, uint64_t b, uint64_t carry_in, uint64_t *carry_out)
+{
+    __uint128_t s = (__uint128_t)a + b + carry_in;
+
+    *carry_out = (uint64_t)(s >> 64);
+    return (uint64_t)s;
+}
+
+/** a - b - borrow_in, with the borrow out (0 or 1) in *borrow_out **/
+static inline uint64_t ct_sub(uint64_t a, uint64_t b, uint64_t borrow_in, uint64_t *borrow_out)
+{
+    __uint128_t d = (__uint128_t)a - b - borrow_in;
+
+    *borrow_out = (uint64_t)(d >> 64) & 1;
+    return (uint64_t)d;
+}
+
+/**
+ * Compute a*b + c + d, which always fits into 128 bits.
+ * Return the lower 64 bits, and store the higher 64 bits into *hi.
+ */
+static inline uint64_t ct_mac(uint64_t a, uint64_t b, uint64_t c, uint64_t d, uint64_t *hi)
+{
+    __uint128_t t = (__uint128_t)a * b + c + d;
+
+    *hi = (uint64_t)(t >> 64);
+    return (uint64_t)t;
+}
+
+#else
+
 /** a + b + carry_in, with the carry out (0 or 1) in *carry_out **/
 static inline uint64_t ct_add(uint64_t a, uint64_t b, uint64_t carry_in, uint64_t *carry_out)
 {
@@ -134,6 +173,8 @@ static inline uint64_t ct_mac(uint64_t a, uint64_t b, uint64_t c, uint64_t d, ui
     *hi = h;
     return lo;
 }
+
+#endif /* HAVE_UINT128 */
 
 /** Number of significant bits in x (0 for x == 0) **/
 static inline uint64_t ct_bitlen64(uint64_t x)
