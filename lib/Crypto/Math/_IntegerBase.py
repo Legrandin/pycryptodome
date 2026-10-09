@@ -220,7 +220,7 @@ class IntegerBase(ABC):
 
     @staticmethod
     @abstractmethod
-    def jacobi_symbol(a: Union[IntegerBase, int], n: Union[IntegerBase, int]) -> IntegerBase:
+    def jacobi_symbol(a: Union[IntegerBase, int], n: Union[IntegerBase, int]) -> int:
         pass
 
     @staticmethod
