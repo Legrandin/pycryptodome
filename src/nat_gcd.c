@@ -14,7 +14,7 @@
 #include "nat_ct.h"
 
 /** Copy a into nw words (zero extension or truncation) **/
-static void nat_to_words(uint64_t *out, const Nat *a, size_t nw)
+STATIC void nat_to_words(uint64_t *out, const Nat *a, size_t nw)
 {
     size_t i;
 

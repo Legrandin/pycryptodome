@@ -21,7 +21,7 @@ FAKE_INIT(nat)
 /* Memory                                                           */
 /* ---------------------------------------------------------------- */
 
-static void wipe(void *p, size_t len)
+STATIC void wipe(void *p, size_t len)
 {
     volatile uint8_t *v = (volatile uint8_t*)p;
 
@@ -191,8 +191,8 @@ void words_shr1(uint64_t *x, uint64_t top, size_t nw)
     x[nw-1] = (x[nw-1] >> 1) | (top << 63);
 }
 
-/** tmp = x >> s, for a public s **/
-static void words_shr_public(uint64_t *out, const uint64_t *x, size_t s, size_t nw)
+/** out = x >> s, for a public s **/
+STATIC void words_shr_public(uint64_t *out, const uint64_t *x, size_t s, size_t nw)
 {
     size_t ws = s / 64;
     unsigned bs = (unsigned)(s % 64);
@@ -208,7 +208,7 @@ static void words_shr_public(uint64_t *out, const uint64_t *x, size_t s, size_t 
 }
 
 /** out = x << s, for a public s **/
-static void words_shl_public(uint64_t *out, const uint64_t *x, size_t s, size_t nw)
+STATIC void words_shl_public(uint64_t *out, const uint64_t *x, size_t s, size_t nw)
 {
     size_t ws = s / 64;
     unsigned bs = (unsigned)(s % 64);
