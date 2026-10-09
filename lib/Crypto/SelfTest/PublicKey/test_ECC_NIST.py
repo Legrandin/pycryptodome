@@ -38,6 +38,32 @@ from Crypto.SelfTest.loader import load_test_vectors
 
 
 class TestEccPoint:
+    def test_public_types(self):
+        key = ECC.generate(curve="P-256")
+        point = key.pointQ
+        assert type(point.x) is int
+        assert type(point.y) is int
+        assert type(point.xy[0]) is int
+        assert point.xy == (point.x, point.y)
+        assert type(key.d) is int
+        assert key.pointQ == key._curve.G * key.d
+
+        # Arithmetic on the coordinates is plain Python int arithmetic
+        assert point.x - 2**300 < 0
+
+    def test_compressed_point_x_one(self):
+        # On P-521, x = 1 is a valid coordinate, and x^3 - 3x is negative
+        curve = _curves["p521"]
+        p, b = int(curve.p), int(curve.b)
+        nbytes = (p.bit_length() + 7) // 8
+        for prefix in (b"\x02", b"\x03"):
+            encoded = prefix + (1).to_bytes(nbytes, "big")
+            key = ECC.import_key(encoded, curve_name="P-521")
+            x, y = key.pointQ.xy
+            assert x == 1
+            assert (y * y - (1 - 3 + b)) % p == 0
+            assert y % 2 == (prefix == b"\x03")
+
     def test_mix(self):
         p1 = ECC.generate(curve="P-256").pointQ
         p2 = ECC.generate(curve="P-384").pointQ

@@ -6,6 +6,7 @@ from __future__ import annotations
 import threading
 from typing import Any, Optional, Union
 
+from Crypto.Math._IntegerBase import IntegerBase
 from Crypto.Math.Numbers import Integer
 from Crypto.Random.random import getrandbits
 from Crypto.Util._raw_api import (
@@ -19,6 +20,32 @@ from Crypto.Util._raw_api import (
     null_pointer,
 )
 from Crypto.Util.number import bytes_to_long, long_to_bytes
+
+
+def _encode_coordinate(value: Union[int, IntegerBase], length: int) -> bytes:
+    """Encode a coordinate into exactly ``length`` bytes (big endian)"""
+
+    if isinstance(value, IntegerBase):
+        try:
+            return value.to_bytes(length)
+        except ValueError:
+            raise ValueError("Incorrect coordinate length")
+    encoded = long_to_bytes(int(value), length)
+    if len(encoded) != length:
+        raise ValueError("Incorrect coordinate length")
+    return encoded
+
+
+def _encode_scalar(scalar: Union[int, IntegerBase], min_length: int) -> bytes:
+    """Encode a scalar (big endian).
+
+    An Integer (possibly secret) is encoded with at least ``min_length``
+    bytes, so that its actual length does not leak.
+    """
+
+    if isinstance(scalar, IntegerBase):
+        return scalar.to_bytes(max(min_length, scalar.size_in_bytes()))
+    return long_to_bytes(scalar)
 
 
 class CurveID:
@@ -184,10 +211,8 @@ class EccPoint:
 
         modulus_bytes = self.size_in_bytes()
 
-        xb = long_to_bytes(int(x), modulus_bytes)
-        yb = long_to_bytes(int(y), modulus_bytes)
-        if len(xb) != modulus_bytes or len(yb) != modulus_bytes:
-            raise ValueError("Incorrect coordinate length")
+        xb = _encode_coordinate(x, modulus_bytes)
+        yb = _encode_coordinate(y, modulus_bytes)
 
         new_point = self._curve.rawlib.new_point
         free_func = self._curve.rawlib.free_point
@@ -261,15 +286,35 @@ class EccPoint:
             return EccPoint(0, 0, self.curve)
 
     @property
-    def x(self) -> Integer:
+    def x(self) -> int:
         return self.xy[0]
 
     @property
-    def y(self) -> Integer:
+    def y(self) -> int:
         return self.xy[1]
 
     @property
-    def xy(self) -> tuple[Integer, Integer]:
+    def xy(self) -> tuple[int, int]:
+        xb, yb = self._get_xy_bytes()
+        return (bytes_to_long(xb), bytes_to_long(yb))
+
+    # The coordinates as Integer objects, for the library itself.
+    # The conversion is constant time (the point may be secret, as in ECDH).
+
+    @property
+    def _x(self) -> Integer:
+        return self._xy[0]
+
+    @property
+    def _y(self) -> Integer:
+        return self._xy[1]
+
+    @property
+    def _xy(self) -> tuple[Integer, Integer]:
+        xb, yb = self._get_xy_bytes()
+        return (Integer.from_bytes(xb), Integer.from_bytes(yb))
+
+    def _get_xy_bytes(self) -> tuple[bytearray, bytearray]:
         modulus_bytes = self.size_in_bytes()
         xb = bytearray(modulus_bytes)
         yb = bytearray(modulus_bytes)
@@ -278,8 +323,7 @@ class EccPoint:
             result = get_xy(xb_ptr, yb_ptr, c_size_t(modulus_bytes), self._point.get())
         if result:
             raise ValueError("Error %d while encoding an EC point" % result)
-
-        return (Integer(bytes_to_long(xb)), Integer(bytes_to_long(yb)))
+        return xb, yb
 
     def size_in_bytes(self) -> int:
         """Size of each coordinate, in bytes."""
@@ -326,7 +370,7 @@ class EccPoint:
         scalar_func = self._curve.rawlib.scalar
         if scalar < 0:
             raise ValueError("Scalar multiplication is only defined for non-negative integers")
-        sb = long_to_bytes(scalar)
+        sb = _encode_scalar(scalar, self.size_in_bytes())
         sb_ptr, sb_len = c_uint8_ptr_len(sb)
         result = scalar_func(self._point.get(), sb_ptr, c_size_t(sb_len), c_ulonglong(getrandbits(64)))
         if result:
@@ -387,9 +431,7 @@ class EccXPoint:
         if x is None:
             xb = null_pointer
         else:
-            xb = c_uint8_ptr(long_to_bytes(int(x), modulus_bytes))
-            if len(xb) != modulus_bytes:
-                raise ValueError("Incorrect coordinate length")
+            xb = c_uint8_ptr(_encode_coordinate(x, modulus_bytes))
 
         raw_point = VoidPointer()
         result = new_point(raw_point.address_of(), xb, c_size_t(modulus_bytes), context)
@@ -449,7 +491,15 @@ class EccXPoint:
         return EccXPoint(None, self.curve)
 
     @property
-    def x(self) -> Integer:
+    def x(self) -> int:
+        return bytes_to_long(self._get_x_bytes())
+
+    @property
+    def _x(self) -> Integer:
+        """The X coordinate as an Integer, converted in constant time"""
+        return Integer.from_bytes(self._get_x_bytes())
+
+    def _get_x_bytes(self) -> bytearray:
         modulus_bytes = self.size_in_bytes()
         xb = bytearray(modulus_bytes)
         get_x = self._curve.rawlib.get_x
@@ -459,7 +509,7 @@ class EccXPoint:
             raise ValueError("No X coordinate for the point at infinity")
         if result:
             raise ValueError("Error %d while getting X of an EC point" % result)
-        return Integer(bytes_to_long(xb))
+        return xb
 
     def size_in_bytes(self) -> int:
         """Size of each coordinate, in bytes."""
@@ -475,7 +525,7 @@ class EccXPoint:
         scalar_func = self._curve.rawlib.scalar
         if scalar < 0:
             raise ValueError("Scalar multiplication is only defined for non-negative integers")
-        sb = long_to_bytes(scalar)
+        sb = _encode_scalar(scalar, self.size_in_bytes())
         sb_ptr, sb_len = c_uint8_ptr_len(sb)
         result = scalar_func(self._point.get(), sb_ptr, c_size_t(sb_len), c_ulonglong(getrandbits(64)))
         if result:

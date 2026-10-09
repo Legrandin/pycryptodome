@@ -243,6 +243,20 @@ class TestRSA:
         assert pub.size_in_bits() == 1024
         assert pub.size_in_bytes() == 128
 
+    def test_decrypt_with_p_larger_than_q(self):
+        # Decryption orders the CRT components so that p < q,
+        # but the key keeps its components as they were given
+        key = self.rsa.generate(1024)
+        assert key.p < key.q
+        swapped = self.rsa.construct((key.n, key.e, key.d, key.q, key.p))
+        assert swapped.p == key.q
+        assert swapped.q == key.p
+        assert swapped.u == pow(key.q, -1, key.p)
+
+        for ciphertext in (0, 1, 2, key.n - 1, pow(12345, key.e, key.n)):
+            assert swapped._decrypt(ciphertext) == key._decrypt(ciphertext)
+            assert pow(swapped._decrypt(ciphertext), key.e, key.n) == ciphertext
+
     def _check_private_key(self, rsaObj):
         from Crypto.Math.Numbers import Integer
 

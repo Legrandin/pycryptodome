@@ -21,9 +21,18 @@ Breaking changes
   contain zero bytes, while the ``context`` now can (for instance, a binary nonce).
   The zero byte between them still separates the two unambiguously,
   as required by NIST SP 800-108r1 (GH#896).
+* The coordinates of ``EccPoint`` and ``EccXPoint`` (``x``, ``y`` and ``xy``),
+  ``EccKey.d`` and the components of ElGamal keys (``p``, ``g``, ``y`` and ``x``)
+  are now Python ``int`` objects, not ``Crypto.Math.Numbers.Integer``.
+  The ElGamal components can no longer be assigned.
 
 Resolved issues
 ---------------
+* The trial division by small primes in ``Crypto.Math.Primality.test_probable_prime()``
+  never ran (only the Miller-Rabin and Lucas tests did), which made the generation
+  of RSA, DSA and ElGamal keys slower.
+* With ``IntegerCustom`` (used when GMP is not available), ``pow(x, e, 1)``
+  raised ``ValueError`` instead of returning 0.
 * ElGamal key objects could not be compared for equality.
 * Comparing an RSA, DSA or ElGamal key with an object of a different type now
   returns ``False`` instead of raising ``AttributeError``.

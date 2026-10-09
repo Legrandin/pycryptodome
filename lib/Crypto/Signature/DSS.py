@@ -148,7 +148,9 @@ class DssSigScheme:
 class DeterministicDsaSigScheme(DssSigScheme):
     # Also applicable to ECDSA
 
-    def __init__(self, key: Union[DsaKey, EccKey], encoding: str, order: Integer, private_key: int) -> None:
+    def __init__(
+        self, key: Union[DsaKey, EccKey], encoding: str, order: Integer, private_key: Optional[Integer]
+    ) -> None:
         super().__init__(key, encoding, order)
         self._private_key = private_key
 
@@ -167,7 +169,7 @@ class DeterministicDsaSigScheme(DssSigScheme):
         """See 2.3.3 in RFC6979"""
 
         assert 0 < int_mod_q < self._order
-        return long_to_bytes(int_mod_q, self._order_bytes)
+        return Integer(int_mod_q).to_bytes(self._order_bytes)
 
     def _bits2octets(self, bstr):
         """See 2.3.4 in RFC6979"""
@@ -358,21 +360,21 @@ def new(
     if encoding not in ("binary", "der"):
         raise ValueError("Unknown encoding '%s'" % encoding)
 
+    # The private key is kept as an Integer, which is converted to bytes
+    # in constant time (RFC6979, section 2.3.3)
+    private_key: Optional[Integer] = None
     if isinstance(key, EccKey):
         order = key._curve.order
-        private_key_attr = "d"
         if not key.curve.startswith("NIST"):
             raise ValueError("ECC key is not on a NIST P curve")
+        if key.has_private():
+            private_key = key._d
     elif isinstance(key, DsaKey):
         order = Integer(key.q)
-        private_key_attr = "x"
+        if key.has_private():
+            private_key = Integer(key._key["x"])
     else:
         raise ValueError("Unsupported key type " + str(type(key)))
-
-    if key.has_private():
-        private_key = getattr(key, private_key_attr)
-    else:
-        private_key = None
 
     if mode == "deterministic-rfc6979":
         return DeterministicDsaSigScheme(key, encoding, order, private_key)
