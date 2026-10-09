@@ -82,10 +82,10 @@ md = Integer(key.d)
 mn = Integer(key.n)
 start = time.time()
 for _x in range(ITER):
-    result_gmp = pow(mg, md, mn)
+    result_integer = pow(mg, md, mn)
 end = time.time()
-gmp_time = end - start
-print("GMP =", gmp_time)
+integer_time = end - start
+print("Integer (%s) =" % Integer.__name__, integer_time)
 
 # -----------------------------------------------------------------
-print("%.2f%%" % float((my_time / gmp_time - 1) * 100), "slower")
+print("%.2f%%" % float((my_time / integer_time - 1) * 100), "slower")

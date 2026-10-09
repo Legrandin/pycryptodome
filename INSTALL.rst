@@ -25,7 +25,7 @@ This is not a problem if your application is deployed in a ``virtualenv``.
 
 The procedures below go a bit more in detail, by explaining
 how to setup the environment for compiling the C extensions
-for each OS, and how to install the GMP library.
+for each OS.
 
 Compiling in Linux Ubuntu
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -49,14 +49,14 @@ Compiling in Linux Fedora
 
 For Python 3.x::
 
-        $ sudo yum install gcc gmp python3-devel
+        $ sudo yum install gcc python3-devel
         $ pip install pycryptodome
         $ pip install pytest pycryptodome-test-vectors
         $ python3 -m Crypto.SelfTest
 
 For PyPy::
 
-        $ sudo yum install gcc gmp pypy-devel
+        $ sudo yum install gcc pypy-devel
         $ pip install pycryptodome
         $ pip install pytest pycryptodome-test-vectors
         $ pypy -m Crypto.SelfTest
@@ -152,4 +152,3 @@ They can be verified with the following PGP key::
 
 .. _pypi: https://pypi.python.org/pypi/pycryptodome
 .. _get-pip.py: https://bootstrap.pypa.io/get-pip.py
-.. _GMP: http://gmplib.org

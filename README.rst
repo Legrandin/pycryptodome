@@ -29,8 +29,6 @@ at the same time, as they will interfere with each other.
     ``Crypto`` is the only package name.
     To migrate, replace ``Cryptodome`` with ``Crypto`` in your imports.
 
-For faster public key operations in Unix, you should install `GMP`_ in your system.
-
 PyCryptodome is a fork of PyCrypto. It brings the following enhancements
 with respect to the last official version of PyCrypto (2.6.1):
 
@@ -76,5 +74,4 @@ For security issues, please send an email to security@pycryptodome.org.
 All the code can be downloaded from `GitHub`_.
 
 .. _`homepage`: https://www.pycryptodome.org
-.. _`GMP`: https://gmplib.org
 .. _GitHub: https://github.com/Legrandin/pycryptodome

@@ -16,9 +16,9 @@ if TYPE_CHECKING:
     from Crypto.Math._IntegerBase import IntegerBase as Integer
 else:
     # The environment variable PYCRYPTODOME_INTEGER forces one implementation
-    # (for testing): "nat", "gmp", "custom" or "native".
+    # (for testing): "nat", "custom" or "native".
     _forced = os.getenv("PYCRYPTODOME_INTEGER")
-    if _forced not in (None, "nat", "gmp", "custom", "native"):
+    if _forced not in (None, "nat", "custom", "native"):
         raise ValueError("Unknown value for PYCRYPTODOME_INTEGER: %s" % _forced)
 
     if _forced == "nat":
@@ -31,9 +31,6 @@ else:
         from Crypto.Math._IntegerNative import IntegerNative as Integer
 
         _implementation = {}
-    elif _forced == "gmp":
-        from Crypto.Math._IntegerGMP import IntegerGMP as Integer
-        from Crypto.Math._IntegerGMP import implementation as _implementation
     else:
         try:
             # Constant-time arithmetic, in C
@@ -41,16 +38,9 @@ else:
             from Crypto.Math._IntegerNat import implementation as _implementation
         except (ImportError, OSError):
             try:
-                if os.getenv("PYCRYPTODOME_DISABLE_GMP"):
-                    raise ImportError()
+                from Crypto.Math._IntegerCustom import IntegerCustom as Integer
+                from Crypto.Math._IntegerCustom import implementation as _implementation
+            except (ImportError, OSError):
+                from Crypto.Math._IntegerNative import IntegerNative as Integer
 
-                from Crypto.Math._IntegerGMP import IntegerGMP as Integer
-                from Crypto.Math._IntegerGMP import implementation as _implementation
-            except (ImportError, OSError, AttributeError):
-                try:
-                    from Crypto.Math._IntegerCustom import IntegerCustom as Integer
-                    from Crypto.Math._IntegerCustom import implementation as _implementation
-                except (ImportError, OSError):
-                    from Crypto.Math._IntegerNative import IntegerNative as Integer
-
-                    _implementation = {}
+                _implementation = {}
