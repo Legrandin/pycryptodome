@@ -74,6 +74,9 @@ New features
 * GH#911: New method ``export()`` for HPKE contexts, to derive secrets
   (RFC 9180, Section 5.3). With the new ``HPKE.AEAD.EXPORT_ONLY``,
   a context can only export secrets. Thanks to sebastian.
+* GH#906: New module ``Crypto.Cipher.oaep`` for RSA-OAEP encryption.
+  It is the same as ``Crypto.Cipher.PKCS1_OAEP``, but the hash function must
+  always be specified, while ``PKCS1_OAEP`` (now a legacy module) defaults to SHA-1.
 
 3.24.0 (4 October 2026)
 ++++++++++++++++++++++++++

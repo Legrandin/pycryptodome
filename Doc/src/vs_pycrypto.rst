@@ -21,7 +21,7 @@ Specifically, for public key cryptography:
 
   Applications should be updated to use instead:
 
-  - :mod:`Crypto.Cipher.PKCS1_OAEP` for encrypting using RSA.
+  - :mod:`Crypto.Cipher.oaep` for encrypting using RSA.
   - :mod:`Crypto.Signature.pkcs1_15` or :mod:`Crypto.Signature.pss` for signing using RSA.
   - :mod:`Crypto.Signature.DSS` for signing using DSA.
 * Method: :meth:`generate` for public key modules does not accept the ``progress_func`` parameter anymore.

@@ -454,11 +454,11 @@ class RsaKey:
 
     def encrypt(self, plaintext, K):
         """:meta private:"""
-        raise NotImplementedError("Use module Crypto.Cipher.PKCS1_OAEP instead")
+        raise NotImplementedError("Use module Crypto.Cipher.oaep instead")
 
     def decrypt(self, ciphertext):
         """:meta private:"""
-        raise NotImplementedError("Use module Crypto.Cipher.PKCS1_OAEP instead")
+        raise NotImplementedError("Use module Crypto.Cipher.oaep instead")
 
     def blind(self, M, B):
         """:meta private:"""

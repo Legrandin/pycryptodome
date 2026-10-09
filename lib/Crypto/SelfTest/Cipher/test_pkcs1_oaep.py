@@ -24,6 +24,7 @@ import pytest
 
 from Crypto import Random
 from Crypto.Cipher import PKCS1_OAEP as PKCS
+from Crypto.Cipher import oaep
 from Crypto.Hash import MD2, MD5, RIPEMD160, SHA1, SHA224, SHA256, SHA384, SHA512
 from Crypto.PublicKey import RSA
 from Crypto.SelfTest.loader import load_test_vectors_wycheproof, wycheproof_id
@@ -277,7 +278,7 @@ class TestPKCS1_OAEP:
                     return r
 
             # The real test
-            cipher = PKCS.new(key, test[4], randfunc=randGen(t2b(test[3])))
+            cipher = oaep.new(key, test[4], randfunc=randGen(t2b(test[3])))
             ct = cipher.encrypt(t2b(test[1]))
             assert ct == t2b(test[2])
 
@@ -295,7 +296,7 @@ class TestPKCS1_OAEP:
             comps = [int(rws(test[0][x]), 16) for x in ("n", "e", "d")]
             key = RSA.construct(comps)
             # The real test
-            cipher = PKCS.new(key, test[4])
+            cipher = oaep.new(key, test[4])
             pt = cipher.decrypt(t2b(test[2]))
             assert pt == t2b(test[1])
 
@@ -330,7 +331,7 @@ class TestPKCS1_OAEP:
             # as the hash output size
             asked = 0
             pt = self.rng(40)
-            cipher = PKCS.new(self.key1024, hashmod, randfunc=localRng)
+            cipher = oaep.new(self.key1024, hashmod, randfunc=localRng)
             ct = cipher.encrypt(pt)
             assert cipher.decrypt(ct) == pt
             assert asked == hashmod.digest_size
@@ -373,6 +374,25 @@ class TestPKCS1_OAEP:
         ct = cipher.encrypt(memoryview(bytearray(pt)))
         pt2 = cipher.decrypt(memoryview(bytearray(ct)))
         assert pt == pt2
+
+    def test_hash_required(self):
+        # The new module has no default hash function
+        with pytest.raises(TypeError):
+            oaep.new(self.key1024)  # type: ignore[call-arg]
+        with pytest.raises(TypeError):
+            oaep.new(self.key1024, None)  # type: ignore[arg-type]
+
+    def test_legacy_default_sha1(self):
+        # The legacy module still defaults to SHA-1
+        ct = PKCS.new(self.key1024).encrypt(b"XER")
+        assert oaep.new(self.key1024, SHA1).decrypt(ct) == b"XER"
+        with pytest.raises(ValueError):
+            oaep.new(self.key1024, SHA256).decrypt(ct)
+
+        # ...and otherwise it is the same as the new module
+        cipher = PKCS.new(self.key1024, SHA256)
+        assert isinstance(cipher, oaep.PKCS1OAEP_Cipher)
+        assert oaep.new(self.key1024, SHA256).decrypt(cipher.encrypt(b"XER")) == b"XER"
 
 
 def _load_tests(filename):
@@ -454,7 +474,7 @@ class TestVectorsWycheproof:
     def check_decrypt(self, tv):
         self._id = "Wycheproof Decrypt %s Test #%s" % (tv.algo, tv.id)
 
-        cipher = PKCS.new(tv.rsa_key, hashAlgo=tv.hash_mod, mgfunc=tv.mgf, label=tv.label)
+        cipher = oaep.new(tv.rsa_key, hashAlgo=tv.hash_mod, mgfunc=tv.mgf, label=tv.label)
         try:
             pt = cipher.decrypt(tv.ct)
         except ValueError:

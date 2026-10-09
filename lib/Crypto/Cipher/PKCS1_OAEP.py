@@ -19,212 +19,23 @@
 # SOFTWARE.
 # ===================================================================
 
+"""
+Legacy module for PKCS#1 OAEP encryption.
+
+Use :mod:`Crypto.Cipher.oaep` instead, which requires the hash function
+to be specified explicitly.
+"""
+
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Optional, Protocol, Union
+from typing import TYPE_CHECKING, Callable, Optional
 
 import Crypto.Hash.SHA1
-import Crypto.Util.number
-from Crypto import Random
-from Crypto.Signature.pss import MGF1
-from Crypto.Util._raw_api import is_buffer
-from Crypto.Util.number import bytes_to_long, ceil_div, long_to_bytes
-from Crypto.Util.strxor import strxor
-
-from ._pkcs1_oaep_decode import oaep_decode
+from Crypto.Cipher import oaep
+from Crypto.Cipher.oaep import Buffer, HashLike, PKCS1OAEP_Cipher
 
 if TYPE_CHECKING:
     from Crypto.PublicKey.RSA import RsaKey
-
-
-class HashLikeClass(Protocol):
-    digest_size: int
-
-    def new(self, data: Optional[bytes] = ...) -> Any: ...
-
-
-class HashLikeModule(Protocol):
-    digest_size: int
-
-    @staticmethod
-    def new(data: Optional[bytes] = ...) -> Any: ...
-
-
-HashLike = Union[HashLikeClass, HashLikeModule]
-Buffer = Union[bytes, bytearray, memoryview]
-
-
-class PKCS1OAEP_Cipher:
-    """Cipher object for PKCS#1 OAEP.
-    Do not create directly: use :func:`new` instead."""
-
-    def __init__(
-        self,
-        key: RsaKey,
-        hashAlgo: Optional[HashLike],
-        mgfunc: Optional[Callable[[bytes, int], bytes]],
-        label: Buffer,
-        randfunc: Callable[[int], bytes],
-    ) -> None:
-        """Initialize this PKCS#1 OAEP cipher object.
-
-        :Parameters:
-         key : an RSA key object
-                If a private half is given, both encryption and decryption are possible.
-                If a public half is given, only encryption is possible.
-         hashAlgo : hash object
-                The hash function to use. This can be a module under `Crypto.Hash`
-                or an existing hash object created from any of such modules. If not specified,
-                `Crypto.Hash.SHA1` is used, matching the RSAES-OAEP default
-                defined in RFC8017. New protocols should use SHA-256 or a stronger
-                hash function.
-         mgfunc : callable
-                A mask generation function that accepts two parameters: a string to
-                use as seed, and the lenth of the mask to generate, in bytes.
-                If not specified, the standard MGF1 consistent with ``hashAlgo`` is used (a safe choice).
-         label : bytes/bytearray/memoryview
-                A label to apply to this particular encryption. If not specified,
-                an empty string is used. Specifying a label does not improve
-                security.
-         randfunc : callable
-                A function that returns random bytes.
-
-        :attention: Modify the mask generation function only if you know what you are doing.
-                    Sender and receiver must use the same one.
-        """
-        self._key = key
-
-        if hashAlgo:
-            self._hashObj = hashAlgo
-        else:
-            self._hashObj = Crypto.Hash.SHA1
-
-        if mgfunc:
-            self._mgf = mgfunc
-        else:
-            self._mgf = lambda x, y: MGF1(x, y, self._hashObj)
-
-        if not is_buffer(label):
-            raise TypeError("Label must be bytes, bytearray or memoryview")
-        self._label = bytes(label)
-        self._randfunc = randfunc
-
-    def can_encrypt(self) -> bool:
-        """Legacy function to check if you can call :meth:`encrypt`.
-
-        .. deprecated:: 3.0"""
-        return self._key.can_encrypt()
-
-    def can_decrypt(self) -> bool:
-        """Legacy function to check if you can call :meth:`decrypt`.
-
-        .. deprecated:: 3.0"""
-        return self._key.has_private()
-
-    def encrypt(self, message: Buffer) -> bytes:
-        """Encrypt a message with PKCS#1 OAEP.
-
-        :param message:
-            The message to encrypt, also known as plaintext. It can be of
-            variable length, but not longer than the RSA modulus (in bytes)
-            minus 2, minus twice the hash output size.
-            For instance, if you use RSA 2048 and SHA-256, the longest message
-            you can encrypt is 190 byte long.
-        :type message: bytes/bytearray/memoryview
-
-        :returns: The ciphertext, as large as the RSA modulus.
-        :rtype: bytes
-
-        :raises ValueError:
-            if the message is too long.
-        """
-
-        # See 7.1.1 in RFC3447
-        modBits = Crypto.Util.number.size(self._key.n)
-        k = ceil_div(modBits, 8)  # Convert from bits to bytes
-        hLen = self._hashObj.digest_size
-        mLen = len(message)
-
-        # Step 1b
-        ps_len = k - mLen - 2 * hLen - 2
-        if ps_len < 0:
-            raise ValueError("Plaintext is too long.")
-        # Step 2a
-        lHash = self._hashObj.new(self._label).digest()
-        # Step 2b
-        ps = b"\x00" * ps_len
-        # Step 2c
-        db = lHash + ps + b"\x01" + bytes(message)
-        # Step 2d
-        ros = self._randfunc(hLen)
-        # Step 2e
-        dbMask = self._mgf(ros, k - hLen - 1)
-        # Step 2f
-        maskedDB = strxor(db, dbMask)
-        # Step 2g
-        seedMask = self._mgf(maskedDB, hLen)
-        # Step 2h
-        maskedSeed = strxor(ros, seedMask)
-        # Step 2i
-        em = b"\x00" + maskedSeed + maskedDB
-        # Step 3a (OS2IP)
-        em_int = bytes_to_long(em)
-        # Step 3b (RSAEP)
-        m_int = self._key._encrypt(em_int)
-        # Step 3c (I2OSP)
-        c = long_to_bytes(m_int, k)
-        return c
-
-    def decrypt(self, ciphertext: Buffer) -> bytes:
-        """Decrypt a message with PKCS#1 OAEP.
-
-        :param ciphertext: The encrypted message.
-        :type ciphertext: bytes/bytearray/memoryview
-
-        :returns: The original message (plaintext).
-        :rtype: bytes
-
-        :raises ValueError:
-            if the ciphertext has the wrong length, or if decryption
-            fails the integrity check (in which case, the decryption
-            key is probably wrong).
-        :raises TypeError:
-            if the RSA key has no private half (i.e. you are trying
-            to decrypt using a public key).
-        """
-
-        # See 7.1.2 in RFC3447
-        modBits = Crypto.Util.number.size(self._key.n)
-        k = ceil_div(modBits, 8)  # Convert from bits to bytes
-        hLen = self._hashObj.digest_size
-
-        # Step 1b and 1c
-        if len(ciphertext) != k or k < hLen + 2:
-            raise ValueError("Ciphertext with incorrect length.")
-        # Step 2a (O2SIP)
-        ct_int = bytes_to_long(ciphertext)
-        # Step 2b (RSADP) and step 2c (I2OSP)
-        em = self._key._decrypt_to_bytes(ct_int)
-        # Step 3a
-        lHash = self._hashObj.new(self._label).digest()
-        # y must be 0, but we MUST NOT check it here in order not to
-        # allow attacks like Manger's (http://dl.acm.org/citation.cfm?id=704143)
-        maskedSeed = em[1 : hLen + 1]
-        maskedDB = em[hLen + 1 :]
-        # Step 3c
-        seedMask = self._mgf(maskedDB, hLen)
-        # Step 3d
-        seed = strxor(maskedSeed, seedMask)
-        # Step 3e
-        dbMask = self._mgf(seed, k - hLen - 1)
-        # Step 3f
-        db = strxor(maskedDB, dbMask)
-        # Step 3b + 3g
-        res = oaep_decode(em, lHash, db)
-        if res <= 0:
-            raise ValueError("Incorrect decryption.")
-        # Step 4
-        return db[res:]
 
 
 def new(
@@ -234,8 +45,11 @@ def new(
     label: Buffer = b"",
     randfunc: Optional[Callable[[int], bytes]] = None,
 ) -> PKCS1OAEP_Cipher:
-    """Return a cipher object :class:`PKCS1OAEP_Cipher`
+    """Return a cipher object :class:`Crypto.Cipher.oaep.PKCS1OAEP_Cipher`
        that can be used to perform PKCS#1 OAEP encryption or decryption.
+
+    It is the same as :func:`Crypto.Cipher.oaep.new`,
+    except that ``hashAlgo`` can be omitted.
 
     :param key:
       The key object to use to encrypt or decrypt the message.
@@ -268,6 +82,6 @@ def new(
     :type randfunc: callable
     """
 
-    if randfunc is None:
-        randfunc = Random.get_random_bytes
-    return PKCS1OAEP_Cipher(key, hashAlgo, mgfunc, label, randfunc)
+    if hashAlgo is None:
+        hashAlgo = Crypto.Hash.SHA1
+    return oaep.new(key, hashAlgo, mgfunc, label, randfunc)
