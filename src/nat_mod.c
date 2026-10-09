@@ -229,7 +229,7 @@ cleanup:
 /* ---------------------------------------------------------------- */
 
 /** Copy nw words of x into out (out->nw words), with zero extension **/
-static void words_to_nat(Nat *out, const uint64_t *x, size_t nw)
+STATIC void words_to_nat(Nat *out, const uint64_t *x, size_t nw)
 {
     size_t i;
 
@@ -238,7 +238,7 @@ static void words_to_nat(Nat *out, const uint64_t *x, size_t nw)
 }
 
 /** out = (x * y) mod m, for x and y with m->nw words; prod has 2*m->nw words **/
-static int mulmod_words(uint64_t *out, const uint64_t *x, const uint64_t *y, const Nat *m, Nat *prod)
+STATIC int mulmod_words(uint64_t *out, const uint64_t *x, const uint64_t *y, const Nat *m, Nat *prod)
 {
     Nat xn, yn;
 
