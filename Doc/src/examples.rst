@@ -201,7 +201,7 @@ As in the first example, we use the EAX mode to allow detection of unauthorized 
 
     # Encrypt the session key with the public RSA key
 
-    cipher_rsa = oaep.new(recipient_key, hashAlgo=SHA256)
+    cipher_rsa = oaep.new(recipient_key, hashmod=SHA256)
     enc_session_key = cipher_rsa.encrypt(session_key)
 
     # Encrypt the data with the AES session key
@@ -233,7 +233,7 @@ first, and with that the rest of the file:
         ciphertext = f.read()
 
     # Decrypt the session key with the private RSA key
-    cipher_rsa = oaep.new(private_key, hashAlgo=SHA256)
+    cipher_rsa = oaep.new(private_key, hashmod=SHA256)
     session_key = cipher_rsa.decrypt(enc_session_key)
 
     # Decrypt the data with the AES session key

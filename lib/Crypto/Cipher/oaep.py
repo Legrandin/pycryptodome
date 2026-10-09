@@ -21,11 +21,11 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Any, Callable, Optional, Protocol, Union
+from typing import TYPE_CHECKING, Any, Optional, Protocol, Union
 
 import Crypto.Util.number
 from Crypto import Random
-from Crypto.Signature.pss import MGF1
+from Crypto.Signature.pss import MGF1, MaskFunction, RndFunction
 from Crypto.Util._raw_api import is_buffer
 from Crypto.Util.number import bytes_to_long, ceil_div, long_to_bytes
 from Crypto.Util.strxor import strxor
@@ -59,62 +59,34 @@ class PKCS1OAEP_Cipher:
 
     def __init__(
         self,
-        key: RsaKey,
-        hashAlgo: HashLike,
-        mgfunc: Optional[Callable[[bytes, int], bytes]],
+        rsa_key: RsaKey,
+        hashmod: HashLike,
+        mask_func: Optional[MaskFunction],
         label: Buffer,
-        randfunc: Callable[[int], bytes],
+        rand_func: Optional[RndFunction],
     ) -> None:
         """Initialize this PKCS#1 OAEP cipher object.
 
-        :Parameters:
-         key : an RSA key object
-                If a private half is given, both encryption and decryption are possible.
-                If a public half is given, only encryption is possible.
-         hashAlgo : hash object
-                The hash function to use. This can be a module under `Crypto.Hash`
-                or an existing hash object created from any of such modules.
-         mgfunc : callable
-                A mask generation function that accepts two parameters: a string to
-                use as seed, and the lenth of the mask to generate, in bytes.
-                If not specified, the standard MGF1 consistent with ``hashAlgo`` is used (a safe choice).
-         label : bytes/bytearray/memoryview
-                A label to apply to this particular encryption. If not specified,
-                an empty string is used. Specifying a label does not improve
-                security.
-         randfunc : callable
-                A function that returns random bytes.
-
-        :attention: Modify the mask generation function only if you know what you are doing.
-                    Sender and receiver must use the same one.
+        See :func:`new` for the parameters.
         """
-        self._key = key
+        self._key = rsa_key
 
-        if hashAlgo is None:
-            raise TypeError("The hash function (hashAlgo) must be specified")
-        self._hashObj = hashAlgo
+        if not (hasattr(hashmod, "digest_size") and hasattr(hashmod, "new")):
+            raise TypeError("A hash module or hash object is required for 'hashmod'")
+        self._hashObj = hashmod
 
-        if mgfunc:
-            self._mgf = mgfunc
+        if mask_func:
+            self._mgf = mask_func
         else:
             self._mgf = lambda x, y: MGF1(x, y, self._hashObj)
 
         if not is_buffer(label):
             raise TypeError("Label must be bytes, bytearray or memoryview")
         self._label = bytes(label)
-        self._randfunc = randfunc
 
-    def can_encrypt(self) -> bool:
-        """Legacy function to check if you can call :meth:`encrypt`.
-
-        .. deprecated:: 3.0"""
-        return self._key.can_encrypt()
-
-    def can_decrypt(self) -> bool:
-        """Legacy function to check if you can call :meth:`decrypt`.
-
-        .. deprecated:: 3.0"""
-        return self._key.has_private()
+        if rand_func is None:
+            rand_func = Random.get_random_bytes
+        self._randfunc = rand_func
 
     def encrypt(self, message: Buffer) -> bytes:
         """Encrypt a message with PKCS#1 OAEP.
@@ -223,33 +195,36 @@ class PKCS1OAEP_Cipher:
 
 
 def new(
-    key: RsaKey,
-    hashAlgo: HashLike,
-    mgfunc: Optional[Callable[[bytes, int], bytes]] = None,
+    rsa_key: RsaKey,
+    *,
+    hashmod: HashLike,
+    mask_func: Optional[MaskFunction] = None,
     label: Buffer = b"",
-    randfunc: Optional[Callable[[int], bytes]] = None,
+    rand_func: Optional[RndFunction] = None,
 ) -> PKCS1OAEP_Cipher:
     """Return a cipher object :class:`PKCS1OAEP_Cipher`
        that can be used to perform PKCS#1 OAEP encryption or decryption.
 
-    :param key:
+    :param rsa_key:
       The key object to use to encrypt or decrypt the message.
       Decryption is only possible with a private RSA key.
-    :type key: RSA key object
+    :type rsa_key: RSA key object
 
-    :param hashAlgo:
+    :param hashmod:
       The hash function to use. This can be a module under `Crypto.Hash`
       or an existing hash object created from any of such modules.
       It must always be specified: new protocols should use SHA-256 or a stronger
       hash function, while `Crypto.Hash.SHA1` matches the RSAES-OAEP default
       defined in RFC8017, which some older protocols still require.
-    :type hashAlgo: hash object
+    :type hashmod: hash module or object
 
-    :param mgfunc:
+    :param mask_func:
       A mask generation function that accepts two parameters: a string to
-      use as seed, and the lenth of the mask to generate, in bytes.
-      If not specified, the standard MGF1 consistent with ``hashAlgo`` is used (a safe choice).
-    :type mgfunc: callable
+      use as seed, and the length of the mask to generate, in bytes.
+      If not specified, the standard MGF1 consistent with ``hashmod`` is used (a safe choice).
+      Modify it only if you know what you are doing (for instance, for interoperability):
+      sender and receiver must use the same one.
+    :type mask_func: callable
 
     :param label:
       A label to apply to this particular encryption. If not specified,
@@ -257,12 +232,13 @@ def new(
       security.
     :type label: bytes/bytearray/memoryview
 
-    :param randfunc:
+    :param rand_func:
       A function that returns random bytes.
-      The default is `Random.get_random_bytes`.
-    :type randfunc: callable
+      The default is :func:`Crypto.Random.get_random_bytes`.
+    :type rand_func: callable
+
+    :raises TypeError:
+      if ``hashmod`` is not a hash module or object.
     """
 
-    if randfunc is None:
-        randfunc = Random.get_random_bytes
-    return PKCS1OAEP_Cipher(key, hashAlgo, mgfunc, label, randfunc)
+    return PKCS1OAEP_Cipher(rsa_key, hashmod, mask_func, label, rand_func)

@@ -278,7 +278,7 @@ class TestPKCS1_OAEP:
                     return r
 
             # The real test
-            cipher = oaep.new(key, test[4], randfunc=randGen(t2b(test[3])))
+            cipher = oaep.new(key, hashmod=test[4], rand_func=randGen(t2b(test[3])))
             ct = cipher.encrypt(t2b(test[1]))
             assert ct == t2b(test[2])
 
@@ -296,7 +296,7 @@ class TestPKCS1_OAEP:
             comps = [int(rws(test[0][x]), 16) for x in ("n", "e", "d")]
             key = RSA.construct(comps)
             # The real test
-            cipher = oaep.new(key, test[4])
+            cipher = oaep.new(key, hashmod=test[4])
             pt = cipher.decrypt(t2b(test[2]))
             assert pt == t2b(test[1])
 
@@ -331,7 +331,7 @@ class TestPKCS1_OAEP:
             # as the hash output size
             asked = 0
             pt = self.rng(40)
-            cipher = oaep.new(self.key1024, hashmod, randfunc=localRng)
+            cipher = oaep.new(self.key1024, hashmod=hashmod, rand_func=localRng)
             ct = cipher.encrypt(pt)
             assert cipher.decrypt(ct) == pt
             assert asked == hashmod.digest_size
@@ -379,20 +379,47 @@ class TestPKCS1_OAEP:
         # The new module has no default hash function
         with pytest.raises(TypeError):
             oaep.new(self.key1024)  # type: ignore[call-arg]
-        with pytest.raises(TypeError):
-            oaep.new(self.key1024, None)  # type: ignore[arg-type]
+        for bad in (None, "SHA256", SHA256.new().digest()):
+            with pytest.raises(TypeError):
+                oaep.new(self.key1024, hashmod=bad)  # type: ignore[arg-type]
+        # A hash object is accepted, like a hash module
+        oaep.new(self.key1024, hashmod=SHA256.new())
 
-    def test_legacy_default_sha1(self):
+    def test_keyword_only(self):
+        with pytest.raises(TypeError):
+            oaep.new(self.key1024, SHA256)  # type: ignore[misc]
+
+    def test_mask_func_and_label(self):
+        # Same behavior as the legacy mgfunc and label parameters
+        def mgf(seed, mask_len):
+            return MGF1(seed, mask_len, SHA1)
+
+        cipher = oaep.new(self.key1024, hashmod=SHA256, mask_func=mgf, label=b"L")
+        legacy = PKCS.new(self.key1024, SHA256, mgfunc=mgf, label=b"L")
+        assert legacy.decrypt(cipher.encrypt(b"XER")) == b"XER"
+        assert cipher.decrypt(legacy.encrypt(b"XER")) == b"XER"
+        with pytest.raises(ValueError):
+            oaep.new(self.key1024, hashmod=SHA256).decrypt(cipher.encrypt(b"XER"))
+
+    def test_no_legacy_methods(self):
+        cipher = oaep.new(self.key1024, hashmod=SHA256)
+        assert not hasattr(cipher, "can_encrypt")
+        assert not hasattr(cipher, "can_decrypt")
+
+    def test_legacy(self):
         # The legacy module still defaults to SHA-1
         ct = PKCS.new(self.key1024).encrypt(b"XER")
-        assert oaep.new(self.key1024, SHA1).decrypt(ct) == b"XER"
+        assert oaep.new(self.key1024, hashmod=SHA1).decrypt(ct) == b"XER"
         with pytest.raises(ValueError):
-            oaep.new(self.key1024, SHA256).decrypt(ct)
+            oaep.new(self.key1024, hashmod=SHA256).decrypt(ct)
 
-        # ...and otherwise it is the same as the new module
-        cipher = PKCS.new(self.key1024, SHA256)
+        # ...and it keeps the deprecated methods
+        cipher = PKCS.new(self.key1024.public_key(), SHA256)
+        assert isinstance(cipher, PKCS.PKCS1OAEP_Cipher)
         assert isinstance(cipher, oaep.PKCS1OAEP_Cipher)
-        assert oaep.new(self.key1024, SHA256).decrypt(cipher.encrypt(b"XER")) == b"XER"
+        assert cipher.can_encrypt()
+        assert not cipher.can_decrypt()
+        assert PKCS.new(self.key1024).can_decrypt()
 
 
 def _load_tests(filename):
@@ -474,7 +501,7 @@ class TestVectorsWycheproof:
     def check_decrypt(self, tv):
         self._id = "Wycheproof Decrypt %s Test #%s" % (tv.algo, tv.id)
 
-        cipher = oaep.new(tv.rsa_key, hashAlgo=tv.hash_mod, mgfunc=tv.mgf, label=tv.label)
+        cipher = oaep.new(tv.rsa_key, hashmod=tv.hash_mod, mask_func=tv.mgf, label=tv.label)
         try:
             pt = cipher.decrypt(tv.ct)
         except ValueError:

@@ -28,28 +28,47 @@ to be specified explicitly.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Optional
+from typing import TYPE_CHECKING, Optional
 
 import Crypto.Hash.SHA1
 from Crypto.Cipher import oaep
-from Crypto.Cipher.oaep import Buffer, HashLike, PKCS1OAEP_Cipher
+from Crypto.Cipher.oaep import Buffer, HashLike
+from Crypto.Signature.pss import MaskFunction, RndFunction
 
 if TYPE_CHECKING:
     from Crypto.PublicKey.RSA import RsaKey
 
 
+class PKCS1OAEP_Cipher(oaep.PKCS1OAEP_Cipher):
+    """Cipher object for PKCS#1 OAEP (legacy).
+    Do not create directly: use :func:`new` instead."""
+
+    def can_encrypt(self) -> bool:
+        """Legacy function to check if you can call :meth:`encrypt`.
+
+        .. deprecated:: 3.0"""
+        return self._key.can_encrypt()
+
+    def can_decrypt(self) -> bool:
+        """Legacy function to check if you can call :meth:`decrypt`.
+
+        .. deprecated:: 3.0"""
+        return self._key.has_private()
+
+
 def new(
     key: RsaKey,
     hashAlgo: Optional[HashLike] = None,
-    mgfunc: Optional[Callable[[bytes, int], bytes]] = None,
+    mgfunc: Optional[MaskFunction] = None,
     label: Buffer = b"",
-    randfunc: Optional[Callable[[int], bytes]] = None,
+    randfunc: Optional[RndFunction] = None,
 ) -> PKCS1OAEP_Cipher:
-    """Return a cipher object :class:`Crypto.Cipher.oaep.PKCS1OAEP_Cipher`
+    """Return a cipher object :class:`PKCS1OAEP_Cipher`
        that can be used to perform PKCS#1 OAEP encryption or decryption.
 
-    It is the same as :func:`Crypto.Cipher.oaep.new`,
-    except that ``hashAlgo`` can be omitted.
+    It is the same as :func:`Crypto.Cipher.oaep.new`, except that
+    ``hashAlgo`` (``hashmod`` in the new module) can be omitted,
+    and that the parameters have different names.
 
     :param key:
       The key object to use to encrypt or decrypt the message.
@@ -84,4 +103,4 @@ def new(
 
     if hashAlgo is None:
         hashAlgo = Crypto.Hash.SHA1
-    return oaep.new(key, hashAlgo, mgfunc, label, randfunc)
+    return PKCS1OAEP_Cipher(key, hashAlgo, mgfunc, label, randfunc)

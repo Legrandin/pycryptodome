@@ -25,14 +25,14 @@ available locally in a file called ``public.pem``)::
         >>>
         >>> message = b'You can attack now!'
         >>> key = RSA.importKey(open('public.pem').read())
-        >>> cipher = oaep.new(key, hashAlgo=SHA256)
+        >>> cipher = oaep.new(key, hashmod=SHA256)
         >>> ciphertext = cipher.encrypt(message)
 
 The recipient uses its own **private key** to decrypt the message.
 We assume the key is stored in a file called ``private.pem``::
 
         >>> key = RSA.importKey(open('private.pem').read())
-        >>> cipher = oaep.new(key, hashAlgo=SHA256)
+        >>> cipher = oaep.new(key, hashmod=SHA256)
         >>> message = cipher.decrypt(ciphertext)
 
 .. warning::
@@ -46,14 +46,4 @@ We assume the key is stored in a file called ``private.pem``::
    Refer to the :mod:`Crypto.PublicKey.RSA` module.
 
 .. automodule:: Crypto.Cipher.oaep
-    :members:
-
-Legacy module
--------------
-
-The module :mod:`Crypto.Cipher.PKCS1_OAEP` has the same API,
-except that the hash function is optional, and it defaults to SHA-1.
-It is kept for backward compatibility.
-
-.. automodule:: Crypto.Cipher.PKCS1_OAEP
     :members:
