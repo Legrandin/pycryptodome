@@ -11,13 +11,6 @@ import pytest
 from Crypto.Math._IntegerNative import IntegerNative
 
 try:
-    from Crypto.Math._IntegerGMP import IntegerGMP
-
-    _gmp_error = None
-except (ImportError, OSError) as e:
-    _gmp_error = e
-
-try:
     from Crypto.Math._IntegerCustom import IntegerCustom
 
     _custom_error = None
@@ -1015,12 +1008,6 @@ class NatIntegerTests:
 class TestIntegerInt(IntegerTests, SignedIntegerTests):
     def setup_method(self):
         self.Integer = IntegerNative
-
-
-@pytest.mark.skipif(_gmp_error is not None, reason="GMP not available (%s)" % _gmp_error)
-class TestIntegerGMP(IntegerTests, SignedIntegerTests):
-    def setup_method(self):
-        self.Integer = IntegerGMP
 
 
 @pytest.mark.skipif(_custom_error is not None, reason="custom modexp not available (%s)" % _custom_error)
