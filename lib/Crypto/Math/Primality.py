@@ -52,42 +52,20 @@ def miller_rabin_test(
     if candidate.is_even():
         return COMPOSITE
 
-    one = Integer(1)
-    minus_one = Integer(candidate - 1)
-
     if randfunc is None:
         randfunc = Random.new().read
 
-    # Step 1 and 2
-    m = Integer(minus_one)
-    a = 0
-    while m.is_even():
-        m >>= 1
-        a += 1
-
-    # Skip step 3
+    # Steps 1-3 and 4.3-4.5 are in Integer._miller_rabin(), which is constant
+    # time for IntegerNat (the candidate is usually a secret prime)
 
     # Step 4
     for _i in range(iterations):
         # Step 4.1-2
-        base = one
-        while base in (one, minus_one):
-            base = Integer.random_range(min_inclusive=2, max_inclusive=candidate - 2, randfunc=randfunc)
-            assert 2 <= base <= candidate - 2
+        base = Integer.random_range(min_inclusive=2, max_inclusive=candidate - 2, randfunc=randfunc)
+        assert 2 <= base <= candidate - 2
 
-        # Step 4.3-4.4
-        z = pow(base, m, candidate)
-        if z in (one, minus_one):
-            continue
-
-        # Step 4.5
-        for _j in range(1, a):
-            z = pow(z, 2, candidate)
-            if z == minus_one:
-                break
-            if z == one:
-                return COMPOSITE
-        else:
+        # Step 4.3-4.5
+        if not candidate._miller_rabin(base):
             return COMPOSITE
 
     # Step 5
@@ -129,6 +107,10 @@ def lucas_test(candidate: Union[int, Integer]) -> PrimeResult:
                 value -= 2
             value = -value
 
+    # The search for D stops at the first value with Jacobi symbol -1,
+    # so the number of steps depends on the candidate. This small leak is
+    # accepted: each Jacobi symbol is computed in constant time by
+    # IntegerNat, and only the number of steps leaks.
     for D in alternate():
         if candidate in (D, -D):
             continue
@@ -139,54 +121,8 @@ def lucas_test(candidate: Union[int, Integer]) -> PrimeResult:
             break
     # Found D. P=1 and Q=(1-D)/4 (note that Q is guaranteed to be an integer)
 
-    # Step 3
-    # This is \delta(n) = n - jacobi(D/n)
-    K = candidate + 1
-    # Step 4
-    r = K.size_in_bits() - 1
-    # Step 5
-    # U_1=1 and V_1=P
-    U_i = Integer(1)
-    V_i = Integer(1)
-    U_temp = Integer(0)
-    V_temp = Integer(0)
-    # Step 6
-    for i in range(r - 1, -1, -1):
-        # Square
-        # U_temp = U_i * V_i % candidate
-        U_temp.set(U_i)
-        U_temp *= V_i
-        U_temp %= candidate
-        # V_temp = (((V_i ** 2 + (U_i ** 2 * D)) * K) >> 1) % candidate
-        V_temp.set(U_i)
-        V_temp *= U_i
-        V_temp *= D
-        V_temp.multiply_accumulate(V_i, V_i)
-        if V_temp.is_odd():
-            V_temp += candidate
-        V_temp >>= 1
-        V_temp %= candidate
-        # Multiply
-        if K.get_bit(i):
-            # U_i = (((U_temp + V_temp) * K) >> 1) % candidate
-            U_i.set(U_temp)
-            U_i += V_temp
-            if U_i.is_odd():
-                U_i += candidate
-            U_i >>= 1
-            U_i %= candidate
-            # V_i = (((V_temp + U_temp * D) * K) >> 1) % candidate
-            V_i.set(V_temp)
-            V_i.multiply_accumulate(U_temp, D)
-            if V_i.is_odd():
-                V_i += candidate
-            V_i >>= 1
-            V_i %= candidate
-        else:
-            U_i.set(U_temp)
-            V_i.set(V_temp)
-    # Step 7
-    if U_i == 0:
+    # Steps 3-7 are in Integer._lucas(), which is constant time for IntegerNat
+    if candidate._lucas(D):
         return PROBABLY_PRIME
     return COMPOSITE
 
@@ -226,11 +162,14 @@ def test_probable_prime(
     if not isinstance(candidate, Integer):
         candidate = Integer(candidate)
 
-    # First, check trial division by the smallest primes
-    if int(candidate) in _sieve_base:
+    # First, check trial division by the smallest primes.
+    # A candidate rejected here is thrown away, and a prime candidate
+    # always goes through all the divisions.
+    if candidate.size_in_bits() <= 10 and int(candidate) in _sieve_base:
         return PROBABLY_PRIME
     try:
-        map(candidate.fail_if_divisible_by, _sieve_base)
+        for small_prime in _sieve_base:
+            candidate.fail_if_divisible_by(small_prime)
     except ValueError:
         return COMPOSITE
 
