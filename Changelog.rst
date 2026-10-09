@@ -55,6 +55,14 @@ Resolved issues
 
 New features
 ------------
+* All the big integer arithmetic for RSA, DSA, ElGamal and ECC runs in a new
+  C library (``Crypto.Math._nat``), in constant time: the time and the memory
+  accesses do not depend on the values of the numbers, only on their (public)
+  size. This includes modular exponentiation and inversion, GCD, Jacobi symbol,
+  and the Miller-Rabin and Lucas tests used to generate primes.
+  It replaces GMP and Python integers, which leak timing information.
+  For now, RSA and DSA private key operations and key generation are slower
+  than with GMP.
 * New function ``Crypto.Hash.KangarooTwelve.digest()``, to hash a whole message
   with a single call. For messages up to 8 KiB, it is 1.3x to 3x faster than
   ``new()`` followed by ``read()``.

@@ -36,16 +36,21 @@ else:
         from Crypto.Math._IntegerGMP import implementation as _implementation
     else:
         try:
-            if os.getenv("PYCRYPTODOME_DISABLE_GMP"):
-                raise ImportError()
-
-            from Crypto.Math._IntegerGMP import IntegerGMP as Integer
-            from Crypto.Math._IntegerGMP import implementation as _implementation
-        except (ImportError, OSError, AttributeError):
+            # Constant-time arithmetic, in C
+            from Crypto.Math._IntegerNat import IntegerNat as Integer
+            from Crypto.Math._IntegerNat import implementation as _implementation
+        except (ImportError, OSError):
             try:
-                from Crypto.Math._IntegerCustom import IntegerCustom as Integer
-                from Crypto.Math._IntegerCustom import implementation as _implementation
-            except (ImportError, OSError):
-                from Crypto.Math._IntegerNative import IntegerNative as Integer
+                if os.getenv("PYCRYPTODOME_DISABLE_GMP"):
+                    raise ImportError()
 
-                _implementation = {}
+                from Crypto.Math._IntegerGMP import IntegerGMP as Integer
+                from Crypto.Math._IntegerGMP import implementation as _implementation
+            except (ImportError, OSError, AttributeError):
+                try:
+                    from Crypto.Math._IntegerCustom import IntegerCustom as Integer
+                    from Crypto.Math._IntegerCustom import implementation as _implementation
+                except (ImportError, OSError):
+                    from Crypto.Math._IntegerNative import IntegerNative as Integer
+
+                    _implementation = {}
