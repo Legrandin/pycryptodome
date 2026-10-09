@@ -3,23 +3,23 @@ from __future__ import annotations
 from typing import Callable, Optional, TypeVar
 
 from Crypto.PublicKey.ECC import EccKey, _import_curve448_public_key, _import_curve25519_public_key, construct
-from Crypto.Util.number import long_to_bytes
 
 T = TypeVar("T")
 
 
 def _compute_ecdh(key_priv, key_pub):
-    pointP = key_pub.pointQ * key_priv.d
+    pointP = key_pub.pointQ * key_priv._d
     if pointP.is_point_at_infinity():
         raise ValueError("Invalid ECDH point")
 
+    # The shared secret: the X coordinate is converted in constant time
     if key_priv.curve == "Curve25519":
-        z = bytearray(pointP.x.to_bytes(32, byteorder="little"))
+        z = bytearray(pointP._x.to_bytes(32, byteorder="little"))
     elif key_priv.curve == "Curve448":
-        z = bytearray(pointP.x.to_bytes(56, byteorder="little"))
+        z = bytearray(pointP._x.to_bytes(56, byteorder="little"))
     else:
         # See Section 5.7.1.2 in NIST SP 800-56Ar3
-        z = long_to_bytes(pointP.x, pointP.size_in_bytes())
+        z = pointP._x.to_bytes(pointP.size_in_bytes())
     return z
 
 
