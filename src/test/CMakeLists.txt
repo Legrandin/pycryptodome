@@ -101,6 +101,26 @@ add_library(mont OBJECT ../mont.c)
 add_executable(test_mont test_mont.c $<TARGET_OBJECTS:mont>)
 add_test(NAME test_mont COMMAND test_mont)
 
+# constant-time natural numbers
+add_library(nat OBJECT ../nat.c ../nat_div.c ../nat_mod.c ../nat_gcd.c ../nat_prime.c)
+
+add_executable(test_nat test_nat.c $<TARGET_OBJECTS:nat>)
+add_test(NAME test_nat COMMAND test_nat)
+
+# Constant-time check of the natural numbers, with Valgrind memcheck
+find_program(VALGRIND valgrind)
+CHECK_INCLUDE_FILE("valgrind/memcheck.h" HAVE_VALGRIND_MEMCHECK_H)
+if (VALGRIND AND HAVE_VALGRIND_MEMCHECK_H)
+    add_executable(test_nat_ct test_nat_ct.c ../nat.c ../nat_div.c ../nat_mod.c ../nat_gcd.c ../nat_prime.c)
+    target_compile_definitions(test_nat_ct PRIVATE NAT_CTGRIND)
+    # The sanitizers cannot run under Valgrind
+    set_target_properties(test_nat_ct PROPERTIES
+        COMPILE_OPTIONS "-O2;-g;-Wall;-Werror"
+        LINK_OPTIONS ""
+        LINK_LIBRARIES "")
+    add_test(NAME test_nat_ct COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_nat_ct>)
+endif()
+
 add_custom_command(
     OUTPUT test_addmul.c
     COMMAND ${PYTHON} ${CMAKE_SOURCE_DIR}/make_tests_addmul.py > test_addmul.c
