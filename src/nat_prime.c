@@ -63,7 +63,7 @@ EXPORT_SYM int nat_miller_rabin(Nat *out, const Nat *n, const Nat *base)
     if (ret)
         goto cleanup;
     mont_to(b, b, ctx);
-    ret = mont_pow(z, b, &dn, ctx);
+    ret = mont_pow(z, b, &dn, 64*nw, ctx);
     if (ret)
         goto cleanup;
 
@@ -76,7 +76,7 @@ EXPORT_SYM int nat_miller_rabin(Nat *out, const Nat *n, const Nat *base)
     for (i=1; i<64*nw; i++) {
         uint64_t active = ct_lt(i, a);
 
-        mont_mul(z, z, z, ctx);
+        mont_sqr(z, z, ctx);
         good |= active & words_eq(z, minus_one, nw);
     }
 
@@ -160,9 +160,9 @@ EXPORT_SYM int nat_lucas(Nat *out, const Nat *n, uint64_t abs_d, int negative_d)
 
         /* U2 = U*V, V2 = (V^2 + D*U^2)/2 */
         mont_mul(u2, u, v, ctx);
-        mont_mul(t, u, u, ctx);
+        mont_sqr(t, u, ctx);
         mont_mul(t, t, dm, ctx);
-        mont_mul(v2, v, v, ctx);
+        mont_sqr(v2, v, ctx);
         mod_add(v2, v2, t, ctx->n, nw);
         mod_half(v2, ctx->n, nw);
 

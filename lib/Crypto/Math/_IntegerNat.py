@@ -62,7 +62,7 @@ int nat_divmod(void *q, void *r, const void *a, const void *b);
 int nat_mod_small(void *out, const void *a, uint64_t d);
 int nat_mulmod(void *out, const void *a, const void *b, const void *m);
 int nat_submod(void *out, const void *a, const void *b, const void *m);
-int nat_powmod(void *out, const void *a, const void *e, const void *m);
+int nat_powmod(void *out, const void *a, const void *e, size_t e_bits, const void *m);
 int nat_invmod(void *out, const void *a, const void *m);
 int nat_gcd(void *out, const void *a, const void *b);
 int nat_jacobi(void *out, const void *a, const void *n, int negate);
@@ -362,7 +362,10 @@ class IntegerNat(IntegerBase):
         modulus = self._check_modulus(modulus)
         result = IntegerNat._make(modulus._bits)
         _check(
-            _lib.nat_powmod(result._p.get(), self._p.get(), exponent._p.get(), modulus._p.get()), "nat_powmod"
+            _lib.nat_powmod(
+                result._p.get(), self._p.get(), exponent._p.get(), c_size_t(exponent._bits), modulus._p.get()
+            ),
+            "nat_powmod",
         )
         return self._adopt(result)
 

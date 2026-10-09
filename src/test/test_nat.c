@@ -11,6 +11,27 @@ void words_shl_public(uint64_t *out, const uint64_t *x, size_t s, size_t nw);
 void nat_to_words(uint64_t *out, const Nat *a, size_t nw);
 void words_to_nat(Nat *out, const uint64_t *x, size_t nw);
 int mulmod_words(uint64_t *out, const uint64_t *x, const uint64_t *y, const Nat *m, Nat *prod);
+uint64_t div128_ct(uint64_t hi, uint64_t lo, uint64_t d);
+uint64_t reciprocal_ct(uint64_t d);
+uint64_t div128_preinv_ct(uint64_t hi, uint64_t lo, uint64_t d, uint64_t recip);
+int inv_odd_simple(uint64_t *out, const uint64_t *a, const uint64_t *n, size_t nw);
+void lin_comb(uint64_t *out, const uint64_t *x, const uint64_t *y, int64_t f, int64_t g, size_t nw);
+void shr_signed(uint64_t *x, size_t nw);
+void cond_negate(uint64_t mask, uint64_t *x, size_t nw);
+void approximations(uint64_t *a_approx, uint64_t *b_approx, const uint64_t *a, const uint64_t *b, size_t nw);
+void mod_lin_comb(uint64_t *x, const uint64_t *u, const uint64_t *v, int64_t f, int64_t g,
+                  const uint64_t *n, uint64_t n0inv, uint64_t *t, uint64_t *kn, size_t nw);
+
+static uint64_t rnd_state = 0x9E3779B97F4A7C15ULL;
+
+static uint64_t rnd(void)
+{
+    /* xorshift64 */
+    rnd_state ^= rnd_state << 13;
+    rnd_state ^= rnd_state >> 7;
+    rnd_state ^= rnd_state << 17;
+    return rnd_state;
+}
 
 #define MAX64 UINT64_MAX
 
@@ -266,11 +287,16 @@ void test_modular(void)
     one = make1(1, 1);
     nat_new(&out, 1);
 
-    assert(nat_powmod(out, a, e, m) == 0);
+    assert(nat_powmod(out, a, e, 64, m) == 0);
     assert(out->w[0] == 7);
-    assert(nat_powmod(out, a, e, me) == 0);
+    /* The same, with the tightest bound on e = 5 (3 bits) */
+    assert(nat_powmod(out, a, e, 3, m) == 0);
+    assert(out->w[0] == 7);
+    assert(nat_powmod(out, a, e, 0, m) == 0);       /* e is taken as 0 */
+    assert(out->w[0] == 1);
+    assert(nat_powmod(out, a, e, 64, me) == 0);
     assert(out->w[0] == 23*23*23*23*23 % 18);
-    assert(nat_powmod(out, a, e, one) == 0);
+    assert(nat_powmod(out, a, e, 64, one) == 0);
     assert(out->w[0] == 0);
 
     assert(nat_invmod(out, a, m) == 0);
@@ -682,7 +708,7 @@ void test_montgomery(void)
         e = make(2, we, 2);
         x[0] = 7; x[1] = 0;
         mont_to(x, x, ctx);
-        assert(mont_pow(y, x, e, ctx) == 0);
+        assert(mont_pow(y, x, e, 64*e->nw, ctx) == 0);
         mont_from(y, y, ctx);
         assert(y[0] == 0xCE19D7661370F5B0ULL && y[1] == 0x4EFF7E6DC4621C8AULL);
         nat_free(e);
@@ -699,7 +725,7 @@ void test_montgomery(void)
     e = make1(1, 1000);
     x[0] = 3;
     mont_to(x, x, ctx);
-    assert(mont_pow(y, x, e, ctx) == 0);
+    assert(mont_pow(y, x, e, 64*e->nw, ctx) == 0);
     mont_from(y, y, ctx);
     assert(y[0] == 73216);
     nat_free(e);
@@ -738,7 +764,7 @@ void test_mont_pow_vs_mulmod(void)
 
     assert(mont_ctx_new(&ctx, n) == 0);
     mont_to(acc, base, ctx);
-    assert(mont_pow(acc, acc, e, ctx) == 0);
+    assert(mont_pow(acc, acc, e, 128, ctx) == 0);
     mont_from(acc, acc, ctx);
     assert(memcmp(acc, ref, sizeof acc) == 0);
 
@@ -809,7 +835,7 @@ void test_argument_checks(void)
 
     /* Zero modulus */
     assert(nat_mulmod(out, a, b, z) == ERR_VALUE);
-    assert(nat_powmod(out, a, b, z) == ERR_VALUE);
+    assert(nat_powmod(out, a, b, 64, z) == ERR_VALUE);
     assert(nat_invmod(out, a, z) == ERR_VALUE);
 
     /* Even modulus where an odd one is required */
@@ -845,6 +871,239 @@ void test_lucas_negative_d(void)
     nat_free(out);
 }
 
+#if defined(HAVE_UINT128)
+static uint64_t div128_ref(uint64_t hi, uint64_t lo, uint64_t d)
+{
+    __uint128_t u = ((__uint128_t)hi << 64) | lo;
+    __uint128_t q = u / d;
+    return (q >> 64) ? UINT64_MAX : (uint64_t)q;
+}
+#endif
+
+void test_div128(void)
+{
+    /* Fixed values: (2^127) / 2^63 = 2^64 does not fit */
+    assert(div128_ct((uint64_t)1 << 63, 0, (uint64_t)1 << 63) == MAX64);
+    assert(div128_ct(0, 12345, (uint64_t)1 << 63) == 0);
+    assert(div128_ct(1, 0, (uint64_t)1 << 63) == 2);
+    assert(div128_ct(MAX64 - 1, MAX64, MAX64) == MAX64);
+    assert(reciprocal_ct((uint64_t)1 << 63) == MAX64);
+    assert(reciprocal_ct(MAX64) == 1);
+    assert(div128_preinv_ct(1, 0, (uint64_t)1 << 63, reciprocal_ct((uint64_t)1 << 63)) == 2);
+
+#if defined(HAVE_UINT128)
+    {
+        int i;
+
+        for (i=0; i<200000; i++) {
+            uint64_t d = rnd() | ((uint64_t)1 << 63);
+            uint64_t lo = rnd();
+            uint64_t hi;
+
+            switch (i % 4) {
+            case 0: hi = d; break;
+            case 1: hi = d - 1; break;
+            case 2: hi = 0; break;
+            default: hi = rnd() % d;
+            }
+            assert(div128_ct(hi, lo, d) == div128_ref(hi, lo, d));
+            assert(div128_preinv_ct(hi, lo, d, reciprocal_ct(d)) == div128_ref(hi, lo, d));
+        }
+    }
+#endif
+}
+
+void test_divmod_random(void)
+{
+    /* q*b + r == a and r < b, for random sizes (also with leading zero words) */
+    int it;
+
+    for (it=0; it<2000; it++) {
+        size_t na = 1 + rnd() % 9, nb = 1 + rnd() % 9, i;
+        Nat *a, *b, *q, *r, *check;
+
+        nat_new(&a, na);
+        nat_new(&b, nb);
+        for (i=0; i<na; i++)
+            a->w[i] = rnd();
+        for (i=0; i<nb; i++)
+            b->w[i] = (it % 5 == 0 && i > 0) ? 0 : rnd();
+        if (it % 7 == 0)
+            b->w[nb - 1] = MAX64;
+        b->w[0] |= 1;
+
+        nat_new(&q, na);
+        nat_new(&r, nb);
+        nat_new(&check, na + nb + 1);
+        assert(nat_divmod(q, r, a, b) == 0);
+        assert(nat_cmp(r, b) == -1);
+        assert(nat_muladd(check, r, q, b) == 0);
+        assert(nat_cmp(check, a) == 0);
+
+        nat_free(a);
+        nat_free(b);
+        nat_free(q);
+        nat_free(r);
+        nat_free(check);
+    }
+}
+
+void test_mont_sqr(void)
+{
+    int it;
+
+    for (it=0; it<2000; it++) {
+        size_t nw = 1 + rnd() % 12, i;
+        uint64_t a[12], o1[12], o2[12], rem[12];
+        Nat *n, an, rn;
+        MontCtx *ctx;
+
+        nat_new(&n, nw);
+        for (i=0; i<nw; i++)
+            n->w[i] = rnd();
+        if (it % 3 == 0)
+            n->w[nw - 1] = MAX64;
+        n->w[0] |= 1;
+        assert(mont_ctx_new(&ctx, n) == 0);
+
+        /* a < n */
+        for (i=0; i<nw; i++)
+            a[i] = rnd();
+        if (it % 4 == 0) {
+            memcpy(a, n->w, nw*sizeof(uint64_t));
+            a[0] -= 1;
+        }
+        an.nw = rn.nw = nw;
+        an.w = a;
+        rn.w = rem;
+        assert(nat_divmod(NULL, &rn, &an, n) == 0);
+
+        mont_mul(o1, rem, rem, ctx);
+        mont_sqr(o2, rem, ctx);
+        assert(memcmp(o1, o2, nw*sizeof(uint64_t)) == 0);
+        mont_sqr(rem, rem, ctx);                      /* in place */
+        assert(memcmp(o1, rem, nw*sizeof(uint64_t)) == 0);
+
+        mont_ctx_free(ctx);
+        nat_free(n);
+    }
+}
+
+void test_inv_odd_vs_simple(void)
+{
+    int it, no_inverse = 0;
+
+    for (it=0; it<3000; it++) {
+        size_t nw = 1 + rnd() % 8, i, top;
+        uint64_t a[8], n[8], o1[8], o2[8];
+        int r1, r2;
+
+        for (i=0; i<nw; i++) {
+            n[i] = rnd();
+            a[i] = rnd();
+        }
+        if (it % 5 == 0)
+            for (i=nw/2; i<nw; i++)
+                n[i] = 0;
+        if (it % 5 == 1) {
+            memset(n, 0, sizeof n);
+            n[0] = 3*5*7*11*13;
+        }
+        n[0] |= 1;
+
+        /* a < n */
+        for (top=nw; top>1 && n[top - 1] == 0; top--);
+        for (i=top; i<nw; i++)
+            a[i] = 0;
+        a[top - 1] %= n[top - 1];
+
+        r1 = inv_odd(o1, a, n, nw);
+        r2 = inv_odd_simple(o2, a, n, nw);
+        assert(r1 == r2);
+        if (r1 == 0)
+            assert(memcmp(o1, o2, nw*sizeof(uint64_t)) == 0);
+        else
+            no_inverse++;
+    }
+    assert(no_inverse > 0);
+}
+
+void test_bgcd_helpers(void)
+{
+    uint64_t x[2] = { 10, 0 }, y[2] = { 3, 0 }, out[3], a, b;
+
+    /* 10*5 + 3*(-7) = 29 */
+    lin_comb(out, x, y, 5, -7, 2);
+    assert(out[0] == 29 && out[1] == 0 && out[2] == 0);
+    /* 10*(-5) + 3*7 = -29 */
+    lin_comb(out, x, y, -5, 7, 2);
+    assert(out[0] == (uint64_t)-29 && out[1] == MAX64 && out[2] == MAX64);
+    /* With full words and the largest factors */
+    {
+        uint64_t xm[1] = { MAX64 }, ym[1] = { MAX64 }, o[2];
+        lin_comb(o, xm, ym, (int64_t)1 << 31, -((int64_t)1 << 31), 1);
+        assert(o[0] == 0 && o[1] == 0);
+        lin_comb(o, xm, ym, (int64_t)1 << 31, 0, 1);
+        /* (2^64 - 1) * 2^31 */
+        assert(o[0] == (uint64_t)0 - ((uint64_t)1 << 31) && o[1] == ((uint64_t)1 << 31) - 1);
+    }
+
+    /* Arithmetic shift by 31 */
+    out[0] = (uint64_t)1 << 40; out[1] = 0; out[2] = 0;
+    shr_signed(out, 2);
+    assert(out[0] == 512 && out[1] == 0 && out[2] == 0);
+    out[0] = (uint64_t)-((int64_t)1 << 40); out[1] = MAX64; out[2] = MAX64;
+    shr_signed(out, 2);
+    assert(out[0] == (uint64_t)-512 && out[1] == MAX64 && out[2] == MAX64);
+
+    /* Conditional negation */
+    out[0] = 5; out[1] = 0; out[2] = 0;
+    cond_negate(0, out, 2);
+    assert(out[0] == 5 && out[1] == 0 && out[2] == 0);
+    cond_negate(MAX64, out, 2);
+    assert(out[0] == (uint64_t)-5 && out[1] == MAX64 && out[2] == MAX64);
+    cond_negate(MAX64, out, 2);
+    assert(out[0] == 5 && out[1] == 0 && out[2] == 0);
+
+    /* Approximations: small values are taken as they are */
+    {
+        uint64_t sa[3] = { 0x123456789ULL, 0, 0 }, sb[3] = { 77, 0, 0 };
+        approximations(&a, &b, sa, sb, 3);
+        assert(a == 0x123456789ULL && b == 77);
+    }
+    /* Large values: low 31 bits, and the top 33 bits aligned on the larger one */
+    {
+        uint64_t la[3] = { 0xFFFFFFFFFFFFFFFFULL, 0x0123456789ABCDEFULL, 0x00000000000000F0ULL };
+        uint64_t lb[3] = { 0x0000000000000005ULL, 0x0000000000000000ULL, 0x0000000000000001ULL };
+        /* len(a) = 136 bits: the top 33 bits of a are bits 103..135 */
+        approximations(&a, &b, la, lb, 3);
+        assert((a & 0x7FFFFFFF) == 0x7FFFFFFF);
+        assert(a >> 31 == ((0xF0ULL << 25) | (0x0123456789ABCDEFULL >> 39)));
+        assert((b & 0x7FFFFFFF) == 5);
+        assert(b >> 31 == ((uint64_t)1 << 25));
+    }
+
+    /* (u*f + v*g) / 2^31 mod n */
+    {
+        uint64_t n[1] = { 1000003 }, u[1] = { 123 }, v[1] = { 456 }, r[1], t[3], kn[2];
+        uint64_t n0inv = n[0], i;
+        uint64_t inv2_31 = 1;
+
+        for (i=0; i<5; i++)
+            n0inv *= 2 - n[0]*n0inv;
+        n0inv = 0 - n0inv;
+        /* 2^-31 mod n, computed by halving */
+        for (i=0; i<31; i++)
+            inv2_31 = (inv2_31 & 1) ? (inv2_31 + n[0]) / 2 : inv2_31 / 2;
+
+        mod_lin_comb(r, u, v, 1000, -77, n, n0inv, t, kn, 1);
+        /* 123*1000 - 456*77 = 87888 */
+        assert(r[0] == (87888 * inv2_31) % n[0]);
+        mod_lin_comb(r, u, v, -1000, 77, n, n0inv, t, kn, 1);
+        assert(r[0] == ((n[0] - 87888) * inv2_31) % n[0]);
+    }
+}
+
 int main(void)
 {
     test_ct_helpers();
@@ -872,5 +1131,10 @@ int main(void)
     test_mulmod_words();
     test_argument_checks();
     test_lucas_negative_d();
+    test_div128();
+    test_divmod_random();
+    test_mont_sqr();
+    test_inv_odd_vs_simple();
+    test_bgcd_helpers();
     return 0;
 }

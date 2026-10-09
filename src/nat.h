@@ -68,7 +68,7 @@ EXPORT_SYM int nat_mod_small(Nat *out, const Nat *a, uint64_t d);
 /** Modular arithmetic **/
 EXPORT_SYM int nat_mulmod(Nat *out, const Nat *a, const Nat *b, const Nat *m);
 EXPORT_SYM int nat_submod(Nat *out, const Nat *a, const Nat *b, const Nat *m);
-EXPORT_SYM int nat_powmod(Nat *out, const Nat *a, const Nat *e, const Nat *m);
+EXPORT_SYM int nat_powmod(Nat *out, const Nat *a, const Nat *e, size_t e_bits, const Nat *m);
 EXPORT_SYM int nat_invmod(Nat *out, const Nat *a, const Nat *m);
 
 /** Number theory **/
@@ -138,13 +138,15 @@ typedef struct {
     uint64_t *r2;       /* R^2 mod n */
     uint64_t *one;      /* R mod n (1 in Montgomery form) */
     uint64_t *unit;     /* the number 1 (not in Montgomery form) */
-    uint64_t *tmp;      /* scratchpad, nw+2 words */
+    uint64_t *tmp;      /* scratchpad, 2*nw+1 words */
 } MontCtx;
 
 int mont_ctx_new(MontCtx **out, const Nat *n);
 void mont_ctx_free(MontCtx *ctx);
 /** out = a*b/R mod n; a, b < n; out may alias a or b **/
 void mont_mul(uint64_t *out, const uint64_t *a, const uint64_t *b, MontCtx *ctx);
+/** out = a*a/R mod n; a < n; out may alias a **/
+void mont_sqr(uint64_t *out, const uint64_t *a, MontCtx *ctx);
 /** out = x*R mod n, for x < n **/
 void mont_to(uint64_t *out, const uint64_t *x, MontCtx *ctx);
 /** out = x/R mod n **/
@@ -155,8 +157,8 @@ void mod_add(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t
 void mod_sub(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, size_t nw);
 /** x = x/2 mod n, x < n, n odd **/
 void mod_half(uint64_t *x, const uint64_t *n, size_t nw);
-/** out = base^e in Montgomery form; base_m is in Montgomery form **/
-int mont_pow(uint64_t *out, const uint64_t *base_m, const Nat *e, MontCtx *ctx);
+/** out = base^e in Montgomery form; base_m is in Montgomery form; e < 2^e_bits (public) **/
+int mont_pow(uint64_t *out, const uint64_t *base_m, const Nat *e, size_t e_bits, MontCtx *ctx);
 
 /** out = a^{-1} mod n, for n odd and a < n (nw words); ERR_VALUE if there is no inverse **/
 int inv_odd(uint64_t *out, const uint64_t *a, const uint64_t *n, size_t nw);

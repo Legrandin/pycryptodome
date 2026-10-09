@@ -14,9 +14,87 @@
 #include "nat_ct.h"
 
 /*
- * Restoring division, one bit of the dividend per step.
- * The number of steps only depends on the size of a,
- * and the cost of each step on the size of b.
+ * Divide the 128-bit number (hi, lo) by d, for d >= 2^63 and hi <= d.
+ * Return the quotient, or 2^64 - 1 if it does not fit into 64 bits
+ * (which only happens when hi == d).
+ *
+ * Restoring division, one bit per step: no division instruction is used,
+ * as its running time may depend on the operands on some CPUs.
+ */
+STATIC uint64_t div128_ct(uint64_t hi, uint64_t lo, uint64_t d)
+{
+    uint64_t rem, q, overflow;
+    int i;
+
+    /* With hi == d, the quotient is at least 2^64 */
+    overflow = ct_eq(hi, d);
+    rem = ct_select(ct_mask(overflow), 0, hi);
+
+    q = 0;
+    for (i=63; i>=0; i--) {
+        uint64_t top, ge;
+
+        /* rem < d, so 2*rem + bit < 2^65: keep the 65th bit in top */
+        top = rem >> 63;
+        rem = (rem << 1) | ((lo >> i) & 1);
+        ge = top | (1 ^ ct_lt(rem, d));
+        rem -= d & ct_mask(ge);
+        q |= ge << i;
+    }
+
+    return ct_select(ct_mask(overflow), UINT64_MAX, q);
+}
+
+/*
+ * Reciprocal of d (for d >= 2^63): floor((2^128 - 1) / d) - 2^64.
+ */
+STATIC uint64_t reciprocal_ct(uint64_t d)
+{
+    return div128_ct(~d, UINT64_MAX, d);
+}
+
+/*
+ * Same as div128_ct(hi, lo, d), with the reciprocal of d precomputed
+ * (Moller and Granlund, "Improved division by invariant integers", 2011,
+ * algorithm 4). The two corrections are done with masks.
+ */
+STATIC uint64_t div128_preinv_ct(uint64_t hi, uint64_t lo, uint64_t d, uint64_t recip)
+{
+    uint64_t overflow, q0, q1, r, carry, m;
+
+    /* With hi == d, the quotient is at least 2^64 */
+    overflow = ct_eq(hi, d);
+    hi = ct_select(ct_mask(overflow), 0, hi);
+
+    /* (q1, q0) = recip * hi + (hi, lo) */
+    DP_MULT(recip, hi, q0, q1);
+    q0 = ct_add(q0, lo, 0, &carry);
+    q1 = q1 + hi + carry;
+    q1 += 1;
+
+    r = lo - q1*d;
+    m = ct_mask(ct_lt(q0, r));
+    q1 -= 1 & m;
+    r += d & m;
+    m = ct_mask(1 ^ ct_lt(r, d));
+    q1 += 1 & m;
+
+    return ct_select(ct_mask(overflow), UINT64_MAX, q1);
+}
+
+/*
+ * Word-wise division (Knuth, TAOCP vol. 2, 4.3.1, algorithm D),
+ * in constant time.
+ *
+ * The divisor is shifted left by s bits, so that its top bit is set
+ * (s is secret, and the shifts are constant time). Then, for each word
+ * of the quotient (from the top), the quotient word is estimated from
+ * the two top words of the current remainder and the top word of the
+ * divisor. The estimate is never too small, and at most 2 too large:
+ * after the multiply-subtract step, the divisor is conditionally added
+ * back twice.
+ *
+ * The cost depends only on the number of words of a and b.
  *
  * q (q_nw words) receives the quotient, truncated to q_nw words;
  * it can be NULL. r (b->nw words) receives the remainder; it can be NULL.
@@ -24,50 +102,82 @@
  */
 int nat_divmod_words(uint64_t *q, size_t q_nw, uint64_t *r, const Nat *a, const Nat *b)
 {
-    uint64_t *rem = NULL, *bext = NULL, *t = NULL;
-    size_t rw, i, nbits;
+    uint64_t *u = NULL, *v = NULL, *tmp = NULL;
+    size_t na, nb, un, j, k;
+    uint64_t s, recip;
     int res = ERR_MEMORY;
 
-    rw = b->nw + 1;
-    rem = nat_words_alloc(rw);
-    bext = nat_words_alloc(rw);
-    t = nat_words_alloc(rw);
-    if (NULL == rem || NULL == bext || NULL == t)
+    na = a->nw;
+    nb = b->nw;
+    un = na + nb;
+
+    u = nat_words_alloc(un);
+    v = nat_words_alloc(nb);
+    tmp = nat_words_alloc(un);
+    if (NULL == u || NULL == v || NULL == tmp)
         goto cleanup;
 
-    memcpy(bext, b->w, b->nw*sizeof(uint64_t));
+    /* Normalize: v = b << s has its top bit set, u = a << s */
+    s = (uint64_t)64*nb - (uint64_t)nat_bit_length(b);
+    memcpy(v, b->w, nb*sizeof(uint64_t));
+    words_shl_secret(v, s, tmp, nb);
+    memcpy(u, a->w, na*sizeof(uint64_t));
+    words_shl_secret(u, s, tmp, un);
+
     if (q)
         memset(q, 0, q_nw*sizeof(uint64_t));
 
-    nbits = 64*a->nw;
-    for (i=nbits; i-- > 0;) {
-        uint64_t bit, keep, carry;
-        size_t j;
+    recip = reciprocal_ct(v[nb-1]);
 
-        /* rem = 2*rem + bit; it fits because rem < b */
-        bit = (a->w[i / 64] >> (i % 64)) & 1;
-        carry = bit;
-        for (j=0; j<rw; j++) {
-            uint64_t top = rem[j] >> 63;
-            rem[j] = (rem[j] << 1) | carry;
-            carry = top;
+    /* The window u[j..j+nb] (nb+1 words) is always smaller than v * 2^64 */
+    for (j=na; j-- > 0;) {
+        uint64_t *w = u + j;
+        uint64_t qhat, mul_carry, borrow, neg;
+        int round;
+
+        qhat = div128_preinv_ct(w[nb], w[nb-1], v[nb-1], recip);
+
+        /* w -= qhat * v */
+        mul_carry = 0;
+        borrow = 0;
+        for (k=0; k<nb; k++) {
+            uint64_t prod = ct_mac(qhat, v[k], mul_carry, 0, &mul_carry);
+            w[k] = ct_sub(w[k], prod, borrow, &borrow);
+        }
+        w[nb] = ct_sub(w[nb], mul_carry, borrow, &borrow);
+
+        /* The estimate is at most 2 too large: add v back, up to twice */
+        neg = borrow;
+        for (round=0; round<2; round++) {
+            uint64_t carry, m;
+
+            m = ct_mask(neg);
+            carry = words_cond_add(m, w, v, nb);
+            w[nb] = ct_add(w[nb], 0, carry, &carry);
+            qhat -= neg;
+            /*
+             * Still negative unless the addition carried out.
+             * The barrier stops clang -Os from turning this into a branch
+             * on the carry flag (found with test_nat_ct).
+             */
+            neg &= 1 ^ ct_barrier(carry);
         }
 
-        /* if rem >= b then rem -= b and the quotient bit is 1 */
-        keep = 1 ^ words_sub(t, rem, bext, rw);
-        words_select(rem, ct_mask(keep), t, rem, rw);
-        if (q && i / 64 < q_nw)
-            q[i / 64] |= keep << (i % 64);
+        if (q && j < q_nw)
+            q[j] = qhat;
     }
 
-    if (r)
-        memcpy(r, rem, b->nw*sizeof(uint64_t));
+    /* The remainder is in the low nb words of u, shifted by s */
+    if (r) {
+        words_shr_secret(u, s, tmp, nb);
+        memcpy(r, u, nb*sizeof(uint64_t));
+    }
     res = 0;
 
 cleanup:
-    nat_words_free(rem, rw);
-    nat_words_free(bext, rw);
-    nat_words_free(t, rw);
+    nat_words_free(u, un);
+    nat_words_free(v, nb);
+    nat_words_free(tmp, un);
     return res;
 }
 

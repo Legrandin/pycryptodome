@@ -103,8 +103,8 @@ static void run(size_t nw)
 
     /* Modular arithmetic */
     nat_mulmod(out, a, b, m_odd);
-    nat_powmod(out, a, e, m_odd);
-    nat_powmod(out, a, e, m_even);
+    nat_powmod(out, a, e, 64*nw, m_odd);
+    nat_powmod(out, a, e, 64*nw, m_even);
     res = nat_invmod(out, a, m_odd);
     (void)res;
     res = nat_invmod(out, a, m_even);
