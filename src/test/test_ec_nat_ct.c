@@ -1,5 +1,6 @@
 /*
- * Constant-time check of ec_nat.c, with Valgrind memcheck, like
+ * Constant-time check of the elliptic curves on the nat library
+ * (ec_nat.c, ed448.c, curve448.c), with Valgrind memcheck, like
  * test_nat_ct.c.
  *
  * The secret inputs (the scalar, the random seed and, for the variable
@@ -20,6 +21,8 @@
 #include "common.h"
 #include "nat.h"
 #include "ec_nat.h"
+#include "ed448.h"
+#include "curve448.h"
 
 #if defined(TEST_BMI2_ADX)
 #include <stdio.h>
@@ -196,6 +199,107 @@ static void run(const Curve *tc)
     ec_nat_free_curve(c);
 }
 
+/* Ed448: the generator, and a point with a component of order 4 */
+static const char *ed_gx = "4f1970c66bed0ded221d15a622bf36da9e146570470f1767ea6de324a3d3a46412ae1af72ab66511433b80e18b00938e2626a82bc70cc05e";
+static const char *ed_gy = "693f46716eb6bc248876203756c9c7624bea73736ca3984087789c1e05a0c2d73ad3ff1ce67c39c4fdbd132c4ed7c8ad9808795bf230fa14";
+
+static PointEd448 *ed448_point(const Ed448Context *ctx, const char *x, const char *y, int secret)
+{
+    uint8_t xb[56], yb[56];
+    PointEd448 *p;
+
+    from_hex(xb, 56, x);
+    from_hex(yb, 56, y);
+    if (secret) {
+        SECRET(xb, 56);
+        SECRET(yb, 56);
+    }
+    assert(ed448_new_point(&p, xb, yb, 56, ctx) == 0);
+    return p;
+}
+
+static void ed448_mul(PointEd448 *p, size_t len)
+{
+    uint8_t k[64], x[56], y[56];
+    uint64_t seed = rnd();
+    size_t i;
+
+    for (i=0; i<len; i++)
+        k[i] = (uint8_t)rnd();
+    SECRET(k, len);
+    SECRET(&seed, sizeof seed);
+    assert(ed448_scalar(p, k, len, seed) == 0);
+    assert(ed448_get_xy(x, y, 56, p) == 0);
+}
+
+static void run_ed448(void)
+{
+    Ed448Context *ctx;
+    PointEd448 *g, *q, *t, *r;
+    unsigned i;
+
+    assert(ed448_new_context(&ctx) == 0);
+    for (i=0; i<2; i++) {
+        /* Fixed base (signatures, key generation) */
+        g = ed448_point(ctx, ed_gx, ed_gy, 0);
+        ed448_mul(g, 57);
+        ed448_mul(g, 64);
+
+        /* Variable base: public (verification), secret; with a point of order 4 */
+        q = ed448_point(ctx, ed_gx, ed_gy, 0);
+        ed448_mul(q, 57);
+        r = ed448_point(ctx, ed_gx, ed_gy, 1);
+        ed448_mul(r, 57);
+        t = ed448_point(ctx, "1", "0", 0);
+        assert(ed448_add(t, r) == 0);
+        ed448_mul(t, 57);
+
+        assert(ed448_add(r, q) == 0);
+        assert(ed448_double(r) == 0);
+        assert(ed448_neg(r) == 0);
+        (void)ed448_cmp(r, q);      /* only the result leaks */
+
+        ed448_free_point(g);
+        ed448_free_point(q);
+        ed448_free_point(t);
+        ed448_free_point(r);
+    }
+    ed448_free_context(ctx);
+}
+
+/* X448: secret scalar, public and secret u-coordinate */
+static void run_x448(void)
+{
+    Curve448Context *ctx;
+    Curve448Point *p;
+    uint8_t u[56], k[56], x[56];
+    uint64_t seed;
+    unsigned i, j;
+
+    assert(curve448_new_context(&ctx) == 0);
+    for (i=0; i<4; i++) {
+        for (j=0; j<56; j++) {
+            u[j] = (uint8_t)rnd();
+            k[j] = (uint8_t)rnd();
+        }
+        if (i == 0) {
+            memset(u, 0, 56);
+            u[55] = 5;
+        }
+        if (i >= 2)
+            SECRET(u, 56);
+        seed = rnd();
+        SECRET(k, 56);
+        SECRET(&seed, sizeof seed);
+        assert(curve448_new_point(&p, u, 56, ctx) == 0);
+        assert(curve448_scalar(p, k, 56, seed) == 0);
+        /* Only the fact that the result is the point at infinity leaks */
+        (void)curve448_get_x(x, 56, p);
+        curve448_free_point(p);
+    }
+    curve448_free_context(ctx);
+}
+
 int main(void)
 {
     size_t i;
@@ -210,5 +314,7 @@ int main(void)
 
     for (i=0; i<sizeof curves / sizeof curves[0]; i++)
         run(&curves[i]);
+    run_ed448();
+    run_x448();
     return 0;
 }

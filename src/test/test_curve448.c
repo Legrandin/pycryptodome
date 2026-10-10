@@ -1,178 +1,256 @@
-#include "endianess.h"
-#include "curve448.h"
-#include "mont.h"
-#include <assert.h>
+/*
+ * Unit tests of curve448.c (X448 on the nat library), with the test
+ * vectors of RFC 7748 (5.2 and 6.2).
+ */
 
-#if 0
-void print_point(Curve448Point *p)
+#include <assert.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include "common.h"
+#include "nat.h"
+#include "ec_common.h"
+#include "curve448.h"
+
+#if defined(TEST_BMI2_ADX)
+#include <stdio.h>
+#include <cpuid.h>
+
+static int have_bmi2_adx(void)
 {
-    mont_printf("X=", p->x, p->ec_ctx->mont_ctx);
-    mont_printf("Z=", p->z, p->ec_ctx->mont_ctx);
+    unsigned eax, ebx, ecx, edx;
+
+    if (__get_cpuid_max(0, NULL) < 7)
+        return 0;
+    __cpuid_count(7, 0, eax, ebx, ecx, edx);
+    return (ebx & (1U << 8)) && (ebx & (1U << 19));
 }
 #endif
 
-void test_ladder_1(void)
+#define LEN 56
+
+/* RFC 7748: little-endian scalars and u-coordinates */
+static const char *vectors[][3] = {
+    { "3d262fddf9ec8e88495266fea19a34d28882acef045104d0d1aae121700a779c984c24f8cdd78fbff44943eba368f54b29259a4f1c600ad3",
+      "06fce640fa3487bfda5f6cf2d5263f8aad88334cbd07437f020f08f9814dc031ddbdc38c19c6da2583fa5429db94ada18aa7a7fb4ef8a086",
+      "ce3e4ff95a60dc6697da1db1d85e6afbdf79b50a2412d7546d5f239fe14fbaadeb445fc66a01b0779d98223961111e21766282f73dd96b6f" },
+    { "203d494428b8399352665ddca42f9de8fef600908e0d461cb021f8c538345dd77c3e4806e25f46d3315c44e0a5b4371282dd2c8d5be3095f",
+      "0fbcc2f993cd56d3305b0b7d9e55d4c1a8fb5dbb52f8e9a1e9b6201b165d015894e56c4d3570bee52fe205e28a78b91cdfbde71ce8d157db",
+      "884a02576239ff7a2f2f63b2db6a9ff37047ac13568e1e30fe63c4a7ad1b3ee3a5700df34321d62077e63633c575c1c954514e99da7c179d" },
+};
+
+/* RFC 7748, 5.2: k = u = 5, then k, u = X448(k, u), k */
+static const char *iter_1 = "3f482c8a9f19b01e6c46ee9711d9dc14fd4bf67af30765c2ae2b846a4d23a8cd0db897086239492caf350b51f833868b9bc2b3bca9cf4113";
+static const char *iter_1000 = "aa3b4749d55b9daf1e5b00288826c467274ce3ebbdd5c17b975e09d4af6c67cf10d087202db88286e2b79fceea3ec353ef54faa26e219f38";
+
+/* RFC 7748, 6.2: Alice's and Bob's private keys, and the shared secret */
+static const char *alice_priv = "9a8f4925d1519f5775cf46b04b5800d4ee9ee8bae8bc5565d498c28dd9c9baf574a9419744897391006382a6f127ab1d9ac2d8c0a598726b";
+static const char *alice_pub = "9b08f7cc31b7e3e67d22d5aea121074a273bd2b83de09c63faa73d2c22c5d9bbc836647241d953d40c5b12da88120d53177f80e532c41fa0";
+static const char *bob_priv = "1c306a7ac2a0e2e0990b294470cba339e6453772b075811d8fad0d1d6927c120bb5ee8972b0d3e21374c9c921b09d1b0366f10b65173992d";
+static const char *bob_pub = "3eb7a829b0cd20f5bcfc0b599b6feccf6da4627107bdb0d4f345b43027d8b972fc3e34fb4232a13ca706dcb57aec3dae07bdc1c67bf33609";
+static const char *shared = "07fff4181ac6cc95ec1c16a94a0f74d12da232ce40a77552281d282bb60c0b56fd2464c335543936521c24403085d59a449a5037514a879d";
+
+static uint64_t rnd_state = 0x0123456789ABCDEFULL;
+
+static uint64_t rnd(void)
 {
-    Curve448Context *ec_ctx;
-    Curve448Point *point;
-    int res;
-
-    const uint8_t x[56] = { 0x86, 0xa0, 0xf8, 0x4e, 0xfb, 0xa7, 0xa7, 0x8a,
-                            0xa1, 0xad, 0x94, 0xdb, 0x29, 0x54, 0xfa, 0x83,
-                            0x25, 0xda, 0xc6, 0x19, 0x8c, 0xc3, 0xbd, 0xdd,
-                            0x31, 0xc0, 0x4d, 0x81, 0xf9, 0x08, 0x0f, 0x02,
-                            0x7f, 0x43, 0x07, 0xbd, 0x4c, 0x33, 0x88, 0xad,
-                            0x8a, 0x3f, 0x26, 0xd5, 0xf2, 0x6c, 0x5f, 0xda,
-                            0xbf, 0x87, 0x34, 0xfa, 0x40, 0xe6, 0xfc, 0x06 };
-
-    const uint8_t scalar[] = { 0xd3, 0x0a, 0x60, 0x1c, 0x4f, 0x9a, 0x25, 0x29,
-                               0x4b, 0xf5, 0x68, 0xa3, 0xeb, 0x43, 0x49, 0xf4,
-                               0xbf, 0x8f, 0xd7, 0xcd, 0xf8, 0x24, 0x4c, 0x98,
-                               0x9c, 0x77, 0x0a, 0x70, 0x21, 0xe1, 0xaa, 0xd1,
-                               0xd0, 0x04, 0x51, 0x04, 0xef, 0xac, 0x82, 0x88,
-                               0xd2, 0x34, 0x9a, 0xa1, 0xfe, 0x66, 0x52, 0x49,
-                               0x88, 0x8e, 0xec, 0xf9, 0xdd, 0x2f, 0x26, 0x3c };
-
-    const uint8_t expected[56] = { 0x6f, 0x6b, 0xd9, 0x3d, 0xf7, 0x82, 0x62, 0x76,
-                                   0x21, 0x1e, 0x11, 0x61, 0x39, 0x22, 0x98, 0x9d,
-                                   0x77, 0xb0, 0x01, 0x6a, 0xc6, 0x5f, 0x44, 0xeb,
-                                   0xad, 0xba, 0x4f, 0xe1, 0x9f, 0x23, 0x5f, 0x6d,
-                                   0x54, 0xd7, 0x12, 0x24, 0x0a, 0xb5, 0x79, 0xdf,
-                                   0xfb, 0x6a, 0x5e, 0xd8, 0xb1, 0x1d, 0xda, 0x97,
-                                   0x66, 0xdc, 0x60, 0x5a, 0xf9, 0x4f, 0x3e, 0xce };
-
-    uint8_t result_x[56];
-
-    res = curve448_new_context(&ec_ctx);
-    assert(res == 0);
-
-    res = curve448_new_point(&point, x, sizeof(x), ec_ctx);
-    assert(res == 0);
-
-    res = curve448_scalar(point, scalar, sizeof(scalar), 0);
-
-    assert(mont_is_one(point->z, point->ec_ctx->mont_ctx));
-    res = mont_to_bytes(result_x, sizeof(result_x), point->x, point->ec_ctx->mont_ctx);
-    assert(res == 0);
-    assert(memcmp(expected, result_x, sizeof(expected)) == 0);
-
-    curve448_free_point(point);
-    curve448_free_context(ec_ctx);
+    /* xorshift64 */
+    rnd_state ^= rnd_state << 13;
+    rnd_state ^= rnd_state >> 7;
+    rnd_state ^= rnd_state << 17;
+    return rnd_state;
 }
 
-void test_ladder_2(void)
+/** Hex string (little-endian number) to big-endian bytes **/
+static void from_hex_le(uint8_t *out, const char *hex)
 {
-    Curve448Context *ec_ctx;
-    Curve448Point *point;
-    int res;
-    uint8_t x[] = { 5 };
-    uint8_t scalar[] = { 0 };
+    unsigned i;
 
-    res = curve448_new_context(&ec_ctx);
-    assert(res == 0);
+    assert(strlen(hex) == 2*LEN);
+    for (i=0; i<LEN; i++) {
+        unsigned v;
 
-    res = curve448_new_point(&point, x, sizeof(x), ec_ctx);
-    assert(res == 0);
-
-    res = curve448_scalar(point, scalar, sizeof(scalar), 0);
-
-    /** PAI **/
-    assert(mont_is_one(point->x, point->ec_ctx->mont_ctx));
-    assert(mont_is_zero(point->z, point->ec_ctx->mont_ctx));
-
-    curve448_free_point(point);
-    curve448_free_context(ec_ctx);
+        assert(sscanf(hex + 2*i, "%2x", &v) == 1);
+        out[LEN - 1 - i] = (uint8_t)v;
+    }
 }
 
-void test_cmp_1(void)
+/** The clamped scalar of RFC 7748 (big-endian) **/
+static void clamp(uint8_t *k)
 {
-    uint8_t c1[56] = { 0xd7, 0x41, 0x07, 0x7b, 0xae, 0x25, 0x76, 0x75,
-                       0xdb, 0xb5, 0x43, 0x55, 0x0d, 0x6f, 0x27, 0xda,
-                       0x32, 0x89, 0x21, 0xfd, 0xb9, 0x9b, 0xf5, 0x4e,
-                       0xbe, 0x9d, 0x4d, 0x0b, 0xcc, 0x58, 0xe9, 0x67,
-                       0xff, 0x6f, 0xd1, 0xe1, 0x18, 0x2b, 0x22, 0x0f,
-                       0xa0, 0x05, 0x7f, 0x0b, 0x0d, 0x3b, 0xc8, 0x3f,
-                       0x86, 0xae, 0x38, 0xef, 0xb3, 0x5f, 0x5a, 0x35 };
-
-    Curve448Context *ec_ctx;
-    Curve448Point *G, *P;
-    int res;
-
-    res = curve448_new_context(&ec_ctx);
-    assert(res == 0);
-
-    // G = (C1, 1)
-    res = curve448_new_point(&G, c1, sizeof(c1), ec_ctx);
-    assert(res == 0);
-
-    // P = (C1*C2, C2)
-    res = curve448_clone(&P, G);
-    assert(res == 0);
-
-    mont_set(P->z, 0x12345678U, P->ec_ctx->mont_ctx);
-    mont_mult(P->x, G->x, P->z, P->wp->scratch, P->ec_ctx->mont_ctx);
-
-    res = curve448_cmp(G, P);
-    assert(res == 0);
-
-    mont_set(G->z, 2, G->ec_ctx->mont_ctx);
-
-    // G = (C1, 2)
-    res = curve448_cmp(G, P);
-    assert(res != 0);
-
-    curve448_free_point(P);
-    curve448_free_point(G);
-    curve448_free_context(ec_ctx);
+    k[LEN - 1] &= 0xFC;
+    k[0] |= 0x80;
 }
 
-void test_cmp_2(void)
+/** out = X448(k, u), all big-endian (k not clamped) **/
+static void x448(uint8_t *out, const Curve448Context *ctx, const uint8_t *k_in, const uint8_t *u)
 {
-    const uint8_t c1[56] = { 0xd7, 0x41, 0x07, 0x7b, 0xae, 0x25, 0x76, 0x75,
-                             0xdb, 0xb5, 0x43, 0x55, 0x0d, 0x6f, 0x27, 0xda,
-                             0x32, 0x89, 0x21, 0xfd, 0xb9, 0x9b, 0xf5, 0x4e,
-                             0xbe, 0x9d, 0x4d, 0x0b, 0xcc, 0x58, 0xe9, 0x67,
-                             0xff, 0x6f, 0xd1, 0xe1, 0x18, 0x2b, 0x22, 0x0f,
-                             0xa0, 0x05, 0x7f, 0x0b, 0x0d, 0x3b, 0xc8, 0x3f,
-                             0x86, 0xae, 0x38, 0xef, 0xb3, 0x5f, 0x5a, 0x35 };
-    const uint8_t scalar[] = { 0 };
+    Curve448Point *p;
+    uint8_t k[LEN];
 
-    Curve448Context *ec_ctx;
-    Curve448Point *G, *P, *Q;
-    int res;
+    memcpy(k, k_in, LEN);
+    clamp(k);
+    assert(curve448_new_point(&p, u, LEN, ctx) == 0);
+    assert(curve448_scalar(p, k, LEN, rnd()) == 0);
+    assert(curve448_get_x(out, LEN, p) == 0);
+    curve448_free_point(p);
+}
 
-    res = curve448_new_context(&ec_ctx);
-    assert(res == 0);
+static void test_vectors(const Curve448Context *ctx)
+{
+    uint8_t k[LEN], u[LEN], expected[LEN], out[LEN];
+    unsigned i;
 
-    /** 3 different ways to create API **/
+    for (i=0; i<sizeof vectors / sizeof vectors[0]; i++) {
+        from_hex_le(k, vectors[i][0]);
+        from_hex_le(u, vectors[i][1]);
+        from_hex_le(expected, vectors[i][2]);
+        x448(out, ctx, k, u);
+        assert(memcmp(out, expected, LEN) == 0);
+    }
+}
 
-    res = curve448_new_point(&G, 0, sizeof(c1), ec_ctx);
-    assert(res == 0);
+static void test_iterations(const Curve448Context *ctx)
+{
+    uint8_t k[LEN], u[LEN], out[LEN], expected[LEN];
+    unsigned i;
 
-    res = curve448_new_point(&P, c1, 0, ec_ctx);
-    assert(res == 0);
+    memset(k, 0, LEN);
+    k[LEN - 1] = 5;
+    memcpy(u, k, LEN);
+    for (i=1; i<=1000; i++) {
+        x448(out, ctx, k, u);
+        memcpy(u, k, LEN);
+        memcpy(k, out, LEN);
+        if (i == 1) {
+            from_hex_le(expected, iter_1);
+            assert(memcmp(k, expected, LEN) == 0);
+        }
+    }
+    from_hex_le(expected, iter_1000);
+    assert(memcmp(k, expected, LEN) == 0);
+}
 
-    res = curve448_new_point(&Q, c1, sizeof(c1), ec_ctx);
-    assert(res == 0);
-    res = curve448_scalar(Q, scalar, sizeof(scalar), 0);
-    assert(res == 0);
+static void test_dh(const Curve448Context *ctx)
+{
+    uint8_t a[LEN], b[LEN], five[LEN], pa[LEN], pb[LEN], s1[LEN], s2[LEN], expected[LEN];
 
-    res = curve448_cmp(G, P);
-    assert(res == 0);
-    res = curve448_cmp(G, Q);
-    assert(res == 0);
+    from_hex_le(a, alice_priv);
+    from_hex_le(b, bob_priv);
+    memset(five, 0, LEN);
+    five[LEN - 1] = 5;
 
-    curve448_free_point(Q);
-    curve448_free_point(P);
-    curve448_free_point(G);
-    curve448_free_context(ec_ctx);
+    x448(pa, ctx, a, five);
+    from_hex_le(expected, alice_pub);
+    assert(memcmp(pa, expected, LEN) == 0);
+    x448(pb, ctx, b, five);
+    from_hex_le(expected, bob_pub);
+    assert(memcmp(pb, expected, LEN) == 0);
+
+    x448(s1, ctx, a, pb);
+    x448(s2, ctx, b, pa);
+    from_hex_le(expected, shared);
+    assert(memcmp(s1, expected, LEN) == 0);
+    assert(memcmp(s2, expected, LEN) == 0);
+}
+
+static void test_points(const Curve448Context *ctx)
+{
+    uint8_t x[LEN], out[LEN], k[LEN];
+    Curve448Point *p, *q, *pai;
+    Curve448Context *ctx2;
+
+    memset(x, 0, LEN);
+    x[LEN - 1] = 5;
+
+    assert(curve448_new_point(NULL, x, LEN, ctx) == ERR_NULL);
+    assert(curve448_new_point(&p, x, LEN, NULL) == ERR_NULL);
+    assert(curve448_new_point(&p, x, LEN + 1, ctx) == ERR_VALUE);
+
+    /* The point at infinity */
+    assert(curve448_new_point(&pai, NULL, 0, ctx) == 0);
+    assert(curve448_get_x(out, LEN, pai) == ERR_EC_PAI);
+    memset(k, 0x55, LEN);
+    assert(curve448_scalar(pai, k, LEN, rnd()) == 0);
+    assert(curve448_get_x(out, LEN, pai) == ERR_EC_PAI);
+
+    /* get_x */
+    assert(curve448_new_point(&p, x, LEN, ctx) == 0);
+    assert(curve448_get_x(out, LEN, p) == 0);
+    assert(memcmp(out, x, LEN) == 0);
+    assert(curve448_get_x(out, LEN - 1, p) == ERR_MODULUS);
+    assert(curve448_get_x(NULL, LEN, p) == ERR_NULL);
+
+    /* Shorter input, and u >= p (reduced: p + 5 is 5) */
+    assert(curve448_new_point(&q, (const uint8_t*)"\x05", 1, ctx) == 0);
+    assert(curve448_cmp(p, q) == 0);
+    curve448_free_point(q);
+    /* p + 5 = 2^448 - 2^224 + 4: ff..ff (28 bytes) 00..00 (27 bytes) 04 */
+    memset(out, 0xFF, 28);
+    memset(out + 28, 0, 28);
+    out[LEN - 1] = 0x04;
+    assert(curve448_new_point(&q, out, LEN, ctx) == 0);
+    assert(curve448_cmp(p, q) == 0);
+    curve448_free_point(q);
+
+    /* cmp, clone */
+    assert(curve448_clone(&q, p) == 0);
+    assert(curve448_cmp(p, q) == 0);
+    assert(curve448_cmp(p, pai) == ERR_VALUE);
+    assert(curve448_cmp(pai, pai) == 0);
+
+    /* 4n * P = infinity for a point of the curve (order of the group) */
+    {
+        uint8_t four_n[LEN] = {
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+            0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFD,
+            0xF3, 0x28, 0x8F, 0xA7, 0x11, 0x3B, 0x6D, 0x26, 0xBB, 0x58, 0xDA, 0x40, 0x85, 0xB3,
+            0x09, 0xCA, 0x37, 0x16, 0x3D, 0x54, 0x8D, 0xE3, 0x0A, 0x4A, 0xAD, 0x61, 0x13, 0xCC
+        };
+
+        assert(curve448_scalar(q, four_n, LEN, rnd()) == 0);
+        assert(curve448_get_x(out, LEN, q) == ERR_EC_PAI);
+    }
+
+    /* Points of another context */
+    assert(curve448_new_context(&ctx2) == 0);
+    curve448_free_point(q);
+    assert(curve448_new_point(&q, x, LEN, ctx2) == 0);
+    assert(curve448_cmp(p, q) == ERR_EC_CURVE);
+    curve448_free_context(ctx2);
+    curve448_free_point(q);                     /* after its context */
+
+    assert(curve448_scalar(NULL, k, LEN, 0) == ERR_NULL);
+    assert(curve448_scalar(p, NULL, LEN, 0) == ERR_NULL);
+    assert(curve448_cmp(NULL, p) == ERR_NULL);
+
+    curve448_free_point(p);
+    curve448_free_point(pai);
+    curve448_free_point(NULL);
 }
 
 int main(void)
 {
-    test_ladder_1();
-    test_ladder_2();
-    test_cmp_1();
-    test_cmp_2();
+    Curve448Context *ctx;
+
+#if defined(TEST_BMI2_ADX)
+    if (!have_bmi2_adx()) {
+        if (getenv("NAT_REQUIRE_BMI2_ADX")) {
+            printf("BMI2 and ADX are required but not available\n");
+            return 1;
+        }
+        printf("Skipping: the CPU does not support BMI2 and ADX\n");
+        return 0;
+    }
+#endif
+
+    assert(curve448_new_context(NULL) == ERR_NULL);
+    assert(curve448_new_context(&ctx) == 0);
+    test_vectors(ctx);
+    test_iterations(ctx);
+    test_dh(ctx);
+    test_points(ctx);
+    curve448_free_context(ctx);
+    curve448_free_context(NULL);
     return 0;
 }

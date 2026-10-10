@@ -4,7 +4,8 @@
  */
 
 /*
- * The NIST curves (ec_nat.c), with the natural number library (nat*.c),
+ * The elliptic curves on the natural number library (nat*.c): the NIST
+ * curves (ec_nat.c), Ed448 (ed448.c) and X448 (curve448.c),
  * as the module Crypto.PublicKey._ec_nat.
  */
 
@@ -15,4 +16,7 @@
 #include "nat_mod.c"
 #include "nat_gcd.c"
 #include "nat_prime.c"
+#include "ec_common.c"
 #include "ec_nat.c"
+#include "ed448.c"
+#include "curve448.c"

@@ -4,12 +4,9 @@ CFLAGS=-Werror -Wall -O3 -g -Wno-unused-const-variable -Wconversion -Wsign-conve
 
 CFLAGS += -fanalyzer
 
-all:: modexp ed25519_perf ed448_perf curve25519_perf curve448_perf
+all:: modexp ed25519_perf curve25519_perf
 
 ed25519_perf: ed25519_perf.c multiply_64.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=64 -DMAIN
-
-ed448_perf: ed448_perf.c mont.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=64 -DMAIN
 
 modexp_in: modexp.c mont.c
@@ -21,8 +18,5 @@ modexp: modexp.c mont.c
 curve25519_perf: curve25519.c multiply_64.c
 	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=64 -DPROFILE
 
-curve448_perf: curve448.c mont.c
-	$(CC) $(CFLAGS) $(CPPFLAGS) -o $@ $^ -DSYS_BITS=64 -DPROFILE
-
 clean::
-	rm -f mont.o modexp x25519 ed25519_perf ed448_perf curve25519_perf curve448_perf
+	rm -f mont.o modexp x25519 ed25519_perf curve25519_perf

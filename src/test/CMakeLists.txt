@@ -140,25 +140,31 @@ if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64" AND NOT MSVC)
     endif()
 endif()
 
-# The NIST curves on the natural numbers
-add_executable(test_ec_nat test_ec_nat.c ../ec_nat.c $<TARGET_OBJECTS:nat>)
-add_test(NAME test_ec_nat COMMAND test_ec_nat)
+# The elliptic curves on the natural numbers: NIST curves, Ed448, X448
+set(EC_SOURCES ../ec_common.c ../ec_nat.c ../ed448.c ../curve448.c)
+set(NAT_SOURCES ../nat.c ../nat_div.c ../nat_mod.c ../nat_gcd.c ../nat_prime.c)
+add_library(ec OBJECT ${EC_SOURCES})
 
-if (NAT_BMI2_ADX_TESTS)
-    add_executable(test_ec_nat_bmi2_adx test_ec_nat.c ../ec_nat_bmi2_adx.c)
-    target_compile_definitions(test_ec_nat_bmi2_adx PRIVATE TEST_BMI2_ADX)
-    target_compile_options(test_ec_nat_bmi2_adx PRIVATE -mbmi2 -madx)
-    add_test(NAME test_ec_nat_bmi2_adx COMMAND test_ec_nat_bmi2_adx)
-endif()
+foreach(ec_test test_ec_nat test_ed448 test_curve448)
+    add_executable(${ec_test} ${ec_test}.c $<TARGET_OBJECTS:ec> $<TARGET_OBJECTS:nat>)
+    add_test(NAME ${ec_test} COMMAND ${ec_test})
 
-if (NAT_32BIT_TESTS AND HAVE_M32)
-    add_executable(test_ec_nat_32 test_ec_nat.c ../ec_nat.c ../nat.c ../nat_div.c ../nat_mod.c ../nat_gcd.c ../nat_prime.c)
-    set_target_properties(test_ec_nat_32 PROPERTIES
-        COMPILE_OPTIONS "-m32;-O2;-g;-Wall;-Werror;-fsanitize=undefined;-fsanitize=address;-UHAVE_UINT128;-USYS_BITS;-DSYS_BITS=32"
-        LINK_OPTIONS "-m32;-fsanitize=undefined;-fsanitize=address"
-        LINK_LIBRARIES "")
-    add_test(NAME test_ec_nat_32 COMMAND test_ec_nat_32)
-endif()
+    if (NAT_BMI2_ADX_TESTS)
+        add_executable(${ec_test}_bmi2_adx ${ec_test}.c ../ec_nat_bmi2_adx.c)
+        target_compile_definitions(${ec_test}_bmi2_adx PRIVATE TEST_BMI2_ADX)
+        target_compile_options(${ec_test}_bmi2_adx PRIVATE -mbmi2 -madx)
+        add_test(NAME ${ec_test}_bmi2_adx COMMAND ${ec_test}_bmi2_adx)
+    endif()
+
+    if (NAT_32BIT_TESTS AND HAVE_M32)
+        add_executable(${ec_test}_32 ${ec_test}.c ${EC_SOURCES} ${NAT_SOURCES})
+        set_target_properties(${ec_test}_32 PROPERTIES
+            COMPILE_OPTIONS "-m32;-O2;-g;-Wall;-Werror;-fsanitize=undefined;-fsanitize=address;-UHAVE_UINT128;-USYS_BITS;-DSYS_BITS=32"
+            LINK_OPTIONS "-m32;-fsanitize=undefined;-fsanitize=address"
+            LINK_LIBRARIES "")
+        add_test(NAME ${ec_test}_32 COMMAND ${ec_test}_32)
+    endif()
+endforeach()
 
 # Constant-time check of the natural numbers, with Valgrind memcheck
 find_program(VALGRIND valgrind)
@@ -173,7 +179,7 @@ if (VALGRIND AND HAVE_VALGRIND_MEMCHECK_H)
         LINK_LIBRARIES "")
     add_test(NAME test_nat_ct COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_nat_ct>)
 
-    add_executable(test_ec_nat_ct test_ec_nat_ct.c ../ec_nat.c ../nat.c ../nat_div.c ../nat_mod.c ../nat_gcd.c ../nat_prime.c)
+    add_executable(test_ec_nat_ct test_ec_nat_ct.c ${EC_SOURCES} ${NAT_SOURCES})
     target_compile_definitions(test_ec_nat_ct PRIVATE NAT_CTGRIND)
     set_target_properties(test_ec_nat_ct PROPERTIES
         COMPILE_OPTIONS "-O2;-g;-Wall;-Werror"
@@ -190,7 +196,7 @@ if (VALGRIND AND HAVE_VALGRIND_MEMCHECK_H)
             LINK_LIBRARIES "")
         add_test(NAME test_nat_ct_32 COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_nat_ct_32>)
 
-        add_executable(test_ec_nat_ct_32 test_ec_nat_ct.c ../ec_nat.c ../nat.c ../nat_div.c ../nat_mod.c ../nat_gcd.c ../nat_prime.c)
+        add_executable(test_ec_nat_ct_32 test_ec_nat_ct.c ${EC_SOURCES} ${NAT_SOURCES})
         target_compile_definitions(test_ec_nat_ct_32 PRIVATE NAT_CTGRIND)
         set_target_properties(test_ec_nat_ct_32 PROPERTIES
             COMPILE_OPTIONS "-m32;-O2;-g;-Wall;-Werror;-UHAVE_UINT128;-USYS_BITS;-DSYS_BITS=32"
@@ -323,14 +329,6 @@ add_test(NAME tests_ladder_step COMMAND tests_ladder_step)
 # ed25519
 add_executable(test_ed25519 test_ed25519.c ../ed25519.c ../multiply_32.c)
 add_test(NAME test_ed25519 COMMAND test_ed25519)
-
-# ed448
-add_executable(test_ed448 test_ed448.c ../ed448.c $<TARGET_OBJECTS:mont>)
-add_test(NAME test_ed448 COMMAND test_ed448)
-
-# curve448
-add_executable(test_curve448 test_curve448.c ../curve448.c $<TARGET_OBJECTS:mont>)
-add_test(NAME test_curve448 COMMAND test_curve448)
 
 # aesni
 if (AESNI)
