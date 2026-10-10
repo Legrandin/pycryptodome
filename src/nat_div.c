@@ -67,7 +67,7 @@ STATIC uint64_t div128_preinv_ct(uint64_t hi, uint64_t lo, uint64_t d, uint64_t 
     hi = ct_select(ct_mask(overflow), 0, hi);
 
     /* (q1, q0) = recip * hi + (hi, lo) */
-    DP_MULT(recip, hi, q0, q1);
+    q0 = ct_mac(recip, hi, 0, 0, &q1);
     q0 = ct_add(q0, lo, 0, &carry);
     q1 = q1 + hi + carry;
     q1 += 1;
@@ -246,7 +246,7 @@ EXPORT_SYM int nat_mod_small(Nat *out, const Nat *a, uint64_t d)
             x = (rem << 32) | ((a->w[i] >> (32*half)) & 0xFFFFFFFFU);
 
             /* q is at most 2 less than the exact quotient */
-            DP_MULT(x, recip, lo, hi);
+            lo = ct_mac(x, recip, 0, 0, &hi);
             (void)lo;
             q = hi;
             rem = x - q*d;

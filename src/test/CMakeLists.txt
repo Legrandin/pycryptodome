@@ -30,6 +30,8 @@ add_compile_definitions(NO_CPYTHON_MODULE)
 
 # Ensure that private functions can be accessed
 add_compile_definitions(STATIC=)
+# Include the reference implementations used by the tests (nat*.c)
+add_compile_definitions(NAT_TESTS)
 
 # TODO: add check for big endianess too
 add_compile_definitions(PYCRYPTO_LITTLE_ENDIAN)
@@ -117,6 +119,27 @@ if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64" AND CMAKE_SIZEOF_VOID_P 
     add_test(NAME test_nat_bmi2_adx COMMAND test_nat_bmi2_adx)
 endif()
 
+# The natural numbers on a 32-bit target (no 128-bit type, 32-bit
+# kernels), when the compiler can build and run 32-bit code (gcc-multilib)
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64" AND NOT MSVC)
+    include(CheckCSourceRuns)
+    set(CMAKE_REQUIRED_FLAGS "-m32")
+    set(CMAKE_REQUIRED_LINK_OPTIONS "-m32")
+    check_c_source_runs("int main(void) { return sizeof(void*) == 4 ? 0 : 1; }" HAVE_M32)
+    unset(CMAKE_REQUIRED_FLAGS)
+    unset(CMAKE_REQUIRED_LINK_OPTIONS)
+    if (HAVE_M32)
+        set(NAT_32BIT_TESTS TRUE)
+        add_executable(test_nat_32 test_nat.c ../nat.c ../nat_div.c ../nat_mod.c ../nat_gcd.c ../nat_prime.c)
+        # Without HAVE_UINT128 and with 32-bit SYS_BITS, as a real 32-bit build
+        set_target_properties(test_nat_32 PROPERTIES
+            COMPILE_OPTIONS "-m32;-O2;-g;-Wall;-Werror;-fsanitize=undefined;-fsanitize=address;-UHAVE_UINT128;-USYS_BITS;-DSYS_BITS=32"
+            LINK_OPTIONS "-m32;-fsanitize=undefined;-fsanitize=address"
+            LINK_LIBRARIES "")
+        add_test(NAME test_nat_32 COMMAND test_nat_32)
+    endif()
+endif()
+
 # Constant-time check of the natural numbers, with Valgrind memcheck
 find_program(VALGRIND valgrind)
 CHECK_INCLUDE_FILE("valgrind/memcheck.h" HAVE_VALGRIND_MEMCHECK_H)
@@ -129,6 +152,16 @@ if (VALGRIND AND HAVE_VALGRIND_MEMCHECK_H)
         LINK_OPTIONS ""
         LINK_LIBRARIES "")
     add_test(NAME test_nat_ct COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_nat_ct>)
+
+    if (NAT_32BIT_TESTS)
+        add_executable(test_nat_ct_32 test_nat_ct.c ../nat.c ../nat_div.c ../nat_mod.c ../nat_gcd.c ../nat_prime.c)
+        target_compile_definitions(test_nat_ct_32 PRIVATE NAT_CTGRIND)
+        set_target_properties(test_nat_ct_32 PROPERTIES
+            COMPILE_OPTIONS "-m32;-O2;-g;-Wall;-Werror;-UHAVE_UINT128;-USYS_BITS;-DSYS_BITS=32"
+            LINK_OPTIONS "-m32"
+            LINK_LIBRARIES "")
+        add_test(NAME test_nat_ct_32 COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_nat_ct_32>)
+    endif()
 
     if (NAT_BMI2_ADX_TESTS)
         add_executable(test_nat_ct_bmi2_adx test_nat_ct.c ../nat_bmi2_adx.c)
