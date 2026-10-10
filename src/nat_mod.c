@@ -50,6 +50,154 @@ void mod_half(uint64_t *x, const uint64_t *n, size_t nw)
 /* Montgomery arithmetic                                            */
 /* ---------------------------------------------------------------- */
 
+#if defined(NAT_32BIT)
+
+/*
+ * 32-bit targets: the Montgomery multiplication and squaring work on
+ * arrays of 32-bit words, with 32x32 -> 64 products, which the CPU has.
+ * The numbers are converted at the start and at the end of each call;
+ * the conversion is linear, while the work is quadratic.
+ */
+
+/** d (2*nw 32-bit words) = s (nw 64-bit words) **/
+STATIC void to_words32(uint32_t *d, const uint64_t *s, size_t nw)
+{
+    size_t i;
+
+    for (i=0; i<nw; i++) {
+        d[2*i] = (uint32_t)s[i];
+        d[2*i + 1] = (uint32_t)(s[i] >> 32);
+    }
+}
+
+/** d (nw 64-bit words) = s (2*nw 32-bit words) **/
+STATIC void from_words32(uint64_t *d, const uint32_t *s, size_t nw)
+{
+    size_t i;
+
+    for (i=0; i<nw; i++)
+        d[i] = ((uint64_t)s[2*i + 1] << 32) | s[2*i];
+}
+
+/** t[0..n-1] += a[0..n-1] * b, and return the high word **/
+STATIC uint32_t addmul_row32(uint32_t *t, const uint32_t *a, uint32_t b, size_t n)
+{
+    uint32_t c = 0;
+    size_t j;
+
+    for (j=0; j<n; j++) {
+        /* (2^32-1)^2 + 2*(2^32-1) = 2^64-1: it always fits */
+        uint64_t p = (uint64_t)a[j]*b + t[j] + c;
+        t[j] = (uint32_t)p;
+        c = (uint32_t)(p >> 32);
+    }
+    return c;
+}
+
+/**
+ * out = t[n..2n-1] + top*2^(32n), minus m if that is at least m;
+ * the value must be smaller than 2m (n words of 32 bits).
+ */
+STATIC void final_sub32(uint32_t *out, const uint32_t *t, uint32_t top, const uint32_t *m, size_t n)
+{
+    uint32_t borrow = 0, mask;
+    size_t j;
+
+    for (j=0; j<n; j++) {
+        uint64_t d = (uint64_t)t[n + j] - m[j] - borrow;
+        out[j] = (uint32_t)d;
+        borrow = (uint32_t)(d >> 63);
+    }
+    /* keep the difference if there was a top word, or no borrow */
+    mask = (uint32_t)ct_mask((uint64_t)(ct_nz(top) | (1 ^ borrow)));
+    for (j=0; j<n; j++)
+        out[j] = (out[j] & mask) | (t[n + j] & ~mask);
+}
+
+/** 32-bit version of mont_mul(): out = a*b/R mod m (n = 2*nw words) **/
+STATIC void mont_mul32(uint32_t *out, const uint32_t *a, const uint32_t *b, MontCtx *ctx)
+{
+    uint32_t *t = ctx->t32;
+    const uint32_t *m = ctx->n32;
+    size_t n = 2*ctx->nw;
+    size_t i;
+
+    memset(t, 0, (2*n + 2)*sizeof(uint32_t));
+
+    for (i=0; i<n; i++) {
+        uint64_t s;
+        uint32_t h, mq;
+
+        /* t[i+n+1] is still zero here */
+        h = addmul_row32(t + i, a, b[i], n);
+        s = (uint64_t)t[i + n] + h;
+        t[i + n] = (uint32_t)s;
+        t[i + n + 1] = (uint32_t)(s >> 32);
+
+        mq = t[i] * ctx->m0_32;
+        h = addmul_row32(t + i, m, mq, n);
+        s = (uint64_t)t[i + n] + h;
+        t[i + n] = (uint32_t)s;
+        t[i + n + 1] += (uint32_t)(s >> 32);
+    }
+
+    final_sub32(out, t, t[2*n], m, n);
+}
+
+/** 32-bit version of mont_sqr(): out = a*a/R mod m (n = 2*nw words) **/
+STATIC void mont_sqr32(uint32_t *out, const uint32_t *a, MontCtx *ctx)
+{
+    uint32_t *t = ctx->t32;
+    const uint32_t *m = ctx->n32;
+    size_t n = 2*ctx->nw;
+    size_t i;
+    uint32_t top;
+    uint64_t c;
+
+    memset(t, 0, (2*n + 2)*sizeof(uint32_t));
+
+    /* Cross products a[i]*a[j], i < j; t[i+n] is still zero */
+    for (i=0; i+1<n; i++)
+        t[i + n] = addmul_row32(t + 2*i + 1, a + i + 1, a[i], n - i - 1);
+
+    /* Double them */
+    top = 0;
+    for (i=0; i<2*n; i++) {
+        uint32_t next = t[i] >> 31;
+        t[i] = (t[i] << 1) | top;
+        top = next;
+    }
+
+    /* Add the squares a[i]^2 */
+    c = 0;
+    for (i=0; i<n; i++) {
+        uint64_t sq = (uint64_t)a[i]*a[i];
+
+        c += (uint64_t)t[2*i] + (uint32_t)sq;
+        t[2*i] = (uint32_t)c;
+        c >>= 32;
+        c += (uint64_t)t[2*i + 1] + (uint32_t)(sq >> 32);
+        t[2*i + 1] = (uint32_t)c;
+        c >>= 32;
+    }
+
+    /* Montgomery reduction, one word at a time */
+    top = 0;
+    for (i=0; i<n; i++) {
+        uint32_t h, mq = t[i] * ctx->m0_32;
+        uint64_t s;
+
+        h = addmul_row32(t + i, m, mq, n);
+        s = (uint64_t)t[i + n] + h + top;
+        t[i + n] = (uint32_t)s;
+        top = (uint32_t)(s >> 32);
+    }
+
+    final_sub32(out, t, top, m, n);
+}
+
+#endif /* NAT_32BIT */
+
 void mont_ctx_free(MontCtx *ctx)
 {
     if (NULL == ctx)
@@ -59,6 +207,11 @@ void mont_ctx_free(MontCtx *ctx)
     nat_words_free(ctx->one, ctx->nw);
     nat_words_free(ctx->unit, ctx->nw);
     nat_words_free(ctx->tmp, 2*ctx->nw + 2);
+    /* The 32-bit arrays are allocated as 64-bit words (see mont_ctx_new) */
+    nat_words_free((uint64_t*)ctx->n32, ctx->nw);
+    nat_words_free((uint64_t*)ctx->t32, 2*ctx->nw + 1);
+    nat_words_free((uint64_t*)ctx->x32, ctx->nw);
+    nat_words_free((uint64_t*)ctx->y32, ctx->nw);
     free(ctx);
 }
 
@@ -96,6 +249,21 @@ int mont_ctx_new(MontCtx **out, const Nat *n)
     for (i=0; i<5; i++)
         inv *= 2 - n->w[0]*inv;
     ctx->m0 = 0 - inv;
+
+#if defined(NAT_32BIT)
+    /*
+     * Arrays of 32-bit words, allocated as 64-bit words; they are only
+     * accessed as 32-bit words.
+     */
+    ctx->n32 = (uint32_t*)nat_words_alloc(nw);
+    ctx->t32 = (uint32_t*)nat_words_alloc(2*nw + 1);
+    ctx->x32 = (uint32_t*)nat_words_alloc(nw);
+    ctx->y32 = (uint32_t*)nat_words_alloc(nw);
+    if (!ctx->n32 || !ctx->t32 || !ctx->x32 || !ctx->y32)
+        goto cleanup;
+    to_words32(ctx->n32, ctx->n, nw);
+    ctx->m0_32 = (uint32_t)ctx->m0;
+#endif
 
     /* R^2 mod n, with R = 2^(64*nw) */
     big = nat_alloc(2*nw + 1);
@@ -202,8 +370,9 @@ STATIC uint64_t addmul_row(uint64_t *t, const uint64_t *a, uint64_t b, size_t nw
     return hi;
 }
 
-#else
+#elif !defined(NAT_32BIT) || defined(NAT_TESTS)
 
+/* (32-bit targets use mont_mul32 and mont_sqr32 instead, except in the tests) */
 STATIC uint64_t addmul_row(uint64_t *t, const uint64_t *a, uint64_t b, size_t nw)
 {
     uint64_t c = 0;
@@ -226,6 +395,12 @@ STATIC uint64_t addmul_row(uint64_t *t, const uint64_t *a, uint64_t b, size_t nw
  */
 void mont_mul(uint64_t *out, const uint64_t *a, const uint64_t *b, MontCtx *ctx)
 {
+#if defined(NAT_32BIT)
+    to_words32(ctx->x32, a, ctx->nw);
+    to_words32(ctx->y32, b, ctx->nw);
+    mont_mul32(ctx->x32, ctx->x32, ctx->y32, ctx);
+    from_words32(out, ctx->x32, ctx->nw);
+#else
     uint64_t *t = ctx->tmp;
     const uint64_t *n = ctx->n;
     size_t nw = ctx->nw;
@@ -251,6 +426,7 @@ void mont_mul(uint64_t *out, const uint64_t *a, const uint64_t *b, MontCtx *ctx)
     /* t[nw..2nw] < 2n: subtract n if needed */
     borrow = words_sub(out, t + nw, n, nw);
     words_select(out, ct_mask(t[2*nw] | (1 ^ borrow)), out, t + nw, nw);
+#endif
 }
 
 /*
@@ -264,6 +440,11 @@ void mont_mul(uint64_t *out, const uint64_t *a, const uint64_t *b, MontCtx *ctx)
  */
 void mont_sqr(uint64_t *out, const uint64_t *a, MontCtx *ctx)
 {
+#if defined(NAT_32BIT)
+    to_words32(ctx->x32, a, ctx->nw);
+    mont_sqr32(ctx->x32, ctx->x32, ctx);
+    from_words32(out, ctx->x32, ctx->nw);
+#else
     uint64_t *t = ctx->tmp;
     const uint64_t *n = ctx->n;
     size_t nw = ctx->nw;
@@ -289,7 +470,7 @@ void mont_sqr(uint64_t *out, const uint64_t *a, MontCtx *ctx)
     for (i=0; i<nw; i++) {
         uint64_t lo, hi;
 
-        DP_MULT(a[i], a[i], lo, hi);
+        lo = ct_mac(a[i], a[i], 0, 0, &hi);
         t[2*i] = ct_add(t[2*i], lo, c, &c);
         t[2*i + 1] = ct_add(t[2*i + 1], hi, c, &c);
     }
@@ -306,6 +487,7 @@ void mont_sqr(uint64_t *out, const uint64_t *a, MontCtx *ctx)
     /* The result (t[nw..2nw-1] and top) is smaller than 2n: subtract n if needed */
     borrow = words_sub(out, t + nw, n, nw);
     words_select(out, ct_mask(top | (1 ^ borrow)), out, t + nw, nw);
+#endif
 }
 
 void mont_to(uint64_t *out, const uint64_t *x, MontCtx *ctx)
@@ -529,6 +711,8 @@ cleanup:
     return res;
 }
 
+#if defined(NAT_TESTS)
+
 /*
  * Constant-time binary extended GCD, for an odd n and a < n, one bit per step.
  * Invariants: x1*a = u and x2*a = v (mod n), with v always odd.
@@ -536,7 +720,8 @@ cleanup:
  * so 2*64*nw steps are always enough. At the end v = gcd(a, n).
  *
  * It is simple but slow: inv_odd() is the optimized version of the same
- * algorithm. This one is the reference for the tests.
+ * algorithm. This one is the reference for the tests (only compiled
+ * with NAT_TESTS).
  */
 STATIC int inv_odd_simple(uint64_t *out, const uint64_t *a, const uint64_t *n, size_t nw)
 {
@@ -595,6 +780,8 @@ cleanup:
     return res;
 }
 
+#endif /* NAT_TESTS */
+
 /*
  * Optimized binary GCD (T. Pornin, "Optimized Binary GCD for Modular
  * Inversion", 2020, algorithm 2), with k = 32.
@@ -610,6 +797,54 @@ cleanup:
  *
  * With fu = f mod 2^64, x*f = x*fu - x*2^64 if f < 0.
  */
+#if defined(NAT_32BIT)
+
+/** x*f + c, for f < 2^32 and c < 2^32: return the low 64 bits, *hi gets the rest (< 2^32) **/
+STATIC uint64_t mul64x32(uint64_t x, uint32_t f, uint64_t c, uint64_t *hi)
+{
+    uint64_t t0, t1;
+
+    t0 = (uint64_t)(uint32_t)x * f + c;
+    t1 = (uint64_t)(uint32_t)(x >> 32) * f + (t0 >> 32);
+    *hi = t1 >> 32;
+    return (t1 << 32) | (uint32_t)t0;
+}
+
+/*
+ * 32-bit targets: x*f + y*g with the magnitudes of f and g (they fit
+ * into 32 bits), so that each word takes two 32x32 products instead of
+ * four. The signs are applied in the same pass, without branches:
+ * -P = ~P + 1, with the +1 carried along the words.
+ */
+STATIC void lin_comb(uint64_t *out, const uint64_t *x, const uint64_t *y, int64_t f, int64_t g, size_t nw)
+{
+    uint64_t fneg = ct_mask((uint64_t)f >> 63), gneg = ct_mask((uint64_t)g >> 63);
+    uint32_t fa = (uint32_t)((((uint64_t)f) ^ fneg) - fneg);
+    uint32_t ga = (uint32_t)((((uint64_t)g) ^ gneg) - gneg);
+    uint64_t cp = 0, cq = 0, ca = fneg & 1, cb = gneg & 1, cc = 0;
+    size_t i;
+
+    for (i=0; i<=nw; i++) {
+        uint64_t p, q;
+
+        /* The words of x*|f| and y*|g| (the top word is the last carry) */
+        if (i < nw) {
+            p = mul64x32(x[i], fa, cp, &cp);
+            q = mul64x32(y[i], ga, cq, &cq);
+        } else {
+            p = cp;
+            q = cq;
+        }
+
+        /* Conditional negations, then the sum */
+        p = ct_add(p ^ fneg, 0, ca, &ca);
+        q = ct_add(q ^ gneg, 0, cb, &cb);
+        out[i] = ct_add(p, q, cc, &cc);
+    }
+}
+
+#else
+
 STATIC void lin_comb(uint64_t *out, const uint64_t *x, const uint64_t *y, int64_t f, int64_t g, size_t nw)
 {
     uint64_t fu = (uint64_t)f, gu = (uint64_t)g;
@@ -634,6 +869,8 @@ STATIC void lin_comb(uint64_t *out, const uint64_t *x, const uint64_t *y, int64_
     }
 }
 
+#endif /* NAT_32BIT */
+
 /* Arithmetic shift right of a signed number of nw+1 words, by BGCD_STEPS bits */
 STATIC void shr_signed(uint64_t *x, size_t nw)
 {
@@ -657,6 +894,27 @@ STATIC void cond_negate(uint64_t mask, uint64_t *x, size_t nw)
 }
 
 /*
+ * (hi, lo) = (hi, lo) << s, for a secret 0 <= s <= 63 (128 bits, the
+ * top bits are lost). Only shifts by constants are used, each selected
+ * with a mask: on 32-bit CPUs, a 64-bit shift by a variable amount is
+ * compiled into code that branches on the amount (found with test_nat_ct).
+ */
+STATIC void shl128_ct(uint64_t *hi, uint64_t *lo, uint64_t s)
+{
+    unsigned j;
+
+    for (j=6; j-- > 0;) {
+        const unsigned k = 1U << j;     /* 32, 16, 8, 4, 2, 1 (public) */
+        uint64_t m = ct_mask((s >> j) & 1);
+        uint64_t new_hi = (*hi << k) | (*lo >> (64 - k));
+        uint64_t new_lo = *lo << k;
+
+        *hi = ct_select(m, new_hi, *hi);
+        *lo = ct_select(m, new_lo, *lo);
+    }
+}
+
+/*
  * The 64-bit approximations of a and b: their low 31 bits, and their
  * top 33 bits, aligned on the length of the larger one.
  * If both fit into 64 bits, they are used as they are.
@@ -664,7 +922,7 @@ STATIC void cond_negate(uint64_t mask, uint64_t *x, size_t nw)
 STATIC void approximations(uint64_t *a_approx, uint64_t *b_approx, const uint64_t *a, const uint64_t *b, size_t nw)
 {
     uint64_t a_hi = a[0], a_lo = 0, b_hi = b[0], b_lo = 0, top = a[0] | b[0], big = 0;
-    uint64_t s, sm, ta, tb, low_mask;
+    uint64_t s, ta, tb, low_mask;
     size_t i;
 
     /* The two words of a and b where the top word of (a | b) starts */
@@ -682,9 +940,10 @@ STATIC void approximations(uint64_t *a_approx, uint64_t *b_approx, const uint64_
     /* Align on the top bit of (a | b): shift left by s bits (0 <= s <= 63) */
     s = 64 - ct_bitlen64(top);
     s = ct_select(ct_mask(ct_eq(s, 64)), 0, s);
-    sm = ct_mask(ct_nz(s));
-    ta = (a_hi << s) | ((a_lo >> ((64 - s) & 63)) & sm);
-    tb = (b_hi << s) | ((b_lo >> ((64 - s) & 63)) & sm);
+    shl128_ct(&a_hi, &a_lo, s);
+    shl128_ct(&b_hi, &b_lo, s);
+    ta = a_hi;
+    tb = b_hi;
 
     low_mask = ((uint64_t)1 << BGCD_STEPS) - 1;
     *a_approx = ct_select(big, (a[0] & low_mask) | (ta & ~low_mask), a[0]);
@@ -709,7 +968,11 @@ STATIC void mod_lin_comb(uint64_t *x, const uint64_t *u, const uint64_t *v, int6
     k = (t[0] * n0inv) & (((uint64_t)1 << BGCD_STEPS) - 1);
     carry = 0;
     for (i=0; i<nw; i++)
+#if defined(NAT_32BIT)
+        kn[i] = mul64x32(n[i], (uint32_t)k, carry, &carry);
+#else
         kn[i] = ct_mac(n[i], k, carry, 0, &carry);
+#endif
     kn[nw] = carry;
     words_add(t, t, kn, nw + 1);
 

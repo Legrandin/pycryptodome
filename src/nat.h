@@ -139,6 +139,17 @@ typedef struct {
     uint64_t *one;      /* R mod n (1 in Montgomery form) */
     uint64_t *unit;     /* the number 1 (not in Montgomery form) */
     uint64_t *tmp;      /* scratchpad, 2*nw+2 words */
+    /*
+     * Only for 32-bit targets (NAT_32BIT), where the Montgomery
+     * multiplication works on 32-bit words: n, -n^{-1} mod 2^32, and
+     * scratchpads, as arrays of 2*nw 32-bit words (t32: 4*nw+2 words).
+     * The Montgomery form is the same (R = 2^(64*nw) = 2^(32*2*nw)).
+     */
+    uint32_t *n32;
+    uint32_t m0_32;
+    uint32_t *t32;
+    uint32_t *x32;
+    uint32_t *y32;
 } MontCtx;
 
 int mont_ctx_new(MontCtx **out, const Nat *n);

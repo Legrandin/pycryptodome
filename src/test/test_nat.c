@@ -22,6 +22,16 @@ void approximations(uint64_t *a_approx, uint64_t *b_approx, const uint64_t *a, c
 void mod_lin_comb(uint64_t *x, const uint64_t *u, const uint64_t *v, int64_t f, int64_t g,
                   const uint64_t *n, uint64_t n0inv, uint64_t *t, uint64_t *kn, size_t nw);
 uint64_t addmul_row(uint64_t *t, const uint64_t *a, uint64_t b, size_t nw);
+void shl128_ct(uint64_t *hi, uint64_t *lo, uint64_t s);
+#if defined(NAT_32BIT)
+void to_words32(uint32_t *d, const uint64_t *s, size_t nw);
+void from_words32(uint64_t *d, const uint32_t *s, size_t nw);
+uint32_t addmul_row32(uint32_t *t, const uint32_t *a, uint32_t b, size_t n);
+void final_sub32(uint32_t *out, const uint32_t *t, uint32_t top, const uint32_t *m, size_t n);
+void mont_mul32(uint32_t *out, const uint32_t *a, const uint32_t *b, MontCtx *ctx);
+void mont_sqr32(uint32_t *out, const uint32_t *a, MontCtx *ctx);
+uint64_t mul64x32(uint64_t x, uint32_t f, uint64_t c, uint64_t *hi);
+#endif
 
 #if defined(TEST_BMI2_ADX)
 #include <stdio.h>
@@ -1151,6 +1161,138 @@ void test_addmul_row(void)
     }
 }
 
+void test_shl128(void)
+{
+    uint64_t s;
+
+    for (s=0; s<64; s++) {
+        uint64_t hi = 0x0123456789ABCDEFULL, lo = 0xFEDCBA9876543210ULL;
+        uint64_t exp_hi = s ? (hi << s) | (lo >> (64 - s)) : hi;
+        uint64_t exp_lo = lo << s;
+
+        shl128_ct(&hi, &lo, s);
+        assert(hi == exp_hi && lo == exp_lo);
+    }
+}
+
+#if defined(NAT_32BIT)
+
+void test_32bit_helpers(void)
+{
+    const uint64_t w[2] = { 0x1122334455667788ULL, 0x99AABBCCDDEEFF00ULL };
+    uint32_t h[4], t[5], a[4];
+    uint64_t back[2], hi, lo;
+    size_t n, j;
+    int it;
+
+    to_words32(h, w, 2);
+    assert(h[0] == 0x55667788U && h[1] == 0x11223344U);
+    assert(h[2] == 0xDDEEFF00U && h[3] == 0x99AABBCCU);
+    from_words32(back, h, 2);
+    assert(back[0] == w[0] && back[1] == w[1]);
+
+    /* x*f + c */
+    lo = mul64x32(MAX64, 0xFFFFFFFFU, 0xFFFFFFFFU, &hi);
+    /* (2^64-1)*(2^32-1) + 2^32-1 = 2^96 - 2^64 */
+    assert(lo == 0 && hi == 0xFFFFFFFFU);
+    lo = mul64x32(0x100000000ULL, 3, 5, &hi);
+    assert(lo == 0x300000005ULL && hi == 0);
+
+    /* addmul_row32 against 64-bit arithmetic */
+    for (n=1; n<=4; n++) {
+        for (it=0; it<1000; it++) {
+            uint64_t ref, c = 0;
+            uint32_t b = (uint32_t)rnd(), hrow;
+            uint32_t tt[4];
+
+            for (j=0; j<n; j++) {
+                tt[j] = (it % 4 == 0) ? 0xFFFFFFFFU : (uint32_t)rnd();
+                a[j] = (it % 3 == 0) ? 0xFFFFFFFFU : (uint32_t)rnd();
+                t[j] = tt[j];
+            }
+            hrow = addmul_row32(t, a, b, n);
+            for (j=0; j<n; j++) {
+                ref = (uint64_t)a[j]*b + tt[j] + c;
+                assert(t[j] == (uint32_t)ref);
+                c = ref >> 32;
+            }
+            assert(hrow == (uint32_t)c);
+        }
+    }
+
+    /* final_sub32: (t[n..2n-1], top) - m if not smaller than m */
+    {
+        uint32_t m[2] = { 10, 1 }, out[2];
+        uint32_t tv[4] = { 0, 0, 9, 1 };            /* value 2^32 + 9 < m */
+        final_sub32(out, tv, 0, m, 2);
+        assert(out[0] == 9 && out[1] == 1);
+        tv[2] = 12;                                 /* 2^32 + 12 >= m */
+        final_sub32(out, tv, 0, m, 2);
+        assert(out[0] == 2 && out[1] == 0);
+        tv[2] = 1; tv[3] = 0;                       /* 2^64 + 1, with top */
+        final_sub32(out, tv, 1, m, 2);
+        assert(out[0] == (uint32_t)(1 - 10) && out[1] == 0xFFFFFFFEU);
+    }
+}
+
+void test_mont32(void)
+{
+    /* mont_mul32 and mont_sqr32 against mont_mul (64-bit words, the
+     * same algorithm with a different word size), through mulmod_words */
+    int it;
+
+    for (it=0; it<500; it++) {
+        size_t nw = 1 + rnd() % 8, i;
+        uint64_t x[8], y[8], r64[8], ref[8];
+        uint32_t x32[16], y32[16], r32[16];
+        Nat *n, *prod, xn, rn;
+        MontCtx *ctx;
+
+        nat_new(&n, nw);
+        nat_new(&prod, 2*nw);
+        for (i=0; i<nw; i++)
+            n->w[i] = rnd();
+        n->w[0] |= 1;
+        assert(mont_ctx_new(&ctx, n) == 0);
+
+        /* x, y < n */
+        for (i=0; i<nw; i++) {
+            x[i] = rnd();
+            y[i] = rnd();
+        }
+        xn.nw = rn.nw = nw;
+        xn.w = x;
+        rn.w = r64;
+        nat_divmod(NULL, &rn, &xn, n);
+        memcpy(x, r64, nw*sizeof(uint64_t));
+        xn.w = y;
+        nat_divmod(NULL, &rn, &xn, n);
+        memcpy(y, r64, nw*sizeof(uint64_t));
+
+        /* x*y/R mod n = mont_from(x*y mod n), computed without Montgomery */
+        mulmod_words(ref, x, y, n, prod);
+        mont_from(ref, ref, ctx);
+
+        to_words32(x32, x, nw);
+        to_words32(y32, y, nw);
+        mont_mul32(r32, x32, y32, ctx);
+        from_words32(r64, r32, nw);
+        assert(memcmp(r64, ref, nw*sizeof(uint64_t)) == 0);
+
+        mulmod_words(ref, x, x, n, prod);
+        mont_from(ref, ref, ctx);
+        mont_sqr32(r32, x32, ctx);
+        from_words32(r64, r32, nw);
+        assert(memcmp(r64, ref, nw*sizeof(uint64_t)) == 0);
+
+        mont_ctx_free(ctx);
+        nat_free(n);
+        nat_free(prod);
+    }
+}
+
+#endif /* NAT_32BIT */
+
 int main(void)
 {
 #if defined(TEST_BMI2_ADX)
@@ -1190,5 +1332,10 @@ int main(void)
     test_inv_odd_vs_simple();
     test_bgcd_helpers();
     test_addmul_row();
+    test_shl128();
+#if defined(NAT_32BIT)
+    test_32bit_helpers();
+    test_mont32();
+#endif
     return 0;
 }

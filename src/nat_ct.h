@@ -25,6 +25,27 @@
 #endif
 
 /*
+ * On 32-bit targets, the CPU multiplies 32x32 -> 64 bits, and 64-bit
+ * additions take two instructions. Some functions have versions written
+ * in 32-bit halves for them (NAT_32BIT).
+ */
+#if !defined(HAVE_UINT128) && defined(SIZE_MAX) && (SIZE_MAX == 0xFFFFFFFFU)
+#define NAT_32BIT
+#endif
+
+/*
+ * Without a 128-bit type, ct_add(), ct_sub() and ct_mac() are written in
+ * 32-bit halves (NAT_HALVES). The only exception is MSVC on 64-bit CPUs,
+ * where DP_MULT() (multiply.h) is the _umul128 or __umulh intrinsic.
+ * The generic DP_MULT() fallback is not used: it computes a carry with a
+ * comparison, which gcc turns into a conditional jump on 32-bit x86
+ * (found with test_nat_ct).
+ */
+#if !defined(HAVE_UINT128) && !(defined(_MSC_VER) && (defined(_M_X64) || defined(__x86_64__) || defined(_M_ARM64)))
+#define NAT_HALVES
+#endif
+
+/*
  * Hide the value of x from the optimizer, so that it cannot turn
  * a computation with masks back into a branch.
  */
@@ -129,6 +150,61 @@ static inline uint64_t ct_mac(uint64_t a, uint64_t b, uint64_t c, uint64_t d, ui
     return (uint64_t)t;
 }
 
+#elif defined(NAT_HALVES)
+
+/*
+ * Without a 128-bit type (in particular, on 32-bit targets): the
+ * operations are split into 32-bit halves, with the carries in the upper
+ * half of 64-bit sums. On 32-bit CPUs, the compiler turns them into
+ * add/adc (sub/sbb) and 32x32 -> 64 multiplications.
+ */
+
+/** a + b + carry_in, with the carry out (0 or 1) in *carry_out **/
+static inline uint64_t ct_add(uint64_t a, uint64_t b, uint64_t carry_in, uint64_t *carry_out)
+{
+    uint64_t lo, hi;
+
+    lo = (uint64_t)(uint32_t)a + (uint32_t)b + carry_in;
+    hi = (uint64_t)(uint32_t)(a >> 32) + (uint32_t)(b >> 32) + (lo >> 32);
+    *carry_out = hi >> 32;
+    return (hi << 32) | (uint32_t)lo;
+}
+
+/** a - b - borrow_in, with the borrow out (0 or 1) in *borrow_out **/
+static inline uint64_t ct_sub(uint64_t a, uint64_t b, uint64_t borrow_in, uint64_t *borrow_out)
+{
+    uint64_t lo, hi;
+
+    /* A negative difference wraps around, which sets the top bit */
+    lo = (uint64_t)(uint32_t)a - (uint32_t)b - borrow_in;
+    hi = (uint64_t)(uint32_t)(a >> 32) - (uint32_t)(b >> 32) - (lo >> 63);
+    *borrow_out = hi >> 63;
+    return (hi << 32) | (uint32_t)lo;
+}
+
+/**
+ * Compute a*b + c + d, which always fits into 128 bits.
+ * Return the lower 64 bits, and store the higher 64 bits into *hi.
+ *
+ * Column by column, with four 32x32 -> 64 products. c and d are added
+ * into the products: (2^32-1)^2 + 2*(2^32-1) = 2^64-1, so no partial
+ * sum overflows.
+ */
+static inline uint64_t ct_mac(uint64_t a, uint64_t b, uint64_t c, uint64_t d, uint64_t *hi)
+{
+    uint32_t a0 = (uint32_t)a, a1 = (uint32_t)(a >> 32);
+    uint32_t b0 = (uint32_t)b, b1 = (uint32_t)(b >> 32);
+    uint64_t col0, col1a, col1b, col2;
+
+    col0 = (uint64_t)a0*b0 + (uint32_t)c + (uint32_t)d;
+    col1a = (uint64_t)a0*b1 + (col0 >> 32) + (uint32_t)(c >> 32);
+    col1b = (uint64_t)a1*b0 + (uint32_t)col1a + (uint32_t)(d >> 32);
+    col2 = (uint64_t)a1*b1 + (col1a >> 32) + (col1b >> 32);
+
+    *hi = col2;
+    return (col1b << 32) | (uint32_t)col0;
+}
+
 #else
 
 /** a + b + carry_in, with the carry out (0 or 1) in *carry_out **/
@@ -174,7 +250,7 @@ static inline uint64_t ct_mac(uint64_t a, uint64_t b, uint64_t c, uint64_t d, ui
     return lo;
 }
 
-#endif /* HAVE_UINT128 */
+#endif /* HAVE_UINT128, NAT_HALVES */
 
 /** Number of significant bits in x (0 for x == 0) **/
 static inline uint64_t ct_bitlen64(uint64_t x)
