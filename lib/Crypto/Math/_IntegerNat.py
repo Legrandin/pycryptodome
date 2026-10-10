@@ -36,6 +36,7 @@ from Crypto.Util._raw_api import (
     create_string_buffer,
     get_raw_buffer,
     load_pycryptodome_raw_lib,
+    null_pointer,
 )
 
 from ._IntegerBase import IntegerBase
@@ -348,7 +349,7 @@ class IntegerNat(IntegerBase):
         if divisor._is_zero():
             raise ZeroDivisionError("Division by zero")
         result = IntegerNat._make(self._bits)
-        _check(_lib.nat_divmod(result._p.get(), None, self._p.get(), divisor._p.get()), "nat_divmod")
+        _check(_lib.nat_divmod(result._p.get(), null_pointer, self._p.get(), divisor._p.get()), "nat_divmod")
         return result
 
     def __mod__(self, divisor: IntLike) -> IntegerNat:
@@ -358,7 +359,7 @@ class IntegerNat(IntegerBase):
         if divisor._is_zero():
             raise ZeroDivisionError("Modulus cannot be zero")
         result = IntegerNat._make(divisor._bits)
-        _check(_lib.nat_divmod(None, result._p.get(), self._p.get(), divisor._p.get()), "nat_divmod")
+        _check(_lib.nat_divmod(null_pointer, result._p.get(), self._p.get(), divisor._p.get()), "nat_divmod")
         return result
 
     def _check_modulus(self, modulus: Any) -> IntegerNat:
