@@ -91,6 +91,9 @@ New features
   result; for X448, the Montgomery ladder with randomized coordinates.
   Ed448 key generation and signing are about 10x faster (precomputed tables),
   verification about 2.5x, and X448 about 1.3x.
+* The field arithmetic of the elliptic curves has unrolled code for each curve size:
+  scalar multiplications are 1.4x-1.7x faster for P-192, P-224 and P-256, and
+  1.1x-1.5x for the larger curves (more with clang than with gcc).
 * New function ``Crypto.Hash.KangarooTwelve.digest()``, to hash a whole message
   with a single call. For messages up to 8 KiB, it is 1.3x to 3x faster than
   ``new()`` followed by ``read()``.

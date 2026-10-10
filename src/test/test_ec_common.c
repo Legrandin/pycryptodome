@@ -302,6 +302,113 @@ static void test_batch_to_affine(const MontCtx *field, const Nat *p_minus_2)
     ec_ws_free(&ws);
 }
 
+/*
+ * The field operations for all the sizes: the fixed-size code (3, 4, 6, 7
+ * and 9 words on 64-bit targets) and the generic one (the other sizes),
+ * against nat_mulmod() and nat_submod(), with random odd moduli. Also
+ * with the output aliasing an input.
+ */
+static void test_field_sizes(void)
+{
+    size_t nw;
+
+    for (nw=1; nw<=10; nw++) {
+        MontCtx *field;
+        Nat *n, *na, *nb, *expected;
+        uint64_t a[10], b[10], am[10], bm[10], r[10];
+        EcWs ws;
+        unsigned t, i;
+
+        assert(nat_new(&n, nw) == 0);
+        assert(nat_new(&na, nw) == 0);
+        assert(nat_new(&nb, nw) == 0);
+        assert(nat_new(&expected, nw) == 0);
+        for (i=0; i<nw; i++)
+            n->w[i] = rnd();
+        n->w[0] |= 1;
+        n->w[nw-1] |= (uint64_t)1 << 63;
+        if (nw % 2)
+            n->w[nw-1] = ~(uint64_t)0;              /* the top word at its maximum */
+        assert(mont_ctx_new(&field, n) == 0);
+        assert(ec_ws_new(&ws, field) == 0);
+
+        for (t=0; t<100; t++) {
+            for (i=0; i<nw; i++) {
+                a[i] = rnd();
+                b[i] = rnd();
+            }
+            a[nw-1] %= n->w[nw-1];
+            b[nw-1] %= n->w[nw-1];
+            if (t == 0)
+                memset(a, 0, nw*8);
+            if (t == 1) {
+                memcpy(a, n->w, nw*8);              /* n - 1 */
+                memcpy(b, n->w, nw*8);
+                a[0]--;
+                b[0]--;
+            }
+            memcpy(na->w, a, nw*8);
+            memcpy(nb->w, b, nw*8);
+            mont_to(am, a, field);
+            mont_to(bm, b, field);
+
+            fe_mul(&ws, r, am, bm);
+            mont_from(r, r, field);
+            assert(nat_mulmod(expected, na, nb, n) == 0);
+            assert(memcmp(r, expected->w, nw*8) == 0);
+
+            /* In place, on either input */
+            memcpy(r, am, nw*8);
+            fe_mul(&ws, r, r, bm);
+            fe_mul(&ws, r, bm, r);
+            assert(nat_mulmod(expected, expected, nb, n) == 0);
+            mont_from(r, r, field);
+            assert(memcmp(r, expected->w, nw*8) == 0);
+
+            fe_sqr(&ws, r, am);
+            mont_from(r, r, field);
+            assert(nat_mulmod(expected, na, na, n) == 0);
+            assert(memcmp(r, expected->w, nw*8) == 0);
+            memcpy(r, am, nw*8);
+            fe_sqr(&ws, r, r);
+            mont_from(r, r, field);
+            assert(memcmp(r, expected->w, nw*8) == 0);
+
+            /* a + b = a - (n - b) mod n */
+            fe_add(&ws, r, a, b);
+            assert(nat_sub(expected, n, nb) == 0);
+            assert(nat_submod(expected, na, expected, n) == 0);
+            if (t == 0 || words_is_zero(b, nw) == 0)
+                assert(memcmp(r, expected->w, nw*8) == 0);
+            {
+                uint64_t nb_neg[10], r2[10];
+
+                fe_neg(&ws, nb_neg, b);
+                fe_sub(&ws, r2, a, nb_neg);
+                assert(memcmp(r, r2, nw*8) == 0);
+            }
+            fe_sub(&ws, r, a, b);
+            assert(nat_submod(expected, na, nb, n) == 0);
+            assert(memcmp(r, expected->w, nw*8) == 0);
+            memcpy(r, a, nw*8);
+            fe_add(&ws, r, r, b);
+            fe_sub(&ws, r, r, b);
+            assert(memcmp(r, a, nw*8) == 0);
+            fe_neg(&ws, r, a);
+            fe_add(&ws, r, r, a);
+            for (i=0; i<nw; i++)
+                assert(r[i] == 0);
+        }
+
+        ec_ws_free(&ws);
+        mont_ctx_free(field);
+        nat_free(n);
+        nat_free(na);
+        nat_free(nb);
+        nat_free(expected);
+    }
+}
+
 int main(void)
 {
     MontCtx *field;
@@ -316,6 +423,7 @@ int main(void)
 
     test_ws(field);
     test_field(field, n, p_minus_2);
+    test_field_sizes();
     test_conversions(field);
     test_random(field);
     test_sizes();

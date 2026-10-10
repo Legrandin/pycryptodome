@@ -15,6 +15,7 @@
 #include "nat.h"
 #include "nat_ct.h"
 #include "ec_common.h"
+#include "ec_field.h"
 
 /* ---------------------------------------------------------------- */
 /* Workspace                                                        */
@@ -48,6 +49,103 @@ void ec_ws_free(EcWs *ws)
 /* ---------------------------------------------------------------- */
 /* Field elements                                                   */
 /* ---------------------------------------------------------------- */
+
+#if !defined(NAT_32BIT)
+
+/*
+ * The size is public, and so is the switch. With BMI2 and ADX, P-521
+ * (9 words) is faster with the MULX/ADX kernel of mont_mul().
+ */
+void fe_mul(EcWs *ws, uint64_t *out, const uint64_t *a, const uint64_t *b)
+{
+    const uint64_t *n = ws->m->n;
+    uint64_t m0 = ws->m->m0;
+
+    switch (ws->nw) {
+    case 3: fe_mont_mul_3(out, a, b, n, m0); break;
+    case 4: fe_mont_mul_4(out, a, b, n, m0); break;
+    case 6: fe_mont_mul_6(out, a, b, n, m0); break;
+    case 7: fe_mont_mul_7(out, a, b, n, m0); break;
+#if !defined(NAT_BMI2_ADX)
+    case 9: fe_mont_mul_9(out, a, b, n, m0); break;
+#endif
+    default: mont_mul(out, a, b, ws->m); break;
+    }
+}
+
+void fe_sqr(EcWs *ws, uint64_t *out, const uint64_t *a)
+{
+    const uint64_t *n = ws->m->n;
+    uint64_t m0 = ws->m->m0;
+
+    switch (ws->nw) {
+    case 3: fe_mont_sqr_3(out, a, n, m0); break;
+    case 4: fe_mont_sqr_4(out, a, n, m0); break;
+    case 6: fe_mont_sqr_6(out, a, n, m0); break;
+    case 7: fe_mont_sqr_7(out, a, n, m0); break;
+#if !defined(NAT_BMI2_ADX)
+    case 9: fe_mont_sqr_9(out, a, n, m0); break;
+#endif
+    default: mont_sqr(out, a, ws->m); break;
+    }
+}
+
+void fe_add(EcWs *ws, uint64_t *out, const uint64_t *a, const uint64_t *b)
+{
+    const uint64_t *n = ws->m->n;
+
+    switch (ws->nw) {
+    case 3: fe_mod_add_3(out, a, b, n); break;
+    case 4: fe_mod_add_4(out, a, b, n); break;
+    case 6: fe_mod_add_6(out, a, b, n); break;
+    case 7: fe_mod_add_7(out, a, b, n); break;
+    case 9: fe_mod_add_9(out, a, b, n); break;
+    default: mod_add(out, a, b, n, ws->nw); break;
+    }
+}
+
+void fe_sub(EcWs *ws, uint64_t *out, const uint64_t *a, const uint64_t *b)
+{
+    const uint64_t *n = ws->m->n;
+
+    switch (ws->nw) {
+    case 3: fe_mod_sub_3(out, a, b, n); break;
+    case 4: fe_mod_sub_4(out, a, b, n); break;
+    case 6: fe_mod_sub_6(out, a, b, n); break;
+    case 7: fe_mod_sub_7(out, a, b, n); break;
+    case 9: fe_mod_sub_9(out, a, b, n); break;
+    default: mod_sub(out, a, b, n, ws->nw); break;
+    }
+}
+
+#else
+
+void fe_mul(EcWs *ws, uint64_t *out, const uint64_t *a, const uint64_t *b)
+{
+    mont_mul(out, a, b, ws->m);
+}
+
+void fe_sqr(EcWs *ws, uint64_t *out, const uint64_t *a)
+{
+    mont_sqr(out, a, ws->m);
+}
+
+void fe_add(EcWs *ws, uint64_t *out, const uint64_t *a, const uint64_t *b)
+{
+    mod_add(out, a, b, ws->m->n, ws->nw);
+}
+
+void fe_sub(EcWs *ws, uint64_t *out, const uint64_t *a, const uint64_t *b)
+{
+    mod_sub(out, a, b, ws->m->n, ws->nw);
+}
+
+#endif /* NAT_32BIT */
+
+void fe_neg(EcWs *ws, uint64_t *out, const uint64_t *a)
+{
+    fe_sub(ws, out, ws->zero, a);
+}
 
 int fe_inv(EcWs *ws, uint64_t *out, const uint64_t *a, const Nat *p_minus_2)
 {
