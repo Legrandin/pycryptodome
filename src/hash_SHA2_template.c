@@ -15,8 +15,9 @@ FAKE_INIT(MODULE_NAME)
  * SHA-2 as defined in FIPS 180-4 http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
  */
 
-#define CH(x,y,z)       (((x) & (y)) ^ (~(x) & (z)))
-#define MAJ(x,y,z)      (((x) & (y)) ^ ((x) & (z)) ^ ((y) & (z)))
+/** Equivalent to the FIPS 180-4 definitions, with fewer operations **/
+#define CH(x,y,z)       ((z) ^ ((x) & ((y) ^ (z))))
+#define MAJ(x,y,z)      (((x) & (y)) | ((z) & ((x) | (y))))
 
 #define ROTR32(n, x)    (((x)>>(n)) | ((x)<<(32-(n))))
 #define ROTR64(n, x)    (((x)>>(n)) | ((x)<<(64-(n))))
@@ -52,10 +53,10 @@ static const sha2_word_t K[SCHEDULE_SIZE] = {
     0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
 };
 
-#define SCHEDULE(i) (sigma_1_256(W[i-2]) + W[i-7] + sigma_0_256(W[i-15]) + W[i-16])
+#define SCHEDULE(t) (W[(t)&15] += sigma_1_256(W[((t)-2)&15]) + W[((t)-7)&15] + sigma_0_256(W[((t)-15)&15]))
 
 #define CYCLE(a,b,c,d,e,f,g,h,t) \
-    h += SIGMA_1_256(e) + CH(e,f,g) + K[t]  + W[t]; \
+    h += SIGMA_1_256(e) + CH(e,f,g) + K[t]  + WT(t); \
     d += h; \
     h += SIGMA_0_256(a) + MAJ(a,b,c);
 
@@ -99,10 +100,10 @@ static const sha2_word_t K[SCHEDULE_SIZE] = {
     0x4cc5d4becb3e42b6ULL, 0x597f299cfc657e2aULL, 0x5fcb6fab3ad6faecULL, 0x6c44198c4a475817ULL
 };
 
-#define SCHEDULE(i) (sigma_1_512(W[i-2]) + W[i-7] + sigma_0_512(W[i-15]) + W[i-16])
+#define SCHEDULE(t) (W[(t)&15] += sigma_1_512(W[((t)-2)&15]) + W[((t)-7)&15] + sigma_0_512(W[((t)-15)&15]))
 
 #define CYCLE(a,b,c,d,e,f,g,h,t) \
-    h += SIGMA_1_512(e) + CH(e,f,g) + K[t]  + W[t]; \
+    h += SIGMA_1_512(e) + CH(e,f,g) + K[t]  + WT(t); \
     d += h; \
     h += SIGMA_0_512(a) + MAJ(a,b,c);
 
@@ -112,6 +113,12 @@ static const sha2_word_t K[SCHEDULE_SIZE] = {
 #else
 #error Invalid WORD_SIZE
 #endif
+
+/**
+ * Message word for round t, with the schedule kept in a rolling window of 16 words.
+ * t is always a constant, so the test is resolved at compile time.
+ **/
+#define WT(t)   ((t) < 16 ? W[(t)&15] : SCHEDULE(t))
 
 static inline void put_be(sha2_word_t number, uint8_t *p)
 {
@@ -153,15 +160,9 @@ static int add_bits(hash_state *hs, sha2_word_t bits)
 static void sha_compress_words(const sha2_word_t h_in[8], sha2_word_t h_out[8], const sha2_word_t M[16])
 {
     sha2_word_t a, b, c, d, e, f, g, h;
-    sha2_word_t W[SCHEDULE_SIZE];
-    int i;
+    sha2_word_t W[16];
 
-    for (i=0; i<16; i++) {
-        W[i] = M[i];
-    }
-    for (;i<SCHEDULE_SIZE; i++) {
-        W[i] = SCHEDULE(i);
-    }
+    memcpy(W, M, sizeof W);
 
     a = h_in[0];
     b = h_in[1];
