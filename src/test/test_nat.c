@@ -35,6 +35,7 @@ uint64_t mul64x32(uint64_t x, uint32_t f, uint64_t c, uint64_t *hi);
 
 #if defined(TEST_BMI2_ADX)
 #include <stdio.h>
+#include <stdlib.h>
 #include <cpuid.h>
 
 /* The build for BMI2 and ADX can only be tested on a CPU that has both */
@@ -1297,6 +1298,13 @@ int main(void)
 {
 #if defined(TEST_BMI2_ADX)
     if (!have_bmi2_adx()) {
+        /* In CI on x86-64, the test must run (NAT_REQUIRE_BMI2_ADX is set) */
+        const char *required = getenv("NAT_REQUIRE_BMI2_ADX");
+
+        if (required && *required) {
+            printf("Failed: the CPU does not support BMI2 and ADX, but NAT_REQUIRE_BMI2_ADX is set\n");
+            return 1;
+        }
         printf("Skipped: the CPU does not support BMI2 and ADX\n");
         return 0;
     }
