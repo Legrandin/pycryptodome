@@ -99,6 +99,25 @@ However, you can also maximize the salt length with::
    max_salt_bytes = key.size_in_bytes() - h.digest_size - 2
    signature = pss.new(key, salt_bytes=max_salt_bytes).sign(h)
 
+Why does a security scanner report private keys in PyCryptodome?
+++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+The self-tests in ``Crypto.SelfTest`` contain keys and certificates
+used as test data, for instance in ``Crypto/SelfTest/PublicKey/test_import_RSA.py``.
+Some scanners for container images, disk images or build artifacts
+report them as leaked private keys or as expired certificates.
+
+These keys are public test vectors and protect nothing:
+they are not used by the library itself, only by its tests.
+
+If you cannot whitelist them, build PyCryptodome from source
+with the environment variable ``PYCRYPTODOME_NO_SELFTEST`` set,
+so that ``Crypto.SelfTest`` is left out of the package::
+
+        PYCRYPTODOME_NO_SELFTEST=1 pip install pycryptodome --no-binary pycryptodome
+
+See :ref:`no_selftest` for details.
+
 Why do I get the error ``No module named Crypto`` on Windows?
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 

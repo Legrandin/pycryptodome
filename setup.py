@@ -24,7 +24,7 @@ import os
 import sys
 import sysconfig
 
-from setuptools import Extension, setup
+from setuptools import Extension, find_packages, setup
 from setuptools.command.build_ext import build_ext
 
 sys.path.append(os.getcwd())
@@ -211,7 +211,16 @@ setup_options = {}
 if not sysconfig.get_config_var("Py_GIL_DISABLED"):
     setup_options["options"] = {"bdist_wheel": {"py_limited_api": "cp39"}}
 
+# Set PYCRYPTODOME_NO_SELFTEST to leave the self-tests (Crypto.SelfTest)
+# out of the package: they embed test keys and certificates,
+# which security scanners may flag
+exclude_packages = []
+if os.environ.get("PYCRYPTODOME_NO_SELFTEST"):
+    exclude_packages = ["Crypto.SelfTest", "Crypto.SelfTest.*"]
+
 setup(
+    packages=find_packages(where="lib", exclude=exclude_packages),
+    package_dir={"": "lib"},
     cmdclass={"build_ext": PCTBuildExt},
     ext_modules=ext_modules,
     **setup_options,

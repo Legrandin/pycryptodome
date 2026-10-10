@@ -81,6 +81,9 @@ New features
   HMAC based on SHA-1, SHA-224, SHA-256, SHA-384 and SHA-512.
 * On x86 CPUs with the SHA extensions (SHA-NI), SHA-224 and SHA-256 use them:
   hashing long messages is about 4x faster, and ``PBKDF2()`` with HMAC-SHA256 about 3.5x.
+* Set the environment variable ``PYCRYPTODOME_NO_SELFTEST`` when building
+  from source to leave out the self-tests (``Crypto.SelfTest``), whose test keys
+  and certificates may be reported by security scanners.
 
 3.24.0 (4 October 2026)
 ++++++++++++++++++++++++++

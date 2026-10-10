@@ -82,6 +82,30 @@ components freely made available by Microsoft.
         > pip install pytest pycryptodome-test-vectors
         > python -m Crypto.SelfTest
 
+.. _no_selftest:
+
+Installing without the self-tests
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The package includes its self-tests (``Crypto.SelfTest``).
+To build it without them, set the environment variable
+``PYCRYPTODOME_NO_SELFTEST`` when compiling from source::
+
+        $ PYCRYPTODOME_NO_SELFTEST=1 pip install pycryptodome --no-binary pycryptodome
+
+or, to build a wheel from a source checkout::
+
+        $ PYCRYPTODOME_NO_SELFTEST=1 python -m build
+
+The rest of the library is unchanged,
+but ``python -m Crypto.SelfTest`` is no longer available.
+
+.. note::
+    If you build with ``pip install .`` or ``pip wheel .`` instead,
+    first remove any ``build/`` directory left by previous builds:
+    setuptools copies all files in it into the wheel, including the old self-tests.
+    ``python -m build`` is not affected, as it builds the wheel from a fresh sdist.
+
 Documentation
 ~~~~~~~~~~~~~
 

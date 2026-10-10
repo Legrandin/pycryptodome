@@ -42,9 +42,6 @@ Changelog = "https://www.pycryptodome.org/src/changelog"
 [tool.setuptools.dynamic]
 version = {attr = "Crypto.__version__"}
 
-[tool.setuptools.packages.find]
-where = ["lib"]
-
 [tool.setuptools.package-data]
 Crypto = ["py.typed"]
 
