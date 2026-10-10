@@ -361,6 +361,9 @@ class EccPoint:
     def __iadd__(self, point: EccPoint) -> EccPoint:
         """Add a second point to this one"""
 
+        # Not all the C modules check it (Ed25519)
+        if self._curve is not point._curve:
+            raise ValueError("EC points are not on the same curve")
         add_func = self._curve.rawlib.add
         result = add_func(self._point.get(), point._point.get())
         if result:

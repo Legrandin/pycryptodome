@@ -99,6 +99,15 @@ class TestEccPoint:
         with pytest.raises(ValueError, match="does not belong to the curve"):
             ECC.import_key(prefix + (gx + p).to_bytes(nbytes, "big"), curve_name="P-521")
 
+    @pytest.mark.parametrize("curve_name", ["p192", "p224", "p256", "p384", "p521", "ed25519", "ed448"])
+    def test_add_other_curve(self, curve_name):
+        G = _curves[curve_name].G
+        other = _curves["p256" if curve_name != "p256" else "ed25519"].G
+        with pytest.raises(ValueError, match="not on the same curve"):
+            G + other
+        with pytest.raises(ValueError, match="not on the same curve"):
+            G.copy().__iadd__(other)
+
     def test_mix(self):
         p1 = ECC.generate(curve="P-256").pointQ
         p2 = ECC.generate(curve="P-384").pointQ
