@@ -5,6 +5,7 @@
 int CTR_start_operation(BlockBase *cipher, uint8_t counter_block0[], size_t counter_block0_len,
                         size_t prefix_len, unsigned counter_len, unsigned little_endian, void **pResult);
 int CTR_encrypt(void *ctrState, const uint8_t *in, uint8_t *out, size_t data_len);
+int CTR_decrypt(void *ctrState, const uint8_t *in, uint8_t *out, size_t data_len);
 int CTR_encrypt_at(const void *ctrState, const uint8_t *in, uint8_t *out, size_t offset, size_t data_len);
 int CTR_skip(void *ctrState, size_t data_len);
 int CTR_check(const void *ctrState, size_t data_len);
@@ -101,6 +102,13 @@ static void test_one(size_t L, size_t prefix, size_t clen, unsigned le)
         assert(0 == memcmp(out, ks, total));
         CTR_stop_operation(state);
     }
+
+    /** CTR_decrypt is the same as CTR_encrypt **/
+    state = start(L, block0, prefix, clen, le);
+    assert(0 == CTR_decrypt(state, ks, out, total));
+    for (i=0; i<total; i++)
+        assert(out[i] == 0);
+    CTR_stop_operation(state);
 
     /** CTR_encrypt_at on three ranges, then CTR_skip and CTR_encrypt again **/
     for (first=1; first<total/2; first+=total/9) {

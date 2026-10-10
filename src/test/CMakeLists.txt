@@ -97,12 +97,6 @@ endif()
 
 # -------------------------------------------------------------------------
 
-# montgomery
-add_library(mont OBJECT ../mont.c)
-
-add_executable(test_mont test_mont.c $<TARGET_OBJECTS:mont>)
-add_test(NAME test_mont COMMAND test_mont)
-
 # constant-time natural numbers
 add_library(nat OBJECT ../nat.c ../nat_div.c ../nat_mod.c ../nat_gcd.c ../nat_prime.c)
 
@@ -145,7 +139,7 @@ set(EC_SOURCES ../ec_common.c ../ec_nat.c ../ed448.c ../curve448.c)
 set(NAT_SOURCES ../nat.c ../nat_div.c ../nat_mod.c ../nat_gcd.c ../nat_prime.c)
 add_library(ec OBJECT ${EC_SOURCES})
 
-foreach(ec_test test_ec_nat test_ed448 test_curve448)
+foreach(ec_test test_ec_common test_ec_nat test_ed448 test_curve448)
     add_executable(${ec_test} ${ec_test}.c $<TARGET_OBJECTS:ec> $<TARGET_OBJECTS:nat>)
     add_test(NAME ${ec_test} COMMAND ${ec_test})
 
@@ -224,43 +218,6 @@ if (VALGRIND AND HAVE_VALGRIND_MEMCHECK_H)
     endif()
 endif()
 
-add_custom_command(
-    OUTPUT test_addmul.c
-    COMMAND ${PYTHON} ${CMAKE_SOURCE_DIR}/make_tests_addmul.py > test_addmul.c
-    DEPENDS make_tests_addmul.py
-)
-add_executable(test_addmul test_addmul.c $<TARGET_OBJECTS:mont>)
-add_test(NAME test_addmul COMMAND test_addmul)
-
-add_custom_command(
-    OUTPUT test_addmul_128.c
-    COMMAND ${PYTHON} ${CMAKE_SOURCE_DIR}/make_tests_addmul128.py > test_addmul_128.c
-    DEPENDS make_tests_addmul128.py
-)
-add_executable(test_addmul128 ${CMAKE_BINARY_DIR}/test_addmul_128.c)
-if (CMAKE_SIZEOF_VOID_P EQUAL 8)
-    target_sources(test_addmul128 PUBLIC ../multiply_64.c)
-else()
-    target_sources(test_addmul128 PUBLIC ../multiply_32.c)
-endif()
-add_test(NAME test_addmul128 COMMAND test_addmul128)
-
-add_custom_command(
-    OUTPUT test_product.c
-    COMMAND ${PYTHON} ${CMAKE_SOURCE_DIR}/make_tests_product.py > test_product.c
-    DEPENDS make_tests_product.py
-)
-add_executable(test_product test_product.c $<TARGET_OBJECTS:mont>)
-add_test(NAME test_product COMMAND test_product)
-
-add_custom_command(
-    OUTPUT test_mont_mult.c
-    COMMAND ${PYTHON} ${CMAKE_SOURCE_DIR}/make_tests_mont_mult.py > test_mont_mult.c
-    DEPENDS make_tests_mont_mult.py
-)
-add_executable(test_mont_mult test_mont_mult.c $<TARGET_OBJECTS:mont>)
-add_test(NAME test_mont_mult COMMAND test_mont_mult)
-
 # endianess
 add_executable(test_endianess test_endianess.c)
 add_test(NAME endianess COMMAND test_endianess)
@@ -301,8 +258,8 @@ add_executable(test_raw_ctr test_raw_ctr.c ../raw_ctr.c)
 add_test(NAME test_raw_ctr COMMAND test_raw_ctr)
 
 # curve25519
-add_library(mod25519 OBJECT ../mod25519.c ../multiply_32.c)
-add_library(curve25519 OBJECT ../curve25519.c ../multiply_32.c)
+add_library(mod25519 OBJECT ../mod25519.c)
+add_library(curve25519 OBJECT ../curve25519.c)
 
 add_executable(test_mod25519 test_mod25519.c $<TARGET_OBJECTS:mod25519>)
 add_test(NAME test_mod25519 COMMAND test_mod25519)
@@ -327,7 +284,7 @@ add_executable(tests_ladder_step tests_ladder_step.c $<TARGET_OBJECTS:curve25519
 add_test(NAME tests_ladder_step COMMAND tests_ladder_step)
 
 # ed25519
-add_executable(test_ed25519 test_ed25519.c ../ed25519.c ../multiply_32.c)
+add_executable(test_ed25519 test_ed25519.c ../ed25519.c)
 add_test(NAME test_ed25519 COMMAND test_ed25519)
 
 # aesni

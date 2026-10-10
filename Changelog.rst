@@ -40,8 +40,6 @@ Resolved issues
 * The trial division by small primes in ``Crypto.Math.Primality.test_probable_prime()``
   never ran (only the Miller-Rabin and Lucas tests did), which made the generation
   of RSA, DSA and ElGamal keys slower.
-* With ``IntegerCustom`` (the fallback when GMP was not available),
-  ``pow(x, e, 1)`` raised ``ValueError`` instead of returning 0.
 * ElGamal key objects could not be compared for equality.
 * Comparing an RSA, DSA or ElGamal key with an object of a different type now
   returns ``False`` instead of raising ``AttributeError``.
@@ -56,8 +54,8 @@ Resolved issues
 * Salsa20 never returned when encrypting or decrypting 4 GiB or more in a single call.
 * The package metadata declares the license as an SPDX expression
   (``BSD-2-Clause AND Unlicense``, PEP 639), which tools can process.
-  SipHash (used internally for side-channel countermeasures) has been
-  reimplemented, as the previous code was under the CC0 license.
+  The SipHash code, which was under the CC0 license, is gone, together with
+  the old big integer code that used it.
 * GH#937: Importing a malformed PEM key could take quadratic time. Thanks to Brian Willows.
 * ``Crypto.Protocol.HPKE.new()`` raised ``TypeError`` with Python 3.9 to 3.11
   when ``aead_id`` was a plain integer, and not an ``HPKE.AEAD`` member.
@@ -69,7 +67,9 @@ New features
   accesses do not depend on the values of the numbers, only on their (public)
   size. This includes modular exponentiation and inversion, GCD, Jacobi symbol,
   and the Miller-Rabin and Lucas tests used to generate primes.
-  It replaces GMP and Python integers, which leak timing information.
+  It replaces GMP, the previous C code for modular exponentiation
+  (``IntegerCustom``) and Python integers, which leak timing information;
+  Python integers remain only as a fallback, if the C extensions are not available.
   The C extensions no longer depend on GMP at runtime.
   For now, RSA and DSA private key operations and key generation are slower
   than with GMP. On x86-64 CPUs with BMI2 and ADX (gcc and clang only),

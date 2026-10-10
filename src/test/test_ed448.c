@@ -29,6 +29,14 @@ static int have_bmi2_adx(void)
 
 /* Private functions (they are not static when STATIC is defined as empty) */
 uint64_t ed448_on_curve(EcWs *ws, const Ed448Context *ctx, const uint64_t *x, const uint64_t *y, const uint64_t *z);
+void ed448_point_double(EcWs *ws, uint64_t *x3, uint64_t *y3, uint64_t *z3,
+                        const uint64_t *x1, const uint64_t *y1, const uint64_t *z1);
+void ed448_point_add(EcWs *ws, const Ed448Context *ctx,
+                     uint64_t *x3, uint64_t *y3, uint64_t *z3,
+                     const uint64_t *x1, const uint64_t *y1, const uint64_t *z1,
+                     const uint64_t *x2, const uint64_t *y2, const uint64_t *z2);
+int ed448_mul_var(EcWs *ws, const Ed448Context *ctx, PointEd448 *p, const uint64_t *kb, const uint64_t *lambda);
+int ed448_mul_g(EcWs *ws, const Ed448Context *ctx, PointEd448 *p, const uint64_t *kb, const uint64_t *lambda);
 
 typedef struct {
     int base;                       /* 0: G, 1: Q, 2: Q + T (T of order 4) */
@@ -393,6 +401,68 @@ static void test_g_table(const Ed448Context *ctx)
     }
 }
 
+/*
+ * The formulas directly: the mixed addition (z2 = NULL) against the full
+ * one, the doubling against an addition, and the two scalar
+ * multiplications against each other (same blinded scalar).
+ */
+static void test_formulas(const Ed448Context *ctx)
+{
+    const size_t nw = ED448_WORDS;
+    PointEd448 *p, *q, *r1, *r2;
+    uint8_t k[LEN];
+    uint64_t kb[8], lambda[ED448_WORDS];
+    EcWs ws;
+    unsigned t;
+    size_t i;
+
+    assert(ec_ws_new(&ws, ctx->field) == 0);
+    p = load_point(ctx, qtx, qty);
+    q = load_point(ctx, gx, gy);
+    r1 = load_point(ctx, "0", "1");
+    r2 = load_point(ctx, "0", "1");
+
+    for (t=0; t<20; t++) {
+        const uint64_t *tx = ctx->g_table + (rnd() % (ctx->windows*EC_DIGITS))*2*nw;
+
+        /* p: projective (Z != 1); q: affine, from the tables */
+        assert(ed448_double(p) == 0);
+        memcpy(q->x, tx, 2*nw*8);
+        memcpy(q->z, ctx->field->one, nw*8);
+
+        ed448_point_add(&ws, ctx, r1->x, r1->y, r1->z, p->x, p->y, p->z, q->x, q->y, NULL);
+        ed448_point_add(&ws, ctx, r2->x, r2->y, r2->z, p->x, p->y, p->z, q->x, q->y, q->z);
+        assert(ed448_cmp(r1, r2) == 0);
+
+        /* Doubling = addition to itself (in place) */
+        ed448_point_double(&ws, r1->x, r1->y, r1->z, p->x, p->y, p->z);
+        assert(ed448_copy(r2, p) == 0);
+        ed448_point_add(&ws, ctx, r2->x, r2->y, r2->z, r2->x, r2->y, r2->z, r2->x, r2->y, r2->z);
+        assert(ed448_cmp(r1, r2) == 0);
+        assert(ed448_on_curve(&ws, ctx, r1->x, r1->y, r1->z));
+
+        /* Variable and fixed base, with the same blinded scalar and lambda */
+        for (i=0; i<LEN; i++)
+            k[i] = (uint8_t)rnd();
+        assert(ec_blind_scalar(kb, ctx->k_words, ctx->group_order, k, LEN, rnd()) == 0);
+        for (i=0; i<nw; i++)
+            lambda[i] = i == 0 ? rnd() | 1 : 0;
+        assert(ed448_copy(r1, q) == 0);
+        memcpy(r1->x, ctx->gx, nw*8);
+        memcpy(r1->y, ctx->gy, nw*8);
+        assert(ed448_mul_var(&ws, ctx, r1, kb, lambda) == 0);
+        assert(ed448_mul_g(&ws, ctx, r2, kb, lambda) == 0);
+        assert(ed448_cmp(r1, r2) == 0);
+        assert(ed448_on_curve(&ws, ctx, r1->x, r1->y, r1->z));
+    }
+
+    ed448_free_point(p);
+    ed448_free_point(q);
+    ed448_free_point(r1);
+    ed448_free_point(r2);
+    ec_ws_free(&ws);
+}
+
 /* k1*(k2*P) = k2*(k1*P), and (k1 + k2)*P = k1*P + k2*P, for random scalars */
 static void test_random(const Ed448Context *ctx)
 {
@@ -477,6 +547,7 @@ int main(void)
     test_on_curve(ctx);
     test_scalar(ctx);
     test_g_table(ctx);
+    test_formulas(ctx);
     test_random(ctx);
     test_other_context(ctx);
     ed448_free_context(ctx);
