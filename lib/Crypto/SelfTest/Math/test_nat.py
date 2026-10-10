@@ -17,6 +17,7 @@ import random
 import pytest
 
 try:
+    from Crypto.Math import _IntegerNat
     from Crypto.Math._IntegerNat import IntegerNat
 
     _nat_error = None
@@ -24,6 +25,19 @@ except (ImportError, OSError) as e:
     _nat_error = e
 
 pytestmark = pytest.mark.skipif(_nat_error is not None, reason="Nat library not available (%s)" % _nat_error)
+
+# Run every test with each build of the C library available on this machine
+_implementations = []
+if _nat_error is None:
+    _implementations.append(pytest.param(_IntegerNat._portable_lib, id="portable"))
+    if _IntegerNat._bmi2_adx_lib is not None:
+        _implementations.append(pytest.param(_IntegerNat._bmi2_adx_lib, id="bmi2_adx"))
+
+
+@pytest.fixture(autouse=True, params=_implementations or [pytest.param(None, id="unavailable")])
+def nat_implementation(request, monkeypatch):
+    if request.param is not None:
+        monkeypatch.setattr(_IntegerNat, "_lib", request.param)
 
 
 def _edge_values(words):

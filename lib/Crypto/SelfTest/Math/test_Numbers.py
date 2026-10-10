@@ -19,6 +19,7 @@ except (ImportError, OSError) as e:
 
 
 try:
+    from Crypto.Math import _IntegerNat
     from Crypto.Math._IntegerNat import IntegerNat
 
     _nat_error = None
@@ -1020,6 +1021,25 @@ class TestIntegerCustomModexp(IntegerTests, SignedIntegerTests):
 class TestIntegerNat(IntegerTests, NatIntegerTests):
     def setup_method(self):
         self.Integer = IntegerNat
+        self._saved_lib = _IntegerNat._lib
+        _IntegerNat._lib = _IntegerNat._portable_lib
+
+    def teardown_method(self):
+        _IntegerNat._lib = self._saved_lib
+
+
+@pytest.mark.skipif(
+    _nat_error is not None or _IntegerNat._bmi2_adx_lib is None,
+    reason="Nat library for BMI2 and ADX not available on this machine",
+)
+class TestIntegerNatBmi2Adx(IntegerTests, NatIntegerTests):
+    def setup_method(self):
+        self.Integer = IntegerNat
+        self._saved_lib = _IntegerNat._lib
+        _IntegerNat._lib = _IntegerNat._bmi2_adx_lib
+
+    def teardown_method(self):
+        _IntegerNat._lib = self._saved_lib
 
 
 class TestIntegerRandom:

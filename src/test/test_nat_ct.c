@@ -16,6 +16,21 @@
 #include "common.h"
 #include "nat.h"
 
+#if defined(TEST_BMI2_ADX)
+#include <stdio.h>
+#include <cpuid.h>
+
+static int have_bmi2_adx(void)
+{
+    unsigned eax, ebx, ecx, edx;
+
+    if (__get_cpuid_max(0, NULL) < 7)
+        return 0;
+    __cpuid_count(7, 0, eax, ebx, ecx, edx);
+    return (ebx & (1U << 8)) && (ebx & (1U << 19));
+}
+#endif
+
 static uint64_t state = 0x0123456789ABCDEFULL;
 
 static uint64_t rnd(void)
@@ -135,6 +150,17 @@ static void run(size_t nw)
 int main(void)
 {
     size_t nw;
+
+#if defined(TEST_BMI2_ADX)
+    /*
+     * Valgrind does not report ADX in its emulated CPUID, but it executes
+     * the instructions itself: under Valgrind, always run the test.
+     */
+    if (!have_bmi2_adx() && !RUNNING_ON_VALGRIND) {
+        printf("Skipped: the CPU does not support BMI2 and ADX\n");
+        return 0;
+    }
+#endif
 
     for (nw=1; nw<=4; nw++)
         run(nw);

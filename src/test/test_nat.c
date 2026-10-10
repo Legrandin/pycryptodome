@@ -21,6 +21,23 @@ void cond_negate(uint64_t mask, uint64_t *x, size_t nw);
 void approximations(uint64_t *a_approx, uint64_t *b_approx, const uint64_t *a, const uint64_t *b, size_t nw);
 void mod_lin_comb(uint64_t *x, const uint64_t *u, const uint64_t *v, int64_t f, int64_t g,
                   const uint64_t *n, uint64_t n0inv, uint64_t *t, uint64_t *kn, size_t nw);
+uint64_t addmul_row(uint64_t *t, const uint64_t *a, uint64_t b, size_t nw);
+
+#if defined(TEST_BMI2_ADX)
+#include <stdio.h>
+#include <cpuid.h>
+
+/* The build for BMI2 and ADX can only be tested on a CPU that has both */
+static int have_bmi2_adx(void)
+{
+    unsigned eax, ebx, ecx, edx;
+
+    if (__get_cpuid_max(0, NULL) < 7)
+        return 0;
+    __cpuid_count(7, 0, eax, ebx, ecx, edx);
+    return (ebx & (1U << 8)) && (ebx & (1U << 19));
+}
+#endif
 
 static uint64_t rnd_state = 0x9E3779B97F4A7C15ULL;
 
@@ -1104,8 +1121,44 @@ void test_bgcd_helpers(void)
     }
 }
 
+void test_addmul_row(void)
+{
+    /* Against a plain computation, for all lengths up to 40 words
+     * (every remainder of the 4-word unrolling in the BMI2/ADX build) */
+    size_t nw, j;
+    int it;
+
+    for (nw=1; nw<=40; nw++) {
+        for (it=0; it<50; it++) {
+            uint64_t t[40], ref[41], a[40], b, h, c;
+
+            for (j=0; j<nw; j++) {
+                t[j] = (it % 5 == 0) ? MAX64 : rnd();
+                a[j] = (it % 7 == 0) ? MAX64 : rnd();
+            }
+            b = (it % 3 == 0) ? MAX64 : rnd();
+
+            memcpy(ref, t, nw*sizeof(uint64_t));
+            c = 0;
+            for (j=0; j<nw; j++)
+                ref[j] = ct_mac(a[j], b, ref[j], c, &c);
+            ref[nw] = c;
+
+            h = addmul_row(t, a, b, nw);
+            assert(memcmp(t, ref, nw*sizeof(uint64_t)) == 0);
+            assert(h == ref[nw]);
+        }
+    }
+}
+
 int main(void)
 {
+#if defined(TEST_BMI2_ADX)
+    if (!have_bmi2_adx()) {
+        printf("Skipped: the CPU does not support BMI2 and ADX\n");
+        return 0;
+    }
+#endif
     test_ct_helpers();
     test_ct_add_sub();
     test_new_and_free();
@@ -1136,5 +1189,6 @@ int main(void)
     test_mont_sqr();
     test_inv_odd_vs_simple();
     test_bgcd_helpers();
+    test_addmul_row();
     return 0;
 }

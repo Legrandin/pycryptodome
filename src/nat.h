@@ -138,7 +138,7 @@ typedef struct {
     uint64_t *r2;       /* R^2 mod n */
     uint64_t *one;      /* R mod n (1 in Montgomery form) */
     uint64_t *unit;     /* the number 1 (not in Montgomery form) */
-    uint64_t *tmp;      /* scratchpad, 2*nw+1 words */
+    uint64_t *tmp;      /* scratchpad, 2*nw+2 words */
 } MontCtx;
 
 int mont_ctx_new(MontCtx **out, const Nat *n);

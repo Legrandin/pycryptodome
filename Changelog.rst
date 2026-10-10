@@ -68,7 +68,8 @@ New features
   It replaces GMP and Python integers, which leak timing information.
   The C extensions no longer depend on GMP at runtime.
   For now, RSA and DSA private key operations and key generation are slower
-  than with GMP.
+  than with GMP. On x86-64 CPUs with BMI2 and ADX (gcc and clang only),
+  a build that uses those instructions is about 15-25% faster.
 * New function ``Crypto.Hash.KangarooTwelve.digest()``, to hash a whole message
   with a single call. For messages up to 8 KiB, it is 1.3x to 3x faster than
   ``new()`` followed by ``read()``.

@@ -107,6 +107,16 @@ add_library(nat OBJECT ../nat.c ../nat_div.c ../nat_mod.c ../nat_gcd.c ../nat_pr
 add_executable(test_nat test_nat.c $<TARGET_OBJECTS:nat>)
 add_test(NAME test_nat COMMAND test_nat)
 
+# The build of the natural numbers for x86-64 CPUs with BMI2 and ADX
+# (gcc and clang only). The tests do nothing on a CPU without them.
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64" AND CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT MSVC)
+    set(NAT_BMI2_ADX_TESTS TRUE)
+    add_executable(test_nat_bmi2_adx test_nat.c ../nat_bmi2_adx.c)
+    target_compile_definitions(test_nat_bmi2_adx PRIVATE TEST_BMI2_ADX)
+    target_compile_options(test_nat_bmi2_adx PRIVATE -mbmi2 -madx)
+    add_test(NAME test_nat_bmi2_adx COMMAND test_nat_bmi2_adx)
+endif()
+
 # Constant-time check of the natural numbers, with Valgrind memcheck
 find_program(VALGRIND valgrind)
 CHECK_INCLUDE_FILE("valgrind/memcheck.h" HAVE_VALGRIND_MEMCHECK_H)
@@ -119,6 +129,16 @@ if (VALGRIND AND HAVE_VALGRIND_MEMCHECK_H)
         LINK_OPTIONS ""
         LINK_LIBRARIES "")
     add_test(NAME test_nat_ct COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_nat_ct>)
+
+    if (NAT_BMI2_ADX_TESTS)
+        add_executable(test_nat_ct_bmi2_adx test_nat_ct.c ../nat_bmi2_adx.c)
+        target_compile_definitions(test_nat_ct_bmi2_adx PRIVATE NAT_CTGRIND TEST_BMI2_ADX)
+        set_target_properties(test_nat_ct_bmi2_adx PROPERTIES
+            COMPILE_OPTIONS "-O2;-g;-Wall;-Werror;-mbmi2;-madx"
+            LINK_OPTIONS ""
+            LINK_LIBRARIES "")
+        add_test(NAME test_nat_ct_bmi2_adx COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_nat_ct_bmi2_adx>)
+    endif()
 endif()
 
 add_custom_command(
