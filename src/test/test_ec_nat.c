@@ -10,6 +10,7 @@
 #include "common.h"
 #include "nat.h"
 #include "nat_ct.h"
+#include "ec_common.h"
 #include "ec_nat.h"
 
 #if defined(TEST_BMI2_ADX)
@@ -28,18 +29,7 @@ static int have_bmi2_adx(void)
 #endif
 
 /* Private functions (they are not static when STATIC is defined as empty) */
-typedef struct {
-    MontCtx *m;
-    uint64_t *buf;
-    uint64_t *t[11];            /* WS_TEMPS */
-} Ws;
-int ws_new(Ws *ws, const EcCurve *c);
-void ws_free(Ws *ws, const EcCurve *c);
-uint64_t point_on_curve(Ws *ws, const EcCurve *c, const uint64_t *x, const uint64_t *y, const uint64_t *z);
-int blind_scalar(uint64_t *kb, const EcCurve *c, const uint8_t *k, size_t len, uint64_t r);
-uint64_t get_bits(const uint64_t *k, size_t kw, size_t pos, unsigned count);
-void booth_digit(const uint64_t *k, size_t kw, size_t i, uint64_t *sign, uint64_t *digit);
-uint64_t next_random(uint64_t *state);
+uint64_t point_on_curve(EcWs *ws, const EcCurve *c, const uint64_t *x, const uint64_t *y, const uint64_t *z);
 
 typedef struct {
     int base_is_g;
@@ -485,9 +475,9 @@ static void test_other_curve(const EcCurve *c1, const EcCurve *c2)
 static void test_point_on_curve(const TestCurve *tc, const EcCurve *c)
 {
     EcPointN *g;
-    Ws ws;
+    EcWs ws;
 
-    assert(ws_new(&ws, c) == 0);
+    assert(ec_ws_new(&ws, c->field) == 0);
     g = load_point(c, tc->gx, tc->gy);
     assert(point_on_curve(&ws, c, g->x, g->y, g->z) == 1);
     assert(ec_nat_double(g) == 0);              /* Z != 1 */
@@ -498,7 +488,7 @@ static void test_point_on_curve(const TestCurve *tc, const EcCurve *c)
     g = load_point(c, "0", "0");
     assert(point_on_curve(&ws, c, g->x, g->y, g->z) == 1);
     ec_nat_free_point(g);
-    ws_free(&ws, c);
+    ec_ws_free(&ws);
 }
 
 /* Booth recoding: the sum of digit_i * 32^i gives back k (mod 2^64, words 0 and 1) */
@@ -508,10 +498,10 @@ static void test_booth(void)
     unsigned t;
     size_t i;
 
-    assert(get_bits((const uint64_t[]){0xF0, 0}, 2, 4, 4) == 0xF);
-    assert(get_bits((const uint64_t[]){0x8000000000000000ULL, 1}, 2, 63, 2) == 3);
-    assert(get_bits((const uint64_t[]){1, 1}, 2, 64, 6) == 1);
-    assert(get_bits((const uint64_t[]){1, 1}, 2, 126, 6) == 0);
+    assert(ec_get_bits((const uint64_t[]){0xF0, 0}, 2, 4, 4) == 0xF);
+    assert(ec_get_bits((const uint64_t[]){0x8000000000000000ULL, 1}, 2, 63, 2) == 3);
+    assert(ec_get_bits((const uint64_t[]){1, 1}, 2, 64, 6) == 1);
+    assert(ec_get_bits((const uint64_t[]){1, 1}, 2, 126, 6) == 0);
 
     for (t=0; t<1000; t++) {
         uint64_t lo = 0, hi = 0;
@@ -527,7 +517,7 @@ static void test_booth(void)
         for (i=(3*64 + EC_WINDOW)/EC_WINDOW; i-- > 0;) {
             uint64_t d;
 
-            booth_digit(k, 4, i, &sign, &digit);
+            ec_booth_digit(k, 4, i, &sign, &digit);
             assert(digit <= 16);
             assert(sign <= 1);
             hi = (hi << 5) | (lo >> 59);
@@ -566,7 +556,7 @@ static void test_blind_scalar(const EcCurve *c)
 
         for (i=0; i<len; i++)
             k[i] = (uint8_t)rnd();
-        assert(blind_scalar(kb, c, k, len, rnd()) == 0);
+        assert(ec_blind_scalar(kb, c->k_words, c->order, k, len, rnd()) == 0);
         assert((size_t)nat_bit_length(&kbn) <= (size_t)nat_bit_length(c->order) + EC_BLINDING_BITS);
         /* kb = k (mod n) */
         assert(nat_from_bytes(knat, k, len, 0) == 0);
@@ -577,7 +567,7 @@ static void test_blind_scalar(const EcCurve *c)
 
     /* r = 0: k mod n itself */
     memset(k, 0xFF, c->len);
-    assert(blind_scalar(kb, c, k, c->len, 0) == 0);
+    assert(ec_blind_scalar(kb, c->k_words, c->order, k, c->len, 0) == 0);
     assert(nat_from_bytes(knat, k, c->len, 0) == 0);
     assert(nat_divmod(NULL, r1, knat, c->order) == 0);
     for (t=0; t<c->k_words; t++)
@@ -733,8 +723,8 @@ int main(void)
     }
 #endif
 
-    r1 = next_random(&state);
-    r2 = next_random(&state);
+    r1 = ec_next_random(&state);
+    r2 = ec_next_random(&state);
     assert(r1 != r2);
     assert(r1 == 0xE220A8397B1DCDAFULL);
 

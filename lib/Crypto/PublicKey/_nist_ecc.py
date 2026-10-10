@@ -1,20 +1,17 @@
 # This file is licensed under the BSD 2-Clause License.
 # See https://opensource.org/licenses/BSD-2-Clause for details.
 
-import os
-
 from Crypto.Math.Numbers import Integer
-from Crypto.Util import _cpu_features
 from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
     c_size_t,
     c_uint8_ptr,
-    load_pycryptodome_raw_lib,
 )
 from Crypto.Util.number import long_to_bytes
 
 from ._curve import _Curve
+from ._ec_lib import load_ec_lib
 
 _ec_cdecl = """
 typedef void EcCurve;
@@ -49,24 +46,7 @@ int ec_nat_neg(EcPoint *p);
 """
 
 
-def _load_ec_lib():
-    """Load the build for x86-64 CPUs with BMI2 and ADX if the CPU supports
-    both (and PYCRYPTODOME_DISABLE_BMI2_ADX is not set), the portable one
-    otherwise. See Crypto.Math._IntegerNat."""
-
-    if (
-        not os.getenv("PYCRYPTODOME_DISABLE_BMI2_ADX")
-        and _cpu_features.have_bmi2()
-        and _cpu_features.have_adx()
-    ):
-        try:
-            return load_pycryptodome_raw_lib("Crypto.PublicKey._ec_nat_bmi2_adx", _ec_cdecl), True
-        except OSError:
-            pass
-    return load_pycryptodome_raw_lib("Crypto.PublicKey._ec_nat", _ec_cdecl), False
-
-
-_ec_lib, _bmi2_adx = _load_ec_lib()
+_ec_lib, _bmi2_adx = load_ec_lib(_ec_cdecl)
 
 
 class EcLib:

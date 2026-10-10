@@ -182,21 +182,9 @@ ext_modules = [
         py_limited_api=True,
     ),
     Extension(
-        "Crypto.PublicKey._curve448",
-        include_dirs=["src/"],
-        sources=["src/curve448.c", "src/mont1.c"],
-        py_limited_api=True,
-    ),
-    Extension(
         "Crypto.PublicKey._ed25519",
         include_dirs=["src/"],
         sources=["src/ed25519.c"],
-        py_limited_api=True,
-    ),
-    Extension(
-        "Crypto.PublicKey._ed448",
-        include_dirs=["src/"],
-        sources=["src/ed448.c", "src/mont2.c"],
         py_limited_api=True,
     ),
     # Math

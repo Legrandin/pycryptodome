@@ -14,13 +14,7 @@
 
 #include "common.h"
 #include "nat.h"
-
-/* The window of the scalar multiplications, in bits (signed digits) */
-#define EC_WINDOW 5
-/* Points per window in a table: the multiples 1..16 (2^(EC_WINDOW-1)) */
-#define EC_DIGITS 16
-/* Random bits added to the scalar (k + r*n) */
-#define EC_BLINDING_BITS 64
+#include "ec_common.h"
 
 typedef struct {
     size_t nw;              /* 64-bit words of a field element */
@@ -28,7 +22,6 @@ typedef struct {
     MontCtx *field;         /* Montgomery arithmetic modulo p (constants only) */
     Nat *p_minus_2;         /* the exponent of the inversion (Fermat) */
     size_t p_bits;
-    uint64_t *zero;         /* the number 0 */
     uint64_t *b;            /* b, in Montgomery form */
     uint64_t *gx, *gy;      /* the generator G (affine, Montgomery form) */
     Nat *order;             /* n */

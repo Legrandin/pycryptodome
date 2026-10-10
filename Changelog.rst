@@ -84,6 +84,13 @@ New features
   have precomputed tables too, and ECDH is about 1.5x-2x faster on P-192,
   P-224, P-256 and P-384. Multiplying the generator by a scalar of any length
   no longer fails.
+* Ed448 and X448 (Curve448) run on the same library and module, with the same
+  countermeasures: for Ed448, a blinded scalar (by a multiple of the order of
+  the whole group, so that it also works for points with a small-order component),
+  signed windows with full table scans, randomized coordinates and a check of the
+  result; for X448, the Montgomery ladder with randomized coordinates.
+  Ed448 key generation and signing are about 10x faster (precomputed tables),
+  verification about 2.5x, and X448 about 1.3x.
 * New function ``Crypto.Hash.KangarooTwelve.digest()``, to hash a whole message
   with a single call. For messages up to 8 KiB, it is 1.3x to 3x faster than
   ``new()`` followed by ``read()``.
