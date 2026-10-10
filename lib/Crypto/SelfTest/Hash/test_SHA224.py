@@ -29,7 +29,11 @@ import pytest
 
 from Crypto.Hash import SHA224
 from Crypto.Protocol.KDF import PBKDF2
-from Crypto.SelfTest.Hash.common import make_hash_tests
+from Crypto.SelfTest.Hash.common import make_hash_tests, sha_ni_required
+from Crypto.Util import _cpu_features
+
+# The implementation selected at import time (the fixture below replaces it)
+_default_lib = SHA224._raw_sha224_lib
 
 # Run every test with each C implementation available on this machine
 _implementations = [pytest.param(SHA224._raw_sha224_portable_lib, id="portable")]
@@ -43,6 +47,14 @@ def sha224_implementation(request, monkeypatch):
 
 
 class TestImplementations:
+    # Required in CI on x86_64 (AMD64) runners known to support SHA-NI,
+    # so that a fallback to the portable implementation is not silent
+    @pytest.mark.skipif(not sha_ni_required(), reason="SHA-NI not required (see sha_ni_required)")
+    def test_sha_ni_available(self):
+        assert _cpu_features.have_sha_ni(), "SHA-NI not detected on this CPU"
+        assert SHA224._raw_sha224_shani_lib is not None, "SHA-NI module not built"
+        assert _default_lib is SHA224._raw_sha224_shani_lib, "SHA-NI module not selected"
+
     def test_all_lengths(self):
         # Every padding case, over one and two blocks
         data = bytes(range(256)) * 2

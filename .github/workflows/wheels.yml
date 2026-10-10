@@ -62,6 +62,10 @@ jobs:
           CIBW_TEST_REQUIRES: "pytest"
           CIBW_TEST_COMMAND: "python -m Crypto.SelfTest --skip-slow-tests"
 
+          # The Windows x86_64 (AMD64) runners support SHA-NI: fail if it is not used.
+          # The tests only enforce it for 64-bit Python, not for the win32 wheels.
+          PYCRYPTODOME_REQUIRE_SHA_NI: ${{ matrix.os == 'windows-2022' && '1' || '' }}
+
       - name: Delete manylinux1 wheels
         if: runner.os == 'Linux'
         run: |

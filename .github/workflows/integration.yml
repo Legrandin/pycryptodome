@@ -89,6 +89,9 @@ jobs:
 
     - name: Test
       shell: bash
+      env:
+        # The Windows x86_64 (AMD64) runners support SHA-NI: fail if it is not used
+        PYCRYPTODOME_REQUIRE_SHA_NI: ${{ matrix.os == 'windows-latest' && '1' || '' }}
       run: |
         python -m Crypto.SelfTest
 

@@ -24,13 +24,30 @@
 """Self-testing for PyCrypto hash modules"""
 
 import binascii
+import os
+import platform
 import re
+import struct
 from binascii import hexlify, unhexlify
 
 import pytest
 
 from Crypto.Util._bytes import tobytes
 from Crypto.Util.strxor import strxor_c
+
+
+def sha_ni_required():
+    """Return True if the SHA-NI implementation must be in use.
+
+    This is the case if the environment variable PYCRYPTODOME_REQUIRE_SHA_NI
+    is set (in CI, for runners known to support SHA-NI) and Python runs
+    as a 64-bit x86 process (x86_64, also called AMD64).
+    """
+
+    if not os.environ.get("PYCRYPTODOME_REQUIRE_SHA_NI"):
+        return False
+    is_64bit = struct.calcsize("P") == 8
+    return is_64bit and platform.machine().lower() in ("x86_64", "amd64")
 
 
 def t2b(hex_string):
