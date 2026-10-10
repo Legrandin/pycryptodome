@@ -30,6 +30,20 @@ static int have_bmi2_adx(void)
 
 /* Private functions (they are not static when STATIC is defined as empty) */
 uint64_t point_on_curve(EcWs *ws, const EcCurve *c, const uint64_t *x, const uint64_t *y, const uint64_t *z);
+void point_double(EcWs *ws, const EcCurve *c, uint64_t *x3, uint64_t *y3, uint64_t *z3,
+                  const uint64_t *x1, const uint64_t *y1, const uint64_t *z1);
+void point_add(EcWs *ws, const EcCurve *c, uint64_t *x3, uint64_t *y3, uint64_t *z3,
+               const uint64_t *x1, const uint64_t *y1, const uint64_t *z1,
+               const uint64_t *x2, const uint64_t *y2, const uint64_t *z2);
+void point_add_mixed(EcWs *ws, const EcCurve *c, uint64_t *x3, uint64_t *y3, uint64_t *z3,
+                     const uint64_t *x1, const uint64_t *y1, const uint64_t *z1,
+                     const uint64_t *x2, const uint64_t *y2);
+void point_set_infinity(const EcCurve *c, uint64_t *x, uint64_t *y, uint64_t *z);
+int scalar_mul_var(EcWs *ws, const EcCurve *c, uint64_t *rx, uint64_t *ry, uint64_t *rz,
+                   const uint64_t *px, const uint64_t *py, const uint64_t *pz,
+                   const uint64_t *kb, const uint64_t *lambda);
+int scalar_mul_g(EcWs *ws, const EcCurve *c, uint64_t *rx, uint64_t *ry, uint64_t *rz,
+                 const uint64_t *kb, const uint64_t *lambda);
 
 typedef struct {
     int base_is_g;
@@ -659,6 +673,94 @@ static void test_g_table(const TestCurve *tc, const EcCurve *c)
     }
 }
 
+/*
+ * The formulas directly: the mixed addition against the full addition
+ * (also from the point at infinity, and for equal points), the point at
+ * infinity in the full formulas, and the two scalar multiplications
+ * against each other (same blinded scalar).
+ */
+static void test_formulas(const TestCurve *tc, const EcCurve *c)
+{
+    const size_t nw = c->nw;
+    EcPointN *p, *q, *r1, *r2;
+    uint8_t k[MAX_LEN];
+    uint64_t kb[16], lambda[16];
+    EcWs ws;
+    unsigned t;
+    size_t i;
+
+    assert(ec_ws_new(&ws, c->field) == 0);
+    p = load_point(c, tc->qx, tc->qy);
+    q = load_point(c, tc->gx, tc->gy);
+    r1 = load_point(c, "0", "0");
+    r2 = load_point(c, "0", "0");
+
+    for (t=0; t<20; t++) {
+        const uint64_t *qx = c->g_table + (rnd() % (c->windows*EC_DIGITS))*2*nw;
+        const uint64_t *qy = qx + nw;
+
+        /* p: projective (Z != 1); q: affine, from the tables */
+        assert(ec_nat_double(p) == 0);
+        memcpy(q->x, qx, nw*8);
+        memcpy(q->y, qy, nw*8);
+        memcpy(q->z, c->field->one, nw*8);
+
+        point_add_mixed(&ws, c, r1->x, r1->y, r1->z, p->x, p->y, p->z, qx, qy);
+        point_add(&ws, c, r2->x, r2->y, r2->z, p->x, p->y, p->z, q->x, q->y, q->z);
+        assert(ec_nat_cmp(r1, r2) == 0);
+
+        /* In place */
+        assert(ec_nat_copy(r2, p) == 0);
+        point_add_mixed(&ws, c, r2->x, r2->y, r2->z, r2->x, r2->y, r2->z, qx, qy);
+        assert(ec_nat_cmp(r1, r2) == 0);
+
+        /* From the point at infinity (randomized) */
+        point_set_infinity(c, r1->x, r1->y, r1->z);
+        fe_mul(&ws, r1->y, r1->y, p->z);
+        point_add_mixed(&ws, c, r1->x, r1->y, r1->z, r1->x, r1->y, r1->z, qx, qy);
+        assert(ec_nat_cmp(r1, q) == 0);
+
+        /* Equal points: a doubling */
+        memcpy(r1->x, q->x, 3*nw*8);
+        fe_mul(&ws, r1->x, r1->x, p->z);
+        fe_mul(&ws, r1->y, r1->y, p->z);
+        fe_mul(&ws, r1->z, r1->z, p->z);
+        point_add_mixed(&ws, c, r1->x, r1->y, r1->z, r1->x, r1->y, r1->z, qx, qy);
+        point_double(&ws, c, r2->x, r2->y, r2->z, q->x, q->y, q->z);
+        assert(ec_nat_cmp(r1, r2) == 0);
+
+        /* The full formulas with the point at infinity */
+        point_set_infinity(c, r1->x, r1->y, r1->z);
+        point_add(&ws, c, r2->x, r2->y, r2->z, r1->x, r1->y, r1->z, p->x, p->y, p->z);
+        assert(ec_nat_cmp(r2, p) == 0);
+        point_add(&ws, c, r2->x, r2->y, r2->z, p->x, p->y, p->z, r1->x, r1->y, r1->z);
+        assert(ec_nat_cmp(r2, p) == 0);
+        point_double(&ws, c, r2->x, r2->y, r2->z, r1->x, r1->y, r1->z);
+        assert(ec_nat_cmp(r2, r1) == 0);
+        assert(point_on_curve(&ws, c, r2->x, r2->y, r2->z));
+
+        /* Variable and fixed base, with the same blinded scalar and lambda */
+        for (i=0; i<c->len; i++)
+            k[i] = (uint8_t)rnd();
+        assert(ec_blind_scalar(kb, c->k_words, c->order, k, c->len, rnd()) == 0);
+        for (i=0; i<nw; i++)
+            lambda[i] = i == 0 ? rnd() | 1 : 0;
+        memcpy(r1->x, c->gx, nw*8);
+        memcpy(r1->y, c->gy, nw*8);
+        memcpy(r1->z, c->field->one, nw*8);
+        assert(scalar_mul_var(&ws, c, r1->x, r1->y, r1->z, r1->x, r1->y, r1->z, kb, lambda) == 0);
+        assert(scalar_mul_g(&ws, c, r2->x, r2->y, r2->z, kb, lambda) == 0);
+        assert(ec_nat_cmp(r1, r2) == 0);
+        assert(point_on_curve(&ws, c, r1->x, r1->y, r1->z));
+    }
+
+    ec_nat_free_point(p);
+    ec_nat_free_point(q);
+    ec_nat_free_point(r1);
+    ec_nat_free_point(r2);
+    ec_ws_free(&ws);
+}
+
 /* k1*(k2*P) = k2*(k1*P), and (k1 + k2)*P = k1*P + k2*P, for random scalars */
 static void test_random(const TestCurve *tc, const EcCurve *c)
 {
@@ -737,6 +839,7 @@ int main(void)
         test_blind_scalar(c[i]);
         test_scalar(&curves[i], c[i]);
         test_g_table(&curves[i], c[i]);
+        test_formulas(&curves[i], c[i]);
         test_random(&curves[i], c[i]);
     }
     test_other_curve(c[0], c[1]);

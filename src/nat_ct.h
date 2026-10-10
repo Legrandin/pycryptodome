@@ -18,7 +18,6 @@
 #define NAT_CT_H
 
 #include "common.h"
-#include "multiply.h"
 
 #if defined(NAT_CTGRIND)
 #include <valgrind/memcheck.h>
@@ -36,10 +35,7 @@
 /*
  * Without a 128-bit type, ct_add(), ct_sub() and ct_mac() are written in
  * 32-bit halves (NAT_HALVES). The only exception is MSVC on 64-bit CPUs,
- * where DP_MULT() (multiply.h) is the _umul128 or __umulh intrinsic.
- * The generic DP_MULT() fallback is not used: it computes a carry with a
- * comparison, which gcc turns into a conditional jump on 32-bit x86
- * (found with test_nat_ct).
+ * where the 128-bit product comes from the _umul128 or __umulh intrinsic.
  */
 #if !defined(HAVE_UINT128) && !(defined(_MSC_VER) && (defined(_M_X64) || defined(__x86_64__) || defined(_M_ARM64)))
 #define NAT_HALVES
@@ -206,6 +202,15 @@ static inline uint64_t ct_mac(uint64_t a, uint64_t b, uint64_t c, uint64_t d, ui
 }
 
 #else
+
+/* MSVC on x86-64 or ARM64 */
+#include <intrin.h>
+
+#if defined(_M_ARM64)
+#define DP_MULT(a,b,ol,oh) do { ol = (uint64_t)(a)*(b); oh = __umulh(a, b); } while (0)
+#else
+#define DP_MULT(a,b,ol,oh) do { ol = _umul128(a, b, &oh); } while (0)
+#endif
 
 /** a + b + carry_in, with the carry out (0 or 1) in *carry_out **/
 static inline uint64_t ct_add(uint64_t a, uint64_t b, uint64_t carry_in, uint64_t *carry_out)

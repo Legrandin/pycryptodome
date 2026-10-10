@@ -11,14 +11,6 @@ import pytest
 from Crypto.Math._IntegerNative import IntegerNative
 
 try:
-    from Crypto.Math._IntegerCustom import IntegerCustom
-
-    _custom_error = None
-except (ImportError, OSError) as e:
-    _custom_error = e
-
-
-try:
     from Crypto.Math import _IntegerNat
     from Crypto.Math._IntegerNat import IntegerNat
 
@@ -1009,12 +1001,6 @@ class NatIntegerTests:
 class TestIntegerInt(IntegerTests, SignedIntegerTests):
     def setup_method(self):
         self.Integer = IntegerNative
-
-
-@pytest.mark.skipif(_custom_error is not None, reason="custom modexp not available (%s)" % _custom_error)
-class TestIntegerCustomModexp(IntegerTests, SignedIntegerTests):
-    def setup_method(self):
-        self.Integer = IntegerCustom
 
 
 @pytest.mark.skipif(_nat_error is not None, reason="Nat library not available (%s)" % _nat_error)

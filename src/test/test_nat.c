@@ -767,6 +767,51 @@ void test_montgomery(void)
     mont_ctx_free(NULL);
 }
 
+/* A private copy shares the constants, and has its own scratchpads */
+void test_mont_ctx_private(void)
+{
+    MontCtx *ctx, *priv;
+    Nat *n;
+    uint64_t x[3], y[3], z1[3], z2[3];
+    unsigned i;
+
+    n = make1(3, 0);
+    for (i=0; i<3; i++)
+        n->w[i] = rnd();
+    n->w[0] |= 1;
+    n->w[2] |= (uint64_t)1 << 63;
+    assert(mont_ctx_new(&ctx, n) == 0);
+    assert(mont_ctx_new_private(&priv, ctx) == 0);
+
+    assert(priv->nw == ctx->nw && priv->m0 == ctx->m0);
+    assert(priv->n == ctx->n && priv->r2 == ctx->r2 && priv->one == ctx->one);
+    assert(priv->tmp != ctx->tmp);
+
+    for (i=0; i<100; i++) {
+        unsigned j;
+
+        for (j=0; j<3; j++) {
+            x[j] = rnd();
+            y[j] = rnd();
+        }
+        x[2] %= n->w[2];
+        y[2] %= n->w[2];
+        mont_mul(z1, x, y, ctx);
+        mont_mul(z2, x, y, priv);
+        assert(memcmp(z1, z2, sizeof z1) == 0);
+        mont_sqr(z1, x, ctx);
+        mont_sqr(z2, x, priv);
+        assert(memcmp(z1, z2, sizeof z1) == 0);
+    }
+
+    /* The copy can be freed before the original */
+    mont_ctx_free_private(priv);
+    mont_ctx_free_private(NULL);
+    mont_mul(z1, x, y, ctx);
+    mont_ctx_free(ctx);
+    nat_free(n);
+}
+
 void test_mont_pow_vs_mulmod(void)
 {
     /* Montgomery exponentiation against square-and-multiply with mulmod_words */
@@ -1329,6 +1374,7 @@ int main(void)
     test_divmod_words();
     test_mod_helpers();
     test_montgomery();
+    test_mont_ctx_private();
     test_mont_pow_vs_mulmod();
     test_inv_odd();
     test_mulmod_words();

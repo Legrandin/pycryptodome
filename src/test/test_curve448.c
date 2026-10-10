@@ -29,6 +29,13 @@ static int have_bmi2_adx(void)
 
 #define LEN 56
 
+/* Private functions (they are not static when STATIC is defined as empty) */
+void curve448_ladder_step(EcWs *ws, const Curve448Context *ctx,
+                          uint64_t *x2, uint64_t *z2, uint64_t *x3, uint64_t *z3,
+                          const uint64_t *x1);
+int curve448_ladder(EcWs *ws, const Curve448Context *ctx, Curve448Point *p,
+                    const uint8_t *k, size_t len, uint64_t seed);
+
 /* RFC 7748: little-endian scalars and u-coordinates */
 static const char *vectors[][3] = {
     { "3d262fddf9ec8e88495266fea19a34d28882acef045104d0d1aae121700a779c984c24f8cdd78fbff44943eba368f54b29259a4f1c600ad3",
@@ -154,6 +161,115 @@ static void test_dh(const Curve448Context *ctx)
     assert(memcmp(s2, expected, LEN) == 0);
 }
 
+/* x of k*P with the public API, for P = (5:1) */
+static void x_of(uint8_t *out, const Curve448Context *ctx, unsigned k)
+{
+    Curve448Point *p;
+    uint8_t five = 5, kb[2];
+
+    kb[0] = (uint8_t)(k >> 8);
+    kb[1] = (uint8_t)k;
+    assert(curve448_new_point(&p, &five, 1, ctx) == 0);
+    assert(curve448_scalar(p, kb, 2, rnd()) == 0);
+    assert(curve448_get_x(out, LEN, p) == 0);
+    curve448_free_point(p);
+}
+
+/*
+ * A ladder step directly: from (nP, (n+1)P) with scaled projective
+ * coordinates, it gives (2nP, (2n+1)P).
+ */
+static void test_ladder_step(const Curve448Context *ctx)
+{
+    const size_t nw = CURVE448_WORDS;
+    Curve448Point *p, *a, *b;
+    uint64_t s[CURVE448_WORDS];
+    uint8_t five = 5, x1[LEN], x2[LEN];
+    EcWs ws;
+    unsigned n, i;
+
+    assert(ec_ws_new(&ws, ctx->field) == 0);
+    assert(curve448_new_point(&p, &five, 1, ctx) == 0);
+    a = NULL;
+    b = NULL;
+
+    for (n=1; n<20; n++) {
+        uint8_t xn[LEN], xn1[LEN];
+
+        x_of(xn, ctx, n);
+        x_of(xn1, ctx, n + 1);
+        assert(curve448_new_point(&a, xn, LEN, ctx) == 0);
+        assert(curve448_new_point(&b, xn1, LEN, ctx) == 0);
+
+        /* Scale (X:Z) by different factors */
+        for (i=0; i<nw; i++)
+            s[i] = i == 0 ? rnd() | 1 : 0;
+        fe_mul(&ws, a->x, a->x, s);
+        fe_mul(&ws, a->z, a->z, s);
+        s[0] = rnd() | 1;
+        fe_mul(&ws, b->x, b->x, s);
+        fe_mul(&ws, b->z, b->z, s);
+
+        curve448_ladder_step(&ws, ctx, a->x, a->z, b->x, b->z, p->x);
+
+        /* Normalize, and compare with the public API */
+        assert(fe_inv(&ws, s, a->z, ctx->p_minus_2) == 0);
+        fe_mul(&ws, a->x, a->x, s);
+        memcpy(a->z, ctx->field->one, nw*8);
+        assert(fe_inv(&ws, s, b->z, ctx->p_minus_2) == 0);
+        fe_mul(&ws, b->x, b->x, s);
+        memcpy(b->z, ctx->field->one, nw*8);
+
+        assert(curve448_get_x(x1, LEN, a) == 0);
+        x_of(x2, ctx, 2*n);
+        assert(memcmp(x1, x2, LEN) == 0);
+        assert(curve448_get_x(x1, LEN, b) == 0);
+        x_of(x2, ctx, 2*n + 1);
+        assert(memcmp(x1, x2, LEN) == 0);
+
+        curve448_free_point(a);
+        curve448_free_point(b);
+    }
+
+    /* From the point at infinity: (1:0) doubled is (1:0)-like (Z = 0) */
+    assert(curve448_new_point(&a, NULL, 0, ctx) == 0);
+    assert(curve448_new_point(&b, &five, 1, ctx) == 0);
+    curve448_ladder_step(&ws, ctx, a->x, a->z, b->x, b->z, p->x);
+    assert(words_is_zero(a->z, nw));
+    curve448_free_point(a);
+    curve448_free_point(b);
+
+    curve448_free_point(p);
+    ec_ws_free(&ws);
+}
+
+/* The ladder directly: the result does not depend on the seed */
+static void test_ladder(const Curve448Context *ctx)
+{
+    Curve448Point *p, *q;
+    uint8_t k[LEN], five = 5, x1[LEN], x2[LEN];
+    EcWs ws;
+    unsigned t, i;
+
+    assert(ec_ws_new(&ws, ctx->field) == 0);
+    for (t=0; t<5; t++) {
+        for (i=0; i<LEN; i++)
+            k[i] = (uint8_t)rnd();
+        assert(curve448_new_point(&p, &five, 1, ctx) == 0);
+        assert(curve448_new_point(&q, &five, 1, ctx) == 0);
+        assert(curve448_ladder(&ws, ctx, p, k, LEN, rnd()) == 0);
+        assert(curve448_ladder(&ws, ctx, q, k, LEN, rnd()) == 0);
+        assert(curve448_get_x(x1, LEN, p) == 0);
+        assert(curve448_get_x(x2, LEN, q) == 0);
+        assert(memcmp(x1, x2, LEN) == 0);
+        /* Z is 1 */
+        assert(memcmp(p->z, ctx->field->one, CURVE448_WORDS*8) == 0);
+        curve448_free_point(p);
+        curve448_free_point(q);
+    }
+    ec_ws_free(&ws);
+}
+
 static void test_points(const Curve448Context *ctx)
 {
     uint8_t x[LEN], out[LEN], k[LEN];
@@ -250,6 +366,8 @@ int main(void)
     test_iterations(ctx);
     test_dh(ctx);
     test_points(ctx);
+    test_ladder_step(ctx);
+    test_ladder(ctx);
     curve448_free_context(ctx);
     curve448_free_context(NULL);
     return 0;

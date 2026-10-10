@@ -12,6 +12,8 @@ void reduce_25519_le64(uint64_t x[4]);
 void cswap(uint32_t a[10], uint32_t b[10], uint32_t c[10], uint32_t d[10], unsigned cond);
 void invert_25519(uint32_t out[10], const uint32_t x[10]);
 void add_25519(uint32_t out[10], const uint32_t f[10], const uint32_t g[10]);
+unsigned sub(uint64_t *out, const uint64_t *a, const uint64_t *b, size_t nw);
+int mod_select(uint64_t *out, const uint64_t *a, const uint64_t *b, unsigned cond, size_t words);
 
 static const uint64_t modulus[4] =  { 0xffffffffffffffedULL, 0xffffffffffffffffULL, 0xffffffffffffffffULL, 0x7fffffffffffffffULL };
 static const uint64_t modulus2[4] = { 0xffffffffffffffdaULL, 0xffffffffffffffffULL, 0xffffffffffffffffULL, 0xffffffffffffffffULL };
@@ -380,8 +382,50 @@ void test_add(void)
     assert(out[3] == 0x8000000000000000);
 }
 
+/** sub() and mod_select() from bignum.c **/
+void test_bignum(void)
+{
+    uint64_t a[3], b[3], out[3];
+    unsigned i;
+
+    /* 2^128 - 1 - 1 = 2^128 - 2 */
+    a[0] = a[1] = 0xFFFFFFFFFFFFFFFFULL; a[2] = 0;
+    b[0] = 1; b[1] = b[2] = 0;
+    assert(sub(out, a, b, 3) == 0);
+    assert(out[0] == 0xFFFFFFFFFFFFFFFEULL && out[1] == 0xFFFFFFFFFFFFFFFFULL && out[2] == 0);
+
+    /* A borrow across the words: 2^128 - 1 = (2^64 - 1, 2^64 - 1, 0) */
+    a[0] = a[1] = 0; a[2] = 1;
+    assert(sub(out, a, b, 3) == 0);
+    assert(out[0] == 0xFFFFFFFFFFFFFFFFULL && out[1] == 0xFFFFFFFFFFFFFFFFULL && out[2] == 0);
+
+    /* Negative result: borrow out, value modulo 2^192 */
+    assert(sub(out, b, a, 3) == 1);
+    assert(out[0] == 1 && out[1] == 0 && out[2] == 0xFFFFFFFFFFFFFFFFULL);
+
+    /* In place */
+    assert(sub(a, a, a, 3) == 0);
+    assert(a[0] == 0 && a[1] == 0 && a[2] == 0);
+
+    /* mod_select: a if cond != 0, b otherwise (odd and even lengths) */
+    for (i=0; i<3; i++) {
+        a[i] = 0x1111111111111111ULL * (i + 1);
+        b[i] = 0xAAAAAAAAAAAAAAAAULL - i;
+    }
+    for (i=1; i<=3; i++) {
+        memset(out, 0, sizeof out);
+        assert(mod_select(out, a, b, 1, i) == 0);
+        assert(memcmp(out, a, i*8) == 0);
+        assert(mod_select(out, a, b, 0x80, i) == 0);
+        assert(memcmp(out, a, i*8) == 0);
+        assert(mod_select(out, a, b, 0, i) == 0);
+        assert(memcmp(out, b, i*8) == 0);
+    }
+}
+
 int main(void)
 {
+    test_bignum();
     test_le64_tole25p5();
     test_le25p5_to_le64();
     test_is_le25p5_zero();

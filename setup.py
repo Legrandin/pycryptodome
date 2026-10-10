@@ -189,12 +189,6 @@ ext_modules = [
     ),
     # Math
     Extension(
-        "Crypto.Math._modexp",
-        include_dirs=["src/"],
-        sources=["src/modexp.c", "src/mont3.c"],
-        py_limited_api=True,
-    ),
-    Extension(
         "Crypto.Math._nat",
         include_dirs=["src/"],
         sources=["src/nat.c", "src/nat_div.c", "src/nat_mod.c", "src/nat_gcd.c", "src/nat_prime.c"],
