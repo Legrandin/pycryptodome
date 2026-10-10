@@ -163,9 +163,16 @@ ext_modules = [
     Extension("Crypto.Util._strxor", include_dirs=["src/"], sources=["src/strxor.c"], py_limited_api=True),
     # ECC
     Extension(
-        "Crypto.PublicKey._ec_ws",
+        "Crypto.PublicKey._ec_nat",
         include_dirs=["src/"],
-        sources=["src/ec_ws.c", "src/mont.c", "src/p256_table.c", "src/p384_table.c", "src/p521_table.c"],
+        sources=["src/ec_nat_module.c"],
+        py_limited_api=True,
+    ),
+    # The same, for x86-64 CPUs with BMI2 and ADX (removed if the compiler cannot build it)
+    Extension(
+        "Crypto.PublicKey._ec_nat_bmi2_adx",
+        include_dirs=["src/"],
+        sources=["src/ec_nat_bmi2_adx.c"],
         py_limited_api=True,
     ),
     Extension(

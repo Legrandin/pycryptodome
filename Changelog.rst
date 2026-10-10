@@ -30,6 +30,10 @@ Breaking changes
   new constant-time code (see below).
 * ``Crypto.Math.Numbers.Integer`` (an internal class) no longer supports
   negative values.
+* Importing a NIST curve public key (SEC1, DER, PEM or OpenSSH) fails if a
+  coordinate of the point is equal to or larger than the modulus ``p``,
+  as required by SEC1. Such coordinates were reduced modulo ``p`` before.
+  ``EccPoint`` and ``ECC.construct()`` still reduce them.
 
 Resolved issues
 ---------------
@@ -70,6 +74,16 @@ New features
   For now, RSA and DSA private key operations and key generation are slower
   than with GMP. On x86-64 CPUs with BMI2 and ADX (gcc and clang only),
   a build that uses those instructions is about 15-25% faster.
+* The NIST curves (P-192, P-224, P-256, P-384 and P-521) run on the same
+  constant-time library (new module ``Crypto.PublicKey._ec_nat``). Every scalar
+  multiplication processes the full (blinded) scalar length, scans its tables in full
+  and randomizes the coordinates, and its result is checked to be on the curve.
+  This fixes timing leaks of the previous code, including one on the length
+  of ECDSA nonces. It is also faster: the multiplication of the generator
+  (signing, key generation) is up to 10x faster for P-192 and P-224, which now
+  have precomputed tables too, and ECDH is about 1.5x-2x faster on P-192,
+  P-224, P-256 and P-384. Multiplying the generator by a scalar of any length
+  no longer fails.
 * New function ``Crypto.Hash.KangarooTwelve.digest()``, to hash a whole message
   with a single call. For messages up to 8 KiB, it is 1.3x to 3x faster than
   ``new()`` followed by ``read()``.

@@ -140,6 +140,26 @@ if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64" AND NOT MSVC)
     endif()
 endif()
 
+# The NIST curves on the natural numbers
+add_executable(test_ec_nat test_ec_nat.c ../ec_nat.c $<TARGET_OBJECTS:nat>)
+add_test(NAME test_ec_nat COMMAND test_ec_nat)
+
+if (NAT_BMI2_ADX_TESTS)
+    add_executable(test_ec_nat_bmi2_adx test_ec_nat.c ../ec_nat_bmi2_adx.c)
+    target_compile_definitions(test_ec_nat_bmi2_adx PRIVATE TEST_BMI2_ADX)
+    target_compile_options(test_ec_nat_bmi2_adx PRIVATE -mbmi2 -madx)
+    add_test(NAME test_ec_nat_bmi2_adx COMMAND test_ec_nat_bmi2_adx)
+endif()
+
+if (NAT_32BIT_TESTS AND HAVE_M32)
+    add_executable(test_ec_nat_32 test_ec_nat.c ../ec_nat.c ../nat.c ../nat_div.c ../nat_mod.c ../nat_gcd.c ../nat_prime.c)
+    set_target_properties(test_ec_nat_32 PROPERTIES
+        COMPILE_OPTIONS "-m32;-O2;-g;-Wall;-Werror;-fsanitize=undefined;-fsanitize=address;-UHAVE_UINT128;-USYS_BITS;-DSYS_BITS=32"
+        LINK_OPTIONS "-m32;-fsanitize=undefined;-fsanitize=address"
+        LINK_LIBRARIES "")
+    add_test(NAME test_ec_nat_32 COMMAND test_ec_nat_32)
+endif()
+
 # Constant-time check of the natural numbers, with Valgrind memcheck
 find_program(VALGRIND valgrind)
 CHECK_INCLUDE_FILE("valgrind/memcheck.h" HAVE_VALGRIND_MEMCHECK_H)
@@ -153,6 +173,14 @@ if (VALGRIND AND HAVE_VALGRIND_MEMCHECK_H)
         LINK_LIBRARIES "")
     add_test(NAME test_nat_ct COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_nat_ct>)
 
+    add_executable(test_ec_nat_ct test_ec_nat_ct.c ../ec_nat.c ../nat.c ../nat_div.c ../nat_mod.c ../nat_gcd.c ../nat_prime.c)
+    target_compile_definitions(test_ec_nat_ct PRIVATE NAT_CTGRIND)
+    set_target_properties(test_ec_nat_ct PROPERTIES
+        COMPILE_OPTIONS "-O2;-g;-Wall;-Werror"
+        LINK_OPTIONS ""
+        LINK_LIBRARIES "")
+    add_test(NAME test_ec_nat_ct COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_ec_nat_ct>)
+
     if (NAT_32BIT_TESTS)
         add_executable(test_nat_ct_32 test_nat_ct.c ../nat.c ../nat_div.c ../nat_mod.c ../nat_gcd.c ../nat_prime.c)
         target_compile_definitions(test_nat_ct_32 PRIVATE NAT_CTGRIND)
@@ -161,6 +189,14 @@ if (VALGRIND AND HAVE_VALGRIND_MEMCHECK_H)
             LINK_OPTIONS "-m32"
             LINK_LIBRARIES "")
         add_test(NAME test_nat_ct_32 COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_nat_ct_32>)
+
+        add_executable(test_ec_nat_ct_32 test_ec_nat_ct.c ../ec_nat.c ../nat.c ../nat_div.c ../nat_mod.c ../nat_gcd.c ../nat_prime.c)
+        target_compile_definitions(test_ec_nat_ct_32 PRIVATE NAT_CTGRIND)
+        set_target_properties(test_ec_nat_ct_32 PROPERTIES
+            COMPILE_OPTIONS "-m32;-O2;-g;-Wall;-Werror;-UHAVE_UINT128;-USYS_BITS;-DSYS_BITS=32"
+            LINK_OPTIONS "-m32"
+            LINK_LIBRARIES "")
+        add_test(NAME test_ec_nat_ct_32 COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_ec_nat_ct_32>)
     endif()
 
     if (NAT_BMI2_ADX_TESTS)
@@ -171,6 +207,14 @@ if (VALGRIND AND HAVE_VALGRIND_MEMCHECK_H)
             LINK_OPTIONS ""
             LINK_LIBRARIES "")
         add_test(NAME test_nat_ct_bmi2_adx COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_nat_ct_bmi2_adx>)
+
+        add_executable(test_ec_nat_ct_bmi2_adx test_ec_nat_ct.c ../ec_nat_bmi2_adx.c)
+        target_compile_definitions(test_ec_nat_ct_bmi2_adx PRIVATE NAT_CTGRIND TEST_BMI2_ADX)
+        set_target_properties(test_ec_nat_ct_bmi2_adx PROPERTIES
+            COMPILE_OPTIONS "-O2;-g;-Wall;-Werror;-mbmi2;-madx"
+            LINK_OPTIONS ""
+            LINK_LIBRARIES "")
+        add_test(NAME test_ec_nat_ct_bmi2_adx COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_ec_nat_ct_bmi2_adx>)
     endif()
 endif()
 
@@ -210,11 +254,6 @@ add_custom_command(
 )
 add_executable(test_mont_mult test_mont_mult.c $<TARGET_OBJECTS:mont>)
 add_test(NAME test_mont_mult COMMAND test_mont_mult)
-
-# ec_ws
-add_library(tables OBJECT ../p256_table.c ../p384_table.c ../p521_table.c)
-add_executable(test_ec_ws test_ec_ws.c ../ec_ws.c $<TARGET_OBJECTS:tables> $<TARGET_OBJECTS:mont>)
-add_test(NAME test_ec_ws COMMAND test_ec_ws)
 
 # endianess
 add_executable(test_endianess test_endianess.c)

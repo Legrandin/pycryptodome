@@ -154,6 +154,13 @@ typedef struct {
 
 int mont_ctx_new(MontCtx **out, const Nat *n);
 void mont_ctx_free(MontCtx *ctx);
+/**
+ * A copy of ctx that shares its constants (n, R^2, ...) but has its own
+ * scratchpads, so that several threads can use the same modulus at the
+ * same time. Free it with mont_ctx_free_private(), before ctx.
+ */
+int mont_ctx_new_private(MontCtx **out, const MontCtx *ctx);
+void mont_ctx_free_private(MontCtx *ctx);
 /** out = a*b/R mod n; a, b < n; out may alias a or b **/
 void mont_mul(uint64_t *out, const uint64_t *a, const uint64_t *b, MontCtx *ctx);
 /** out = a*a/R mod n; a < n; out may alias a **/

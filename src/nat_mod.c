@@ -198,6 +198,61 @@ STATIC void mont_sqr32(uint32_t *out, const uint32_t *a, MontCtx *ctx)
 
 #endif /* NAT_32BIT */
 
+void mont_ctx_free_private(MontCtx *ctx);
+
+/* Allocate the scratchpads of a context (nw is already set) */
+STATIC int mont_ctx_alloc_scratch(MontCtx *ctx)
+{
+    size_t nw = ctx->nw;
+
+    ctx->tmp = nat_words_alloc(2*nw + 2);
+    if (NULL == ctx->tmp)
+        return ERR_MEMORY;
+#if defined(NAT_32BIT)
+    /* Arrays of 32-bit words, allocated as 64-bit words */
+    ctx->t32 = (uint32_t*)nat_words_alloc(2*nw + 1);
+    ctx->x32 = (uint32_t*)nat_words_alloc(nw);
+    ctx->y32 = (uint32_t*)nat_words_alloc(nw);
+    if (!ctx->t32 || !ctx->x32 || !ctx->y32)
+        return ERR_MEMORY;
+#endif
+    return 0;
+}
+
+STATIC void mont_ctx_free_scratch(MontCtx *ctx)
+{
+    nat_words_free(ctx->tmp, 2*ctx->nw + 2);
+    nat_words_free((uint64_t*)ctx->t32, 2*ctx->nw + 1);
+    nat_words_free((uint64_t*)ctx->x32, ctx->nw);
+    nat_words_free((uint64_t*)ctx->y32, ctx->nw);
+}
+
+int mont_ctx_new_private(MontCtx **out, const MontCtx *ctx)
+{
+    MontCtx *copy;
+
+    *out = copy = (MontCtx*)calloc(1, sizeof(MontCtx));
+    if (NULL == copy)
+        return ERR_MEMORY;
+    *copy = *ctx;
+    copy->tmp = NULL;
+    copy->t32 = copy->x32 = copy->y32 = NULL;
+    if (mont_ctx_alloc_scratch(copy)) {
+        mont_ctx_free_private(copy);
+        *out = NULL;
+        return ERR_MEMORY;
+    }
+    return 0;
+}
+
+void mont_ctx_free_private(MontCtx *ctx)
+{
+    if (NULL == ctx)
+        return;
+    mont_ctx_free_scratch(ctx);
+    free(ctx);
+}
+
 void mont_ctx_free(MontCtx *ctx)
 {
     if (NULL == ctx)
@@ -206,12 +261,9 @@ void mont_ctx_free(MontCtx *ctx)
     nat_words_free(ctx->r2, ctx->nw);
     nat_words_free(ctx->one, ctx->nw);
     nat_words_free(ctx->unit, ctx->nw);
-    nat_words_free(ctx->tmp, 2*ctx->nw + 2);
     /* The 32-bit arrays are allocated as 64-bit words (see mont_ctx_new) */
     nat_words_free((uint64_t*)ctx->n32, ctx->nw);
-    nat_words_free((uint64_t*)ctx->t32, 2*ctx->nw + 1);
-    nat_words_free((uint64_t*)ctx->x32, ctx->nw);
-    nat_words_free((uint64_t*)ctx->y32, ctx->nw);
+    mont_ctx_free_scratch(ctx);
     free(ctx);
 }
 
@@ -237,8 +289,9 @@ int mont_ctx_new(MontCtx **out, const Nat *n)
     ctx->r2 = nat_words_alloc(nw);
     ctx->one = nat_words_alloc(nw);
     ctx->unit = nat_words_alloc(nw);
-    ctx->tmp = nat_words_alloc(2*nw + 2);
-    if (!ctx->n || !ctx->r2 || !ctx->one || !ctx->unit || !ctx->tmp)
+    if (!ctx->n || !ctx->r2 || !ctx->one || !ctx->unit)
+        goto cleanup;
+    if (mont_ctx_alloc_scratch(ctx))
         goto cleanup;
 
     memcpy(ctx->n, n->w, nw*sizeof(uint64_t));
@@ -256,10 +309,7 @@ int mont_ctx_new(MontCtx **out, const Nat *n)
      * accessed as 32-bit words.
      */
     ctx->n32 = (uint32_t*)nat_words_alloc(nw);
-    ctx->t32 = (uint32_t*)nat_words_alloc(2*nw + 1);
-    ctx->x32 = (uint32_t*)nat_words_alloc(nw);
-    ctx->y32 = (uint32_t*)nat_words_alloc(nw);
-    if (!ctx->n32 || !ctx->t32 || !ctx->x32 || !ctx->y32)
+    if (!ctx->n32)
         goto cleanup;
     to_words32(ctx->n32, ctx->n, nw);
     ctx->m0_32 = (uint32_t)ctx->m0;

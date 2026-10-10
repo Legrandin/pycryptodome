@@ -499,15 +499,16 @@ def set_compiler_options(extensions):
     # BMI2 and ADX, for the big integer code (gcc and clang on x86-64 only)
     # Detecting them at runtime requires cpuid.h
     bmi2_adx_result = cpuid_h_present and compiler_supports_bmi2_adx()
-    bmi2_adx_mod_name = "Crypto.Math._nat_bmi2_adx"
+    bmi2_adx_mod_names = ["Crypto.Math._nat_bmi2_adx", "Crypto.PublicKey._ec_nat_bmi2_adx"]
     if bmi2_adx_result:
         print("Compiling support for BMI2 and ADX instructions")
         for x in extensions:
-            if x.name == bmi2_adx_mod_name:
+            if x.name in bmi2_adx_mod_names:
                 x.extra_compile_args.extend(bmi2_adx_result["extra_cc_options"])
     else:
         print("Warning: compiler does not support BMI2 and ADX instructions")
-        remove_extension(extensions, bmi2_adx_mod_name)
+        for mod_name in bmi2_adx_mod_names:
+            remove_extension(extensions, mod_name)
 
     for x in extensions:
         x.extra_compile_args.extend(extra_cc_options)

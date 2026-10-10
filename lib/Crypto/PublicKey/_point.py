@@ -60,6 +60,9 @@ class CurveID:
     CURVE448 = 9
 
 
+_nist_curve_ids = (CurveID.P192, CurveID.P224, CurveID.P256, CurveID.P384, CurveID.P521)
+
+
 class _Curves:
     curves: dict[str, Any] = {}
     curves_lock = threading.RLock()
@@ -213,6 +216,15 @@ class EccPoint:
 
         xb = _encode_coordinate(x, modulus_bytes)
         yb = _encode_coordinate(y, modulus_bytes)
+
+        # For the NIST curves, coordinates that fit in the length of the
+        # modulus are reduced modulo p (the C code only accepts values
+        # smaller than p). Imported keys are checked before, and they are
+        # rejected instead (see ECC._import_public_der).
+        if self._curve.id in _nist_curve_ids:
+            p = int(self._curve.p)
+            xb = long_to_bytes(bytes_to_long(xb) % p, modulus_bytes)
+            yb = long_to_bytes(bytes_to_long(yb) % p, modulus_bytes)
 
         new_point = self._curve.rawlib.new_point
         free_func = self._curve.rawlib.free_point

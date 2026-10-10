@@ -46,19 +46,22 @@ jobs:
       run: |
         pip install -v .
 
-    # On x86-64, the big integer code (Crypto.Math._IntegerNat) must use
-    # its build for CPUs with BMI2 and ADX, so that the tests cover it
+    # On x86-64, the big integer code (Crypto.Math._IntegerNat) and the
+    # NIST curves (Crypto.PublicKey._nist_ecc) must use their builds for
+    # CPUs with BMI2 and ADX, so that the tests cover them
     - name: Check that the BMI2/ADX build of the big integer code is used
       if: runner.arch == 'X64'
       run: |
         python -c "from Crypto.Math import _IntegerNat as n; import sys; sys.exit(0 if n._bmi2_adx_lib is not None else 'The BMI2/ADX build of Crypto.Math._nat was not loaded')"
+        python -c "from Crypto.PublicKey import _nist_ecc as e; import sys; sys.exit(0 if e._bmi2_adx else 'The BMI2/ADX build of Crypto.PublicKey._ec_nat was not loaded')"
 
     - name: Test
       shell: bash
       run: |
         python -m Crypto.SelfTest
 
-    # The same tests with the portable build of the big integer code
+    # The same tests with the portable build of the big integer code (and
+    # of the NIST curves)
     # (once per Python API: ctypes and cffi)
     - name: Test the portable build of the big integer code
       if: runner.arch == 'X64' && matrix.python-version == '3.14'
@@ -67,6 +70,7 @@ jobs:
         PYCRYPTODOME_DISABLE_BMI2_ADX: 1
       run: |
         python -c "from Crypto.Math import _IntegerNat as n; import sys; sys.exit(0 if n._lib is n._portable_lib else 'The portable build was not selected')"
+        python -c "from Crypto.PublicKey import _nist_ecc as e; import sys; sys.exit(0 if not e._bmi2_adx else 'The portable build of the NIST curves was not selected')"
         python -m Crypto.SelfTest --skip-slow-tests
 
   build_desktop:
