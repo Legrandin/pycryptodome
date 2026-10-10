@@ -763,16 +763,22 @@ def _import_public_der(ec_point, curve_oid=None, curve_name=None):
         if len(ec_point) != (1 + modulus_bytes):
             raise ValueError("Incorrect EC point length")
         x = Integer.from_bytes(ec_point[1:])
+        if x >= curve.p:
+            raise ValueError("The EC point does not belong to the curve")
         # Right now, we only support Short Weierstrass curves:
         # y^2 = x^3 - 3x + b, computed without negative intermediate values
-        x_red = x % curve.p
-        y = (x_red**3 + curve.b + (curve.p - x_red) * 3).sqrt(curve.p)
+        y = (x**3 + curve.b + (curve.p - x) * 3).sqrt(curve.p)
         if point_type == 0x02 and y.is_odd():
             y = curve.p - y
         if point_type == 0x03 and y.is_even():
             y = curve.p - y
     else:
         raise ValueError("Incorrect EC point encoding")
+
+    # SEC1 3.2.2.1: the coordinates must be smaller than p
+    # (EccPoint would reduce them)
+    if x >= curve.p or y >= curve.p:
+        raise ValueError("The EC point does not belong to the curve")
 
     return construct(curve=_curve_name, point_x=x, point_y=y)
 

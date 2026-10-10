@@ -9,7 +9,6 @@
 #include "endianess.h"
 #include "multiply.h"
 #include "mont.h"
-#include "ec.h"
 #include "modexp_utils.h"
 
 #include <sys/time.h>
