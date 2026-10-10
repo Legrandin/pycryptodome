@@ -261,8 +261,9 @@ STATIC void ec_full_double(uint64_t *x3, uint64_t *y3, uint64_t *z3,
  * Input and output points can match. The correct is produced if both or either
  * input points are at infinity.
  *
- * @warning The function is regular (constant-time) only if the second point (affine)
- * is NOT the point-at-infinity.
+ * The second point (affine) can be the point-at-infinity, encoded as (0, 0):
+ * the formula is computed anyway, and its result replaced with the first
+ * point with a mask, so that the time does not depend on it.
  */
 STATIC void ec_mix_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                        const uint64_t *x13, const uint64_t *y13, const uint64_t *z13,
@@ -280,17 +281,15 @@ STATIC void ec_mix_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     uint64_t *y1 = tmp->g;
     uint64_t *z1 = tmp->h;
     uint64_t *s = tmp->scratch;
+    uint64_t pai2;
+    unsigned i;
 
     /*
     * Algorithm 5 in "Complete addition formulas for prime order elliptic curves", Renes et al.
     */
-    
-    if (mont_is_zero(x2, ctx) & mont_is_zero(y2, ctx)) {
-        mont_copy(x3, x13, ctx);
-        mont_copy(y3, y13, ctx);
-        mont_copy(z3, z13, ctx);
-        return;
-    }
+
+    /* All ones if the second point is the point-at-infinity */
+    pai2 = (uint64_t)0 - (uint64_t)(mont_is_zero(x2, ctx) & mont_is_zero(y2, ctx));
 
     memcpy(x1, x13, ctx->bytes);
     memcpy(y1, y13, ctx->bytes);
@@ -343,6 +342,13 @@ STATIC void ec_mix_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     mont_mult(z3, t4, z3, s, ctx);      /* 34 */
     mont_mult(t1, t3, t0, s, ctx);
     mont_add(z3, z3, t1, s, ctx);
+
+    /* If the second point was the point-at-infinity, the result is the first point */
+    for (i=0; i<ctx->words; i++) {
+        x3[i] = (x1[i] & pai2) | (x3[i] & ~pai2);
+        y3[i] = (y1[i] & pai2) | (y3[i] & ~pai2);
+        z3[i] = (z1[i] & pai2) | (z3[i] & ~pai2);
+    }
 }
 
 /*
@@ -452,6 +458,28 @@ STATIC void ec_full_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     mont_add(z3, z3, t1, s, ctx);   /* 43 */
 }
 
+/*
+ * Return 1 if all the bits of the big-endian number exp (len bytes), from
+ * position limit up (0 is the least significant bit), are zero.
+ * All the bytes are read; only the result can leak.
+ */
+STATIC int high_bits_zero(const uint8_t *exp, size_t len, size_t limit)
+{
+    uint8_t acc = 0;
+    size_t k;
+
+    for (k=0; k<len; k++) {
+        size_t first_bit = 8*k;     /* position of bit 0 of byte k (from the end) */
+        uint8_t byte = exp[len - 1 - k];
+
+        if (first_bit >= limit)
+            acc |= byte;
+        else if (first_bit + 8 > limit)
+            acc |= (uint8_t)(byte >> (limit - first_bit));
+    }
+    return acc == 0;
+}
+
 #define WINDOW_SIZE_BITS 4
 #define WINDOW_SIZE_ITEMS (1<<WINDOW_SIZE_BITS)
 
@@ -532,8 +560,10 @@ STATIC int ec_scalar(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     mont_set(y3, 1, ctx);
     mont_set(z3, 0, ctx);
 
-    /** Find first non-zero byte in exponent **/
-    for (; exp_size && *exp==0; exp++, exp_size--);
+    /*
+     * All the bytes of the (blinded) scalar are processed, also the leading
+     * zeros, so that the time does not depend on its value.
+     */
     bw = init_bit_window_lr(WINDOW_SIZE_BITS, exp, exp_size);
 
     /** For every nibble, double 16 times and add window value **/
@@ -725,12 +755,17 @@ STATIC int ec_scalar_g_p256(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     mont_set(y3, 1, ctx);
     mont_set(z3, 0, ctx);
 
-    /** Find first non-zero byte in exponent **/
-    for (; exp_size && *exp==0; exp++, exp_size--);
+    /*
+     * All the windows covered by the tables are processed, whatever the
+     * value of the scalar (leading zeros are not skipped). The bits above
+     * them must be zero.
+     */
     bw = init_bit_window_rl(p256_window_size, exp, exp_size);
-
-    if (bw.nr_windows > p256_n_tables)
-        return ERR_VALUE;
+    if (bw.nr_windows > p256_n_tables) {
+        if (!high_bits_zero(exp, exp_size, (size_t)p256_n_tables * p256_window_size))
+            return ERR_VALUE;
+        bw.nr_windows = p256_n_tables;
+    }
 
     for (unsigned i=0; i < bw.nr_windows; ++i) {
         unsigned index;
@@ -767,12 +802,17 @@ STATIC int ec_scalar_g_p384(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     mont_set(y3, 1, ctx);
     mont_set(z3, 0, ctx);
 
-    /** Find first non-zero byte in exponent **/
-    for (; exp_size && *exp==0; exp++, exp_size--);
+    /*
+     * All the windows covered by the tables are processed, whatever the
+     * value of the scalar (leading zeros are not skipped). The bits above
+     * them must be zero.
+     */
     bw = init_bit_window_rl(p384_window_size, exp, exp_size);
-
-    if (bw.nr_windows > p384_n_tables)
-        return ERR_VALUE;
+    if (bw.nr_windows > p384_n_tables) {
+        if (!high_bits_zero(exp, exp_size, (size_t)p384_n_tables * p384_window_size))
+            return ERR_VALUE;
+        bw.nr_windows = p384_n_tables;
+    }
 
     for (unsigned i=0; i < bw.nr_windows; ++i) {
         unsigned index;
@@ -810,30 +850,17 @@ STATIC int ec_scalar_g_p521(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     mont_set(y3, 1, ctx);
     mont_set(z3, 0, ctx);
 
-    /** Find first non-zero byte in exponent **/
-    for (; exp_size && *exp==0; exp++, exp_size--);
+    /*
+     * All the windows covered by the tables are processed, whatever the
+     * value of the scalar (leading zeros are not skipped). The bits above
+     * them must be zero.
+     */
     bw = init_bit_window_rl(p521_window_size, exp, exp_size);
-
-    if (exp_size == 66) {
-        if (exp[0] >> 1) {
+    if (bw.nr_windows > p521_n_tables) {
+        if (!high_bits_zero(exp, exp_size, (size_t)p521_n_tables * p521_window_size))
             return ERR_VALUE;
-        }
-        switch (p521_window_size) {
-            case 1: bw.nr_windows -= 7; break;
-            case 2: bw.nr_windows -= 3; break;
-            case 3: bw.nr_windows -= 2; break;
-            case 4:
-            case 5:
-            case 6:
-            case 7: bw.nr_windows -= 1; break;
-        }
+        bw.nr_windows = p521_n_tables;
     }
-
-    if (exp_size > 66)
-        return ERR_VALUE;
-
-    if (bw.nr_windows > p521_n_tables)
-        return ERR_VALUE;
 
     for (unsigned i=0; i < bw.nr_windows; ++i) {
         unsigned index;
