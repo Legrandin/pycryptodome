@@ -4,7 +4,6 @@
  */
 
 #include <assert.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include "common.h"
@@ -68,18 +67,22 @@ static uint64_t rnd(void)
     return rnd_state;
 }
 
+static unsigned hex_digit(char ch)
+{
+    if (ch >= '0' && ch <= '9')
+        return (unsigned)(ch - '0');
+    assert(ch >= 'a' && ch <= 'f');
+    return (unsigned)(ch - 'a' + 10);
+}
+
 /** Hex string (little-endian number) to big-endian bytes **/
 static void from_hex_le(uint8_t *out, const char *hex)
 {
     unsigned i;
 
     assert(strlen(hex) == 2*LEN);
-    for (i=0; i<LEN; i++) {
-        unsigned v;
-
-        assert(sscanf(hex + 2*i, "%2x", &v) == 1);
-        out[LEN - 1 - i] = (uint8_t)v;
-    }
+    for (i=0; i<LEN; i++)
+        out[LEN - 1 - i] = (uint8_t)(hex_digit(hex[2*i]) << 4 | hex_digit(hex[2*i + 1]));
 }
 
 /** The clamped scalar of RFC 7748 (big-endian) **/
