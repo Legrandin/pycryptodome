@@ -52,31 +52,16 @@ void ec_ws_free(EcWs *ws);
 /*
  * Field elements: nw words, in Montgomery form, smaller than p.
  * The outputs may alias the inputs.
+ *
+ * On 64-bit targets, the sizes of the curves (3, 4, 6, 7 and 9 words)
+ * have their own unrolled code (ec_field.h); other sizes, and 32-bit
+ * targets, use mont_mul(), mont_sqr(), mod_add() and mod_sub().
  */
-static inline void fe_mul(EcWs *ws, uint64_t *out, const uint64_t *a, const uint64_t *b)
-{
-    mont_mul(out, a, b, ws->m);
-}
-
-static inline void fe_sqr(EcWs *ws, uint64_t *out, const uint64_t *a)
-{
-    mont_sqr(out, a, ws->m);
-}
-
-static inline void fe_add(EcWs *ws, uint64_t *out, const uint64_t *a, const uint64_t *b)
-{
-    mod_add(out, a, b, ws->m->n, ws->nw);
-}
-
-static inline void fe_sub(EcWs *ws, uint64_t *out, const uint64_t *a, const uint64_t *b)
-{
-    mod_sub(out, a, b, ws->m->n, ws->nw);
-}
-
-static inline void fe_neg(EcWs *ws, uint64_t *out, const uint64_t *a)
-{
-    mod_sub(out, ws->zero, a, ws->m->n, ws->nw);
-}
+void fe_mul(EcWs *ws, uint64_t *out, const uint64_t *a, const uint64_t *b);
+void fe_sqr(EcWs *ws, uint64_t *out, const uint64_t *a);
+void fe_add(EcWs *ws, uint64_t *out, const uint64_t *a, const uint64_t *b);
+void fe_sub(EcWs *ws, uint64_t *out, const uint64_t *a, const uint64_t *b);
+void fe_neg(EcWs *ws, uint64_t *out, const uint64_t *a);
 
 static inline void fe_copy(EcWs *ws, uint64_t *out, const uint64_t *a)
 {
