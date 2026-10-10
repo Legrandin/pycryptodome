@@ -18,6 +18,7 @@
 
 #if defined(TEST_BMI2_ADX)
 #include <stdio.h>
+#include <stdlib.h>
 #include <cpuid.h>
 
 static int have_bmi2_adx(void)
@@ -157,6 +158,13 @@ int main(void)
      * the instructions itself: under Valgrind, always run the test.
      */
     if (!have_bmi2_adx() && !RUNNING_ON_VALGRIND) {
+        /* In CI on x86-64, the test must run (NAT_REQUIRE_BMI2_ADX is set) */
+        const char *required = getenv("NAT_REQUIRE_BMI2_ADX");
+
+        if (required && *required) {
+            printf("Failed: the CPU does not support BMI2 and ADX, but NAT_REQUIRE_BMI2_ADX is set\n");
+            return 1;
+        }
         printf("Skipped: the CPU does not support BMI2 and ADX\n");
         return 0;
     }

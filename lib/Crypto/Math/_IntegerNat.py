@@ -22,6 +22,7 @@ are not constant time, and are only meant for public values.
 from __future__ import annotations
 
 import operator
+import os
 from typing import Any, Optional, Union
 
 from Crypto.Util import _cpu_features
@@ -76,9 +77,13 @@ int nat_lucas(void *out, const void *n, uint64_t abs_d, int negative_d);
 def _load_bmi2_adx_lib() -> Any:
     """Load the build of the library for x86-64 CPUs with BMI2 and ADX.
 
-    Return None if the CPU does not support both, or if the module was not
-    compiled in (other CPU architectures and compilers).
+    Return None if the CPU does not support both, if the module was not
+    compiled in (other CPU architectures and compilers), or if the
+    environment variable PYCRYPTODOME_DISABLE_BMI2_ADX is set (to test
+    the portable build).
     """
+    if os.getenv("PYCRYPTODOME_DISABLE_BMI2_ADX"):
+        return None
     if not (_cpu_features.have_bmi2() and _cpu_features.have_adx()):
         return None
     try:
