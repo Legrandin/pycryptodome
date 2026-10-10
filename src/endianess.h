@@ -161,13 +161,16 @@ static inline uint64_t load_u8to64_big(const uint8_t *p)
 /**
  * Convert a big endian-encoded number in[] into a little-endian
  * 64-bit word array x[]. There must be enough words to contain the entire
- * number.
+ * number (ERR_MAX_DATA otherwise).
+ *
+ * The number can be secret: all bytes are processed, whatever their value
+ * (leading zeros are not skipped), and only the fact that the number does
+ * not fit can leak.
  */
 static inline int bytes_to_words(uint64_t *x, size_t words, const uint8_t *in, size_t len)
 {
-    uint8_t buf8[8];
-    size_t words_used, bytes_in_msw, i;
-    uint64_t *xp;
+    uint8_t overflow = 0;
+    size_t k;
 
     if (0 == words || 0 == len)
         return ERR_NOT_ENOUGH_DATA;
@@ -176,46 +179,32 @@ static inline int bytes_to_words(uint64_t *x, size_t words, const uint8_t *in, s
 
     memset(x, 0, words*sizeof(uint64_t));
 
-    /** Shorten the input **/
-    for (; len > 0 && 0 == *in; in++, len--);
-    if (0 == len)
-        return 0;
+    /* k is the position of the byte, from the least significant one */
+    for (k=0; k<len; k++) {
+        uint8_t byte = in[len - 1 - k];
 
-    /** How many words we actually need **/
-    words_used = (len + 7) / 8;
-    if (words_used > words)
-        return ERR_MAX_DATA;
-
-    /** Not all bytes in the most-significant words are used **/
-    bytes_in_msw = len % 8;
-    if (bytes_in_msw == 0)
-        bytes_in_msw = 8;
-
-    /** Do most significant word **/
-    memset(buf8, 0, 8);
-    memcpy(buf8 + (8 - bytes_in_msw), in, bytes_in_msw);
-    xp = &x[words_used-1];
-    *xp = LOAD_U64_BIG(buf8);
-    in += bytes_in_msw;
-
-    /** Do the other words **/
-    for (i=0; i<words_used-1; i++, in += 8) {
-        xp--;
-        *xp = LOAD_U64_BIG(in);
+        if (k/8 < words)
+            x[k/8] |= (uint64_t)byte << (8*(k%8));
+        else
+            overflow |= byte;
     }
-    return 0;
+
+    return overflow ? ERR_MAX_DATA : 0;
 }
 
 /**
  * Convert a little-endian 64-bit word array x[] into a big endian-encoded
- * number out[]. The number is left-padded with zeroes if required.
+ * number out[]. The number is left-padded with zeroes if required, and
+ * it must fit into len bytes (ERR_MAX_DATA otherwise).
+ *
+ * The number can be secret: all words are processed, whatever their value
+ * (leading zeros are not skipped), and only the fact that the number does
+ * not fit can leak.
  */
 static inline int words_to_bytes(uint8_t *out, size_t len, const uint64_t *x, size_t words)
 {
-    size_t i;
-    const uint64_t *msw;
-    uint8_t buf8[8];
-    size_t partial, real_len;
+    uint8_t overflow = 0;
+    size_t k;
 
     if (0 == words || 0 == len)
         return ERR_NOT_ENOUGH_DATA;
@@ -224,37 +213,17 @@ static inline int words_to_bytes(uint8_t *out, size_t len, const uint64_t *x, si
 
     memset(out, 0, len);
 
-    /* Shorten the input, so that the rightmost word is
-     * the most significant one (and non-zero)
-     */
-    for (; words>0 && x[words-1]==0; words--);
-    if (words == 0)
-        return 0;
-    msw = &x[words-1];
+    /* k is the position of the byte, from the least significant one */
+    for (k=0; k<8*words; k++) {
+        uint8_t byte = (uint8_t)(x[k/8] >> (8*(k%8)));
 
-    /* Find how many non-zero bytes there are in the most-significant word */
-    STORE_U64_BIG(buf8, *msw);
-    for (partial=8; partial>0 && buf8[8-partial] == 0; partial--);
-    assert(partial > 0);
-    
-    /** Check if there is enough room **/
-    real_len = partial + 8*(words-1);
-    if (real_len > len)
-        return ERR_MAX_DATA;
+        if (k < len)
+            out[len - 1 - k] = byte;
+        else
+            overflow |= byte;
+    }
 
-    /** Pad **/
-    out += len - real_len;
-
-    /** Most significant word **/
-    memcpy(out, buf8+(8-partial), partial);
-    out += partial;
-    msw--;
-
-    /** Any remaining full word **/
-    for (i=0; i<words-1; i++, out += 8, msw--)
-        STORE_U64_BIG(out, *msw);
-
-    return 0;
+    return overflow ? ERR_MAX_DATA : 0;
 }
 
 #endif
