@@ -47,8 +47,14 @@ static inline uint64_t dp_mult_128_32(uint64_t a, uint64_t b, uint64_t *oh)
     sum2 = (uint64_t)ah*bh;
 
     sum1a += sum0 >> 32;
+    /*
+     * sum1b + sum1a, with the carry computed without a comparison:
+     * compilers may turn a comparison into a conditional jump (gcc does on
+     * 32-bit x86), and the operands can be secret.
+     */
+    sum3 = sum1b;
     sum1b += sum1a;
-    sum3 = sum1b < sum1a;
+    sum3 = ((sum3 & sum1a) | ((sum3 | sum1a) & ~sum1b)) >> 63;
     sum2 += sum1b >> 32;
     sum3 += sum2 >> 32;
 
