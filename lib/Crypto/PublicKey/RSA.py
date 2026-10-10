@@ -514,7 +514,7 @@ def generate(bits: int, randfunc: Optional[RNG] = None, e: Int = 65537) -> RsaKe
     d = n = Integer(1)
     e = Integer(e)
 
-    while n.size_in_bits() != bits and d < (1 << (bits // 2)):
+    while n.size_in_bits() != bits or d < (1 << (bits // 2)):
         # Generate the prime factors of n: p and q.
         # By construciton, their product is always
         # 2^{bits-1} < p*q < 2^bits.
