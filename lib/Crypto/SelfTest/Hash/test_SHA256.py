@@ -23,10 +23,46 @@
 
 """Self-test suite for Crypto.Hash.SHA256"""
 
+import hashlib
+
 import pytest
 
 from Crypto.Hash import SHA256
+from Crypto.Protocol.KDF import PBKDF2
 from Crypto.SelfTest.Hash.common import make_hash_tests
+
+# Run every test with each C implementation available on this machine
+_implementations = [pytest.param(SHA256._raw_sha256_portable_lib, id="portable")]
+if SHA256._raw_sha256_shani_lib is not None:
+    _implementations.append(pytest.param(SHA256._raw_sha256_shani_lib, id="shani"))
+
+
+@pytest.fixture(autouse=True, params=_implementations)
+def sha256_implementation(request, monkeypatch):
+    monkeypatch.setattr(SHA256, "_raw_sha256_lib", request.param)
+
+
+class TestImplementations:
+    def test_all_lengths(self):
+        # Every padding case, over one and two blocks
+        data = bytes(range(256)) * 2
+        for length in range(300):
+            assert SHA256.new(data[:length]).digest() == hashlib.sha256(data[:length]).digest()
+
+    def test_chunks(self):
+        # Partial and whole blocks, in any order
+        data = bytes(range(256)) * 8
+        for chunk_sizes in ((1, 63, 64, 65, 200), (64, 64, 1, 127, 300), (3, 500, 7, 129)):
+            h = SHA256.new()
+            pos = 0
+            for size in chunk_sizes:
+                h.update(data[pos : pos + size])
+                pos += size
+            assert h.digest() == hashlib.sha256(data[:pos]).digest()
+
+    def test_pbkdf2(self):
+        expected = hashlib.pbkdf2_hmac("sha256", b"password", b"salt", 1000, 2 * 32 + 1)
+        assert PBKDF2(b"password", b"salt", 2 * 32 + 1, 1000, hmac_hash_module=SHA256) == expected
 
 
 @pytest.mark.slow

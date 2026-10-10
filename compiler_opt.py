@@ -225,6 +225,39 @@ def compiler_supports_avx2_bmi2():
     return False
 
 
+def compiler_supports_sha_ni():
+    """Return the compiler options to enable the SHA-NI intrinsics
+    (with SSSE3 and SSE4.1), or False if the compiler cannot emit them.
+    MSVC needs no options; gcc and clang need -msha and -msse4.1."""
+
+    source = """
+    #include <immintrin.h>
+    #include <string.h>
+    __m128i f(__m128i a, __m128i b, __m128i k) {
+        __m128i x = _mm_sha256rnds2_epu32(a, b, k);
+        x = _mm_sha256msg2_epu32(_mm_sha256msg1_epu32(x, a), b);
+        return _mm_blend_epi16(_mm_alignr_epi8(x, a, 8), b, 0xF0);
+    }
+    int main(void) {
+        int ret;
+        __m128i x;
+        x = _mm_set1_epi32(1);
+        x = f(x, x, x);
+        memcpy(&ret, &x, sizeof(ret));
+        return ret;
+    }
+    """
+
+    if test_compilation(source, msg="SHA-NI intrinsics"):
+        return {"extra_cc_options": [], "extra_macros": []}
+
+    options = ["-msha", "-msse4.1"]
+    if test_compilation(source, extra_cc_options=options, msg="SHA-NI intrinsics"):
+        return {"extra_cc_options": options, "extra_macros": []}
+
+    return False
+
+
 def compiler_has_posix_memalign():
     source = """
     #include <stdlib.h>
@@ -417,6 +450,21 @@ def set_compiler_options(extensions):
     else:
         print("Warning: compiler does not support AVX2 and BMI2 instructions")
         for mod_name in avx2_bmi2_mod_names:
+            remove_extension(extensions, mod_name)
+
+    # SHA-NI
+    sha_ni_result = (cpuid_h_present or intrin_h_present) and compiler_supports_sha_ni()
+    sha_ni_mod_names = ["Crypto.Hash._SHA224_shani", "Crypto.Hash._SHA256_shani"]
+    if sha_ni_result:
+        print("Compiling support for SHA-NI instructions")
+        sha_ni_mods = [x for x in extensions if x.name in sha_ni_mod_names]
+        for x in sha_ni_mods:
+            x.extra_compile_args.extend(sha_ni_result["extra_cc_options"])
+            for macro in sha_ni_result["extra_macros"]:
+                x.define_macros.append((macro, None))
+    else:
+        print("Warning: compiler does not support SHA-NI instructions")
+        for mod_name in sha_ni_mod_names:
             remove_extension(extensions, mod_name)
 
     for x in extensions:

@@ -22,6 +22,7 @@ from __future__ import annotations
 
 from typing import Optional, Union
 
+from Crypto.Util import _cpu_features
 from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
@@ -32,9 +33,7 @@ from Crypto.Util._raw_api import (
     load_pycryptodome_raw_lib,
 )
 
-_raw_sha256_lib = load_pycryptodome_raw_lib(
-    "Crypto.Hash._SHA256",
-    """
+_sha256_cdecl = """
                         int SHA256_init(void **shaState);
                         int SHA256_destroy(void *shaState);
                         int SHA256_update(void *hs,
@@ -51,8 +50,34 @@ _raw_sha256_lib = load_pycryptodome_raw_lib(
                                             uint8_t *final_digest,
                                             size_t iterations,
                                             size_t digest_size);
-                        """,
-)
+                        """
+
+_raw_sha256_portable_lib = load_pycryptodome_raw_lib("Crypto.Hash._SHA256", _sha256_cdecl)
+
+
+def _load_sha_ni_lib(name: str, cdecl: str):
+    """Load the functions in ``cdecl`` from the module ``name``,
+    compiled for the Intel SHA extensions (SHA-NI).
+
+    Return None if the CPU does not support them,
+    or if the module was not compiled in.
+    """
+
+    if not _cpu_features.have_sha_ni():
+        return None
+    try:
+        return load_pycryptodome_raw_lib(name, cdecl)
+    except OSError:
+        return None
+
+
+_raw_sha256_shani_lib = _load_sha_ni_lib("Crypto.Hash._SHA256_shani", _sha256_cdecl)
+
+# The implementation used by SHA256Hash
+if _raw_sha256_shani_lib is not None:
+    _raw_sha256_lib = _raw_sha256_shani_lib
+else:
+    _raw_sha256_lib = _raw_sha256_portable_lib
 
 
 class SHA256Hash:

@@ -22,6 +22,7 @@ from __future__ import annotations
 
 from typing import Optional, Union
 
+from Crypto.Hash.SHA256 import _load_sha_ni_lib
 from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
@@ -34,9 +35,7 @@ from Crypto.Util._raw_api import (
 
 Buffer = Union[bytes, bytearray, memoryview]
 
-_raw_sha224_lib = load_pycryptodome_raw_lib(
-    "Crypto.Hash._SHA224",
-    """
+_sha224_cdecl = """
                         int SHA224_init(void **shaState);
                         int SHA224_destroy(void *shaState);
                         int SHA224_update(void *hs,
@@ -53,8 +52,16 @@ _raw_sha224_lib = load_pycryptodome_raw_lib(
                                             uint8_t *final_digest,
                                             size_t iterations,
                                             size_t digest_size);
-                        """,
-)
+                        """
+
+_raw_sha224_portable_lib = load_pycryptodome_raw_lib("Crypto.Hash._SHA224", _sha224_cdecl)
+_raw_sha224_shani_lib = _load_sha_ni_lib("Crypto.Hash._SHA224_shani", _sha224_cdecl)
+
+# The implementation used by SHA224Hash
+if _raw_sha224_shani_lib is not None:
+    _raw_sha224_lib = _raw_sha224_shani_lib
+else:
+    _raw_sha224_lib = _raw_sha224_portable_lib
 
 
 class SHA224Hash:

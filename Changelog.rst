@@ -79,6 +79,8 @@ New features
   must always be specified, and all parameters after the key are keyword-only.
 * ``Crypto.Protocol.KDF.PBKDF2()`` is about 1.25x-1.35x faster with
   HMAC based on SHA-1, SHA-224, SHA-256, SHA-384 and SHA-512.
+* On x86 CPUs with the SHA extensions (SHA-NI), SHA-224 and SHA-256 use them:
+  hashing long messages is about 4x faster, and ``PBKDF2()`` with HMAC-SHA256 about 3.5x.
 
 3.24.0 (4 October 2026)
 ++++++++++++++++++++++++++

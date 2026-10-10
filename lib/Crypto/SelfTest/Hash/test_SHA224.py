@@ -23,8 +23,47 @@
 
 """Self-test suite for Crypto.Hash.SHA224"""
 
+import hashlib
+
+import pytest
+
 from Crypto.Hash import SHA224
+from Crypto.Protocol.KDF import PBKDF2
 from Crypto.SelfTest.Hash.common import make_hash_tests
+
+# Run every test with each C implementation available on this machine
+_implementations = [pytest.param(SHA224._raw_sha224_portable_lib, id="portable")]
+if SHA224._raw_sha224_shani_lib is not None:
+    _implementations.append(pytest.param(SHA224._raw_sha224_shani_lib, id="shani"))
+
+
+@pytest.fixture(autouse=True, params=_implementations)
+def sha224_implementation(request, monkeypatch):
+    monkeypatch.setattr(SHA224, "_raw_sha224_lib", request.param)
+
+
+class TestImplementations:
+    def test_all_lengths(self):
+        # Every padding case, over one and two blocks
+        data = bytes(range(256)) * 2
+        for length in range(300):
+            assert SHA224.new(data[:length]).digest() == hashlib.sha224(data[:length]).digest()
+
+    def test_chunks(self):
+        # Partial and whole blocks, in any order
+        data = bytes(range(256)) * 8
+        for chunk_sizes in ((1, 63, 64, 65, 200), (64, 64, 1, 127, 300), (3, 500, 7, 129)):
+            h = SHA224.new()
+            pos = 0
+            for size in chunk_sizes:
+                h.update(data[pos : pos + size])
+                pos += size
+            assert h.digest() == hashlib.sha224(data[:pos]).digest()
+
+    def test_pbkdf2(self):
+        expected = hashlib.pbkdf2_hmac("sha224", b"password", b"salt", 1000, 2 * 28 + 1)
+        assert PBKDF2(b"password", b"salt", 2 * 28 + 1, 1000, hmac_hash_module=SHA224) == expected
+
 
 # Test vectors from various sources
 # This is a list of (expected_result, input[, description]) tuples.

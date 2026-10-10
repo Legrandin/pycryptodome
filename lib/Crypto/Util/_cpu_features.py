@@ -15,6 +15,7 @@ _raw_cpuid_lib = load_pycryptodome_raw_lib(
                                            int have_avx2(void);
                                            int have_bmi1(void);
                                            int have_bmi2(void);
+                                           int have_sha_ni(void);
                                            """,
 )
 
@@ -37,6 +38,10 @@ def have_bmi1() -> int:
 
 def have_bmi2() -> int:
     return _raw_cpuid_lib.have_bmi2()
+
+
+def have_sha_ni() -> int:
+    return _raw_cpuid_lib.have_sha_ni()
 
 
 def available_cores() -> int:

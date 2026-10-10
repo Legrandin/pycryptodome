@@ -7,7 +7,26 @@
 #include "common.h"
 #include "endianess.h"
 
-FAKE_INIT(MODULE_NAME)
+/**
+ * The extension module is named after SHA2_MODULE (default: MODULE_NAME),
+ * while the exported functions are always prefixed by MODULE_NAME.
+ *
+ * If SHA2_SHA_NI is defined (SHA-224 and SHA-256 only), the compression
+ * function uses the Intel SHA extensions: the module can only be loaded
+ * on a CPU that supports them (see SHA256_shani.c).
+ */
+#ifndef SHA2_MODULE
+#define SHA2_MODULE MODULE_NAME
+#endif
+
+FAKE_INIT(SHA2_MODULE)
+
+#ifdef SHA2_SHA_NI
+#if WORD_SIZE != 4
+#error SHA-NI is only available for SHA-224 and SHA-256
+#endif
+#include <immintrin.h>
+#endif
 
 #define FUNC_NAME(pf) _PASTE2(MODULE_NAME, pf)
 
@@ -153,6 +172,82 @@ static int add_bits(hash_state *hs, sha2_word_t bits)
     return ERR_MAX_DATA;
 }
 
+#ifdef SHA2_SHA_NI
+
+/** Rounds 4g to 4g+3, with message words w = W[4g..4g+3] **/
+#define SHANI_ROUNDS(g, w) do { \
+    wk = _mm_add_epi32(w, _mm_loadu_si128((const __m128i*)&K[(g)*4])); \
+    cdgh = _mm_sha256rnds2_epu32(cdgh, abef, wk); \
+    wk = _mm_shuffle_epi32(wk, 0x0E); \
+    abef = _mm_sha256rnds2_epu32(abef, cdgh, wk); \
+    } while (0)
+
+/** With m0..m3 = W[t-16..t-1], replace m0 with W[t..t+3] **/
+#define SHANI_SCHEDULE(m0, m1, m2, m3) do { \
+    m0 = _mm_sha256msg1_epu32(m0, m1); \
+    m0 = _mm_add_epi32(m0, _mm_alignr_epi8(m3, m2, 4)); \
+    m0 = _mm_sha256msg2_epu32(m0, m3); \
+    } while (0)
+
+/**
+ * Compress one block, already decoded into sixteen words,
+ * with the Intel SHA extensions.
+ * h_out[] may be the same array as h_in[] or M[].
+ */
+static void sha_compress_words(const sha2_word_t h_in[8], sha2_word_t h_out[8], const sha2_word_t M[16])
+{
+    __m128i abef, cdgh, abef_save, cdgh_save;
+    __m128i m0, m1, m2, m3, wk, tmp;
+
+    /** The SHA-NI instructions want the state as {A,B,E,F} and {C,D,G,H} **/
+    tmp  = _mm_loadu_si128((const __m128i*)&h_in[0]);   /** D C B A (lane 3..0) **/
+    cdgh = _mm_loadu_si128((const __m128i*)&h_in[4]);   /** H G F E **/
+    tmp  = _mm_shuffle_epi32(tmp, 0xB1);                /** C D A B **/
+    cdgh = _mm_shuffle_epi32(cdgh, 0x1B);               /** E F G H **/
+    abef = _mm_alignr_epi8(tmp, cdgh, 8);               /** A B E F **/
+    cdgh = _mm_blend_epi16(cdgh, tmp, 0xF0);            /** C D G H **/
+
+    abef_save = abef;
+    cdgh_save = cdgh;
+
+    /** m0..m3 are a rolling window of the last 16 words of the message schedule **/
+    m0 = _mm_loadu_si128((const __m128i*)&M[0]);
+    m1 = _mm_loadu_si128((const __m128i*)&M[4]);
+    m2 = _mm_loadu_si128((const __m128i*)&M[8]);
+    m3 = _mm_loadu_si128((const __m128i*)&M[12]);
+
+    SHANI_ROUNDS( 0, m0);
+    SHANI_ROUNDS( 1, m1);
+    SHANI_ROUNDS( 2, m2);
+    SHANI_ROUNDS( 3, m3);
+    SHANI_SCHEDULE(m0, m1, m2, m3); SHANI_ROUNDS( 4, m0);
+    SHANI_SCHEDULE(m1, m2, m3, m0); SHANI_ROUNDS( 5, m1);
+    SHANI_SCHEDULE(m2, m3, m0, m1); SHANI_ROUNDS( 6, m2);
+    SHANI_SCHEDULE(m3, m0, m1, m2); SHANI_ROUNDS( 7, m3);
+    SHANI_SCHEDULE(m0, m1, m2, m3); SHANI_ROUNDS( 8, m0);
+    SHANI_SCHEDULE(m1, m2, m3, m0); SHANI_ROUNDS( 9, m1);
+    SHANI_SCHEDULE(m2, m3, m0, m1); SHANI_ROUNDS(10, m2);
+    SHANI_SCHEDULE(m3, m0, m1, m2); SHANI_ROUNDS(11, m3);
+    SHANI_SCHEDULE(m0, m1, m2, m3); SHANI_ROUNDS(12, m0);
+    SHANI_SCHEDULE(m1, m2, m3, m0); SHANI_ROUNDS(13, m1);
+    SHANI_SCHEDULE(m2, m3, m0, m1); SHANI_ROUNDS(14, m2);
+    SHANI_SCHEDULE(m3, m0, m1, m2); SHANI_ROUNDS(15, m3);
+
+    abef = _mm_add_epi32(abef, abef_save);
+    cdgh = _mm_add_epi32(cdgh, cdgh_save);
+
+    /** Back to {A,B,C,D} and {E,F,G,H} **/
+    tmp  = _mm_shuffle_epi32(abef, 0x1B);               /** F E B A **/
+    cdgh = _mm_shuffle_epi32(cdgh, 0xB1);               /** D C H G **/
+    abef = _mm_blend_epi16(tmp, cdgh, 0xF0);            /** D C B A **/
+    cdgh = _mm_alignr_epi8(cdgh, tmp, 8);               /** H G F E **/
+
+    _mm_storeu_si128((__m128i*)&h_out[0], abef);
+    _mm_storeu_si128((__m128i*)&h_out[4], cdgh);
+}
+
+#else
+
 /**
  * Compress one block, already decoded into sixteen words.
  * h_out[] may be the same array as h_in[] or M[].
@@ -268,17 +363,25 @@ static void sha_compress_words(const sha2_word_t h_in[8], sha2_word_t h_out[8], 
     h_out[7] = h_in[7] + h;
 }
 
-static void sha_compress(hash_state * hs)
+#endif /** SHA2_SHA_NI **/
+
+/** Compress one block of BLOCK_SIZE bytes **/
+static void sha_compress_block(hash_state *hs, const uint8_t *block)
 {
     sha2_word_t M[16];
     int i;
 
     /** Words flow in in big-endian mode **/
     for (i=0; i<16; i++) {
-        M[i] = LOAD_WORD_BIG(&hs->buf[i*WORD_SIZE]);
+        M[i] = LOAD_WORD_BIG(&block[i*WORD_SIZE]);
     }
 
     sha_compress_words(hs->h, hs->h, M);
+}
+
+static void sha_compress(hash_state * hs)
+{
+    sha_compress_block(hs, hs->buf);
 }
 
 EXPORT_SYM int FUNC_NAME(_init)(hash_state **shaState
@@ -355,6 +458,18 @@ EXPORT_SYM int FUNC_NAME(_update)(hash_state *hs, const uint8_t *buf, size_t len
 
     while (len>0) {
         unsigned btc, left;
+
+        /** Whole blocks are compressed directly from the input **/
+        if (curlen == 0 && len >= BLOCK_SIZE) {
+            sha_compress_block(hs, buf);
+            buf += BLOCK_SIZE;
+            len -= BLOCK_SIZE;
+            if (add_bits(hs, BLOCK_SIZE*8)) {
+                hs->curlen = 0;
+                return ERR_MAX_DATA;
+            }
+            continue;
+        }
 
         left = BLOCK_SIZE - curlen;
         btc = (unsigned)MIN(left, len);

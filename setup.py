@@ -45,6 +45,18 @@ ext_modules = [
     Extension("Crypto.Hash._MD5", include_dirs=["src/"], sources=["src/MD5.c"], py_limited_api=True),
     Extension("Crypto.Hash._SHA1", include_dirs=["src/"], sources=["src/SHA1.c"], py_limited_api=True),
     Extension("Crypto.Hash._SHA256", include_dirs=["src/"], sources=["src/SHA256.c"], py_limited_api=True),
+    Extension(
+        "Crypto.Hash._SHA224_shani",
+        include_dirs=["src/"],
+        sources=["src/SHA224_shani.c"],
+        py_limited_api=True,
+    ),
+    Extension(
+        "Crypto.Hash._SHA256_shani",
+        include_dirs=["src/"],
+        sources=["src/SHA256_shani.c"],
+        py_limited_api=True,
+    ),
     Extension("Crypto.Hash._SHA224", include_dirs=["src/"], sources=["src/SHA224.c"], py_limited_api=True),
     Extension("Crypto.Hash._SHA384", include_dirs=["src/"], sources=["src/SHA384.c"], py_limited_api=True),
     Extension("Crypto.Hash._SHA512", include_dirs=["src/"], sources=["src/SHA512.c"], py_limited_api=True),
