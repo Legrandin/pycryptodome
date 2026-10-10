@@ -169,6 +169,48 @@ class TestPBKDF2:
         k2 = PBKDF2(b"xxx", b"yyy", 16, 10)
         assert k1 == k2
 
+    class _SHA512Truncated:
+        # Module-like wrapper, to drive the optimized C path with SHA-512/t
+
+        def __init__(self, truncate):
+            self._truncate = truncate
+            self.digest_size = SHA512.new(truncate=truncate).digest_size
+            self.block_size = SHA512.block_size
+
+        def new(self, data=None):
+            return SHA512.new(data, truncate=self._truncate)
+
+        def _pbkdf2_hmac_assist(self, *args):
+            return SHA512._pbkdf2_hmac_assist(*args)
+
+    @pytest.mark.parametrize(
+        "hashmod",
+        [SHA1, SHA224, SHA256, SHA384, SHA512, _SHA512Truncated("224"), _SHA512Truncated("256")],
+        ids=["SHA1", "SHA224", "SHA256", "SHA384", "SHA512", "SHA512/224", "SHA512/256"],
+    )
+    @pytest.mark.parametrize("password", [b"xxx", b"p" * 200], ids=["short_pw", "long_pw"])
+    @pytest.mark.parametrize("count", [1, 2, 3, 77])
+    def test5(self, hashmod, password, count):
+        # Verify that the optimized C path matches the generic one,
+        # also when the digest does not fill the last word (SHA-512/224)
+        # and when more than one block of output is requested
+
+        def prf(p, s):
+            return HMAC.new(p, s, hashmod).digest()
+
+        salt = b"yyy"
+        dk_len = hashmod.digest_size * 2 + 5
+
+        pr1 = PBKDF2(password, salt, dk_len, count, prf=prf)
+        pr2 = PBKDF2(password, salt, dk_len, count, hmac_hash_module=hashmod)
+        assert pr1 == pr2
+
+    def test6(self):
+        # Test vector for PBKDF2-HMAC-SHA512/224 (cross-checked with OpenSSL)
+        hashmod = self._SHA512Truncated("224")
+        res = PBKDF2(b"p", b"s", 28, 3, hmac_hash_module=hashmod)
+        assert res == t2b("f494b312268f820917e98f0b2f6fadc12778d9d300412603d8a51541")
+
 
 class TestS2V:
     # Sequence of test vectors.

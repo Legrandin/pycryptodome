@@ -146,28 +146,31 @@ static int add_bits(hash_state *hs, sha2_word_t bits)
     return ERR_MAX_DATA;
 }
 
-static void sha_compress(hash_state * hs)
+/**
+ * Compress one block, already decoded into sixteen words.
+ * h_out[] may be the same array as h_in[] or M[].
+ */
+static void sha_compress_words(const sha2_word_t h_in[8], sha2_word_t h_out[8], const sha2_word_t M[16])
 {
     sha2_word_t a, b, c, d, e, f, g, h;
     sha2_word_t W[SCHEDULE_SIZE];
     int i;
 
-    /** Words flow in in big-endian mode **/
     for (i=0; i<16; i++) {
-        W[i] = LOAD_WORD_BIG(&hs->buf[i*WORD_SIZE]);
+        W[i] = M[i];
     }
     for (;i<SCHEDULE_SIZE; i++) {
         W[i] = SCHEDULE(i);
     }
 
-    a = hs->h[0];
-    b = hs->h[1];
-    c = hs->h[2];
-    d = hs->h[3];
-    e = hs->h[4];
-    f = hs->h[5];
-    g = hs->h[6];
-    h = hs->h[7];
+    a = h_in[0];
+    b = h_in[1];
+    c = h_in[2];
+    d = h_in[3];
+    e = h_in[4];
+    f = h_in[5];
+    g = h_in[6];
+    h = h_in[7];
 
     CYCLE(a,b,c,d,e,f,g,h, 0);
     CYCLE(h,a,b,c,d,e,f,g, 1);
@@ -254,14 +257,27 @@ static void sha_compress(hash_state * hs)
 #endif
 
     /** compute new intermediate hash **/
-    hs->h[0] += a;
-    hs->h[1] += b;
-    hs->h[2] += c;
-    hs->h[3] += d;
-    hs->h[4] += e;
-    hs->h[5] += f;
-    hs->h[6] += g;
-    hs->h[7] += h;
+    h_out[0] = h_in[0] + a;
+    h_out[1] = h_in[1] + b;
+    h_out[2] = h_in[2] + c;
+    h_out[3] = h_in[3] + d;
+    h_out[4] = h_in[4] + e;
+    h_out[5] = h_in[5] + f;
+    h_out[6] = h_in[6] + g;
+    h_out[7] = h_in[7] + h;
+}
+
+static void sha_compress(hash_state * hs)
+{
+    sha2_word_t M[16];
+    int i;
+
+    /** Words flow in in big-endian mode **/
+    for (i=0; i<16; i++) {
+        M[i] = LOAD_WORD_BIG(&hs->buf[i*WORD_SIZE]);
+    }
+
+    sha_compress_words(hs->h, hs->h, M);
 }
 
 EXPORT_SYM int FUNC_NAME(_init)(hash_state **shaState
@@ -455,9 +471,11 @@ EXPORT_SYM int FUNC_NAME(_pbkdf2_hmac_assist)(const hash_state *inner, const has
                                              size_t iterations,
                                              size_t digest_size)
 {
-    hash_state inner_temp, outer_temp;
+    sha2_word_t M[16], h[8], acc[8];
+    sha2_word_t mask, pad;
+    uint8_t tmp[WORD_SIZE*8];
     size_t i;
-    uint8_t last_hmac[DIGEST_SIZE]; /** MAX DIGEST SIZE **/
+    unsigned j, full, rem, nwords;
 
     if (NULL == inner || NULL == outer || NULL == first_hmac || NULL == result) {
         return ERR_NULL;
@@ -470,28 +488,70 @@ EXPORT_SYM int FUNC_NAME(_pbkdf2_hmac_assist)(const hash_state *inner, const has
     if (digest_size != inner->digest_size || digest_size != outer->digest_size) {
         return ERR_DIGEST_SIZE;
     }
-    
-    memcpy(result, first_hmac, digest_size);
-    memcpy(last_hmac, first_hmac, digest_size);
+
+    /** Both hashes must have absorbed exactly one block (the padded HMAC key) **/
+    if (inner->curlen != 0 || outer->curlen != 0 ||
+        inner->totbits[0] != BLOCK_SIZE*8 || inner->totbits[1] != 0 ||
+        outer->totbits[0] != BLOCK_SIZE*8 || outer->totbits[1] != 0) {
+        return ERR_STATE;
+    }
+
+    /**
+     * The digest may not fill the last word it touches (e.g. SHA-512/224):
+     * that word is shared with the 0x80 padding byte.
+     **/
+    full = (unsigned)(digest_size / WORD_SIZE);
+    rem = (unsigned)(digest_size % WORD_SIZE);
+    nwords = full + (rem > 0);
+    mask = rem ? ~(((sha2_word_t)1 << ((WORD_SIZE-rem)*8)) - 1) : 0;
+    pad = (sha2_word_t)0x80 << ((WORD_SIZE-rem-1)*8);
+
+    memset(tmp, 0, sizeof tmp);
+    memcpy(tmp, first_hmac, digest_size);
+    for (j=0; j<8; j++) {
+        acc[j] = LOAD_WORD_BIG(&tmp[j*WORD_SIZE]);
+    }
+
+    /**
+     * Each hash in the loop processes a single, already padded block,
+     * so we skip the buffering logic and call the compression function directly.
+     **/
+    memset(M, 0, sizeof M);
+    for (j=0; j<nwords; j++) {
+        M[j] = acc[j];
+    }
+    M[full] |= pad;
+    M[15] = (sha2_word_t)((BLOCK_SIZE + digest_size)*8);
 
     for (i=1; i<iterations; i++) {
-        unsigned j;
 
-        inner_temp = *inner;
-        outer_temp = *outer;
+        /** Inner hash **/
+        sha_compress_words(inner->h, h, M);
+        for (j=0; j<full; j++) {
+            M[j] = h[j];
+        }
+        if (rem) {
+            M[full] = (h[full] & mask) | pad;
+        }
 
-        FUNC_NAME(_update)(&inner_temp, last_hmac, digest_size);
-        sha_finalize(&inner_temp, last_hmac, digest_size);
+        /** Outer hash **/
+        sha_compress_words(outer->h, h, M);
+        for (j=0; j<full; j++) {
+            M[j] = h[j];
+        }
+        if (rem) {
+            M[full] = (h[full] & mask) | pad;
+        }
 
-        /** last_hmac is now the intermediate digest **/
-
-        FUNC_NAME(_update)(&outer_temp, last_hmac, digest_size);
-        sha_finalize(&outer_temp, last_hmac, digest_size);
-
-        for (j=0; j<digest_size; j++) {
-            result[j] ^= last_hmac[j];
+        for (j=0; j<nwords; j++) {
+            acc[j] ^= h[j];
         }
     }
+
+    for (j=0; j<8; j++) {
+        put_be(acc[j], &tmp[j*WORD_SIZE]);
+    }
+    memcpy(result, tmp, digest_size);
 
     return 0;
 }

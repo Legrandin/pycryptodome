@@ -77,6 +77,8 @@ New features
 * GH#906: New module ``Crypto.Cipher.oaep`` for RSA-OAEP encryption.
   It replaces ``Crypto.Cipher.PKCS1_OAEP``. The hash function (``hashmod``)
   must always be specified, and all parameters after the key are keyword-only.
+* ``Crypto.Protocol.KDF.PBKDF2()`` is about 1.25x-1.35x faster with
+  HMAC based on SHA-1, SHA-224, SHA-256, SHA-384 and SHA-512.
 
 3.24.0 (4 October 2026)
 ++++++++++++++++++++++++++
