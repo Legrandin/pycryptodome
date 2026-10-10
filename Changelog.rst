@@ -21,9 +21,25 @@ Breaking changes
   contain zero bytes, while the ``context`` now can (for instance, a binary nonce).
   The zero byte between them still separates the two unambiguously,
   as required by NIST SP 800-108r1 (GH#896).
+* The coordinates of ``EccPoint`` and ``EccXPoint`` (``x``, ``y`` and ``xy``),
+  ``EccKey.d`` and the components of ElGamal keys (``p``, ``g``, ``y`` and ``x``)
+  are now Python ``int`` objects, not ``Crypto.Math.Numbers.Integer``.
+  The ElGamal components can no longer be assigned.
+* The GMP library is no longer used, and the environment variable
+  ``PYCRYPTODOME_DISABLE_GMP`` has no effect. Big integers are handled by the
+  new constant-time code (see below).
+* ``Crypto.Math.Numbers.Integer`` (an internal class) no longer supports
+  negative values.
+* Importing a NIST curve public key (SEC1, DER, PEM or OpenSSH) fails if a
+  coordinate of the point is equal to or larger than the modulus ``p``,
+  as required by SEC1. Such coordinates were reduced modulo ``p`` before.
+  ``EccPoint`` and ``ECC.construct()`` still reduce them.
 
 Resolved issues
 ---------------
+* The trial division by small primes in ``Crypto.Math.Primality.test_probable_prime()``
+  never ran (only the Miller-Rabin and Lucas tests did), which made the generation
+  of RSA, DSA and ElGamal keys slower.
 * ElGamal key objects could not be compared for equality.
 * Comparing an RSA, DSA or ElGamal key with an object of a different type now
   returns ``False`` instead of raising ``AttributeError``.
@@ -38,14 +54,46 @@ Resolved issues
 * Salsa20 never returned when encrypting or decrypting 4 GiB or more in a single call.
 * The package metadata declares the license as an SPDX expression
   (``BSD-2-Clause AND Unlicense``, PEP 639), which tools can process.
-  SipHash (used internally for side-channel countermeasures) has been
-  reimplemented, as the previous code was under the CC0 license.
+  The SipHash code, which was under the CC0 license, is gone, together with
+  the old big integer code that used it.
 * GH#937: Importing a malformed PEM key could take quadratic time. Thanks to Brian Willows.
 * ``Crypto.Protocol.HPKE.new()`` raised ``TypeError`` with Python 3.9 to 3.11
   when ``aead_id`` was a plain integer, and not an ``HPKE.AEAD`` member.
 
 New features
 ------------
+* All the big integer arithmetic for RSA, DSA, ElGamal and ECC runs in a new
+  C library (``Crypto.Math._nat``), in constant time: the time and the memory
+  accesses do not depend on the values of the numbers, only on their (public)
+  size. This includes modular exponentiation and inversion, GCD, Jacobi symbol,
+  and the Miller-Rabin and Lucas tests used to generate primes.
+  It replaces GMP, the previous C code for modular exponentiation
+  (``IntegerCustom``) and Python integers, which leak timing information;
+  Python integers remain only as a fallback, if the C extensions are not available.
+  The C extensions no longer depend on GMP at runtime.
+  For now, RSA and DSA private key operations and key generation are slower
+  than with GMP. On x86-64 CPUs with BMI2 and ADX (gcc and clang only),
+  a build that uses those instructions is about 15-25% faster.
+* The NIST curves (P-192, P-224, P-256, P-384 and P-521) run on the same
+  constant-time library (new module ``Crypto.PublicKey._ec_nat``). Every scalar
+  multiplication processes the full (blinded) scalar length, scans its tables in full
+  and randomizes the coordinates, and its result is checked to be on the curve.
+  This fixes timing leaks of the previous code, including one on the length
+  of ECDSA nonces. It is also faster: the multiplication of the generator
+  (signing, key generation) is up to 10x faster for P-192 and P-224, which now
+  have precomputed tables too, and ECDH is about 1.5x-2x faster on P-192,
+  P-224, P-256 and P-384. Multiplying the generator by a scalar of any length
+  no longer fails.
+* Ed448 and X448 (Curve448) run on the same library and module, with the same
+  countermeasures: for Ed448, a blinded scalar (by a multiple of the order of
+  the whole group, so that it also works for points with a small-order component),
+  signed windows with full table scans, randomized coordinates and a check of the
+  result; for X448, the Montgomery ladder with randomized coordinates.
+  Ed448 key generation and signing are about 10x faster (precomputed tables),
+  verification about 2.5x, and X448 about 1.3x.
+* The field arithmetic of the elliptic curves has unrolled code for each curve size:
+  scalar multiplications are 1.4x-1.7x faster for P-192, P-224 and P-256, and
+  1.1x-1.5x for the larger curves (more with clang than with gcc).
 * New function ``Crypto.Hash.KangarooTwelve.digest()``, to hash a whole message
   with a single call. For messages up to 8 KiB, it is 1.3x to 3x faster than
   ``new()`` followed by ``read()``.

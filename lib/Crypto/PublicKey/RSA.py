@@ -97,6 +97,12 @@ class RsaKey:
     _dp: Integer
     _dq: Integer
     _invq: Optional[Integer]
+    # CRT components for decryption, ordered so that _crt_p < _crt_q
+    _crt_p: Integer
+    _crt_q: Integer
+    _crt_dp: Integer
+    _crt_dq: Integer
+    _crt_u: Integer
 
     def __init__(self, **kwargs: Int) -> None:
         """Build an RSA key.
@@ -128,6 +134,25 @@ class RsaKey:
             self._dp = self._d % (self._p - 1)  # = (e⁻¹) mod (p-1)
             self._dq = self._d % (self._q - 1)  # = (e⁻¹) mod (q-1)
             self._invq = None  # will be computed on demand
+            self._init_crt()
+
+    def _init_crt(self) -> None:
+        """Prepare the CRT components used for decryption.
+
+        They are ordered so that p < q, as the CRT step needs m1 < q, with
+        m1 < p. This comparison only reveals which prime is the larger one.
+        The private exponents get the same size as the primes, so that
+        their actual length does not leak.
+        """
+        p, q = Integer(self._p), Integer(self._q)
+        if not q < p:
+            dp, dq, u = self._dp, self._dq, Integer(self._u)
+        else:
+            p, q = q, p
+            dp, dq, u = self._dq, self._dp, p.inverse(q)
+        self._crt_p, self._crt_q, self._crt_u = p, q, u
+        self._crt_dp = Integer(dp)._resize(p.size_in_bits())
+        self._crt_dq = Integer(dq)._resize(q.size_in_bits())
 
     @property
     def n(self) -> int:
@@ -211,10 +236,11 @@ class RsaKey:
         # Step 2: Compute c' = c * r**e mod n
         cp = Integer(ciphertext) * pow(r, self._e, self._n) % self._n
         # Step 3: Compute m' = c'**d mod n       (normal RSA decryption)
-        m1 = pow(cp, self._dp, self._p)
-        m2 = pow(cp, self._dq, self._q)
-        h = ((m2 - m1) * self._u) % self._q
-        mp = h * self._p + m1
+        m1 = pow(cp, self._crt_dp, self._crt_p)
+        m2 = pow(cp, self._crt_dq, self._crt_q)
+        # (m2 - m1) mod q, with m1 < p < q
+        h = (m2._sub_mod(m1, self._crt_q) * self._crt_u) % self._crt_q
+        mp = h * self._crt_p + m1
         # Step 4: Compute m = m' * (r**(-1)) mod n
         # then encode into a big endian byte string
         result = Integer._mult_modulo_bytes(r.inverse(self._n), mp, self._n)
@@ -536,7 +562,7 @@ def generate(bits: int, randfunc: Optional[RNG] = None, e: Int = 65537) -> RsaKe
             return (
                 candidate > min_q  # noqa: B023 (used in this iteration)
                 and (candidate - 1).gcd(e) == 1
-                and abs(candidate - p) > min_distance  # noqa: B023
+                and (candidate - p if candidate > p else p - candidate) > min_distance  # noqa: B023
             )
 
         q = generate_probable_prime(exact_bits=size_q, randfunc=randfunc, prime_filter=filter_q)

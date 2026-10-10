@@ -213,6 +213,32 @@ class Blake2Test:
             assert h1.digest() == h2.digest()
 
 
+class Blake2RawCopyTest:
+    # The C function blake2*_copy() (not used by the Python API)
+
+    def test_raw_copy(self):
+        h1 = self.BLAKE2.new(digest_bits=self.max_bits, data=b"abc")
+        h2 = self.BLAKE2.new(digest_bits=self.max_bits)
+        assert self.copy(h1._state.get(), h2._state.get()) == 0
+        h1.update(b"def")
+        h2.update(b"def")
+        assert (
+            h1.digest() == h2.digest() == self.BLAKE2.new(digest_bits=self.max_bits, data=b"abcdef").digest()
+        )
+
+
+class TestBlake2bRawCopy(Blake2RawCopyTest):
+    BLAKE2 = BLAKE2b
+    max_bits = 512
+    copy = staticmethod(BLAKE2b._raw_blake2b_lib.blake2b_copy)
+
+
+class TestBlake2sRawCopy(Blake2RawCopyTest):
+    BLAKE2 = BLAKE2s
+    max_bits = 256
+    copy = staticmethod(BLAKE2s._raw_blake2s_lib.blake2s_copy)
+
+
 class TestBlake2b(Blake2Test):
     #: Module
     BLAKE2 = BLAKE2b

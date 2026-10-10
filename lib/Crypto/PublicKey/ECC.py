@@ -257,7 +257,7 @@ class EccKey:
         blind_d = self._d * blind
         inv_blind_k = (blind * k).inverse(order)
 
-        r = (self._curve.G * k).x % order
+        r = (self._curve.G * k)._x % order
         s = inv_blind_k * (blind * z + blind_d * r) % order
         return (r, s)
 
@@ -267,13 +267,13 @@ class EccKey:
         sinv = rs[1].inverse(order)
         point1 = self._curve.G * ((sinv * z) % order)
         point2 = self.pointQ * ((sinv * rs[0]) % order)
-        return (point1 + point2).x % order == rs[0]
+        return (point1 + point2)._x % order == rs[0]
 
     @property
     def d(self) -> int:
         if not self.has_private():
             raise ValueError("This is not a private ECC key")
-        return self._d
+        return int(self._d)
 
     @property
     def seed(self) -> bytes:
@@ -311,26 +311,25 @@ class EccKey:
 
         modulus_bytes = self.pointQ.size_in_bytes()
 
+        x, y = self.pointQ._xy
         if compress:
-            if self.pointQ.y.is_odd():
+            if y.is_odd():
                 first_byte = b"\x03"
             else:
                 first_byte = b"\x02"
-            public_key = first_byte + self.pointQ.x.to_bytes(modulus_bytes)
+            public_key = first_byte + x.to_bytes(modulus_bytes)
         else:
-            public_key = (
-                b"\x04" + self.pointQ.x.to_bytes(modulus_bytes) + self.pointQ.y.to_bytes(modulus_bytes)
-            )
+            public_key = b"\x04" + x.to_bytes(modulus_bytes) + y.to_bytes(modulus_bytes)
         return public_key
 
     def _export_eddsa_public(self):
-        x, y = self.pointQ.xy
+        x, y = self.pointQ._xy
         if self._curve.id == _CurveID.ED25519:
             result = bytearray(y.to_bytes(32, byteorder="little"))
-            result[31] = ((x & 1) << 7) | result[31]
+            result[31] = (int(x.is_odd()) << 7) | result[31]
         elif self._curve.id == _CurveID.ED448:
             result = bytearray(y.to_bytes(57, byteorder="little"))
-            result[56] = (x & 1) << 7
+            result[56] = int(x.is_odd()) << 7
         else:
             raise ValueError("Not an EdDSA key to export")
         return bytes(result)
@@ -338,7 +337,7 @@ class EccKey:
     def _export_montgomery_public(self):
         if not self._curve.is_montgomery:
             raise ValueError("Not a Montgomery key to export")
-        x = self.pointQ.x
+        x = self.pointQ._x
         field_size = self.pointQ.size_in_bytes()
         result = bytearray(x.to_bytes(field_size, byteorder="little"))
         return bytes(result)
@@ -371,11 +370,12 @@ class EccKey:
 
         # Public key - uncompressed form
         modulus_bytes = self.pointQ.size_in_bytes()
-        public_key = b"\x04" + self.pointQ.x.to_bytes(modulus_bytes) + self.pointQ.y.to_bytes(modulus_bytes)
+        x, y = self.pointQ._xy
+        public_key = b"\x04" + x.to_bytes(modulus_bytes) + y.to_bytes(modulus_bytes)
 
         seq = [
             1,
-            DerOctetString(self.d.to_bytes(modulus_bytes)),
+            DerOctetString(self._d.to_bytes(modulus_bytes)),
             DerObjectId(self._curve.oid, explicit=0),
             DerBitString(public_key, explicit=1),
         ]
@@ -444,13 +444,12 @@ class EccKey:
         else:
             modulus_bytes = self.pointQ.size_in_bytes()
 
+            x, y = self.pointQ._xy
             if compress:
-                first_byte = 2 + self.pointQ.y.is_odd()
-                public_key = bytes([first_byte]) + self.pointQ.x.to_bytes(modulus_bytes)
+                first_byte = 2 + y.is_odd()
+                public_key = bytes([first_byte]) + x.to_bytes(modulus_bytes)
             else:
-                public_key = (
-                    b"\x04" + self.pointQ.x.to_bytes(modulus_bytes) + self.pointQ.y.to_bytes(modulus_bytes)
-                )
+                public_key = b"\x04" + x.to_bytes(modulus_bytes) + y.to_bytes(modulus_bytes)
 
             middle = desc.split("-")[2]
             comps = (tobytes(desc), tobytes(middle), public_key)
@@ -713,8 +712,8 @@ def construct(**kwargs: Unpack[ConstructParams]) -> EccKey:
         # Validate that the private key matches the public one
         # because EccKey will not do that automatically
         if new_key.has_private() and "point" in params:
-            pub_key = curve.G * new_key.d
-            if pub_key.xy != (point_x, point_y):
+            pub_key = curve.G * new_key._d
+            if pub_key.xy != (int(point_x), int(point_y)):
                 raise ValueError("Private and public ECC keys do not match")
 
     return new_key
@@ -764,14 +763,22 @@ def _import_public_der(ec_point, curve_oid=None, curve_name=None):
         if len(ec_point) != (1 + modulus_bytes):
             raise ValueError("Incorrect EC point length")
         x = Integer.from_bytes(ec_point[1:])
-        # Right now, we only support Short Weierstrass curves
-        y = (x**3 - x * 3 + curve.b).sqrt(curve.p)
+        if x >= curve.p:
+            raise ValueError("The EC point does not belong to the curve")
+        # Right now, we only support Short Weierstrass curves:
+        # y^2 = x^3 - 3x + b, computed without negative intermediate values
+        y = (x**3 + curve.b + (curve.p - x) * 3).sqrt(curve.p)
         if point_type == 0x02 and y.is_odd():
             y = curve.p - y
         if point_type == 0x03 and y.is_even():
             y = curve.p - y
     else:
         raise ValueError("Incorrect EC point encoding")
+
+    # SEC1 3.2.2.1: the coordinates must be smaller than p
+    # (EccPoint would reduce them)
+    if x >= curve.p or y >= curve.p:
+        raise ValueError("The EC point does not belong to the curve")
 
     return construct(curve=_curve_name, point_x=x, point_y=y)
 
@@ -1107,7 +1114,7 @@ def _import_ed25519_public_key(encoded: bytes) -> tuple[Int, Int]:
     if point_y == 1:
         return 0, 1
 
-    u = (point_y**2 - 1) % p
+    u = (point_y**2 + p - 1) % p
     v = ((point_y**2 % p) * d + 1) % p
     try:
         v_inv = v.inverse(p)
@@ -1204,8 +1211,8 @@ def _import_ed448_public_key(encoded: bytes) -> tuple[Int, Int]:
     if point_y == 1:
         return 0, 1
 
-    u = (point_y**2 - 1) % p
-    v = ((point_y**2 % p) * d - 1) % p
+    u = (point_y**2 + p - 1) % p
+    v = ((point_y**2 % p) * d + p - 1) % p
     try:
         v_inv = v.inverse(p)
         x2 = (u * v_inv) % p

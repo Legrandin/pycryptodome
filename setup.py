@@ -163,9 +163,16 @@ ext_modules = [
     Extension("Crypto.Util._strxor", include_dirs=["src/"], sources=["src/strxor.c"], py_limited_api=True),
     # ECC
     Extension(
-        "Crypto.PublicKey._ec_ws",
+        "Crypto.PublicKey._ec_nat",
         include_dirs=["src/"],
-        sources=["src/ec_ws.c", "src/mont.c", "src/p256_table.c", "src/p384_table.c", "src/p521_table.c"],
+        sources=["src/ec_nat_module.c"],
+        py_limited_api=True,
+    ),
+    # The same, for x86-64 CPUs with BMI2 and ADX (removed if the compiler cannot build it)
+    Extension(
+        "Crypto.PublicKey._ec_nat_bmi2_adx",
+        include_dirs=["src/"],
+        sources=["src/ec_nat_bmi2_adx.c"],
         py_limited_api=True,
     ),
     Extension(
@@ -175,28 +182,23 @@ ext_modules = [
         py_limited_api=True,
     ),
     Extension(
-        "Crypto.PublicKey._curve448",
-        include_dirs=["src/"],
-        sources=["src/curve448.c", "src/mont1.c"],
-        py_limited_api=True,
-    ),
-    Extension(
         "Crypto.PublicKey._ed25519",
         include_dirs=["src/"],
         sources=["src/ed25519.c"],
         py_limited_api=True,
     ),
-    Extension(
-        "Crypto.PublicKey._ed448",
-        include_dirs=["src/"],
-        sources=["src/ed448.c", "src/mont2.c"],
-        py_limited_api=True,
-    ),
     # Math
     Extension(
-        "Crypto.Math._modexp",
+        "Crypto.Math._nat",
         include_dirs=["src/"],
-        sources=["src/modexp.c", "src/mont3.c"],
+        sources=["src/nat.c", "src/nat_div.c", "src/nat_mod.c", "src/nat_gcd.c", "src/nat_prime.c"],
+        py_limited_api=True,
+    ),
+    # The same, for x86-64 CPUs with BMI2 and ADX (removed if the compiler cannot build it)
+    Extension(
+        "Crypto.Math._nat_bmi2_adx",
+        include_dirs=["src/"],
+        sources=["src/nat_bmi2_adx.c"],
         py_limited_api=True,
     ),
 ]

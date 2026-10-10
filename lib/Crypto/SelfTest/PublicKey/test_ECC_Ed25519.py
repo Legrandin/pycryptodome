@@ -251,6 +251,16 @@ class TestEccKey_Ed25519:
 
 
 class TestEccModule_Ed25519:
+    def test_import_y_zero(self):
+        # With y = 0, the numerator y^2 - 1 is negative before the reduction
+        from Crypto.PublicKey.ECC import _import_ed25519_public_key
+
+        p = 2**255 - 19
+        x, y = _import_ed25519_public_key(bytes(32))
+        assert y == 0
+        assert (int(x) ** 2 + 1) % p == 0
+        assert int(x) % 2 == 0
+
     def test_generate(self):
         key = ECC.generate(curve="Ed25519")
         assert key.has_private()

@@ -138,3 +138,17 @@ class TestOutput:
 
 
 TestVectors = make_block_tests(Blowfish, "Blowfish", test_data)
+
+
+class TestEKSBlowfish:
+    # The variant used by bcrypt, which only encrypts
+
+    def test_decrypt(self):
+        from Crypto.Cipher import _EKSBlowfish
+
+        key, salt = b"password", b"0123456789abcdef"
+        pt = b"OrpheanBeholderScryDoubt"
+        for invert in (True, False):
+            ct = _EKSBlowfish.new(key, _EKSBlowfish.MODE_ECB, salt, 4, invert).encrypt(pt)
+            assert ct != pt
+            assert _EKSBlowfish.new(key, _EKSBlowfish.MODE_ECB, salt, 4, invert).decrypt(ct) == pt

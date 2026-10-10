@@ -33,10 +33,10 @@ class MockLib:
         return True
 
     have_clmul = have_aes_ni
-    ec_ws_new_context = lambda *x: 0
-    ec_free_context = lambda *x: None
-    ec_ws_new_point = lambda *x: 0
-    ec_ws_free_point = lambda *x: None
+    ec_nat_new_curve = lambda *x: 0
+    ec_nat_free_curve = lambda *x: None
+    ec_nat_new_point = lambda *x: 0
+    ec_nat_free_point = lambda *x: None
     ed25519_new_point = lambda *x: 0
     ed25519_free_point = lambda *x: None
     ed448_new_context = lambda *x: 0
