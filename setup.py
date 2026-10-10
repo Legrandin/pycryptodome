@@ -205,6 +205,13 @@ ext_modules = [
         sources=["src/nat.c", "src/nat_div.c", "src/nat_mod.c", "src/nat_gcd.c", "src/nat_prime.c"],
         py_limited_api=True,
     ),
+    # The same, for x86-64 CPUs with BMI2 and ADX (removed if the compiler cannot build it)
+    Extension(
+        "Crypto.Math._nat_bmi2_adx",
+        include_dirs=["src/"],
+        sources=["src/nat_bmi2_adx.c"],
+        py_limited_api=True,
+    ),
 ]
 
 # Add compiler specific options.

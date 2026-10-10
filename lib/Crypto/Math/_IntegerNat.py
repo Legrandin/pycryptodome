@@ -24,6 +24,7 @@ from __future__ import annotations
 import operator
 from typing import Any, Optional, Union
 
+from Crypto.Util import _cpu_features
 from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
@@ -71,8 +72,27 @@ int nat_miller_rabin(void *out, const void *n, const void *base);
 int nat_lucas(void *out, const void *n, uint64_t abs_d, int negative_d);
 """
 
-_lib = load_pycryptodome_raw_lib("Crypto.Math._nat", _nat_cdecl)
-implementation = {"library": "nat", "api": backend}
+
+def _load_bmi2_adx_lib() -> Any:
+    """Load the build of the library for x86-64 CPUs with BMI2 and ADX.
+
+    Return None if the CPU does not support both, or if the module was not
+    compiled in (other CPU architectures and compilers).
+    """
+    if not (_cpu_features.have_bmi2() and _cpu_features.have_adx()):
+        return None
+    try:
+        return load_pycryptodome_raw_lib("Crypto.Math._nat_bmi2_adx", _nat_cdecl)
+    except OSError:
+        return None
+
+
+_portable_lib = load_pycryptodome_raw_lib("Crypto.Math._nat", _nat_cdecl)
+_bmi2_adx_lib = _load_bmi2_adx_lib()
+
+# Both builds have the same functions, and they give the same results
+_lib = _bmi2_adx_lib if _bmi2_adx_lib is not None else _portable_lib
+implementation = {"library": "nat", "api": backend, "bmi2_adx": _bmi2_adx_lib is not None}
 
 # Errors from src/errors.h
 _ERR_VALUE = 14

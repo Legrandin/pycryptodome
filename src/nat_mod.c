@@ -58,7 +58,7 @@ void mont_ctx_free(MontCtx *ctx)
     nat_words_free(ctx->r2, ctx->nw);
     nat_words_free(ctx->one, ctx->nw);
     nat_words_free(ctx->unit, ctx->nw);
-    nat_words_free(ctx->tmp, 2*ctx->nw + 1);
+    nat_words_free(ctx->tmp, 2*ctx->nw + 2);
     free(ctx);
 }
 
@@ -84,7 +84,7 @@ int mont_ctx_new(MontCtx **out, const Nat *n)
     ctx->r2 = nat_words_alloc(nw);
     ctx->one = nat_words_alloc(nw);
     ctx->unit = nat_words_alloc(nw);
-    ctx->tmp = nat_words_alloc(2*nw + 1);
+    ctx->tmp = nat_words_alloc(2*nw + 2);
     if (!ctx->n || !ctx->r2 || !ctx->one || !ctx->unit || !ctx->tmp)
         goto cleanup;
 
@@ -123,38 +123,134 @@ cleanup:
 }
 
 /*
- * Montgomery multiplication (CIOS method): out = a*b/R mod n.
+ * The core of the Montgomery multiplication and squaring:
+ * t[0..nw-1] += a[0..nw-1] * b, and return the high word h,
+ * so that the exact result is t + h*2^(64*nw). nw is at least 1.
+ *
+ * In the build for CPUs with BMI2 and ADX (NAT_BMI2_ADX, gcc and clang
+ * on x86-64), it is written with MULX (a product that does not touch the
+ * flags), ADCX (addition with the carry flag) and ADOX (addition with the
+ * overflow flag): the low halves of the products are accumulated on one
+ * carry chain and the high halves on the other, so the two chains run
+ * in parallel. The loop only uses instructions that keep the flags
+ * (LEA, JRCXZ, JMP). Otherwise, it is plain C.
+ *
+ * Both versions are constant time: the loop count only depends on nw.
+ */
+#if defined(NAT_BMI2_ADX)
+
+STATIC uint64_t addmul_row(uint64_t *t, const uint64_t *a, uint64_t b, size_t nw)
+{
+    uint64_t *t_end = t + nw;
+    const uint64_t *a_end = a + nw;
+    int64_t i = -(int64_t)nw;               /* index from the end, up to 0 */
+    int64_t r = -(int64_t)(nw & 3);
+    uint64_t hi;
+
+    __asm__ volatile (
+        "xor %%r10d, %%r10d\n\t"            /* high word so far = 0; CF = OF = 0 */
+
+        /* The first nw % 4 words, one at a time (rcx counts up to 0) */
+        "mov %[r], %%rcx\n\t"
+        "jrcxz 3f\n\t"
+        "4:\n\t"
+        "mulx (%[a],%[i],8), %%r8, %%r9\n\t"
+        "adcx (%[t],%[i],8), %%r8\n\t"
+        "adox %%r10, %%r8\n\t"
+        "mov %%r8, (%[t],%[i],8)\n\t"
+        "mov %%r9, %%r10\n\t"
+        "lea 1(%[i]), %[i]\n\t"
+        "lea 1(%%rcx), %%rcx\n\t"
+        "jrcxz 3f\n\t"
+        "jmp 4b\n\t"
+
+        /* The other words, four at a time (rcx counts up to 0) */
+        "3:\n\t"
+        "mov %[i], %%rcx\n\t"
+        "jrcxz 2f\n\t"
+        "1:\n\t"
+        "mulx (%[a],%%rcx,8), %%r8, %%r9\n\t"
+        "adcx (%[t],%%rcx,8), %%r8\n\t"
+        "adox %%r10, %%r8\n\t"
+        "mov %%r8, (%[t],%%rcx,8)\n\t"
+        "mulx 8(%[a],%%rcx,8), %%r8, %%r10\n\t"
+        "adcx 8(%[t],%%rcx,8), %%r8\n\t"
+        "adox %%r9, %%r8\n\t"
+        "mov %%r8, 8(%[t],%%rcx,8)\n\t"
+        "mulx 16(%[a],%%rcx,8), %%r8, %%r9\n\t"
+        "adcx 16(%[t],%%rcx,8), %%r8\n\t"
+        "adox %%r10, %%r8\n\t"
+        "mov %%r8, 16(%[t],%%rcx,8)\n\t"
+        "mulx 24(%[a],%%rcx,8), %%r8, %%r10\n\t"
+        "adcx 24(%[t],%%rcx,8), %%r8\n\t"
+        "adox %%r9, %%r8\n\t"
+        "mov %%r8, 24(%[t],%%rcx,8)\n\t"
+        "lea 4(%%rcx), %%rcx\n\t"
+        "jrcxz 2f\n\t"
+        "jmp 1b\n\t"
+
+        /* The high word: the last high half, plus both carries */
+        "2:\n\t"
+        "mov $0, %%r9d\n\t"
+        "adcx %%r9, %%r10\n\t"
+        "adox %%r9, %%r10\n\t"
+        "mov %%r10, %[hi]\n\t"
+        : [i] "+r" (i), [hi] "=r" (hi)
+        : [a] "r" (a_end), [t] "r" (t_end), [r] "r" (r), "d" (b)
+        : "rcx", "r8", "r9", "r10", "cc", "memory");
+
+    return hi;
+}
+
+#else
+
+STATIC uint64_t addmul_row(uint64_t *t, const uint64_t *a, uint64_t b, size_t nw)
+{
+    uint64_t c = 0;
+    size_t j;
+
+    for (j=0; j<nw; j++)
+        t[j] = ct_mac(a[j], b, t[j], c, &c);
+    return c;
+}
+
+#endif
+
+/*
+ * Montgomery multiplication: out = a*b/R mod n.
  * a and b must be smaller than n. out may alias a or b.
+ *
+ * Separated operand scanning: for each word of b, add a*b[i] and then
+ * mq*n at offset i (mq makes word i zero). The result is in the upper
+ * half of t, and it is smaller than 2n.
  */
 void mont_mul(uint64_t *out, const uint64_t *a, const uint64_t *b, MontCtx *ctx)
 {
     uint64_t *t = ctx->tmp;
     const uint64_t *n = ctx->n;
     size_t nw = ctx->nw;
-    size_t i, j;
+    size_t i;
     uint64_t borrow;
 
-    memset(t, 0, (nw + 2)*sizeof(uint64_t));
+    memset(t, 0, (2*nw + 2)*sizeof(uint64_t));
 
-    /* One pass per word of b: t = (t + a*b[i] + mq*n) / 2^64 */
     for (i=0; i<nw; i++) {
-        uint64_t c1, c2, mq, lo, top;
+        uint64_t h, c, mq;
 
-        lo = ct_mac(a[0], b[i], t[0], 0, &c1);
-        mq = lo * ctx->m0;
-        ct_mac(mq, n[0], lo, 0, &c2);           /* the low word becomes 0 */
-        for (j=1; j<nw; j++) {
-            lo = ct_mac(a[j], b[i], t[j], c1, &c1);
-            t[j - 1] = ct_mac(mq, n[j], lo, c2, &c2);
-        }
-        top = ct_add(t[nw], c1, 0, &c1);
-        t[nw - 1] = ct_add(top, c2, 0, &c2);
-        t[nw] = c1 + c2;
+        /* t[i+nw+1] is still zero here */
+        h = addmul_row(t + i, a, b[i], nw);
+        t[i + nw] = ct_add(t[i + nw], h, 0, &c);
+        t[i + nw + 1] = c;
+
+        mq = t[i] * ctx->m0;
+        h = addmul_row(t + i, n, mq, nw);
+        t[i + nw] = ct_add(t[i + nw], h, 0, &c);
+        t[i + nw + 1] += c;
     }
 
-    /* t < 2n: subtract n if t >= n */
-    borrow = words_sub(out, t, n, nw);
-    words_select(out, ct_mask(t[nw] | (1 ^ borrow)), out, t, nw);
+    /* t[nw..2nw] < 2n: subtract n if needed */
+    borrow = words_sub(out, t + nw, n, nw);
+    words_select(out, ct_mask(t[2*nw] | (1 ^ borrow)), out, t + nw, nw);
 }
 
 /*
@@ -163,7 +259,7 @@ void mont_mul(uint64_t *out, const uint64_t *a, const uint64_t *b, MontCtx *ctx)
  *
  * The square is computed first (each cross product a[i]*a[j], i < j,
  * once, then doubled, then the squares a[i]^2 added), then reduced
- * (one word at a time, like the second half of mont_mul).
+ * one word at a time.
  * This takes about 1.5*nw^2 word multiplications instead of 2*nw^2.
  */
 void mont_sqr(uint64_t *out, const uint64_t *a, MontCtx *ctx)
@@ -171,18 +267,14 @@ void mont_sqr(uint64_t *out, const uint64_t *a, MontCtx *ctx)
     uint64_t *t = ctx->tmp;
     const uint64_t *n = ctx->n;
     size_t nw = ctx->nw;
-    size_t i, j;
+    size_t i;
     uint64_t c, top, borrow;
 
-    memset(t, 0, (2*nw + 1)*sizeof(uint64_t));
+    memset(t, 0, (2*nw + 2)*sizeof(uint64_t));
 
-    /* t = sum of a[i]*a[j]*2^(64*(i+j)), for i < j */
-    for (i=0; i+1<nw; i++) {
-        c = 0;
-        for (j=i+1; j<nw; j++)
-            t[i + j] = ct_mac(a[i], a[j], t[i + j], c, &c);
-        t[i + nw] = c;
-    }
+    /* t = sum of a[i]*a[j]*2^(64*(i+j)), for i < j; t[i+nw] is still zero */
+    for (i=0; i+1<nw; i++)
+        t[i + nw] = addmul_row(t + 2*i + 1, a + i + 1, a[i], nw - i - 1);
 
     /* t = 2*t */
     top = 0;
@@ -205,12 +297,10 @@ void mont_sqr(uint64_t *out, const uint64_t *a, MontCtx *ctx)
     /* Montgomery reduction: t = t / R mod n, with t < n^2 */
     top = 0;
     for (i=0; i<nw; i++) {
-        uint64_t mq = t[i] * ctx->m0;
+        uint64_t h, mq = t[i] * ctx->m0;
 
-        c = 0;
-        for (j=0; j<nw; j++)
-            t[i + j] = ct_mac(mq, n[j], t[i + j], c, &c);
-        t[i + nw] = ct_add(t[i + nw], c, top, &top);
+        h = addmul_row(t + i, n, mq, nw);
+        t[i + nw] = ct_add(t[i + nw], h, top, &top);
     }
 
     /* The result (t[nw..2nw-1] and top) is smaller than 2n: subtract n if needed */

@@ -15,7 +15,14 @@
 #include "nat.h"
 #include "nat_ct.h"
 
-FAKE_INIT(nat)
+/*
+ * The same code is also compiled for CPUs with BMI2 and ADX, as another
+ * module (see nat_bmi2_adx.c).
+ */
+#ifndef NAT_MODULE
+#define NAT_MODULE nat
+#endif
+FAKE_INIT(NAT_MODULE)
 
 /* ---------------------------------------------------------------- */
 /* Memory                                                           */
