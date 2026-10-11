@@ -17,6 +17,16 @@
 #include "nat.h"
 #include "nat_ct.h"
 
+/*
+ * On 32-bit x86, SSE2 (when the compiler can build it) gives two
+ * 32x32 -> 64 products per instruction, and 64-bit additions in one
+ * instruction. No runtime detection: such builds require SSE2.
+ */
+#if defined(NAT_32BIT) && defined(USE_SSE2)
+#define NAT_SSE2
+#include <emmintrin.h>
+#endif
+
 /* ---------------------------------------------------------------- */
 /* Modular helpers on word arrays                                   */
 /* ---------------------------------------------------------------- */
@@ -79,6 +89,52 @@ STATIC void from_words32(uint64_t *d, const uint32_t *s, size_t nw)
         d[i] = ((uint64_t)s[2*i + 1] << 32) | s[2*i];
 }
 
+#if defined(NAT_SSE2)
+
+/**
+ * t[0..n-1] += a[0..n-1] * b, and return the high word.
+ *
+ * Two words per step: one PMULUDQ computes a[j]*b and a[j+1]*b, then
+ * the carry runs through the low 64-bit lane (the high lane holds junk,
+ * which never reaches the low one).
+ *
+ * t[j] and t[j+1] are loaded separately: the previous row (at offset
+ * one word less) has just stored them as 32-bit words, and a single
+ * 64-bit load over two such stores stalls on store forwarding.
+ */
+STATIC uint32_t addmul_row32(uint32_t *t, const uint32_t *a, uint32_t b, size_t n)
+{
+    __m128i vb = _mm_set1_epi32((int)b);
+    __m128i zero = _mm_setzero_si128();
+    __m128i c = zero;
+    size_t j;
+
+    for (j=0; j+1<n; j+=2) {
+        __m128i va, vt, s;
+
+        /* { a[j], 0, a[j+1], 0 } and { t[j], 0, t[j+1], 0 } */
+        va = _mm_unpacklo_epi32(_mm_loadl_epi64((const __m128i*)(a + j)), zero);
+        vt = _mm_unpacklo_epi64(_mm_cvtsi32_si128((int)t[j]), _mm_cvtsi32_si128((int)t[j + 1]));
+        /* a[j]*b + t[j] and a[j+1]*b + t[j+1]; plus a 32-bit carry,
+           (2^32-1)^2 + 2*(2^32-1) = 2^64-1: it always fits */
+        s = _mm_add_epi64(_mm_mul_epu32(va, vb), vt);
+        c = _mm_add_epi64(c, s);
+        t[j] = (uint32_t)_mm_cvtsi128_si32(c);
+        c = _mm_add_epi64(_mm_srli_epi64(c, 32), _mm_srli_si128(s, 8));
+        t[j + 1] = (uint32_t)_mm_cvtsi128_si32(c);
+        c = _mm_srli_epi64(c, 32);
+    }
+    if (j < n) {
+        c = _mm_add_epi64(c, _mm_mul_epu32(_mm_cvtsi32_si128((int)a[j]), vb));
+        c = _mm_add_epi64(c, _mm_cvtsi32_si128((int)t[j]));
+        t[j] = (uint32_t)_mm_cvtsi128_si32(c);
+        c = _mm_srli_epi64(c, 32);
+    }
+    return (uint32_t)_mm_cvtsi128_si32(c);
+}
+
+#else
+
 /** t[0..n-1] += a[0..n-1] * b, and return the high word **/
 STATIC uint32_t addmul_row32(uint32_t *t, const uint32_t *a, uint32_t b, size_t n)
 {
@@ -93,6 +149,8 @@ STATIC uint32_t addmul_row32(uint32_t *t, const uint32_t *a, uint32_t b, size_t 
     }
     return c;
 }
+
+#endif /* NAT_SSE2 */
 
 /**
  * out = t[n..2n-1] + top*2^(32n), minus m if that is at least m;

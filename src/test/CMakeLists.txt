@@ -131,6 +131,14 @@ if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64" AND NOT MSVC)
             LINK_OPTIONS "-m32;-fsanitize=undefined;-fsanitize=address"
             LINK_LIBRARIES "")
         add_test(NAME test_nat_32 COMMAND test_nat_32)
+
+        # The same with the SSE2 kernels, as in a real 32-bit x86 build
+        add_executable(test_nat_32_sse2 test_nat.c ../nat.c ../nat_div.c ../nat_mod.c ../nat_gcd.c ../nat_prime.c)
+        set_target_properties(test_nat_32_sse2 PROPERTIES
+            COMPILE_OPTIONS "-m32;-msse2;-DUSE_SSE2;-O2;-g;-Wall;-Werror;-fsanitize=undefined;-fsanitize=address;-UHAVE_UINT128;-USYS_BITS;-DSYS_BITS=32"
+            LINK_OPTIONS "-m32;-fsanitize=undefined;-fsanitize=address"
+            LINK_LIBRARIES "")
+        add_test(NAME test_nat_32_sse2 COMMAND test_nat_32_sse2)
     endif()
 endif()
 
@@ -157,6 +165,13 @@ foreach(ec_test test_ec_common test_ec_nat test_ed448 test_curve448)
             LINK_OPTIONS "-m32;-fsanitize=undefined;-fsanitize=address"
             LINK_LIBRARIES "")
         add_test(NAME ${ec_test}_32 COMMAND ${ec_test}_32)
+
+        add_executable(${ec_test}_32_sse2 ${ec_test}.c ${EC_SOURCES} ${NAT_SOURCES})
+        set_target_properties(${ec_test}_32_sse2 PROPERTIES
+            COMPILE_OPTIONS "-m32;-msse2;-DUSE_SSE2;-O2;-g;-Wall;-Werror;-fsanitize=undefined;-fsanitize=address;-UHAVE_UINT128;-USYS_BITS;-DSYS_BITS=32"
+            LINK_OPTIONS "-m32;-fsanitize=undefined;-fsanitize=address"
+            LINK_LIBRARIES "")
+        add_test(NAME ${ec_test}_32_sse2 COMMAND ${ec_test}_32_sse2)
     endif()
 endforeach()
 
@@ -197,6 +212,22 @@ if (VALGRIND AND HAVE_VALGRIND_MEMCHECK_H)
             LINK_OPTIONS "-m32"
             LINK_LIBRARIES "")
         add_test(NAME test_ec_nat_ct_32 COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_ec_nat_ct_32>)
+
+        add_executable(test_nat_ct_32_sse2 test_nat_ct.c ../nat.c ../nat_div.c ../nat_mod.c ../nat_gcd.c ../nat_prime.c)
+        target_compile_definitions(test_nat_ct_32_sse2 PRIVATE NAT_CTGRIND)
+        set_target_properties(test_nat_ct_32_sse2 PROPERTIES
+            COMPILE_OPTIONS "-m32;-msse2;-DUSE_SSE2;-O2;-g;-Wall;-Werror;-UHAVE_UINT128;-USYS_BITS;-DSYS_BITS=32"
+            LINK_OPTIONS "-m32"
+            LINK_LIBRARIES "")
+        add_test(NAME test_nat_ct_32_sse2 COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_nat_ct_32_sse2>)
+
+        add_executable(test_ec_nat_ct_32_sse2 test_ec_nat_ct.c ${EC_SOURCES} ${NAT_SOURCES})
+        target_compile_definitions(test_ec_nat_ct_32_sse2 PRIVATE NAT_CTGRIND)
+        set_target_properties(test_ec_nat_ct_32_sse2 PROPERTIES
+            COMPILE_OPTIONS "-m32;-msse2;-DUSE_SSE2;-O2;-g;-Wall;-Werror;-UHAVE_UINT128;-USYS_BITS;-DSYS_BITS=32"
+            LINK_OPTIONS "-m32"
+            LINK_LIBRARIES "")
+        add_test(NAME test_ec_nat_ct_32_sse2 COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_ec_nat_ct_32_sse2>)
     endif()
 
     if (NAT_BMI2_ADX_TESTS)

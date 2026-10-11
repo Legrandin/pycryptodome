@@ -1226,7 +1226,7 @@ void test_shl128(void)
 void test_32bit_helpers(void)
 {
     const uint64_t w[2] = { 0x1122334455667788ULL, 0x99AABBCCDDEEFF00ULL };
-    uint32_t h[4], t[5], a[4];
+    uint32_t h[4], t[8], a[8];
     uint64_t back[2], hi, lo;
     size_t n, j;
     int it;
@@ -1245,11 +1245,12 @@ void test_32bit_helpers(void)
     assert(lo == 0x300000005ULL && hi == 0);
 
     /* addmul_row32 against 64-bit arithmetic */
-    for (n=1; n<=4; n++) {
+    /* up to 7 words: the SSE2 version works on pairs, plus an odd word */
+    for (n=1; n<=7; n++) {
         for (it=0; it<1000; it++) {
             uint64_t ref, c = 0;
             uint32_t b = (uint32_t)rnd(), hrow;
-            uint32_t tt[4];
+            uint32_t tt[8];
 
             for (j=0; j<n; j++) {
                 tt[j] = (it % 4 == 0) ? 0xFFFFFFFFU : (uint32_t)rnd();
