@@ -33,6 +33,21 @@ from Crypto.Util.number import bytes_to_long
 
 
 class TestElGamal:
+    def test_component_types(self):
+        tv = self.tve[0]
+        p, g, y, x = (int(tv[c], 16) for c in ("p", "g", "y", "x"))
+        key = ElGamal.construct((p, g, y, x))
+        for value, expected in ((key.p, p), (key.g, g), (key.y, y), (key.x, x)):
+            assert type(value) is int
+            assert value == expected
+        assert key.has_private()
+
+        pub = key.publickey()
+        assert not pub.has_private()
+        with pytest.raises(AttributeError):
+            _ = pub.x
+        assert pub.p == p
+
     #
     # Test vectors
     #

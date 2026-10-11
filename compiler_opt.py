@@ -255,6 +255,35 @@ def compiler_supports_sha_ni():
     if test_compilation(source, extra_cc_options=options, msg="SHA-NI intrinsics"):
         return {"extra_cc_options": options, "extra_macros": []}
 
+
+def compiler_supports_bmi2_adx():
+    """Return the compiler options to build the code for x86-64 CPUs with
+    BMI2 and ADX (inline assembly with MULX, ADCX and ADOX), or False if
+    the compiler cannot. Only gcc and clang are supported."""
+
+    source = """
+    #include <stdint.h>
+    #if !defined(__x86_64__)
+    #error Only for x86-64
+    #endif
+    int main(void) {
+        uint64_t lo, hi, x = 3, y = 5;
+        __asm__ volatile (
+            "xor %%r8d, %%r8d\\n\\t"
+            "mulx %[y], %[lo], %[hi]\\n\\t"
+            "adcx %%r8, %[lo]\\n\\t"
+            "adox %%r8, %[hi]\\n\\t"
+            : [lo] "=&r" (lo), [hi] "=&r" (hi)
+            : "d" (x), [y] "r" (y)
+            : "r8", "cc");
+        return (int)(lo + hi) - 15;
+    }
+    """
+
+    options = ["-mbmi2", "-madx"]
+    if test_compilation(source, extra_cc_options=options, msg="BMI2 and ADX inline assembly"):
+        return {"extra_cc_options": options, "extra_macros": []}
+
     return False
 
 
@@ -465,6 +494,20 @@ def set_compiler_options(extensions):
     else:
         print("Warning: compiler does not support SHA-NI instructions")
         for mod_name in sha_ni_mod_names:
+            remove_extension(extensions, mod_name)
+
+    # BMI2 and ADX, for the big integer code (gcc and clang on x86-64 only)
+    # Detecting them at runtime requires cpuid.h
+    bmi2_adx_result = cpuid_h_present and compiler_supports_bmi2_adx()
+    bmi2_adx_mod_names = ["Crypto.Math._nat_bmi2_adx", "Crypto.PublicKey._ec_nat_bmi2_adx"]
+    if bmi2_adx_result:
+        print("Compiling support for BMI2 and ADX instructions")
+        for x in extensions:
+            if x.name in bmi2_adx_mod_names:
+                x.extra_compile_args.extend(bmi2_adx_result["extra_cc_options"])
+    else:
+        print("Warning: compiler does not support BMI2 and ADX instructions")
+        for mod_name in bmi2_adx_mod_names:
             remove_extension(extensions, mod_name)
 
     for x in extensions:

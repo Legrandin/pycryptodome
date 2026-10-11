@@ -220,7 +220,7 @@ class IntegerBase(ABC):
 
     @staticmethod
     @abstractmethod
-    def jacobi_symbol(a: Union[IntegerBase, int], n: Union[IntegerBase, int]) -> IntegerBase:
+    def jacobi_symbol(a: Union[IntegerBase, int], n: Union[IntegerBase, int]) -> int:
         pass
 
     @staticmethod
@@ -287,6 +287,93 @@ class IntegerBase(ABC):
             raise ValueError("Cannot compute square root")
 
         return r
+
+    # Private helpers for the rest of the library. The implementations
+    # below work on any integer; IntegerNat replaces them with
+    # constant-time versions.
+
+    def _sub_mod(self, term: Union[IntegerBase, int], modulus: Union[IntegerBase, int]) -> IntegerBase:
+        """Return (self - term) mod modulus, for self and term smaller than the modulus"""
+        return (self - term) % modulus
+
+    def _resize(self, bits: int) -> IntegerBase:
+        """Declare that the value is smaller than 2**bits (for IntegerNat, the
+        operations then work on that many bits, whatever the value)"""
+        return self
+
+    def _miller_rabin(self, base: Union[IntegerBase, int]) -> bool:
+        """One round of Miller-Rabin (FIPS 186-4, C.3.1, steps 4.3-4.5).
+
+        self must be odd and at least 5, and base in [2, self-2].
+        Return True if self is a probable prime for this base.
+        """
+        minus_one = self - 1
+        m = self - 1
+        a = 0
+        while m.is_even():
+            m >>= 1
+            a += 1
+
+        z = pow(self.__class__(base), m, self)
+        if z in (1, minus_one):
+            return True
+        for _j in range(1, a):
+            z = pow(z, 2, self)
+            if z == minus_one:
+                return True
+            if z == 1:
+                return False
+        return False
+
+    def _lucas(self, d: int) -> bool:
+        """Lucas test with P=1 and Q=(1-D)/4 (FIPS 186-4, C.3.3, steps 3-7).
+
+        self must be odd and at least 3. Return True if U_{self+1} is 0 mod self.
+        """
+        cls = self.__class__
+        # This is \delta(n) = n - jacobi(D/n)
+        K = self + 1
+        r = K.size_in_bits() - 1
+        # U_1=1 and V_1=P
+        U_i = cls(1)
+        V_i = cls(1)
+        U_temp = cls(0)
+        V_temp = cls(0)
+        for i in range(r - 1, -1, -1):
+            # Square
+            # U_temp = U_i * V_i % self
+            U_temp.set(U_i)
+            U_temp *= V_i
+            U_temp %= self
+            # V_temp = (((V_i ** 2 + (U_i ** 2 * D)) * K) >> 1) % self
+            V_temp.set(U_i)
+            V_temp *= U_i
+            V_temp *= d
+            V_temp.multiply_accumulate(V_i, V_i)
+            if V_temp.is_odd():
+                V_temp += self
+            V_temp >>= 1
+            V_temp %= self
+            # Multiply
+            if K.get_bit(i):
+                # U_i = (((U_temp + V_temp) * K) >> 1) % self
+                U_i.set(U_temp)
+                U_i += V_temp
+                if U_i.is_odd():
+                    U_i += self
+                U_i >>= 1
+                U_i %= self
+                # V_i = (((V_temp + U_temp * D) * K) >> 1) % self
+                V_i.set(V_temp)
+                V_i.multiply_accumulate(U_temp, d)
+                if V_i.is_odd():
+                    V_i += self
+                V_i >>= 1
+                V_i %= self
+            else:
+                U_i.set(U_temp)
+                V_i.set(V_temp)
+        return U_i == 0
 
     @classmethod
     def random(

@@ -48,3 +48,14 @@ test_data = [
 
 
 TestVectors = make_hash_tests(MD2, "MD2", test_data, digest_size=16, oid="1.2.840.113549.2.2")
+
+
+class TestCopy:
+    def test_copy(self):
+        h1 = MD2.new(b"abc")
+        h2 = h1.copy()
+        # The copy is independent of the original
+        h1.update(b"def")
+        assert h2.digest() == MD2.new(b"abc").digest()
+        h2.update(b"def")
+        assert h1.digest() == h2.digest() == MD2.new(b"abcdef").digest()

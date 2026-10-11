@@ -38,6 +38,76 @@ from Crypto.SelfTest.loader import load_test_vectors
 
 
 class TestEccPoint:
+    def test_public_types(self):
+        key = ECC.generate(curve="P-256")
+        point = key.pointQ
+        assert type(point.x) is int
+        assert type(point.y) is int
+        assert type(point.xy[0]) is int
+        assert point.xy == (point.x, point.y)
+        assert type(key.d) is int
+        assert key.pointQ == key._curve.G * key.d
+
+        # Arithmetic on the coordinates is plain Python int arithmetic
+        assert point.x - 2**300 < 0
+
+    def test_compressed_point_x_one(self):
+        # On P-521, x = 1 is a valid coordinate, and x^3 - 3x is negative
+        curve = _curves["p521"]
+        p, b = int(curve.p), int(curve.b)
+        nbytes = (p.bit_length() + 7) // 8
+        for prefix in (b"\x02", b"\x03"):
+            encoded = prefix + (1).to_bytes(nbytes, "big")
+            key = ECC.import_key(encoded, curve_name="P-521")
+            x, y = key.pointQ.xy
+            assert x == 1
+            assert (y * y - (1 - 3 + b)) % p == 0
+            assert y % 2 == (prefix == b"\x03")
+
+    @pytest.mark.parametrize("curve_name", ["p192", "p224", "p256", "p384", "p521"])
+    def test_coordinates_reduced(self, curve_name):
+        # Coordinates that fit in the length of the modulus are reduced modulo p
+        curve = _curves[curve_name]
+        p = int(curve.p)
+        nbytes = (p.bit_length() + 7) // 8
+        assert EccPoint(p, 0, curve_name).is_point_at_infinity()
+        assert EccPoint(p, p, curve_name).is_point_at_infinity()
+        if curve.Gx + p < 2 ** (8 * nbytes):
+            assert EccPoint(int(curve.Gx) + p, curve.Gy, curve_name) == curve.G
+        if curve.Gy + p < 2 ** (8 * nbytes):
+            assert EccPoint(curve.Gx, int(curve.Gy) + p, curve_name) == curve.G
+        # Longer values are still rejected
+        with pytest.raises(ValueError, match="Incorrect coordinate length"):
+            EccPoint(2 ** (8 * nbytes), 0, curve_name)
+
+    def test_import_coordinates_not_reduced(self):
+        # An imported point must have coordinates smaller than p (SEC1 3.2.2.1)
+        curve = _curves["p521"]
+        p, gx, gy = int(curve.p), int(curve.Gx), int(curve.Gy)
+        nbytes = (p.bit_length() + 7) // 8
+        assert gx + p < 2 ** (8 * nbytes) and gy + p < 2 ** (8 * nbytes)
+
+        def sec1(x, y):
+            return b"\x04" + x.to_bytes(nbytes, "big") + y.to_bytes(nbytes, "big")
+
+        assert ECC.import_key(sec1(gx, gy), curve_name="P-521").pointQ == curve.G
+        for x, y in ((gx + p, gy), (gx, gy + p), (p, 0)):
+            with pytest.raises(ValueError, match="does not belong to the curve"):
+                ECC.import_key(sec1(x, y), curve_name="P-521")
+        prefix = b"\x02" if gy % 2 == 0 else b"\x03"
+        assert ECC.import_key(prefix + gx.to_bytes(nbytes, "big"), curve_name="P-521").pointQ == curve.G
+        with pytest.raises(ValueError, match="does not belong to the curve"):
+            ECC.import_key(prefix + (gx + p).to_bytes(nbytes, "big"), curve_name="P-521")
+
+    @pytest.mark.parametrize("curve_name", ["p192", "p224", "p256", "p384", "p521", "ed25519", "ed448"])
+    def test_add_other_curve(self, curve_name):
+        G = _curves[curve_name].G
+        other = _curves["p256" if curve_name != "p256" else "ed25519"].G
+        with pytest.raises(ValueError, match="not on the same curve"):
+            G + other
+        with pytest.raises(ValueError, match="not on the same curve"):
+            G.copy().__iadd__(other)
+
     def test_mix(self):
         p1 = ECC.generate(curve="P-256").pointQ
         p2 = ECC.generate(curve="P-384").pointQ

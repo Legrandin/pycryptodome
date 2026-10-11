@@ -2,67 +2,97 @@
 # See https://opensource.org/licenses/BSD-2-Clause for details.
 
 from Crypto.Math.Numbers import Integer
-from Crypto.Random.random import getrandbits
 from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
     c_size_t,
     c_uint8_ptr,
-    c_uint8_ptr_len,
-    c_ulonglong,
-    load_pycryptodome_raw_lib,
 )
 from Crypto.Util.number import long_to_bytes
 
 from ._curve import _Curve
+from ._ec_lib import load_ec_lib
 
-_ec_lib = load_pycryptodome_raw_lib(
-    "Crypto.PublicKey._ec_ws",
-    """
-typedef void EcContext;
+_ec_cdecl = """
+typedef void EcCurve;
 typedef void EcPoint;
-int ec_ws_new_context(EcContext **pec_ctx,
-                      const uint8_t *modulus,
-                      const uint8_t *b,
-                      const uint8_t *order,
-                      size_t len,
-                      uint64_t seed);
-void ec_ws_free_context(EcContext *ec_ctx);
-int ec_ws_new_point(EcPoint **pecp,
-                    const uint8_t *x,
-                    const uint8_t *y,
-                    size_t len,
-                    const EcContext *ec_ctx);
-void ec_ws_free_point(EcPoint *ecp);
-int ec_ws_get_xy(uint8_t *x,
-                 uint8_t *y,
-                 size_t len,
-                 const EcPoint *ecp);
-int ec_ws_double(EcPoint *p);
-int ec_ws_add(EcPoint *ecpa, EcPoint *ecpb);
-int ec_ws_scalar(EcPoint *ecp,
-                 const uint8_t *k,
-                 size_t len,
-                 uint64_t seed);
-int ec_ws_clone(EcPoint **pecp2, const EcPoint *ecp);
-int ec_ws_cmp(const EcPoint *ecp1, const EcPoint *ecp2);
-int ec_ws_neg(EcPoint *p);
-""",
-)
+int ec_nat_new_curve(EcCurve **out,
+                     const uint8_t *p,
+                     const uint8_t *b,
+                     const uint8_t *order,
+                     const uint8_t *gx,
+                     const uint8_t *gy,
+                     size_t len);
+void ec_nat_free_curve(EcCurve *curve);
+int ec_nat_new_point(EcPoint **out,
+                     const uint8_t *x,
+                     const uint8_t *y,
+                     size_t len,
+                     const EcCurve *curve);
+void ec_nat_free_point(EcPoint *p);
+int ec_nat_get_xy(uint8_t *x,
+                  uint8_t *y,
+                  size_t len,
+                  const EcPoint *p);
+int ec_nat_double(EcPoint *p);
+int ec_nat_add(EcPoint *a, const EcPoint *b);
+int ec_nat_scalar(EcPoint *p,
+                  const uint8_t *k,
+                  size_t len,
+                  uint64_t seed);
+int ec_nat_clone(EcPoint **out, const EcPoint *p);
+int ec_nat_cmp(const EcPoint *a, const EcPoint *b);
+int ec_nat_neg(EcPoint *p);
+"""
+
+
+_ec_lib, _bmi2_adx = load_ec_lib(_ec_cdecl)
 
 
 class EcLib:
-    new_context = _ec_lib.ec_ws_new_context
-    free_context = _ec_lib.ec_ws_free_context
-    new_point = _ec_lib.ec_ws_new_point
-    free_point = _ec_lib.ec_ws_free_point
-    get_xy = _ec_lib.ec_ws_get_xy
-    double = _ec_lib.ec_ws_double
-    add = _ec_lib.ec_ws_add
-    scalar = _ec_lib.ec_ws_scalar
-    clone = _ec_lib.ec_ws_clone
-    cmp = _ec_lib.ec_ws_cmp
-    neg = _ec_lib.ec_ws_neg
+    new_point = _ec_lib.ec_nat_new_point
+    free_point = _ec_lib.ec_nat_free_point
+    get_xy = _ec_lib.ec_nat_get_xy
+    double = _ec_lib.ec_nat_double
+    add = _ec_lib.ec_nat_add
+    scalar = _ec_lib.ec_nat_scalar
+    clone = _ec_lib.ec_nat_clone
+    cmp = _ec_lib.ec_nat_cmp
+    neg = _ec_lib.ec_nat_neg
+
+
+def _new_curve(p, b, order, Gx, Gy, bits, oid, desc, openssh):
+    """A NIST curve y^2 = x^3 - 3x + b mod p, with generator (Gx, Gy) of order n"""
+
+    size = (bits + 7) // 8
+    curve = VoidPointer()
+    result = _ec_lib.ec_nat_new_curve(
+        curve.address_of(),
+        c_uint8_ptr(long_to_bytes(p, size)),
+        c_uint8_ptr(long_to_bytes(b, size)),
+        c_uint8_ptr(long_to_bytes(order, size)),
+        c_uint8_ptr(long_to_bytes(Gx, size)),
+        c_uint8_ptr(long_to_bytes(Gy, size)),
+        c_size_t(size),
+    )
+    if result:
+        raise ImportError("Error %d initializing %s context" % (result, desc))
+
+    context = SmartPointer(curve.get(), _ec_lib.ec_nat_free_curve)
+    return _Curve(
+        Integer(p),
+        Integer(b),
+        Integer(order),
+        Integer(Gx),
+        Integer(Gy),
+        None,
+        bits,
+        oid,
+        context,
+        desc,
+        openssh,
+        EcLib,
+    )
 
 
 def p192_curve():
@@ -72,39 +102,7 @@ def p192_curve():
     Gx = 0x188DA80EB03090F67CBF20EB43A18800F4FF0AFD82FF1012
     Gy = 0x07192B95FFC8DA78631011ED6B24CDD573F977A11E794811
 
-    p192_modulus = long_to_bytes(p, 24)
-    p192_b = long_to_bytes(b, 24)
-    p192_order = long_to_bytes(order, 24)
-
-    ec_p192_context = VoidPointer()
-    p192_modulus_ptr, p192_modulus_len = c_uint8_ptr_len(p192_modulus)
-    result = _ec_lib.ec_ws_new_context(
-        ec_p192_context.address_of(),
-        p192_modulus_ptr,
-        c_uint8_ptr(p192_b),
-        c_uint8_ptr(p192_order),
-        c_size_t(p192_modulus_len),
-        c_ulonglong(getrandbits(64)),
-    )
-    if result:
-        raise ImportError("Error %d initializing P-192 context" % result)
-
-    context = SmartPointer(ec_p192_context.get(), _ec_lib.ec_ws_free_context)
-    p192 = _Curve(
-        Integer(p),
-        Integer(b),
-        Integer(order),
-        Integer(Gx),
-        Integer(Gy),
-        None,
-        192,
-        "1.2.840.10045.3.1.1",  # ANSI X9.62 / SEC2
-        context,
-        "NIST P-192",
-        "ecdsa-sha2-nistp192",
-        EcLib,
-    )
-    return p192
+    return _new_curve(p, b, order, Gx, Gy, 192, "1.2.840.10045.3.1.1", "NIST P-192", "ecdsa-sha2-nistp192")
 
 
 def p224_curve():
@@ -114,39 +112,7 @@ def p224_curve():
     Gx = 0xB70E0CBD6BB4BF7F321390B94A03C1D356C21122343280D6115C1D21
     Gy = 0xBD376388B5F723FB4C22DFE6CD4375A05A07476444D5819985007E34
 
-    p224_modulus = long_to_bytes(p, 28)
-    p224_b = long_to_bytes(b, 28)
-    p224_order = long_to_bytes(order, 28)
-
-    ec_p224_context = VoidPointer()
-    p224_modulus_ptr, p224_modulus_len = c_uint8_ptr_len(p224_modulus)
-    result = _ec_lib.ec_ws_new_context(
-        ec_p224_context.address_of(),
-        p224_modulus_ptr,
-        c_uint8_ptr(p224_b),
-        c_uint8_ptr(p224_order),
-        c_size_t(p224_modulus_len),
-        c_ulonglong(getrandbits(64)),
-    )
-    if result:
-        raise ImportError("Error %d initializing P-224 context" % result)
-
-    context = SmartPointer(ec_p224_context.get(), _ec_lib.ec_ws_free_context)
-    p224 = _Curve(
-        Integer(p),
-        Integer(b),
-        Integer(order),
-        Integer(Gx),
-        Integer(Gy),
-        None,
-        224,
-        "1.3.132.0.33",  # SEC 2
-        context,
-        "NIST P-224",
-        "ecdsa-sha2-nistp224",
-        EcLib,
-    )
-    return p224
+    return _new_curve(p, b, order, Gx, Gy, 224, "1.3.132.0.33", "NIST P-224", "ecdsa-sha2-nistp224")
 
 
 def p256_curve():
@@ -156,39 +122,7 @@ def p256_curve():
     Gx = 0x6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296
     Gy = 0x4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5
 
-    p256_modulus = long_to_bytes(p, 32)
-    p256_b = long_to_bytes(b, 32)
-    p256_order = long_to_bytes(order, 32)
-
-    ec_p256_context = VoidPointer()
-    p256_modulus_ptr, p256_modulus_len = c_uint8_ptr_len(p256_modulus)
-    result = _ec_lib.ec_ws_new_context(
-        ec_p256_context.address_of(),
-        p256_modulus_ptr,
-        c_uint8_ptr(p256_b),
-        c_uint8_ptr(p256_order),
-        c_size_t(p256_modulus_len),
-        c_ulonglong(getrandbits(64)),
-    )
-    if result:
-        raise ImportError("Error %d initializing P-256 context" % result)
-
-    context = SmartPointer(ec_p256_context.get(), _ec_lib.ec_ws_free_context)
-    p256 = _Curve(
-        Integer(p),
-        Integer(b),
-        Integer(order),
-        Integer(Gx),
-        Integer(Gy),
-        None,
-        256,
-        "1.2.840.10045.3.1.7",  # ANSI X9.62 / SEC2
-        context,
-        "NIST P-256",
-        "ecdsa-sha2-nistp256",
-        EcLib,
-    )
-    return p256
+    return _new_curve(p, b, order, Gx, Gy, 256, "1.2.840.10045.3.1.7", "NIST P-256", "ecdsa-sha2-nistp256")
 
 
 def p384_curve():
@@ -198,39 +132,7 @@ def p384_curve():
     Gx = 0xAA87CA22BE8B05378EB1C71EF320AD746E1D3B628BA79B9859F741E082542A385502F25DBF55296C3A545E3872760AB7
     Gy = 0x3617DE4A96262C6F5D9E98BF9292DC29F8F41DBD289A147CE9DA3113B5F0B8C00A60B1CE1D7E819D7A431D7C90EA0E5F
 
-    p384_modulus = long_to_bytes(p, 48)
-    p384_b = long_to_bytes(b, 48)
-    p384_order = long_to_bytes(order, 48)
-
-    ec_p384_context = VoidPointer()
-    p384_modulus_ptr, p384_modulus_len = c_uint8_ptr_len(p384_modulus)
-    result = _ec_lib.ec_ws_new_context(
-        ec_p384_context.address_of(),
-        p384_modulus_ptr,
-        c_uint8_ptr(p384_b),
-        c_uint8_ptr(p384_order),
-        c_size_t(p384_modulus_len),
-        c_ulonglong(getrandbits(64)),
-    )
-    if result:
-        raise ImportError("Error %d initializing P-384 context" % result)
-
-    context = SmartPointer(ec_p384_context.get(), _ec_lib.ec_ws_free_context)
-    p384 = _Curve(
-        Integer(p),
-        Integer(b),
-        Integer(order),
-        Integer(Gx),
-        Integer(Gy),
-        None,
-        384,
-        "1.3.132.0.34",  # SEC 2
-        context,
-        "NIST P-384",
-        "ecdsa-sha2-nistp384",
-        EcLib,
-    )
-    return p384
+    return _new_curve(p, b, order, Gx, Gy, 384, "1.3.132.0.34", "NIST P-384", "ecdsa-sha2-nistp384")
 
 
 def p521_curve():
@@ -240,36 +142,4 @@ def p521_curve():
     Gx = 0x000000C6858E06B70404E9CD9E3ECB662395B4429C648139053FB521F828AF606B4D3DBAA14B5E77EFE75928FE1DC127A2FFA8DE3348B3C1856A429BF97E7E31C2E5BD66
     Gy = 0x0000011839296A789A3BC0045C8A5FB42C7D1BD998F54449579B446817AFBD17273E662C97EE72995EF42640C550B9013FAD0761353C7086A272C24088BE94769FD16650
 
-    p521_modulus = long_to_bytes(p, 66)
-    p521_b = long_to_bytes(b, 66)
-    p521_order = long_to_bytes(order, 66)
-
-    ec_p521_context = VoidPointer()
-    p521_modulus_ptr, p521_modulus_len = c_uint8_ptr_len(p521_modulus)
-    result = _ec_lib.ec_ws_new_context(
-        ec_p521_context.address_of(),
-        p521_modulus_ptr,
-        c_uint8_ptr(p521_b),
-        c_uint8_ptr(p521_order),
-        c_size_t(p521_modulus_len),
-        c_ulonglong(getrandbits(64)),
-    )
-    if result:
-        raise ImportError("Error %d initializing P-521 context" % result)
-
-    context = SmartPointer(ec_p521_context.get(), _ec_lib.ec_ws_free_context)
-    p521 = _Curve(
-        Integer(p),
-        Integer(b),
-        Integer(order),
-        Integer(Gx),
-        Integer(Gy),
-        None,
-        521,
-        "1.3.132.0.35",  # SEC 2
-        context,
-        "NIST P-521",
-        "ecdsa-sha2-nistp521",
-        EcLib,
-    )
-    return p521
+    return _new_curve(p, b, order, Gx, Gy, 521, "1.3.132.0.35", "NIST P-521", "ecdsa-sha2-nistp521")

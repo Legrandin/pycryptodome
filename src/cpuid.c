@@ -160,9 +160,16 @@ EXPORT_SYM int have_bmi2(void)
     return (leaf7_ebx() & (1UL<<8)) ? 1 : 0;
 }
 
+/** Return non-zero if the CPU supports ADX (ADCX and ADOX: additions with
+ * two independent carry flags). **/
+EXPORT_SYM int have_adx(void)
+{
+    return (leaf7_ebx() & (1UL<<19)) ? 1 : 0;
+}
+
 #else
 
-/** AVX2, BMI1 and BMI2 are only detected with gcc and clang for now **/
+/** AVX2, BMI1, BMI2 and ADX are only detected with gcc and clang for now **/
 
 EXPORT_SYM int have_avx2(void)
 {
@@ -175,6 +182,11 @@ EXPORT_SYM int have_bmi1(void)
 }
 
 EXPORT_SYM int have_bmi2(void)
+{
+    return 0;
+}
+
+EXPORT_SYM int have_adx(void)
 {
     return 0;
 }

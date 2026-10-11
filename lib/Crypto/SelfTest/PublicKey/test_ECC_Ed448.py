@@ -308,6 +308,16 @@ class TestEccKey_Ed448:
 
 
 class TestEccModule_Ed448:
+    def test_import_y_zero(self):
+        # With y = 0, both y^2 - 1 and d*y^2 - 1 are negative before the reduction
+        from Crypto.PublicKey.ECC import _import_ed448_public_key
+
+        p = 2**448 - 2**224 - 1
+        x, y = _import_ed448_public_key(bytes(57))
+        assert y == 0
+        assert int(x) ** 2 % p == 1
+        assert int(x) % 2 == 0
+
     def test_generate(self):
         key = ECC.generate(curve="Ed448")
         assert key.has_private()

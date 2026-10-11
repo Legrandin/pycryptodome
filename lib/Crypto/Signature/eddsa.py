@@ -162,7 +162,7 @@ class EdDSASigScheme:
         k_hash = SHA512.new(dom2 + R_pk + self._A + PHM).digest()
         k = Integer.from_bytes(k_hash, "little") % self._order
         # Step 5
-        s = (r + k * self._key.d) % self._order
+        s = (r + k * self._key._d) % self._order
 
         return R_pk + s.to_bytes(32, "little")
 
@@ -184,7 +184,7 @@ class EdDSASigScheme:
         k_hash = SHAKE256.new(dom4 + R_pk + self._A + PHM).read(114)
         k = Integer.from_bytes(k_hash, "little") % self._order
         # Step 5
-        s = (r + k * self._key.d) % self._order
+        s = (r + k * self._key._d) % self._order
 
         return R_pk + s.to_bytes(57, "little")
 
