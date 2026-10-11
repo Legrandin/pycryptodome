@@ -705,6 +705,70 @@ class IntegerTests:
         with pytest.raises(ValueError):
             modmult(4, 5, 4)
 
+    def test_public_flag(self):
+        Integer = self.Integer
+        pub = Integer(10, public=True)
+        sec = Integer(10)
+
+        # By default, a number is potentially secret
+        assert not sec._public
+        assert not Integer.from_bytes(b"\x0a")._public
+        assert Integer.from_bytes(b"\x0a", public=True)._public
+        assert Integer.from_bytes(b"\x0a", "little", public=True) == 10
+
+        # A copy keeps the flag
+        assert Integer(pub)._public
+        assert not Integer(sec)._public
+
+        # +, -, *, // and %: public if both operands are (an int is public)
+        for result in (pub + pub, pub + 1, pub - 1, pub * 8, pub // 3, pub % 7, pub % pub):
+            assert result._public
+        for result in (
+            pub + sec,
+            sec + pub,
+            sec + 1,
+            pub - sec,
+            pub * sec,
+            sec * pub,
+            sec * 8,
+            pub // sec,
+            pub % sec,
+        ):
+            assert not result._public
+
+        # Modular inverse: public if both operands are
+        assert pub.inverse(7)._public and pub.inverse(Integer(7, public=True))._public
+        assert not pub.inverse(Integer(7))._public and not sec.inverse(7)._public
+
+        # Any other operation gives a potentially secret result
+        for result in (pub**2, pow(pub, 2, 7), pub >> 1, pub << 1, pub & 3, pub | 3):
+            assert not result._public
+
+        # In place
+        x = Integer(3, public=True)
+        x += 1
+        x *= 2
+        x %= 5
+        x -= 1
+        assert x._public and x == 2
+        x *= sec
+        assert not x._public
+        for op in (
+            lambda v: v.inplace_pow(2),
+            lambda v: v.inplace_inverse(Integer(5)),
+            lambda v: v.multiply_accumulate(2, 3),
+            lambda v: v.__irshift__(1),
+            lambda v: v.__ilshift__(1),
+        ):
+            y = Integer(3, public=True)
+            op(y)
+            assert not y._public
+        y = Integer(3, public=True)
+        y.set(sec)
+        assert not y._public
+        y.set(pub)
+        assert y._public
+
 
 class SignedIntegerTests:
     """Tests with negative values, for the implementations that support them"""
@@ -831,6 +895,12 @@ class SignedIntegerTests:
 
 class NatIntegerTests:
     """Tests for the implementations without negative values"""
+
+    def test_public_flag_reflected(self):
+        pub = self.Integer(10, public=True)
+        sec = self.Integer(10)
+        assert (1 + pub)._public and (8 * pub)._public and (20 - pub)._public
+        assert not (1 + sec)._public and not (8 * sec)._public and not (20 - sec)._public
 
     def test_no_negative_values(self):
         Integer = self.Integer

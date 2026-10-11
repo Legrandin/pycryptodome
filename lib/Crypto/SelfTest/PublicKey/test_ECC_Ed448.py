@@ -372,3 +372,45 @@ class TestEccModule_Ed448:
             ECC.construct(curve="Ed448", d=2, **coordG)
         with pytest.raises(ValueError):
             ECC.construct(curve="Ed448", seed=b"H" * 58)
+
+
+def _spy_scalar(monkeypatch, rawlib):
+    """Record the names of the scalar multiplications called on rawlib"""
+
+    calls = []
+    for name in ("scalar", "scalar_public"):
+        func = getattr(rawlib, name)
+        monkeypatch.setattr(rawlib, name, lambda *args, _f=func, _n=name: calls.append(_n) or _f(*args))
+    return calls
+
+
+@pytest.mark.parametrize("curve", ["Ed25519", "Ed448"])
+def test_scalar_multiply_public(curve, monkeypatch):
+    from Crypto.Math.Numbers import Integer
+    from Crypto.Signature import eddsa
+
+    key = ECC.generate(curve=curve)
+    order = int(key._curve.order)
+    scalars = [0, 1, 2, 8, 255, order - 1, order, 4 * order + 1, 8 * order + 5, 2**900 + 3]
+    scalars += [int(Integer.random_range(min_inclusive=1, max_exclusive=order)) for _ in range(5)]
+    calls = _spy_scalar(monkeypatch, key._curve.rawlib)
+
+    for point in (key._curve.G, key.pointQ):
+        for k in scalars:
+            del calls[:]
+            expected = point * k
+            assert calls == ["scalar"]
+            del calls[:]
+            assert point * Integer(k, public=True) == expected
+            assert calls == ["scalar_public"]
+
+    # The verification of an EdDSA signature only uses public scalars,
+    # the signature only secret ones
+    del calls[:]
+    signature = eddsa.new(key, "rfc8032").sign(b"message")
+    assert set(calls) == {"scalar"}
+    del calls[:]
+    eddsa.new(key.public_key(), "rfc8032").verify(b"message", signature)
+    assert set(calls) == {"scalar_public"}
+    with pytest.raises(ValueError):
+        eddsa.new(key.public_key(), "rfc8032").verify(b"other", signature)

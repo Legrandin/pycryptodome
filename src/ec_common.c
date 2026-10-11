@@ -384,6 +384,28 @@ cleanup:
     return res;
 }
 
+int ec_public_scalar(uint64_t *kw, size_t k_words, size_t *windows, const Nat *order, const uint8_t *k, size_t len)
+{
+    size_t bits;
+    int res;
+
+    /* k mod order (with r = 0, no blinding) */
+    res = ec_blind_scalar(kw, k_words, order, k, len, 0);
+    if (res)
+        return res;
+
+    /* The value is public: the loop can stop at its top bit */
+    bits = 64*k_words;
+    while (bits > 0 && ((kw[(bits-1)/64] >> ((bits-1) % 64)) & 1) == 0)
+        bits--;
+
+    /* The top digit of the Booth recoding needs a zero bit above */
+    *windows = (bits + 1 + EC_WINDOW - 1) / EC_WINDOW;
+    if (*windows == 0)
+        *windows = 1;
+    return 0;
+}
+
 size_t ec_k_words(size_t order_bits)
 {
     return (order_bits + EC_BLINDING_BITS + 63) / 64;

@@ -43,7 +43,7 @@ int scalar_mul_var(EcWs *ws, const EcCurve *c, uint64_t *rx, uint64_t *ry, uint6
                    const uint64_t *px, const uint64_t *py, const uint64_t *pz,
                    const uint64_t *kb, const uint64_t *lambda);
 int scalar_mul_g(EcWs *ws, const EcCurve *c, uint64_t *rx, uint64_t *ry, uint64_t *rz,
-                 const uint64_t *kb, const uint64_t *lambda);
+                 const uint64_t *kb, size_t windows, const uint64_t *lambda);
 
 typedef struct {
     int base_is_g;
@@ -749,7 +749,7 @@ static void test_formulas(const TestCurve *tc, const EcCurve *c)
         memcpy(r1->y, c->gy, nw*8);
         memcpy(r1->z, c->field->one, nw*8);
         assert(scalar_mul_var(&ws, c, r1->x, r1->y, r1->z, r1->x, r1->y, r1->z, kb, lambda) == 0);
-        assert(scalar_mul_g(&ws, c, r2->x, r2->y, r2->z, kb, lambda) == 0);
+        assert(scalar_mul_g(&ws, c, r2->x, r2->y, r2->z, kb, c->windows, lambda) == 0);
         assert(ec_nat_cmp(r1, r2) == 0);
         assert(point_on_curve(&ws, c, r1->x, r1->y, r1->z));
     }
@@ -808,6 +808,59 @@ static void test_random(const TestCurve *tc, const EcCurve *c)
     }
 }
 
+/*
+ * The multiplication for public scalars gives the same result as the
+ * blinded one: for G (tables) and another point, for random scalars of
+ * several lengths (also longer than the order), 0, n and n + 1.
+ */
+static void test_scalar_public(const TestCurve *tc, const EcCurve *c)
+{
+    const size_t lens[] = { 1, 2, 8, c->len, c->len + 8, 2*c->len };
+    uint8_t k[2*MAX_LEN + 8];
+    unsigned base, t;
+    size_t i, l;
+
+    for (base=0; base<2; base++) {
+        const char *bx = base ? tc->qx : tc->gx, *by = base ? tc->qy : tc->gy;
+
+        for (l=0; l<sizeof lens / sizeof lens[0]; l++) {
+            for (t=0; t<5; t++) {
+                EcPointN *a, *b;
+
+                for (i=0; i<lens[l]; i++)
+                    k[i] = (uint8_t)rnd();
+                a = load_point(c, bx, by);
+                b = load_point(c, bx, by);
+                assert(ec_nat_scalar(a, k, lens[l], rnd()) == 0);
+                assert(ec_nat_scalar_public(b, k, lens[l]) == 0);
+                assert(ec_nat_cmp(a, b) == 0);
+                ec_nat_free_point(a);
+                ec_nat_free_point(b);
+            }
+        }
+
+        /* 0, n and n + 1 */
+        for (t=0; t<3; t++) {
+            EcPointN *a, *b;
+
+            if (t == 0) {
+                memset(k, 0, c->len);
+            } else {
+                assert(nat_to_bytes(k, c->len, c->order, 0) == 0);
+                if (t == 2)
+                    k[c->len - 1]++;        /* n is odd */
+            }
+            a = load_point(c, bx, by);
+            b = load_point(c, bx, by);
+            assert(ec_nat_scalar(a, k, c->len, rnd()) == 0);
+            assert(ec_nat_scalar_public(b, k, c->len) == 0);
+            assert(ec_nat_cmp(a, b) == 0);
+            ec_nat_free_point(a);
+            ec_nat_free_point(b);
+        }
+    }
+}
+
 int main(void)
 {
     EcCurve *c[NCURVES];
@@ -838,6 +891,7 @@ int main(void)
         test_point_on_curve(&curves[i], c[i]);
         test_blind_scalar(c[i]);
         test_scalar(&curves[i], c[i]);
+        test_scalar_public(&curves[i], c[i]);
         test_g_table(&curves[i], c[i]);
         test_formulas(&curves[i], c[i]);
         test_random(&curves[i], c[i]);

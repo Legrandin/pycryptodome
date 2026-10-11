@@ -56,6 +56,11 @@ Resolved issues
 * GH#937: Importing a malformed PEM key could take quadratic time. Thanks to Brian Willows.
 * ``Crypto.Protocol.HPKE.new()`` raised ``TypeError`` with Python 3.9 to 3.11
   when ``aead_id`` was a plain integer, and not an ``HPKE.AEAD`` member.
+* Ed25519 and X25519: the final reduction modulo the prime (when
+  converting a point to bytes, including the X25519 shared secret) could
+  branch on secret data, depending on the compiler and the target
+  (for instance, gcc -O3 on 32-bit x86, and the code without SSE2 built with clang).
+  It is now constant time, checked with Valgrind like the rest of the elliptic curves.
 
 New features
 ------------
@@ -88,6 +93,13 @@ New features
   result; for X448, the Montgomery ladder with randomized coordinates.
   Ed448 key generation and signing are about 10x faster (precomputed tables),
   verification about 2.5x, and X448 about 1.3x.
+* Ed25519 scalar multiplications are blinded (by a random 32-bit multiple of
+  the order of the whole group) and randomize the coordinates. Signing is about
+  10% slower.
+* The verification of ECDSA and EdDSA signatures no longer applies the
+  side-channel countermeasures, which are useless for its public values:
+  about 22-28% faster for P-256, P-384, P-521 and Ed448. For the NIST curves,
+  it also uses faster (not constant-time) formulas.
 * The field arithmetic of the elliptic curves has unrolled code for each curve size:
   scalar multiplications are 1.4x-1.7x faster for P-192, P-224 and P-256, and
   1.1x-1.5x for the larger curves (more with clang than with gcc).

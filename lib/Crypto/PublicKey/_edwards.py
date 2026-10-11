@@ -31,6 +31,7 @@ int ed25519_get_xy(uint8_t *xb, uint8_t *yb, size_t modsize, Point *p);
 int ed25519_double(Point *p);
 int ed25519_add(Point *P1, const Point *P2);
 int ed25519_scalar(Point *P, const uint8_t *scalar, size_t scalar_len, uint64_t seed);
+int ed25519_scalar_public(Point *P, const uint8_t *scalar, size_t scalar_len);
 """,
     )
 
@@ -44,13 +45,15 @@ int ed25519_scalar(Point *P, const uint8_t *scalar, size_t scalar_len, uint64_t 
         double = _ed25519_lib.ed25519_double
         add = _ed25519_lib.ed25519_add
         scalar = _ed25519_lib.ed25519_scalar
+        scalar_public = _ed25519_lib.ed25519_scalar_public
 
+    # The parameters of the curve are public
     ed25519 = _Curve(
-        Integer(p),
+        Integer(p, public=True),
         None,
-        Integer(order),
-        Integer(Gx),
-        Integer(Gy),
+        Integer(order, public=True),
+        Integer(Gx, public=True),
+        Integer(Gy, public=True),
         None,
         255,
         "1.3.101.112",  # RFC8410
@@ -88,6 +91,7 @@ int ed448_get_xy(uint8_t *xb, uint8_t *yb, size_t len, const PointEd448 *p);
 int ed448_double(PointEd448 *p);
 int ed448_add(PointEd448 *P1, const PointEd448 *P2);
 int ed448_scalar(PointEd448 *P, const uint8_t *scalar, size_t scalar_len, uint64_t seed);
+int ed448_scalar_public(PointEd448 *P, const uint8_t *scalar, size_t scalar_len);
 """,
     )
 
@@ -101,6 +105,7 @@ int ed448_scalar(PointEd448 *P, const uint8_t *scalar, size_t scalar_len, uint64
         double = _ed448_lib.ed448_double
         add = _ed448_lib.ed448_add
         scalar = _ed448_lib.ed448_scalar
+        scalar_public = _ed448_lib.ed448_scalar_public
 
     ed448_context = VoidPointer()
     result = _ed448_lib.ed448_new_context(ed448_context.address_of())
@@ -109,12 +114,13 @@ int ed448_scalar(PointEd448 *P, const uint8_t *scalar, size_t scalar_len, uint64
 
     context = SmartPointer(ed448_context.get(), _ed448_lib.ed448_free_context)
 
+    # The parameters of the curve are public
     ed448 = _Curve(
-        Integer(p),
+        Integer(p, public=True),
         None,
-        Integer(order),
-        Integer(Gx),
-        Integer(Gy),
+        Integer(order, public=True),
+        Integer(Gx, public=True),
+        Integer(Gy, public=True),
         None,
         448,
         "1.3.101.113",  # RFC8410

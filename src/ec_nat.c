@@ -20,9 +20,15 @@
  *   k + r*n (r of 64 random bits), with tables that are scanned in full
  *   for each digit. The input point is also randomized (same point,
  *   different projective coordinates).
+ * - For a PUBLIC scalar (ec_nat_scalar_public(), as in the verification
+ *   of a signature): no blinding, and only the windows that the scalar
+ *   needs; the variable base uses Jacobian coordinates, with faster but
+ *   incomplete formulas and branches (about 10-25% faster). Nothing
+ *   there is constant time.
  *
- * Nothing branches on, or accesses memory at an address that depends on,
- * secret values (the scalar, the points derived from it). Intended leaks
+ * Apart from the public scalars, nothing branches on, or accesses memory
+ * at an address that depends on, secret values (the scalar, the points
+ * derived from it). Intended leaks
  * (an invalid point, a result that is not on the curve) go through
  * ct_declassify(). Checked with Valgrind by test/test_ec_nat_ct.c.
  *
@@ -343,17 +349,19 @@ cleanup:
 
 /*
  * (rx:ry:rz) = k * G, with the precomputed tables (fixed base) and the
- * blinded scalar kb.
+ * scalar kb (k_words words) over its lowest windows.
  *
  * For each window i: a full scan of its table for the digit, a
  * conditional negation, and a mixed addition. There are no doublings.
  * A zero digit selects no point: the addition is computed anyway, and its
  * result discarded with a mask. The accumulator starts as (0:lambda:0),
  * the point at infinity with randomized coordinates.
+ *
+ * For a public scalar, windows can be fewer than for a blinded one.
  */
 STATIC int scalar_mul_g(EcWs *ws, const EcCurve *c,
                         uint64_t *rx, uint64_t *ry, uint64_t *rz,
-                        const uint64_t *kb, const uint64_t *lambda)
+                        const uint64_t *kb, size_t windows, const uint64_t *lambda)
 {
     const size_t nw = c->nw;
     uint64_t *acc, *sum, *sel, *ny;
@@ -369,7 +377,7 @@ STATIC int scalar_mul_g(EcWs *ws, const EcCurve *c,
 
     fe_copy(ws, acc + nw, lambda);
 
-    for (w=0; w<c->windows; w++) {
+    for (w=0; w<windows; w++) {
         const uint64_t *window = c->g_table + w*EC_DIGITS*2*nw;
         uint64_t sign, digit;
 
@@ -394,6 +402,214 @@ cleanup:
     nat_words_free(acc, 3*nw);
     nat_words_free(sum, 3*nw);
     nat_words_free(sel, 2*nw);
+    nat_words_free(ny, nw);
+    return res;
+}
+
+/* ---------------------------------------------------------------- */
+/* Public scalars only: Jacobian coordinates, NOT constant time     */
+/* ---------------------------------------------------------------- */
+
+/*
+ * A point (X, Y, Z) in Jacobian coordinates is x = X/Z^2, y = Y/Z^3;
+ * Z = 0 is the point at infinity. The formulas are faster than the
+ * complete ones, but they have special cases (the point at infinity,
+ * equal points), which are dealt with by branches: only for public data.
+ */
+
+#define MUL(o, a, b)    fe_mul(ws, o, a, b)
+#define SQR(o, a)       fe_sqr(ws, o, a)
+#define ADD(o, a, b)    fe_add(ws, o, a, b)
+#define SUB(o, a, b)    fe_sub(ws, o, a, b)
+
+/* 3M + 5S, for a = -3 (dbl-2001-b in the Explicit-Formulas Database). In place. */
+static void jac_double(EcWs *ws, uint64_t *t, uint64_t *x, uint64_t *y, uint64_t *z)
+{
+    const size_t nw = ws->nw;
+    uint64_t *delta = t, *gamma = t + nw, *beta = t + 2*nw, *alpha = t + 3*nw, *u = t + 4*nw;
+
+    SQR(delta, z);
+    SQR(gamma, y);
+    MUL(beta, x, gamma);
+    SUB(u, x, delta);           /* alpha = 3 (X - delta) (X + delta) */
+    ADD(alpha, x, delta);
+    MUL(alpha, alpha, u);
+    ADD(u, alpha, alpha);
+    ADD(alpha, alpha, u);
+    ADD(z, y, z);               /* Z3 = (Y + Z)^2 - gamma - delta */
+    SQR(z, z);
+    SUB(z, z, gamma);
+    SUB(z, z, delta);
+    ADD(beta, beta, beta);      /* beta = 4 beta */
+    ADD(beta, beta, beta);
+    SQR(x, alpha);              /* X3 = alpha^2 - 2 (4 beta) */
+    SUB(x, x, beta);
+    SUB(x, x, beta);
+    SUB(beta, beta, x);         /* Y3 = alpha (4 beta - X3) - 8 gamma^2 */
+    MUL(y, alpha, beta);
+    SQR(gamma, gamma);
+    ADD(gamma, gamma, gamma);
+    ADD(gamma, gamma, gamma);
+    ADD(gamma, gamma, gamma);
+    SUB(y, y, gamma);
+}
+
+static int fe_is_zero(EcWs *ws, const uint64_t *a)
+{
+    return (int)words_is_zero(a, ws->nw);
+}
+
+/*
+ * (x1, y1, z1) += (x2, y2, z2): 11M + 5S (add-2007-bl), plus the special
+ * cases. In place.
+ */
+static void jac_add(EcWs *ws, uint64_t *t, uint64_t *x1, uint64_t *y1, uint64_t *z1,
+                    const uint64_t *x2, const uint64_t *y2, const uint64_t *z2)
+{
+    const size_t nw = ws->nw;
+    uint64_t *z1z1 = t, *z2z2 = t + nw, *u1 = t + 2*nw, *u2 = t + 3*nw, *s1 = t + 4*nw, *s2 = t + 5*nw;
+    uint64_t *h = t + 6*nw, *i = t + 7*nw, *j = t + 8*nw, *r = t + 9*nw;
+
+    if (fe_is_zero(ws, z2))
+        return;
+    if (fe_is_zero(ws, z1)) {
+        fe_copy(ws, x1, x2);
+        fe_copy(ws, y1, y2);
+        fe_copy(ws, z1, z2);
+        return;
+    }
+
+    SQR(z1z1, z1);
+    SQR(z2z2, z2);
+    MUL(u1, x1, z2z2);
+    MUL(u2, x2, z1z1);
+    MUL(s1, y1, z2);
+    MUL(s1, s1, z2z2);
+    MUL(s2, y2, z1);
+    MUL(s2, s2, z1z1);
+    SUB(h, u2, u1);
+    SUB(r, s2, s1);
+
+    if (fe_is_zero(ws, h)) {
+        if (fe_is_zero(ws, r)) {
+            jac_double(ws, t + 10*nw, x1, y1, z1);
+        } else {
+            memset(z1, 0, nw*sizeof(uint64_t));     /* P + (-P) */
+        }
+        return;
+    }
+
+    ADD(r, r, r);
+    ADD(i, h, h);               /* I = (2H)^2 */
+    SQR(i, i);
+    MUL(j, h, i);               /* J = H I */
+    MUL(u1, u1, i);             /* V = U1 I */
+    ADD(z1, z1, z2);            /* Z3 = ((Z1 + Z2)^2 - Z1Z1 - Z2Z2) H */
+    SQR(z1, z1);
+    SUB(z1, z1, z1z1);
+    SUB(z1, z1, z2z2);
+    MUL(z1, z1, h);
+    SQR(x1, r);                 /* X3 = r^2 - J - 2V */
+    SUB(x1, x1, j);
+    SUB(x1, x1, u1);
+    SUB(x1, x1, u1);
+    SUB(u1, u1, x1);            /* Y3 = r (V - X3) - 2 S1 J */
+    MUL(y1, r, u1);
+    MUL(s1, s1, j);
+    ADD(s1, s1, s1);
+    SUB(y1, y1, s1);
+}
+
+#undef MUL
+#undef SQR
+#undef ADD
+#undef SUB
+
+/*
+ * (rx:ry:rz) = k * (px:py:pz), for a PUBLIC scalar kb (k_words words) over
+ * its lowest windows, in Jacobian coordinates: the same signed windows as
+ * scalar_mul_var(), but with branches, and the faster formulas.
+ * Input and output in projective coordinates. The output may be the input.
+ */
+STATIC int scalar_mul_var_public(EcWs *ws, const EcCurve *c,
+                                 uint64_t *rx, uint64_t *ry, uint64_t *rz,
+                                 const uint64_t *px, const uint64_t *py, const uint64_t *pz,
+                                 const uint64_t *kb, size_t windows)
+{
+    const size_t nw = c->nw;
+    uint64_t *table, *acc, *t, *ny;
+    size_t i, w;
+    int res = ERR_MEMORY;
+
+    table = nat_words_alloc(3*EC_DIGITS*nw);
+    acc = nat_words_alloc(3*nw);
+    t = nat_words_alloc(15*nw);
+    ny = nat_words_alloc(nw);
+    if (!table || !acc || !t || !ny)
+        goto cleanup;
+
+    if (words_is_zero(pz, nw)) {
+        point_set_infinity(c, rx, ry, rz);
+        res = 0;
+        goto cleanup;
+    }
+
+#define TX(j) (table + (3*((j)-1) + 0)*nw)
+#define TY(j) (table + (3*((j)-1) + 1)*nw)
+#define TZ(j) (table + (3*((j)-1) + 2)*nw)
+
+    /* T[1] = P = (X Z, Y Z^2, Z), T[j] = T[j-1] + P */
+    fe_mul(ws, TX(1), px, pz);
+    fe_sqr(ws, TY(1), pz);
+    fe_mul(ws, TY(1), TY(1), py);
+    fe_copy(ws, TZ(1), pz);
+    for (i=2; i<=EC_DIGITS; i++) {
+        memcpy(TX(i), TX(i-1), 3*nw*sizeof(uint64_t));
+        jac_add(ws, t, TX(i), TY(i), TZ(i), TX(1), TY(1), TZ(1));
+    }
+
+    memset(acc, 0, 3*nw*sizeof(uint64_t));
+    fe_copy(ws, acc, c->field->one);
+    fe_copy(ws, acc + nw, c->field->one);
+
+    for (w=windows; w-- > 0;) {
+        uint64_t sign, digit;
+
+        if (!words_is_zero(acc + 2*nw, nw)) {
+            for (i=0; i<EC_WINDOW; i++)
+                jac_double(ws, t, acc, acc + nw, acc + 2*nw);
+        }
+
+        ec_booth_digit(kb, c->k_words, w, &sign, &digit);
+        if (digit == 0)
+            continue;
+        if (sign) {
+            fe_neg(ws, ny, TY(digit));
+            jac_add(ws, t, acc, acc + nw, acc + 2*nw, TX(digit), ny, TZ(digit));
+        } else {
+            jac_add(ws, t, acc, acc + nw, acc + 2*nw, TX(digit), TY(digit), TZ(digit));
+        }
+    }
+
+#undef TX
+#undef TY
+#undef TZ
+
+    /* Back to projective coordinates: (X Z : Y : Z^3) */
+    if (words_is_zero(acc + 2*nw, nw)) {
+        point_set_infinity(c, rx, ry, rz);
+    } else {
+        fe_mul(ws, rx, acc, acc + 2*nw);
+        fe_copy(ws, ry, acc + nw);
+        fe_sqr(ws, t, acc + 2*nw);
+        fe_mul(ws, rz, t, acc + 2*nw);
+    }
+    res = 0;
+
+cleanup:
+    nat_words_free(table, 3*EC_DIGITS*nw);
+    nat_words_free(acc, 3*nw);
+    nat_words_free(t, 15*nw);
     nat_words_free(ny, nw);
     return res;
 }
@@ -815,7 +1031,7 @@ EXPORT_SYM int ec_nat_scalar(EcPointN *p, const uint8_t *k, size_t len, uint64_t
            words_eq(p->z, c->field->one, c->nw);
 
     if (ct_declassify(is_g))
-        res = scalar_mul_g(&ws, c, p->x, p->y, p->z, kb, lambda);
+        res = scalar_mul_g(&ws, c, p->x, p->y, p->z, kb, c->windows, lambda);
     else
         res = scalar_mul_var(&ws, c, p->x, p->y, p->z, p->x, p->y, p->z, kb, lambda);
     if (res)
@@ -827,6 +1043,57 @@ EXPORT_SYM int ec_nat_scalar(EcPointN *p, const uint8_t *k, size_t len, uint64_t
 cleanup:
     nat_words_free(kb, c->k_words);
     nat_words_free(lambda, c->nw);
+    ec_ws_free(&ws);
+    return res;
+}
+
+/**
+ * p = k*p, for the big-endian scalar k (len bytes, any length), which
+ * must be PUBLIC (as in the verification of a signature): there is no
+ * blinding, and the running time depends on k.
+ *
+ * If p is the generator, the precomputed tables are used. The result is
+ * checked to be on the curve (ERR_EC_POINT otherwise).
+ */
+EXPORT_SYM int ec_nat_scalar_public(EcPointN *p, const uint8_t *k, size_t len)
+{
+    const EcCurve *c;
+    uint64_t *kw;
+    size_t windows;
+    EcWs ws;
+    int res;
+
+    if (!p || !k)
+        return ERR_NULL;
+    if (len == 0)
+        return ERR_NOT_ENOUGH_DATA;
+    c = p->curve;
+
+    res = ec_ws_new(&ws, c->field);
+    if (res)
+        return res;
+    kw = nat_words_alloc(c->k_words);
+    if (!kw) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
+
+    res = ec_public_scalar(kw, c->k_words, &windows, c->order, k, len);
+    if (res)
+        goto cleanup;
+
+    if (words_eq(p->x, c->gx, c->nw) & words_eq(p->y, c->gy, c->nw) & words_eq(p->z, c->field->one, c->nw))
+        res = scalar_mul_g(&ws, c, p->x, p->y, p->z, kw, windows, c->field->one);
+    else
+        res = scalar_mul_var_public(&ws, c, p->x, p->y, p->z, p->x, p->y, p->z, kw, windows);
+    if (res)
+        goto cleanup;
+
+    if (!point_on_curve(&ws, c, p->x, p->y, p->z))
+        res = ERR_EC_POINT;
+
+cleanup:
+    nat_words_free(kw, c->k_words);
     ec_ws_free(&ws);
     return res;
 }
