@@ -247,6 +247,30 @@ class EccPoint:
         # free the memory allocated by the raw library for the EC point
         self._point = SmartPointer(raw_point.get(), free_func)
 
+    @classmethod
+    def _decode_eddsa(cls, encoded: bytes, curve: str) -> EccPoint:
+        """A point of Ed25519 or Ed448, from its encoding in RFC 8032.
+
+        Raises ValueError if the encoding is not valid.
+        """
+
+        point = cls.__new__(cls)
+        point._curve = _curves[curve]
+        point.curve = point._curve.canonical
+
+        raw_point = VoidPointer()
+        try:
+            context = point._curve.context.get()
+        except AttributeError:
+            context = null_pointer
+        result = point._curve.rawlib.decode_point(
+            raw_point.address_of(), c_uint8_ptr(encoded), c_size_t(len(encoded)), context
+        )
+        if result:
+            raise ValueError("Invalid %s point encoding" % point.curve)
+        point._point = SmartPointer(raw_point.get(), point._curve.rawlib.free_point)
+        return point
+
     def set(self, point: EccPoint) -> EccPoint:
         clone = self._curve.rawlib.clone
         free_func = self._curve.rawlib.free_point
@@ -277,9 +301,11 @@ class EccPoint:
 
     def copy(self) -> EccPoint:
         """Return a copy of this point."""
-        x, y = self.xy
-        np = EccPoint(x, y, self.curve)
-        return np
+
+        np = EccPoint.__new__(EccPoint)
+        np._curve = self._curve
+        np.curve = self.curve
+        return np.set(self)
 
     def is_point_at_infinity(self) -> bool:
         """``True`` if this is the *point-at-infinity*."""

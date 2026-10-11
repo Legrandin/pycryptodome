@@ -375,6 +375,7 @@ EXPORT_SYM void ed448_free_context(Ed448Context *ctx)
         return;
     ec_field_free(ctx->field);
     nat_free(ctx->p_minus_2);
+    nat_free(ctx->sqrt_exp);
     nat_free(ctx->group_order);
     nat_words_free(ctx->d, NW);
     nat_words_free(ctx->gx, NW);
@@ -406,11 +407,13 @@ EXPORT_SYM int ed448_new_context(Ed448Context **out)
     n = nat_alloc(NW);
     two = nat_alloc(1);
     ctx->p_minus_2 = nat_alloc(NW);
+    ctx->sqrt_exp = nat_alloc(NW);
     ctx->group_order = nat_alloc(NW);
     ctx->d = nat_words_alloc(NW);
     ctx->gx = nat_words_alloc(NW);
     ctx->gy = nat_words_alloc(NW);
-    if (!p || !n || !two || !ctx->p_minus_2 || !ctx->group_order || !ctx->d || !ctx->gx || !ctx->gy)
+    if (!p || !n || !two || !ctx->p_minus_2 || !ctx->sqrt_exp || !ctx->group_order || !ctx->d || !ctx->gx ||
+        !ctx->gy)
         goto cleanup;
 
     res = nat_from_bytes(p, ed448_p, ED448_BYTES, 0);
@@ -419,6 +422,9 @@ EXPORT_SYM int ed448_new_context(Ed448Context **out)
     two->w[0] = 2;
     if (res == 0)
         res = nat_sub(ctx->p_minus_2, p, two);
+    /* (p-3)/4 = (p-2) >> 2, as p = 3 mod 4 */
+    if (res == 0)
+        res = nat_shr(ctx->sqrt_exp, ctx->p_minus_2, 2);
     if (res)
         goto cleanup;
     ctx->p_bits = (size_t)nat_bit_length(p);
@@ -529,6 +535,112 @@ EXPORT_SYM int ed448_new_point(PointEd448 **out, const uint8_t *x, const uint8_t
         res = ERR_EC_POINT;
 
 cleanup:
+    ec_ws_free(&ws);
+    if (res) {
+        ed448_free_point(p);
+        *out = NULL;
+    }
+    return res;
+}
+
+/**
+ * Decode a point encoded as in RFC 8032 (5.2.3): 57 bytes, the y-coordinate
+ * in little-endian order, then a byte with the least significant bit of x
+ * in its top bit (the other bits must be zero).
+ *
+ * Return ERR_EC_POINT if the encoding is not valid: y not smaller than p,
+ * no x for that y, or x = 0 with its bit set.
+ * The encoding is public: the function is not constant time.
+ */
+EXPORT_SYM int ed448_decode_point(PointEd448 **out, const uint8_t *encoded, size_t len,
+                                  const Ed448Context *ctx)
+{
+    PointEd448 *p;
+    uint8_t yb[ED448_BYTES];
+    uint64_t *y, *x, *u = NULL, *v = NULL, *t = NULL, *w = NULL;
+    unsigned x_0;
+    size_t i;
+    EcWs ws;
+    int res;
+
+    if (!out || !encoded || !ctx)
+        return ERR_NULL;
+    if (len != ED448_BYTES + 1)
+        return ERR_MODULUS;
+    if (encoded[ED448_BYTES] & 0x7F)
+        return ERR_EC_POINT;
+    x_0 = encoded[ED448_BYTES] >> 7;
+
+    *out = p = ed448_point_alloc(ctx);
+    if (NULL == p)
+        return ERR_MEMORY;
+    res = ec_ws_new(&ws, ctx->field);
+    if (res) {
+        ed448_free_point(p);
+        *out = NULL;
+        return res;
+    }
+    x = p->x;
+    y = p->y;
+
+    res = ERR_MEMORY;
+    u = nat_words_alloc(NW);
+    v = nat_words_alloc(NW);
+    t = nat_words_alloc(NW);
+    w = nat_words_alloc(NW);
+    if (!u || !v || !t || !w)
+        goto cleanup;
+
+    /* y must be smaller than p */
+    for (i=0; i<ED448_BYTES; i++)
+        yb[i] = encoded[ED448_BYTES - 1 - i];
+    res = fe_from_bytes(y, &ws, yb, ED448_BYTES, 0);
+    if (res) {
+        res = ERR_EC_POINT;
+        goto cleanup;
+    }
+
+    /* u = y^2 - 1, v = d y^2 - 1 */
+    fe_sqr(&ws, t, y);
+    fe_sub(&ws, u, t, ctx->field->one);
+    fe_mul(&ws, v, t, ctx->d);
+    fe_sub(&ws, v, v, ctx->field->one);
+
+    /* x = u^3 v (u^5 v^3)^((p-3)/4) */
+    fe_sqr(&ws, t, u);          /* u^2 */
+    fe_mul(&ws, w, t, u);       /* u^3 */
+    fe_mul(&ws, x, w, v);       /* u^3 v */
+    fe_mul(&ws, t, w, t);       /* u^5 */
+    fe_sqr(&ws, w, v);          /* v^2 */
+    fe_mul(&ws, w, w, v);       /* v^3 */
+    fe_mul(&ws, t, t, w);       /* u^5 v^3 */
+    fe_pow_public(&ws, t, t, ctx->sqrt_exp);
+    fe_mul(&ws, x, x, t);
+
+    /* x is a root if v x^2 = u; otherwise there is none */
+    fe_sqr(&ws, t, x);
+    fe_mul(&ws, t, t, v);
+    if (!words_eq(t, u, NW)) {
+        res = ERR_EC_POINT;
+        goto cleanup;
+    }
+
+    /* Select the root with the right parity */
+    fe_to_words(&ws, t, x);
+    if (words_is_zero(t, NW) && x_0) {
+        res = ERR_EC_POINT;
+        goto cleanup;
+    }
+    if ((t[0] & 1) != x_0)
+        fe_neg(&ws, x, x);
+    fe_copy(&ws, p->z, ctx->field->one);
+    res = 0;
+
+cleanup:
+    nat_words_free(u, NW);
+    nat_words_free(v, NW);
+    nat_words_free(t, NW);
+    nat_words_free(w, NW);
     ec_ws_free(&ws);
     if (res) {
         ed448_free_point(p);

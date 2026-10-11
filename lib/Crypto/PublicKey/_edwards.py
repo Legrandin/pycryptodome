@@ -23,6 +23,10 @@ int ed25519_new_point(Point **out,
                       const uint8_t y[32],
                       size_t modsize,
                       const void *context);
+int ed25519_decode_point(Point **out,
+                         const uint8_t *encoded,
+                         size_t len,
+                         const void *context);
 int ed25519_clone(Point **P, const Point *Q);
 void ed25519_free_point(Point *p);
 int ed25519_cmp(const Point *p1, const Point *p2);
@@ -37,6 +41,7 @@ int ed25519_scalar_public(Point *P, const uint8_t *scalar, size_t scalar_len);
 
     class EcLib:
         new_point = _ed25519_lib.ed25519_new_point
+        decode_point = _ed25519_lib.ed25519_decode_point
         clone = _ed25519_lib.ed25519_clone
         free_point = _ed25519_lib.ed25519_free_point
         cmp = _ed25519_lib.ed25519_cmp
@@ -83,6 +88,10 @@ int ed448_new_point(PointEd448 **out,
                     const uint8_t y[56],
                     size_t len,
                     const EcContext *context);
+int ed448_decode_point(PointEd448 **out,
+                       const uint8_t *encoded,
+                       size_t len,
+                       const EcContext *context);
 int ed448_clone(PointEd448 **P, const PointEd448 *Q);
 void ed448_free_point(PointEd448 *p);
 int ed448_cmp(const PointEd448 *p1, const PointEd448 *p2);
@@ -97,6 +106,7 @@ int ed448_scalar_public(PointEd448 *P, const uint8_t *scalar, size_t scalar_len)
 
     class EcLib:
         new_point = _ed448_lib.ed448_new_point
+        decode_point = _ed448_lib.ed448_decode_point
         clone = _ed448_lib.ed448_clone
         free_point = _ed448_lib.ed448_free_point
         cmp = _ed448_lib.ed448_cmp

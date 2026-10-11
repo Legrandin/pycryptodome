@@ -1102,29 +1102,11 @@ def _import_ed25519_public_key(encoded: bytes) -> tuple[Int, Int]:
     if len(encoded) != 32:
         raise ValueError("Incorrect length. Only Ed25519 public keys are supported.")
 
-    p = Integer(0x7FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFED)  # 2**255 - 19
-    d = 37095705934669439343138083508754565189542113879843219016388785533085940283555
-
-    y = bytearray(encoded)
-    x_lsb = y[31] >> 7
-    y[31] &= 0x7F
-    point_y = Integer.from_bytes(y, byteorder="little")
-    if point_y >= p:
-        raise ValueError("Invalid Ed25519 key (y)")
-    if point_y == 1:
-        return 0, 1
-
-    u = (point_y**2 + p - 1) % p
-    v = ((point_y**2 % p) * d + 1) % p
     try:
-        v_inv = v.inverse(p)
-        x2 = (u * v_inv) % p
-        point_x = Integer._tonelli_shanks(x2, p)
-        if (point_x & 1) != x_lsb:
-            point_x = p - point_x
+        point = EccPoint._decode_eddsa(encoded, "Ed25519")
     except ValueError:
         raise ValueError("Invalid Ed25519 public key")
-    return point_x, point_y
+    return point.xy
 
 
 def _import_curve25519_public_key(encoded):
@@ -1200,28 +1182,11 @@ def _import_ed448_public_key(encoded: bytes) -> tuple[Int, Int]:
     if len(encoded) != 57:
         raise ValueError("Incorrect length. Only Ed448 public keys are supported.")
 
-    p = _curves["curve448"].p
-    d = p - 39081
-
-    y = encoded[:56]
-    x_lsb = encoded[56] >> 7
-    point_y = Integer.from_bytes(y, byteorder="little")
-    if point_y >= p:
-        raise ValueError("Invalid Ed448 key (y)")
-    if point_y == 1:
-        return 0, 1
-
-    u = (point_y**2 + p - 1) % p
-    v = ((point_y**2 % p) * d + p - 1) % p
     try:
-        v_inv = v.inverse(p)
-        x2 = (u * v_inv) % p
-        point_x = Integer._tonelli_shanks(x2, p)
-        if (point_x & 1) != x_lsb:
-            point_x = p - point_x
+        point = EccPoint._decode_eddsa(encoded, "Ed448")
     except ValueError:
         raise ValueError("Invalid Ed448 public key")
-    return point_x, point_y
+    return point.xy
 
 
 def import_key(

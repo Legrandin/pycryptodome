@@ -8,6 +8,8 @@ int convert_behex_to_le25p5(uint32_t out[10], const char *in);
 int convert_le25p5_to_behex(char **out, uint32_t in[10]);
 void convert_le25p5_to_le8(uint8_t out[32], const uint32_t in[10]);
 void convert_le8_to_le25p5(uint32_t out[10], const uint8_t in[32]);
+void sub_25519(uint32_t out[10], const uint32_t a[10], const uint32_t b[10]);
+void ed25519_add_internal(Point *P3, const Point *P1, const Point *P2);
 
 /* Add G to PAI */
 void test_point_add_1(void)
@@ -456,6 +458,100 @@ void test_scalar_blinding(void)
     }
 }
 
+/* The encoding of RFC 8032 (5.1.2) of P */
+static void encode_point(uint8_t enc[32], const Point *P)
+{
+    uint8_t x[32];
+
+    to_affine(x, enc, P);
+    enc[31] |= (uint8_t)((x[0] & 1) << 7);
+}
+
+/* Decode an encoding of P (or fail with error), and check that it gives P back */
+static void check_decode(const uint8_t enc[32], const Point *P, int error)
+{
+    Point *Q = NULL;
+
+    assert(ed25519_decode_point(&Q, enc, 32, NULL) == error);
+    if (error) {
+        assert(Q == NULL);
+        return;
+    }
+    assert(ed25519_cmp(Q, P) == 0);
+    ed25519_free_point(Q);
+}
+
+void test_decode_point(void)
+{
+    char Gx_hex[] = "216936d3cd6e53fec0a4e231fdd6dc5c692cc7609525a7b2c9562d608f25d51a";
+    char Gy_hex[] = "6666666666666666666666666666666666666666666666666666666666666658";
+    uint8_t enc[32];
+    Point G, P, *Q;
+    unsigned i;
+
+    memset(&G, 0, sizeof G);
+    convert_behex_to_le25p5(G.X, Gx_hex);
+    convert_behex_to_le25p5(G.Y, Gy_hex);
+    G.Z[0] = 1;
+    mul_25519(G.T, G.X, G.Y);
+
+    /* Round trip of G, 2G, ..., 16G (both parities of x, both roots) */
+    P = G;
+    for (i=1; i<=16; i++) {
+        encode_point(enc, &P);
+        check_decode(enc, &P, 0);
+        ed25519_add_internal(&P, &P, &G);
+    }
+
+    /* The neutral point (0, 1): x = 0 cannot have its bit set */
+    memset(&P, 0, sizeof P);
+    P.Y[0] = P.Z[0] = 1;
+    memset(enc, 0, 32);
+    enc[0] = 1;
+    check_decode(enc, &P, 0);
+    enc[31] = 0x80;
+    check_decode(enc, &P, ERR_EC_POINT);
+
+    /* The point of order 2 (0, -1) */
+    sub_25519(P.Y, P.T, P.Y);
+    memset(enc, 0xFF, 32);
+    enc[0] = 0xEC;
+    enc[31] = 0x7F;
+    check_decode(enc, &P, 0);
+    enc[31] = 0xFF;
+    check_decode(enc, &P, ERR_EC_POINT);
+
+    /* y = p, p + 1 and 2^255 - 1 are not reduced (with both values of the bit) */
+    for (i=0; i<3; i++) {
+        memset(enc, 0xFF, 32);
+        enc[0] = i == 0 ? 0xED : (i == 1 ? 0xEE : 0xFF);
+        enc[31] = 0x7F;
+        check_decode(enc, NULL, ERR_EC_POINT);
+        enc[31] = 0xFF;
+        check_decode(enc, NULL, ERR_EC_POINT);
+    }
+
+    /* y = 2 has no x; y = 3 has one, on the curve */
+    memset(enc, 0, 32);
+    enc[0] = 2;
+    check_decode(enc, NULL, ERR_EC_POINT);
+    enc[0] = 3;
+    assert(ed25519_decode_point(&Q, enc, 32, NULL) == 0);
+    {
+        uint8_t xb[32], yb[32];
+        Point *R;
+
+        assert(ed25519_get_xy(xb, yb, 32, Q) == 0);
+        assert(ed25519_new_point(&R, xb, yb, 32, NULL) == 0);
+        assert(ed25519_cmp(Q, R) == 0);
+        ed25519_free_point(R);
+    }
+    ed25519_free_point(Q);
+
+    /* Wrong length */
+    assert(ed25519_decode_point(&Q, enc, 31, NULL) == ERR_MODULUS);
+}
+
 int main(void)
 {
     test_point_add_1();
@@ -467,5 +563,6 @@ int main(void)
     test_scalar_blinding();
     test_cmp_1();
     test_neg_1();
+    test_decode_point();
     return 0;
 }
