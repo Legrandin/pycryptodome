@@ -338,6 +338,7 @@ EXPORT_SYM int ed25519_new_point(Point **out,
                       size_t modsize, void *context)
 {
     uint32_t A[10], B[10], C[10];
+    uint8_t bb[32], cb[32];
     const char d[] = "52036cee2b6ffe738cc740797779e89800700a4d4141d8ab75eb4dca135978a3";
 
     if ((NULL == out) || (NULL == x) || (NULL == y))
@@ -368,14 +369,100 @@ EXPORT_SYM int ed25519_new_point(Point **out,
     A[0] = 1;
     add_25519(C, C, A);                     /* 1 + dx²y² - ax² */
 
-    reduce_25519_le25p5(B);
-    reduce_25519_le25p5(C);
-    if (0 != memcmp(B, C, sizeof B)) {
+    /* Compare the values fully reduced: the limbs alone can differ by p */
+    convert_le25p5_to_le8(bb, B);
+    convert_le25p5_to_le8(cb, C);
+    if (0 != memcmp(bb, cb, sizeof bb)) {
         free(*out);
         *out = NULL;
         return ERR_EC_POINT;
     }
 
+    return 0;
+}
+
+/*
+ * Decode a point encoded as in RFC 8032 (5.1.3): the y-coordinate in
+ * little-endian order, with the least significant bit of x in the top bit.
+ *
+ * Return ERR_EC_POINT if the encoding is not valid: y not smaller than p,
+ * no x for that y, or x = 0 with its bit set.
+ * The encoding is public: the function is not constant time.
+ */
+EXPORT_SYM int ed25519_decode_point(Point **out, const uint8_t *encoded, size_t len, void *context)
+{
+    const char d_hex[] = "52036cee2b6ffe738cc740797779e89800700a4d4141d8ab75eb4dca135978a3";
+    const char sqrtm1_hex[] = "2b8324804fc1df0b2b4d00993dfbd7a72f431806ad2fe478c4ee1b274a0ea0b0";
+    const uint32_t zero[10] = { 0 };
+    uint32_t y[10], x[10], u[10], v[10], v3[10], t[10], d[10];
+    uint8_t yb[32], check[32], ub[32];
+    unsigned x_0;
+
+    if ((NULL == out) || (NULL == encoded))
+        return ERR_NULL;
+    if (len != 32)
+        return ERR_MODULUS;
+
+    memcpy(yb, encoded, 32);
+    x_0 = yb[31] >> 7;
+    yb[31] &= 0x7F;
+
+    /* y must be smaller than p: it is unchanged by the reduction */
+    convert_le8_to_le25p5(y, yb);
+    convert_le25p5_to_le8(check, y);
+    if (0 != memcmp(check, yb, 32))
+        return ERR_EC_POINT;
+
+    /* u = y² - 1, v = dy² + 1 */
+    convert_behex_to_le25p5(d, d_hex);
+    mul_25519(t, y, y);
+    memset(u, 0, sizeof u);
+    u[0] = 1;
+    add_25519(v, t, zero);
+    mul_25519(v, v, d);
+    add_25519(v, v, u);
+    sub_25519(u, t, u);
+
+    /* x = u v³ (u v⁷)^((p-5)/8) */
+    mul_25519(v3, v, v);
+    mul_25519(v3, v3, v);
+    mul_25519(t, v3, v3);
+    mul_25519(t, t, v);
+    mul_25519(t, t, u);
+    pow22523_25519(t, t);
+    mul_25519(x, u, v3);
+    mul_25519(x, x, t);
+
+    /* v x² is u (x is a root), -u (x √-1 is a root), or else there is no root */
+    mul_25519(t, x, x);
+    mul_25519(t, t, v);
+    convert_le25p5_to_le8(check, t);
+    convert_le25p5_to_le8(ub, u);
+    if (0 != memcmp(check, ub, 32)) {
+        sub_25519(t, zero, t);
+        convert_le25p5_to_le8(check, t);
+        if (0 != memcmp(check, ub, 32))
+            return ERR_EC_POINT;
+        convert_behex_to_le25p5(t, sqrtm1_hex);
+        mul_25519(x, x, t);
+    }
+
+    /* Select the root with the right parity */
+    convert_le25p5_to_le8(check, x);
+    if (is_le25p5_zero(x) && x_0)
+        return ERR_EC_POINT;
+    if ((check[0] & 1) != x_0)
+        sub_25519(x, zero, x);
+
+    *out = calloc(1, sizeof(Point));
+    if (NULL == *out)
+        return ERR_MEMORY;
+    memcpy((*out)->X, x, sizeof x);
+    memcpy((*out)->Y, y, sizeof y);
+    (*out)->Z[0] = 1;
+    mul_25519((*out)->T, x, y);
+
+    (void)context;
     return 0;
 }
 

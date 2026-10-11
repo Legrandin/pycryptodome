@@ -230,7 +230,7 @@ void fe_neg(EcWs *ws, uint64_t *out, const uint64_t *a)
  * out = a^e, for a public exponent e, with fe_mul() and fe_sqr()
  * (fixed windows of 4 bits; the table is indexed by public digits).
  */
-static void fe_pow_public(EcWs *ws, uint64_t *out, const uint64_t *a, const Nat *e)
+void fe_pow_public(EcWs *ws, uint64_t *out, const uint64_t *a, const Nat *e)
 {
     uint64_t table[1 << FE_POW_WINDOW][FE_POW_MAX_WORDS], acc[FE_POW_MAX_WORDS];
     const size_t nw = ws->nw;

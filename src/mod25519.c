@@ -404,30 +404,26 @@ STATIC void cswap(uint32_t a[10], uint32_t b[10], uint32_t c[10], uint32_t d[10]
     }
 }
 
+#define sqr_25519(a,b) mul_25519(a,b,b)
+
 /*
- * Compute x⁻¹ in prime field 2²⁵⁵ - 19
+ * out = x^(2²⁵⁰ - 1) and x11 = x^11 in prime field 2²⁵⁵ - 19:
+ * the common part of invert_25519() and pow22523_25519().
  *
  * The input x[] is encoded in mixed radix 2²⁶/2²⁵ with limbs < 2²⁷.
- *
- * The result out[] is encoded in also mixed radix 2²⁶/2²⁵ such that:
- *      out[i] < 2²⁶      for even i
- *      out[j] < 2²⁵      for odd j<9
- *      out[9] < 2²⁶
  */
-STATIC void invert_25519(uint32_t out[10], const uint32_t x[10])
+static void pow2250m1_25519(uint32_t out[10], uint32_t x11[10], const uint32_t x[10])
 {
-    uint32_t a[10], x1[10], x3p0[10], x3p1p0[10], x5m0[10];
+    uint32_t a[10], x1[10], x3p0[10], x5m0[10];
     uint32_t x10m0[10], x20m0[10], x50m0[10], x100m0[10];
     unsigned i;
-
-    #define sqr_25519(a,b) mul_25519(a,b,b)
 
     sqr_25519(x1, x);           /* 2¹ */
     sqr_25519(a, x1);           /* 2² */
     sqr_25519(a, a);            /* 2³ */
     mul_25519(x3p0, a, x);      /* 2³ + 2⁰ */
-    mul_25519(x3p1p0, x3p0, x1);/* 2³ + 2¹ + 2⁰ = 11 */
-    sqr_25519(a, x3p1p0);       /* 2⁴ + 2² + 2¹  */
+    mul_25519(x11, x3p0, x1);   /* 2³ + 2¹ + 2⁰ = 11 */
+    sqr_25519(a, x11);          /* 2⁴ + 2² + 2¹  */
     mul_25519(x5m0, a, x3p0);   /* 2⁴ + 2³ + 2² + 2¹ + 2⁰ = 2⁵ - 2⁰ */
     sqr_25519(a, x5m0);         /* 2⁶ - 2¹ */
     sqr_25519(a, a);            /* 2⁷ - 2² */
@@ -462,13 +458,46 @@ STATIC void invert_25519(uint32_t out[10], const uint32_t x[10])
     for (i=0; i<50; i++) {
         sqr_25519(a, a);
     }                           /* 2²⁵⁰ - 2⁵⁰ */
-    mul_25519(a, a, x50m0);     /* 2²⁵⁰ - 2⁰ */
+    mul_25519(out, a, x50m0);   /* 2²⁵⁰ - 2⁰ */
+}
+
+/*
+ * Compute x⁻¹ in prime field 2²⁵⁵ - 19
+ *
+ * The input x[] is encoded in mixed radix 2²⁶/2²⁵ with limbs < 2²⁷.
+ *
+ * The result out[] is encoded in also mixed radix 2²⁶/2²⁵ such that:
+ *      out[i] < 2²⁶      for even i
+ *      out[j] < 2²⁵      for odd j<9
+ *      out[9] < 2²⁶
+ */
+STATIC void invert_25519(uint32_t out[10], const uint32_t x[10])
+{
+    uint32_t a[10], x11[10];
+
+    pow2250m1_25519(a, x11, x); /* 2²⁵⁰ - 2⁰ */
     sqr_25519(a, a);            /* 2²⁵¹ - 2¹ */
     sqr_25519(a, a);            /* 2²⁵² - 2² */
     sqr_25519(a, a);            /* 2²⁵³ - 2³ */
     sqr_25519(a, a);            /* 2²⁵⁴ - 2⁴ */
     sqr_25519(a, a);            /* 2²⁵⁵ - 2⁵  = 2²⁵⁵ - 32 */
-    mul_25519(out, a, x3p1p0);  /* 2²⁵⁵ - 21 */
+    mul_25519(out, a, x11);     /* 2²⁵⁵ - 21 */
+}
+
+/*
+ * Compute x^((p-5)/8) = x^(2²⁵² - 3) in prime field p = 2²⁵⁵ - 19,
+ * for the square roots (RFC 8032, 5.1.3).
+ *
+ * Same encodings as invert_25519().
+ */
+STATIC void pow22523_25519(uint32_t out[10], const uint32_t x[10])
+{
+    uint32_t a[10], x11[10];
+
+    pow2250m1_25519(a, x11, x); /* 2²⁵⁰ - 2⁰ */
+    sqr_25519(a, a);            /* 2²⁵¹ - 2¹ */
+    sqr_25519(a, a);            /* 2²⁵² - 2² */
+    mul_25519(out, a, x);       /* 2²⁵² - 3 */
 }
 
 /*

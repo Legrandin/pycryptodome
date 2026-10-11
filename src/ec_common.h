@@ -98,6 +98,9 @@ static inline void fe_copy(EcWs *ws, uint64_t *out, const uint64_t *a)
     memcpy(out, a, ws->nw*sizeof(uint64_t));
 }
 
+/** out = a^e, for a PUBLIC exponent e (not constant time in e) **/
+void fe_pow_public(EcWs *ws, uint64_t *out, const uint64_t *a, const Nat *e);
+
 /** out = 1/a (Fermat: a^(p-2)), and 0 for a = 0 **/
 int fe_inv(EcWs *ws, uint64_t *out, const uint64_t *a, const Nat *p_minus_2);
 

@@ -560,6 +560,91 @@ static void test_scalar_public(const Ed448Context *ctx)
     }
 }
 
+/* The encoding of RFC 8032 (5.2.2) of a point */
+static void encode_point(uint8_t enc[LEN + 1], const PointEd448 *p)
+{
+    uint8_t xb[LEN], yb[LEN];
+    size_t i;
+
+    assert(ed448_get_xy(xb, yb, LEN, p) == 0);
+    for (i=0; i<LEN; i++)
+        enc[i] = yb[LEN - 1 - i];
+    enc[LEN] = (uint8_t)((xb[LEN - 1] & 1) << 7);
+}
+
+/* Decode an encoding of p (or fail with error), and check that it gives p back */
+static void check_decode(const Ed448Context *ctx, const uint8_t enc[LEN + 1], const PointEd448 *p, int error)
+{
+    PointEd448 *q = NULL;
+
+    assert(ed448_decode_point(&q, enc, LEN + 1, ctx) == error);
+    if (error) {
+        assert(q == NULL);
+        return;
+    }
+    check_equal(q, p);
+    ed448_free_point(q);
+}
+
+static void test_decode_point(const Ed448Context *ctx)
+{
+    uint8_t enc[LEN + 1], k = 0;
+    PointEd448 *p, *q;
+    unsigned i;
+
+    /* Round trip of G, Q, Q + T (T of order 4), and multiples */
+    for (i=0; i<12; i++) {
+        const char *bx = i % 3 == 0 ? gx : (i % 3 == 1 ? qx : qtx);
+        const char *by = i % 3 == 0 ? gy : (i % 3 == 1 ? qy : qty);
+
+        p = load_point(ctx, bx, by);
+        k = (uint8_t)(i + 1);
+        assert(ed448_scalar(p, &k, 1, rnd()) == 0);
+        encode_point(enc, p);
+        check_decode(ctx, enc, p, 0);
+        /* The other bits of the last byte must be zero */
+        enc[LEN] |= 1;
+        check_decode(ctx, enc, p, ERR_EC_POINT);
+        ed448_free_point(p);
+    }
+
+    /* The neutral point (0, 1): x = 0 cannot have its bit set */
+    p = load_point(ctx, "00", "01");
+    memset(enc, 0, LEN + 1);
+    enc[0] = 1;
+    check_decode(ctx, enc, p, 0);
+    enc[LEN] = 0x80;
+    check_decode(ctx, enc, p, ERR_EC_POINT);
+    ed448_free_point(p);
+
+    /* y = p and 2^448 - 1 are not reduced */
+    for (i=0; i<2; i++) {
+        memset(enc, 0xFF, LEN + 1);
+        enc[28] = i == 0 ? 0xFE : 0xFF;
+        enc[LEN] = 0;
+        check_decode(ctx, enc, NULL, ERR_EC_POINT);
+    }
+
+    /* y = 2 has no x; y = 3 has one, on the curve */
+    memset(enc, 0, LEN + 1);
+    enc[0] = 2;
+    check_decode(ctx, enc, NULL, ERR_EC_POINT);
+    enc[0] = 3;
+    assert(ed448_decode_point(&q, enc, LEN + 1, ctx) == 0);
+    {
+        uint8_t xb[LEN], yb[LEN];
+
+        assert(ed448_get_xy(xb, yb, LEN, q) == 0);
+        assert(ed448_new_point(&p, xb, yb, LEN, ctx) == 0);
+        check_equal(p, q);
+        ed448_free_point(p);
+    }
+    ed448_free_point(q);
+
+    /* Wrong length */
+    assert(ed448_decode_point(&q, enc, LEN, ctx) == ERR_MODULUS);
+}
+
 static void test_other_context(const Ed448Context *ctx)
 {
     Ed448Context *ctx2;
@@ -600,6 +685,7 @@ int main(void)
     test_formulas(ctx);
     test_random(ctx);
     test_scalar_public(ctx);
+    test_decode_point(ctx);
     test_other_context(ctx);
     ed448_free_context(ctx);
     return 0;

@@ -22,6 +22,7 @@
 typedef struct {
     EcField *field;         /* the field: arithmetic modulo p (constants only) */
     Nat *p_minus_2;         /* the exponent of the inversion (Fermat) */
+    Nat *sqrt_exp;          /* (p-3)/4, for the square roots (RFC 8032, 5.2.3) */
     size_t p_bits;
     uint64_t *d;            /* d, as a field element */
     uint64_t *gx, *gy;      /* the generator G (affine, field elements) */
@@ -45,6 +46,8 @@ EXPORT_SYM int ed448_new_context(Ed448Context **out);
 EXPORT_SYM void ed448_free_context(Ed448Context *ctx);
 EXPORT_SYM int ed448_new_point(PointEd448 **out, const uint8_t *x, const uint8_t *y, size_t len,
                                const Ed448Context *ctx);
+EXPORT_SYM int ed448_decode_point(PointEd448 **out, const uint8_t *encoded, size_t len,
+                                  const Ed448Context *ctx);
 EXPORT_SYM void ed448_free_point(PointEd448 *p);
 EXPORT_SYM int ed448_clone(PointEd448 **out, const PointEd448 *p);
 EXPORT_SYM int ed448_copy(PointEd448 *dst, const PointEd448 *src);

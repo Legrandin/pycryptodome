@@ -7,7 +7,13 @@ from typing import Optional, Protocol, Union
 
 from Crypto.Hash import SHA512, SHAKE256
 from Crypto.Math.Numbers import Integer
-from Crypto.PublicKey.ECC import EccKey, _import_ed448_public_key, _import_ed25519_public_key, construct
+from Crypto.PublicKey.ECC import (
+    EccKey,
+    EccPoint,
+    _import_ed448_public_key,
+    _import_ed25519_public_key,
+    construct,
+)
 from Crypto.Util._raw_api import is_buffer
 
 # A public constant, for scalar multiplications with no blinding
@@ -247,7 +253,7 @@ class EdDSASigScheme:
 
         # Step 1
         try:
-            R = import_public_key(signature[:32]).pointQ
+            R = EccPoint._decode_eddsa(signature[:32], "Ed25519")
         except ValueError:
             raise ValueError("The signature is not authentic (R)")
         s = Integer.from_bytes(signature[32:], "little", public=True)
@@ -277,7 +283,7 @@ class EdDSASigScheme:
 
         # Step 1
         try:
-            R = import_public_key(signature[:57]).pointQ
+            R = EccPoint._decode_eddsa(signature[:57], "Ed448")
         except ValueError:
             raise ValueError("The signature is not authentic (R)")
         s = Integer.from_bytes(signature[57:], "little", public=True)

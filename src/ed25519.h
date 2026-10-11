@@ -11,6 +11,7 @@ typedef struct Point {
 EXPORT_SYM int ed25519_new_point(Point **out,
                       const uint8_t x[32], const uint8_t y[32],
                       size_t modsize, void *context);
+EXPORT_SYM int ed25519_decode_point(Point **out, const uint8_t *encoded, size_t len, void *context);
 EXPORT_SYM int ed25519_clone(Point **P, const Point *Q);
 EXPORT_SYM void ed25519_free_point(Point *p);
 EXPORT_SYM int ed25519_cmp(const Point *p1, const Point *p2);
