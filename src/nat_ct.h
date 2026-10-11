@@ -103,9 +103,18 @@ static inline uint64_t ct_mask(uint64_t bit)
     return 0 - ct_barrier(bit);
 }
 
-/** x if mask is all ones, y if mask is zero **/
+/**
+ * x if mask is all ones, y if mask is zero.
+ *
+ * The mask goes through the barrier here as well, and not only in
+ * ct_mask(): whatever the compiler may have learned about it on the way
+ * (for example that it is 0 or all ones), it cannot turn the selection
+ * into a branch. This is what BoringSSL does in constant_time_select_w(),
+ * with value_barrier_w().
+ */
 static inline uint64_t ct_select(uint64_t mask, uint64_t x, uint64_t y)
 {
+    mask = ct_barrier(mask);
     return y ^ (mask & (x ^ y));
 }
 
