@@ -37,6 +37,11 @@ typedef struct {
 /** Memory **/
 EXPORT_SYM int nat_new(Nat **out, size_t nw);
 EXPORT_SYM void nat_free(Nat *x);
+/**
+ * out = a, over the size of out (out->nw words): zero-extended if out is
+ * larger than a, and truncated (reduced modulo 2^(64*out->nw)) if it is
+ * smaller, so the high words of a are lost unless they are zero.
+ */
 EXPORT_SYM int nat_copy(Nat *out, const Nat *a);
 
 /** Conversions **/
