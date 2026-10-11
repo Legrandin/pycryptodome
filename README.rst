@@ -8,7 +8,8 @@ PyCryptodome
 ============
 
 PyCryptodome is a self-contained Python package of low-level
-cryptographic primitives.
+cryptographic primitives: one ``pip install``, no system libraries,
+and a broad, consistent API from AES and RSA to HPKE and KangarooTwelve.
 
 It supports Python 3.9 and newer, and PyPy.
 
@@ -18,9 +19,17 @@ You install it with::
 
 All modules are installed under the ``Crypto`` package.
 
-PyCryptodome is an almost drop-in replacement for the old PyCrypto library.
-One must avoid having both PyCrypto and PyCryptodome installed
-at the same time, as they will interfere with each other.
+.. code-block:: python
+
+    from Crypto.Cipher import AES
+    from Crypto.Random import get_random_bytes
+
+    key = get_random_bytes(32)
+    cipher = AES.new(key, AES.MODE_GCM)         # a random nonce is generated
+    ciphertext, tag = cipher.encrypt_and_digest(b"attack at dawn")
+
+    receiver = AES.new(key, AES.MODE_GCM, nonce=cipher.nonce)
+    plaintext = receiver.decrypt_and_verify(ciphertext, tag)  # raises ValueError if tampered
 
 .. note::
     Up to version 3.x, the library was also released as the ``pycryptodomex``
@@ -29,20 +38,47 @@ at the same time, as they will interfere with each other.
     ``Crypto`` is the only package name.
     To migrate, replace ``Cryptodome`` with ``Crypto`` in your imports.
 
-PyCryptodome is a fork of PyCrypto. It brings the following enhancements
-with respect to the last official version of PyCrypto (2.6.1):
+Why PyCryptodome
+----------------
 
+* **Self-contained.** No runtime dependencies and no system libraries:
+  all the C code ships with the package, so there is nothing else to install,
+  patch, or keep in sync. Building from source only needs a C compiler.
+  Binary wheels are available for Linux, macOS and Windows, on x86 and ARM,
+  for CPython and PyPy.
+* **Broad.** Mainstream and specialized algorithms behind one consistent API,
+  including many that are hard to find elsewhere in Python: SIV and OCB modes,
+  AES key wrap (KW, KWP), HPKE, KMAC, TupleHash, TurboSHAKE, KangarooTwelve,
+  Ed448 and X448, and Shamir's secret sharing.
+* **Easy to use correctly.** Authenticated encryption and verification are a
+  single call, nonces and IVs are generated for you, randomness comes straight
+  from the operating system, and keys are imported and exported in the
+  standard formats (PEM, DER, PKCS#8, OpenSSH).
+* **Side-channel aware.** The big integer arithmetic on private keys runs in
+  constant time, in C. RSA decryption is blinded, and elliptic curve scalar
+  multiplications are blinded and use randomized coordinates.
+* **Fast where it counts.** AES-NI, CLMUL, the SHA extensions, AVX2 and
+  BMI2/ADX are used when the CPU has them, selected at runtime:
+  the same wheel runs everywhere, at full speed on recent hardware.
+* **Well tested.** Checked against the NIST and Wycheproof test vectors,
+  on Linux, macOS and Windows, x86 and ARM, CPython and PyPy.
+* **Permissive license.** BSD 2-Clause, and public domain for the oldest code.
+
+Features
+--------
+
+* AES, RSA (with OAEP and PSS), DSA, SHA-2, HMAC and CMAC
 * Authenticated encryption modes (GCM, CCM, EAX, SIV, OCB, KW, KWP)
 * Hybrid Public Key Encryption (HPKE)
 * Accelerated AES on Intel platforms via AES-NI
 * First class support for PyPy
-* Elliptic curves cryptography (NIST P-curves; Ed25519, Ed448, Curve25519, Curve448)
-* Better and more compact API (`nonce` and `iv` attributes for ciphers,
+* Elliptic curve cryptography (NIST P-curves; Ed25519, Ed448, Curve25519, Curve448)
+* A compact API (``nonce`` and ``iv`` attributes for ciphers,
   automatic generation of random nonces and IVs, simplified CTR cipher mode,
   and more)
 * SHA-3 hash algorithms (FIPS 202) and derived functions (NIST SP-800 185):
 
-  - SHAKE128 and SHA256 XOFs
+  - SHAKE128 and SHAKE256 XOFs
   - cSHAKE128 and cSHAKE256 XOFs
   - KMAC128 and KMAC256
   - TupleHash128 and TupleHash256
@@ -57,15 +93,9 @@ with respect to the last official version of PyCrypto (2.6.1):
 * Deterministic (EC)DSA and EdDSA
 * Password-protected PKCS#8 key containers
 * Shamir's Secret Sharing scheme
-* Random numbers get sourced directly from the OS (and not from a CSPRNG in userspace)
-* Simplified install process, including better support for Windows
-* Cleaner RSA and DSA key generation (largely based on FIPS 186-4)
-* Major clean ups and simplification of the code base
-
-PyCryptodome is not a wrapper to a separate C library like *OpenSSL*.
-To the largest possible extent, algorithms are implemented in pure Python.
-Only the pieces that are extremely critical to performance (e.g. block ciphers)
-are implemented as C extensions.
+* Random numbers sourced directly from the operating system
+* Simple installation, including on Windows
+* RSA and DSA key generation largely based on FIPS 186-4
 
 For more information, see the `homepage`_.
 

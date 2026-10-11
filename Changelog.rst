@@ -7,16 +7,13 @@ Changelog
 Breaking changes
 ----------------
 * Remove support for Python 2.7 and 3.8. The minimum supported version is now Python 3.9.
-* The ``pycryptodomex`` package (``Cryptodome`` namespace) is no longer released.
+* The ``pycryptodomex`` package (``Cryptodome`` namespace) is no longer released
+  (except for important security patches, but still on the 3.x branch).
   The library is only available as ``pycryptodome``, under the ``Crypto`` namespace.
 * The self-tests are now run by ``pytest``, which must be installed for
   ``python -m Crypto.SelfTest`` to work.
 * Remove the ``test`` command of ``setup.py``. Install the package
   (e.g. with ``pip install -e .``) and run ``python -m Crypto.SelfTest`` instead.
-* The output length must be a proper integer (``bool`` is rejected) in ``read()``
-  of SHAKE, cSHAKE, TurboSHAKE and KangarooTwelve objects, and for
-  ``digest_bytes`` and ``digest_bits`` of BLAKE2b and BLAKE2s.
-  Before, ``True`` was accepted as 1 and produced a 1-byte output.
 * In ``Crypto.Protocol.KDF.SP800_108_Counter()``, the ``label`` can no longer
   contain zero bytes, while the ``context`` now can (for instance, a binary nonce).
   The zero byte between them still separates the two unambiguously,
