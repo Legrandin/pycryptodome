@@ -552,6 +552,67 @@ void test_decode_point(void)
     assert(ed25519_decode_point(&Q, enc, 31, NULL) == ERR_MODULUS);
 }
 
+/*
+ * The fixed-base multiplication (table, for B with Z = 1) gives the same
+ * result as the ladder (B with Z = 2, not recognized as the base point),
+ * blinded and public, for scalars of all the lengths up to the limit of
+ * the table (36 bytes) and beyond, and for edge values.
+ */
+void test_scalar_base(void)
+{
+    char Gx_hex[] = "216936d3cd6e53fec0a4e231fdd6dc5c692cc7609525a7b2c9562d608f25d51a";
+    char Gy_hex[] = "6666666666666666666666666666666666666666666666666666666666666658";
+    /* L, big-endian */
+    static const uint8_t order[32] = {
+        0x10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0x14, 0xde, 0xf9, 0xde, 0xa2, 0xf7, 0x9c, 0xd6, 0x58, 0x12, 0x63, 0x1a, 0x5c, 0xf5, 0xd3, 0xed };
+    uint32_t two[10] = { 2 };
+    uint64_t state = 1;
+    uint8_t k[40];
+    Point G, G2, P, Q;
+    unsigned t, len, i;
+
+    memset(&G, 0, sizeof G);
+    convert_behex_to_le25p5(G.X, Gx_hex);
+    convert_behex_to_le25p5(G.Y, Gy_hex);
+    G.Z[0] = 1;
+    mul_25519(G.T, G.X, G.Y);
+
+    /* The same point, with Z = 2 */
+    mul_25519(G2.X, G.X, two);
+    mul_25519(G2.Y, G.Y, two);
+    mul_25519(G2.Z, G.Z, two);
+    mul_25519(G2.T, G.T, two);
+
+    for (t=0; t<600 + 6; t++) {
+        len = t < 600 ? 1 + t % 37 : 32;
+        for (i=0; i<len; i++) {
+            state = state * 6364136223846793005ULL + 1442695040888963407ULL;
+            k[i] = (uint8_t)(state >> 56);
+        }
+        if (t >= 600) {
+            switch (t - 600) {
+            case 0: memset(k, 0, 32); break;                    /* 0 */
+            case 1: memset(k, 0xFF, 32); break;                 /* 2^256 - 1 */
+            case 2: memcpy(k, order, 32); break;                /* L */
+            case 3: memcpy(k, order, 32); k[31]--; break;       /* L - 1 */
+            case 4: memcpy(k, order, 32); k[31]++; break;       /* L + 1 */
+            case 5: memset(k, 0x88, 32); break;                 /* all digits 8 */
+            }
+        }
+
+        P = G;
+        Q = G2;
+        assert(ed25519_scalar(&P, k, len, state) == 0);
+        assert(ed25519_scalar(&Q, k, len, state ^ 1) == 0);
+        assert(ed25519_cmp(&P, &Q) == 0);
+
+        P = G;
+        assert(ed25519_scalar_public(&P, k, len) == 0);
+        assert(ed25519_cmp(&P, &Q) == 0);
+    }
+}
+
 int main(void)
 {
     test_point_add_1();
@@ -561,6 +622,7 @@ int main(void)
     test_point_double_2();
     test_scalar_mult();
     test_scalar_blinding();
+    test_scalar_base();
     test_cmp_1();
     test_neg_1();
     test_decode_point();

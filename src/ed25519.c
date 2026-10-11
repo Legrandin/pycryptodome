@@ -52,6 +52,15 @@ FAKE_INIT(ed25519)
 #include "mod25519.c"
 
 /*
+ * The precomputed table of the base point (36 KB) can be left out with
+ * EC_NO_TABLES, to save space: the base point then goes through the
+ * ladder like any other point (about 6x slower).
+ */
+#if !defined(EC_NO_TABLES)
+#include "ed25519_table.h"
+#endif
+
+/*
  * P3 can be P1 or P2
  */
 STATIC void ed25519_add_internal(Point *P3, const Point *P1, const Point *P2)
@@ -229,12 +238,175 @@ static void ed25519_ladder(Point *R0, Point *R1, const uint64_t *kw, size_t nbit
     cswap(R0->Z, R0->T, R1->Z, R1->T, swap);
 }
 
+#if !defined(EC_NO_TABLES)
+
+/* ---------------------------------------------------------------- */
+/* Fixed base: the precomputed multiples of the base point          */
+/* ---------------------------------------------------------------- */
+
+/*
+ * An affine point (x, y) as (y + x, y - x, 2dxy), the form of the table:
+ * the neutral point is (1, 1, 0), and -(x, y) swaps the first two values
+ * and negates the third.
+ */
+typedef struct {
+    uint32_t ypx[10];
+    uint32_t ymx[10];
+    uint32_t xy2d[10];
+} Niels;
+
+/*
+ * P3 = P1 + Q, with Q in the form of the table (7M). Complete, like
+ * ed25519_add_internal(), with Z2 = 1. P3 can be P1.
+ */
+STATIC void ed25519_add_niels(Point *P3, const Point *P1, const Niels *Q)
+{
+    uint32_t A[10], B[10], C[10], D[10];
+
+    sub_25519(A, P1->Y, P1->X);         /* (Y1-X1)      each limb < 2²⁶ */
+    mul_25519(A, A, Q->ymx);            /* A            < 2²⁶ */
+    add32(B, P1->Y, P1->X);             /* (Y1+X1)      < 2²⁷ */
+    mul_25519(B, B, Q->ypx);            /* B            < 2²⁶ */
+    mul_25519(C, P1->T, Q->xy2d);       /* C            < 2²⁶ */
+    add_25519(D, P1->Z, P1->Z);         /* D=2*Z1       < 2²⁶ */
+    sub_25519(P3->T, B, A);             /* E=B-A        < 2²⁶ */
+    sub_25519(P3->Z, D, C);             /* F=D-C        < 2²⁶ */
+    add32(D, D, C);                     /* G=D+C        < 2²⁷ */
+    add32(B, B, A);                     /* H=B+A        < 2²⁷ */
+    mul_25519(P3->X, P3->T, P3->Z);     /* X3=E*F       < 2²⁶ */
+    mul_25519(P3->Y, D, B);             /* Y3=G*H       < 2²⁶ */
+    mul_25519(P3->T, P3->T, B);         /* T3=E*H       < 2²⁶ */
+    mul_25519(P3->Z, P3->Z, D);         /* Z3=F*G       < 2²⁶ */
+}
+
+/*
+ * out = e * 256^pos * B, for a signed digit e in [-8, 8], from the table.
+ * Constant time: all the 8 entries are read, and the negation is masked.
+ */
+STATIC void ed25519_select_niels(Niels *out, size_t pos, int8_t e)
+{
+    const uint32_t zero[10] = { 0 };
+    uint32_t neg_xy2d[10], m, t;
+    uint32_t sign, abs_e;
+    unsigned i, j;
+
+    sign = (uint32_t)((uint8_t)e >> 7);
+    abs_e = (uint32_t)(e * (1 - 2*(int)sign));
+
+    memset(out, 0, sizeof *out);
+    out->ypx[0] = 1;
+    out->ymx[0] = 1;
+    for (i=0; i<8; i++) {
+        const uint32_t *entry = &ed25519_table[pos][i][0][0];
+        uint32_t *o = &out->ypx[0];
+
+        m = (uint32_t)ct_mask(ct_eq(abs_e, i + 1));
+        for (j=0; j<30; j++) {
+            o[j] = (entry[j] & m) | (o[j] & ~m);
+        }
+    }
+
+    /* Negative digit: swap y+x and y-x, and negate 2dxy */
+    m = (uint32_t)ct_mask(sign);
+    sub_25519(neg_xy2d, zero, out->xy2d);
+    for (j=0; j<10; j++) {
+        t = (out->ypx[j] ^ out->ymx[j]) & m;
+        out->ypx[j] ^= t;
+        out->ymx[j] ^= t;
+        out->xy2d[j] = (neg_xy2d[j] & m) | (out->xy2d[j] & ~m);
+    }
+}
+
+/*
+ * The nd signed digits in radix 16 of kw (nw little-endian words):
+ * kw = sum of e[i] * 16^i, with e[i] in [-8, 8). The top digit must have
+ * room for the last carry (kw < 2^(4*(nd-1))). Constant time.
+ */
+STATIC void ed25519_recode(int8_t *e, size_t nd, const uint64_t *kw, size_t nw)
+{
+    int carry = 0, v;
+    size_t i;
+
+    for (i=0; i<nd; i++) {
+        v = i/16 < nw ? (int)((kw[i/16] >> (4*(i%16))) & 0xF) : 0;
+        v += carry;
+        carry = (v + 8) >> 4;
+        e[i] = (int8_t)(v - (carry << 4));
+    }
+}
+
+/*
+ * 1 if P is the base point B with Z = 1, 0 otherwise.
+ * The point may be secret: only that fact leaks.
+ */
+STATIC int ed25519_is_base(const Point *P)
+{
+    uint8_t x[32], y[32], z[32];
+    uint64_t diff = 0;
+    unsigned i;
+
+    convert_le25p5_to_le8(x, P->X);
+    convert_le25p5_to_le8(y, P->Y);
+    convert_le25p5_to_le8(z, P->Z);
+    for (i=0; i<32; i++) {
+        diff |= (uint64_t)((x[i] ^ ed25519_base_x[i]) | (y[i] ^ ed25519_base_y[i]) | (z[i] ^ (i == 0)));
+    }
+    return (int)ct_declassify(ct_z(diff));
+}
+
+/* The number of radix-16 digits for a scalar of nbits bits (with the last carry) */
+static size_t ed25519_digits(size_t nbits)
+{
+    return (nbits + 3) / 4 + 1;
+}
+
+/*
+ * Pout = k*B, for the base point B, with the table: the sum of the odd
+ * digits, times 16 (4 doublings), plus the sum of the even digits.
+ * k is in kw (nw little-endian words), over nd digits (nd at most
+ * 2*ED25519_TABLE_POSITIONS). The sums start from the neutral point R0
+ * (with randomized coordinates, if wanted). Constant time.
+ */
+STATIC void ed25519_mul_base(Point *Pout, const uint64_t *kw, size_t nw, size_t nd, const Point *R0)
+{
+    int8_t e[2*ED25519_TABLE_POSITIONS];
+    volatile int8_t *wipe;
+    Niels t;
+    Point acc;
+    size_t i;
+
+    ed25519_recode(e, nd, kw, nw);
+
+    acc = *R0;
+    for (i=1; i<nd; i+=2) {
+        ed25519_select_niels(&t, i/2, e[i]);
+        ed25519_add_niels(&acc, &acc, &t);
+    }
+    for (i=0; i<4; i++) {
+        ed25519_double_internal(&acc, &acc);
+    }
+    for (i=0; i<nd; i+=2) {
+        ed25519_select_niels(&t, i/2, e[i]);
+        ed25519_add_niels(&acc, &acc, &t);
+    }
+    *Pout = acc;
+
+    wipe = e;
+    for (i=0; i<nd; i++) {
+        wipe[i] = 0;
+    }
+}
+
+#endif /* !EC_NO_TABLES */
+
 /*
  * Scalar multiplication Q = k*B, for a scalar k that can be secret.
  *
  * The scalar is blinded: the ladder runs over k + r*8L, for a random r of
  * ED25519_BLIND_BITS bits, which gives the same point for any B on the curve.
  * The projective coordinates are randomized too.
+ * For the base point (with Z = 1) and a scalar of up to 36 bytes, the
+ * precomputed table is used instead of the ladder (same countermeasures).
  *
  * @param[out]  Pout    The resulting point Q (it can be the same as Pin).
  * @param[in]   k       The scalar encoded in big-endian mode.
@@ -277,14 +449,21 @@ STATIC int ed25519_scalar_internal(Point *Pout,
     memcpy(R0.Y, lambda, sizeof lambda);
     memcpy(R0.Z, lambda, sizeof lambda);
 
-    /* R1 = (lambda*X, lambda*Y, lambda*Z, lambda*T), the input point */
-    mul_25519(R1.X, Pin->X, lambda);
-    mul_25519(R1.Y, Pin->Y, lambda);
-    mul_25519(R1.Z, Pin->Z, lambda);
-    mul_25519(R1.T, Pin->T, lambda);
+#if !defined(EC_NO_TABLES)
+    if (ed25519_digits(nbits) <= 2*ED25519_TABLE_POSITIONS && ed25519_is_base(Pin)) {
+        ed25519_mul_base(Pout, kb, nw, ed25519_digits(nbits), &R0);
+    } else
+#endif
+    {
+        /* R1 = (lambda*X, lambda*Y, lambda*Z, lambda*T), the input point */
+        mul_25519(R1.X, Pin->X, lambda);
+        mul_25519(R1.Y, Pin->Y, lambda);
+        mul_25519(R1.Z, Pin->Z, lambda);
+        mul_25519(R1.T, Pin->T, lambda);
 
-    ed25519_ladder(&R0, &R1, kb, nbits);
-    *Pout = R0;
+        ed25519_ladder(&R0, &R1, kb, nbits);
+        *Pout = R0;
+    }
 
     wipe = kb;
     for (i=0; i<nw; i++) {
@@ -298,6 +477,7 @@ STATIC int ed25519_scalar_internal(Point *Pout,
  * Scalar multiplication Q = k*B, for a public scalar k (as in the
  * verification of a signature): no blinding, and the ladder only runs
  * over the bits of k. Its running time depends on the length of k.
+ * For the base point (with Z = 1), the table is used if k fits.
  *
  * @param[out]  Pout    The resulting point Q (it can be the same as Pin).
  * @param[in]   k       The scalar encoded in big-endian mode.
@@ -322,10 +502,17 @@ STATIC int ed25519_scalar_public_internal(Point *Pout,
     /* R0 = (0, 1, 1, 0), the neutral point */
     memset(&R0, 0, sizeof R0);
     R0.Y[0] = R0.Z[0] = 1;
-    R1 = *Pin;
 
-    ed25519_ladder(&R0, &R1, kw, 8*len);
-    *Pout = R0;
+#if !defined(EC_NO_TABLES)
+    if (ed25519_digits(8*len) <= 2*ED25519_TABLE_POSITIONS && ed25519_is_base(Pin)) {
+        ed25519_mul_base(Pout, kw, nw, ed25519_digits(8*len), &R0);
+    } else
+#endif
+    {
+        R1 = *Pin;
+        ed25519_ladder(&R0, &R1, kw, 8*len);
+        *Pout = R0;
+    }
 
     free(kw);
     return 0;

@@ -67,15 +67,15 @@ Why PyCryptodome
 Features
 --------
 
-* AES, RSA (with OAEP and PSS), DSA, SHA-2, HMAC and CMAC
+* AES, RSA (with OAEP and PSS), DSA
 * Authenticated encryption modes (GCM, CCM, EAX, SIV, OCB, KW, KWP)
 * Hybrid Public Key Encryption (HPKE)
-* Accelerated AES on Intel platforms via AES-NI
-* First class support for PyPy
 * Elliptic curve cryptography (NIST P-curves; Ed25519, Ed448, Curve25519, Curve448)
 * A compact API (``nonce`` and ``iv`` attributes for ciphers,
   automatic generation of random nonces and IVs, simplified CTR cipher mode,
   and more)
+* SHA-2 hash algorithms, including truncated ones SHA-512/224 and SHA-512/256 (FIPS 180-4)
+* HMAC  and CMAC
 * SHA-3 hash algorithms (FIPS 202) and derived functions (NIST SP-800 185):
 
   - SHAKE128 and SHAKE256 XOFs
@@ -84,7 +84,6 @@ Features
   - TupleHash128 and TupleHash256
 
 * KangarooTwelve, TurboSHAKE128, and TurboSHAKE256 XOFs
-* Truncated hash algorithms SHA-512/224 and SHA-512/256 (FIPS 180-4)
 * BLAKE2b and BLAKE2s hash algorithms
 * Salsa20 and ChaCha20/XChaCha20 stream ciphers
 * Poly1305 MAC

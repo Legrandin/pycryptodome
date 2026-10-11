@@ -9,7 +9,7 @@ from ._IntegerBase import IntegerBase
 class IntegerNative(IntegerBase):
     """A class to model a natural integer (including zero)"""
 
-    def __init__(self, value, public=False):
+    def __init__(self, value, *, public=False):
         if isinstance(value, float):
             raise ValueError("A floating point type is not a natural number")
         # A copy keeps the value public
@@ -49,7 +49,7 @@ class IntegerNative(IntegerBase):
         return result
 
     @classmethod
-    def from_bytes(cls, byte_string, byteorder="big", public=False):
+    def from_bytes(cls, byte_string, byteorder="big", *, public=False):
         if byteorder == "big":
             pass
         elif byteorder == "little":

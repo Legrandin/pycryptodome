@@ -29,6 +29,17 @@
 /* Random bits added to the scalar (k + r*order) */
 #define EC_BLINDING_BITS 64
 
+/*
+ * The precomputed tables of the generator (NIST curves, Ed448) can be left
+ * out with EC_NO_TABLES, to save memory: the generator is then multiplied
+ * like any other point (about 4-5x slower).
+ */
+#if defined(EC_NO_TABLES)
+#define EC_USE_TABLES 0
+#else
+#define EC_USE_TABLES 1
+#endif
+
 /* Temporary field elements in a workspace */
 #define EC_WS_TEMPS 11
 

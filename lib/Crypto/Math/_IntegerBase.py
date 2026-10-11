@@ -26,7 +26,7 @@ RandFunc = Callable[[int], bytes]
 class IntegerBase(ABC):
     if TYPE_CHECKING:
 
-        def __init__(self, value: Union[IntegerBase, int], public: bool = False) -> None: ...
+        def __init__(self, value: Union[IntegerBase, int], *, public: bool = False) -> None: ...
 
     # A number is potentially secret, unless it is created as public
     # (for instance, a value in a signature to verify): then operations
@@ -63,7 +63,7 @@ class IntegerBase(ABC):
     @staticmethod
     @abstractmethod
     def from_bytes(
-        byte_string: Union[bytes, bytearray, memoryview], byteorder: str = "big", public: bool = False
+        byte_string: Union[bytes, bytearray, memoryview], byteorder: str = "big", *, public: bool = False
     ) -> IntegerBase:
         pass
 

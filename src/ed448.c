@@ -448,7 +448,7 @@ EXPORT_SYM int ed448_new_context(Ed448Context **out)
         res = fe_from_bytes(ctx->gx, &ws, ed448_gx, ED448_BYTES, 0);
     if (res == 0)
         res = fe_from_bytes(ctx->gy, &ws, ed448_gy, ED448_BYTES, 0);
-    if (res == 0)
+    if (res == 0 && EC_USE_TABLES)
         res = ed448_build_g_table(&ws, ctx);
 
 cleanup:
@@ -809,7 +809,7 @@ EXPORT_SYM int ed448_scalar(PointEd448 *p, const uint8_t *k, size_t len, uint64_
     is_g = words_eq(p->x, ctx->gx, NW) & words_eq(p->y, ctx->gy, NW) &
            words_eq(p->z, ctx->field->one, NW);
 
-    if (ct_declassify(is_g))
+    if (EC_USE_TABLES && ct_declassify(is_g))
         res = ed448_mul_g(&ws, ctx, p, kb, ctx->windows, lambda);
     else
         res = ed448_mul_var(&ws, ctx, p, kb, ctx->windows, lambda);
@@ -862,7 +862,8 @@ EXPORT_SYM int ed448_scalar_public(PointEd448 *p, const uint8_t *k, size_t len)
     if (res)
         goto cleanup;
 
-    if (words_eq(p->x, ctx->gx, NW) & words_eq(p->y, ctx->gy, NW) & words_eq(p->z, ctx->field->one, NW))
+    if (EC_USE_TABLES &&
+        (words_eq(p->x, ctx->gx, NW) & words_eq(p->y, ctx->gy, NW) & words_eq(p->z, ctx->field->one, NW)))
         res = ed448_mul_g(&ws, ctx, p, kw, windows, ctx->field->one);
     else
         res = ed448_mul_var(&ws, ctx, p, kw, windows, ctx->field->one);

@@ -762,7 +762,8 @@ EXPORT_SYM int ec_nat_new_curve(EcCurve **out,
         goto cleanup;
     }
 
-    res = build_g_table(&ws, c);
+    if (EC_USE_TABLES)
+        res = build_g_table(&ws, c);
 
 cleanup:
     if (ws_ready)
@@ -1030,7 +1031,7 @@ EXPORT_SYM int ec_nat_scalar(EcPointN *p, const uint8_t *k, size_t len, uint64_t
     is_g = words_eq(p->x, c->gx, c->nw) & words_eq(p->y, c->gy, c->nw) &
            words_eq(p->z, c->field->one, c->nw);
 
-    if (ct_declassify(is_g))
+    if (EC_USE_TABLES && ct_declassify(is_g))
         res = scalar_mul_g(&ws, c, p->x, p->y, p->z, kb, c->windows, lambda);
     else
         res = scalar_mul_var(&ws, c, p->x, p->y, p->z, p->x, p->y, p->z, kb, lambda);
@@ -1082,7 +1083,8 @@ EXPORT_SYM int ec_nat_scalar_public(EcPointN *p, const uint8_t *k, size_t len)
     if (res)
         goto cleanup;
 
-    if (words_eq(p->x, c->gx, c->nw) & words_eq(p->y, c->gy, c->nw) & words_eq(p->z, c->field->one, c->nw))
+    if (EC_USE_TABLES &&
+        (words_eq(p->x, c->gx, c->nw) & words_eq(p->y, c->gy, c->nw) & words_eq(p->z, c->field->one, c->nw)))
         res = scalar_mul_g(&ws, c, p->x, p->y, p->z, kw, windows, c->field->one);
     else
         res = scalar_mul_var_public(&ws, c, p->x, p->y, p->z, p->x, p->y, p->z, kw, windows);

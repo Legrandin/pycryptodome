@@ -425,11 +425,16 @@ static void test_formulas(const Ed448Context *ctx)
     r2 = load_point(ctx, "0", "1");
 
     for (t=0; t<20; t++) {
-        const uint64_t *tx = ctx->g_table + (rnd() % (ctx->windows*EC_DIGITS))*2*nw;
+#if EC_USE_TABLES
+        const uint64_t *tx = ctx->g_table + (rnd() % (ctx->windows*EC_DIGITS))*2*nw, *ty = tx + nw;
+#else
+        const uint64_t *tx = ctx->gx, *ty = ctx->gy;
+#endif
 
         /* p: projective (Z != 1); q: affine, from the tables */
         assert(ed448_double(p) == 0);
-        memcpy(q->x, tx, 2*nw*8);
+        memcpy(q->x, tx, nw*8);
+        memcpy(q->y, ty, nw*8);
         memcpy(q->z, ctx->field->one, nw*8);
 
         ed448_point_add(&ws, ctx, r1->x, r1->y, r1->z, p->x, p->y, p->z, q->x, q->y, NULL);
@@ -453,8 +458,10 @@ static void test_formulas(const Ed448Context *ctx)
         memcpy(r1->x, ctx->gx, nw*8);
         memcpy(r1->y, ctx->gy, nw*8);
         assert(ed448_mul_var(&ws, ctx, r1, kb, ctx->windows, lambda) == 0);
+#if EC_USE_TABLES
         assert(ed448_mul_g(&ws, ctx, r2, kb, ctx->windows, lambda) == 0);
         assert(ed448_cmp(r1, r2) == 0);
+#endif
         assert(ed448_on_curve(&ws, ctx, r1->x, r1->y, r1->z));
     }
 
@@ -681,7 +688,11 @@ int main(void)
     test_points(ctx);
     test_on_curve(ctx);
     test_scalar(ctx);
+#if EC_USE_TABLES
     test_g_table(ctx);
+#else
+    (void)test_g_table;
+#endif
     test_formulas(ctx);
     test_random(ctx);
     test_scalar_public(ctx);

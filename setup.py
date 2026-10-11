@@ -213,6 +213,20 @@ setup_options = {}
 if not sysconfig.get_config_var("Py_GIL_DISABLED"):
     setup_options["options"] = {"bdist_wheel": {"py_limited_api": "cp39"}}
 
+# Set PYCRYPTODOME_NO_EC_TABLES to build the elliptic curves without the
+# precomputed tables of the generator (Ed25519: 36 KB in the binary;
+# Ed448 and the NIST curves: 39-266 KB of memory per curve, at runtime).
+# The multiplication of the generator (key generation, signing) becomes
+# about 4-6x slower.
+if os.environ.get("PYCRYPTODOME_NO_EC_TABLES"):
+    for ext in ext_modules:
+        if ext.name in (
+            "Crypto.PublicKey._ed25519",
+            "Crypto.PublicKey._ec_nat",
+            "Crypto.PublicKey._ec_nat_bmi2_adx",
+        ):
+            ext.define_macros.append(("EC_NO_TABLES", None))
+
 # Set PYCRYPTODOME_NO_SELFTEST to leave the self-tests (Crypto.SelfTest)
 # out of the package: they embed test keys and certificates,
 # which security scanners may flag
