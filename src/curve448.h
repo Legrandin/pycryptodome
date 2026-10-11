@@ -20,14 +20,14 @@
 #define CURVE448_BYTES 56
 
 typedef struct {
-    MontCtx *field;         /* Montgomery arithmetic modulo p (constants only) */
+    EcField *field;         /* the field: arithmetic modulo p (constants only) */
     Nat *p_minus_2;         /* the exponent of the inversion (Fermat) */
     size_t p_bits;
-    uint64_t *a24;          /* (A+2)/4 = 39082, in Montgomery form */
+    uint64_t *a24;          /* (A+2)/4 = 39082, as a field element */
 } Curve448Context;
 
 /*
- * A point (X:Z), with x = X/Z, in Montgomery form: Z is 1, or 0 for
+ * A point (X:Z), with x = X/Z, as field elements: Z is 1, or 0 for
  * the point at infinity (1:0). It can be freed after its context.
  */
 typedef struct {

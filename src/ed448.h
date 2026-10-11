@@ -20,11 +20,11 @@
 #define ED448_BYTES 56
 
 typedef struct {
-    MontCtx *field;         /* Montgomery arithmetic modulo p (constants only) */
+    EcField *field;         /* the field: arithmetic modulo p (constants only) */
     Nat *p_minus_2;         /* the exponent of the inversion (Fermat) */
     size_t p_bits;
-    uint64_t *d;            /* d, in Montgomery form */
-    uint64_t *gx, *gy;      /* the generator G (affine, Montgomery form) */
+    uint64_t *d;            /* d, as a field element */
+    uint64_t *gx, *gy;      /* the generator G (affine, field elements) */
     Nat *group_order;       /* 4*n: the order of the whole group (cofactor 4) */
     size_t k_words;         /* 64-bit words of a blinded scalar */
     size_t windows;         /* windows of a blinded scalar */
@@ -33,7 +33,7 @@ typedef struct {
 } Ed448Context;
 
 /*
- * A point in projective coordinates (X:Y:Z), in Montgomery form.
+ * A point in projective coordinates (X:Y:Z), as field elements.
  * It can be freed after its context.
  */
 typedef struct {

@@ -8,7 +8,9 @@
  * (the NIST curves P-192, P-224, P-256, P-384 and P-521), on the
  * constant-time arithmetic of the nat library (nat_mod.c).
  *
- * - Field elements: arrays of nw 64-bit words, in Montgomery form.
+ * - Field elements: arrays of nw 64-bit words, in Montgomery form,
+ *   except for P-521 (plain, with the reduction of 2^521 - 1: see
+ *   ec_special.h).
  * - Points: projective coordinates (X:Y:Z); the point at infinity is
  *   (0:1:0). Additions and doublings use the complete formulas of Renes,
  *   Costello and Batina, "Complete addition formulas for prime order
@@ -456,7 +458,7 @@ EXPORT_SYM void ec_nat_free_curve(EcCurve *c)
 {
     if (NULL == c)
         return;
-    mont_ctx_free(c->field);
+    ec_field_free(c->field);
     nat_free(c->p_minus_2);
     nat_free(c->order);
     nat_words_free(c->b, c->nw);
@@ -508,7 +510,7 @@ EXPORT_SYM int ec_nat_new_curve(EcCurve **out,
     res = nat_from_bytes(pn, p, len, 0);
     if (res)
         goto cleanup;
-    res = mont_ctx_new(&c->field, pn);
+    res = ec_field_new(&c->field, pn);
     if (res)
         goto cleanup;
     two->w[0] = 2;

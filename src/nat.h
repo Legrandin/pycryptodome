@@ -175,6 +175,10 @@ void mod_add(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t
 void mod_sub(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, size_t nw);
 /** x = x/2 mod n, x < n, n odd **/
 void mod_half(uint64_t *x, const uint64_t *n, size_t nw);
+/** out (2*nw words) = a*b, the full product; out must not alias a or b **/
+void mul_wide(uint64_t *out, const uint64_t *a, const uint64_t *b, MontCtx *ctx);
+/** out (2*nw words) = a*a, the full square; out must not alias a **/
+void sqr_wide(uint64_t *out, const uint64_t *a, MontCtx *ctx);
 /** out = base^e in Montgomery form; base_m is in Montgomery form; e < 2^e_bits (public) **/
 int mont_pow(uint64_t *out, const uint64_t *base_m, const Nat *e, size_t e_bits, MontCtx *ctx);
 

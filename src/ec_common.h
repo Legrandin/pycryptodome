@@ -6,7 +6,7 @@
 /*
  * What the elliptic curves on the nat library have in common (the NIST
  * curves in ec_nat.c, Ed448 in ed448.c, X448 in curve448.c):
- * a workspace, field elements in Montgomery form, and the
+ * the field, a workspace, field elements, and the
  * side-channel countermeasures of the scalar multiplications (blinding,
  * signed windows, full table scans, randomized coordinates).
  *
@@ -33,12 +33,42 @@
 #define EC_WS_TEMPS 11
 
 /*
+ * The representation of the field elements, which depends on p (public):
+ *  - EC_FIELD_MONT: Montgomery form, for any odd p;
+ *  - EC_FIELD_P448: plain, for p = 2^448 - 2^224 - 1 (Ed448, X448);
+ *  - EC_FIELD_P521: plain, for p = 2^521 - 1 (P-521).
+ * The two primes of a special form have their own reduction, after a
+ * full product (ec_special.h).
+ */
+typedef enum { EC_FIELD_MONT, EC_FIELD_P448, EC_FIELD_P521 } EcFieldKind;
+
+/* The field of a curve (shared by all the operations: read only) */
+typedef struct {
+    /*
+     * The Montgomery context of p. With EC_FIELD_MONT, it does all the
+     * arithmetic. With the other kinds, only its scratchpads are used
+     * (in the private copy of each workspace), by mul_wide() and
+     * sqr_wide() on 32-bit targets, and for P-521 in the BMI2/ADX build.
+     */
+    MontCtx *m;
+    EcFieldKind kind;
+    size_t nw;              /* 64-bit words of a field element */
+    uint64_t *one;          /* 1, in the representation of the field (nw words) */
+} EcField;
+
+int ec_field_new(EcField **out, const Nat *p);
+void ec_field_free(EcField *f);
+/** out = x in the representation of the field, for x < p (setup only: not thread safe) **/
+void ec_field_from_words(EcField *f, uint64_t *out, const uint64_t *x);
+
+/*
  * The workspace of one operation: a private copy of the Montgomery
  * scratchpads (the constants of the field are shared), and temporaries.
  * With one workspace per operation, a curve can be used by several
  * threads at the same time.
  */
 typedef struct {
+    const EcField *f;
     MontCtx *m;
     size_t nw;
     uint64_t *buf;
@@ -46,16 +76,16 @@ typedef struct {
     uint64_t *t[EC_WS_TEMPS];
 } EcWs;
 
-int ec_ws_new(EcWs *ws, const MontCtx *field);
+int ec_ws_new(EcWs *ws, const EcField *field);
 void ec_ws_free(EcWs *ws);
 
 /*
- * Field elements: nw words, in Montgomery form, smaller than p.
- * The outputs may alias the inputs.
+ * Field elements: nw words, in the representation of the field (see
+ * EcField), smaller than p. The outputs may alias the inputs.
  *
- * On 64-bit targets, the sizes of the curves (3, 4, 6, 7 and 9 words)
- * have their own unrolled code (ec_field.h); other sizes, and 32-bit
- * targets, use mont_mul(), mont_sqr(), mod_add() and mod_sub().
+ * Montgomery form: on 64-bit targets, the sizes of the curves (3, 4, 6, 7
+ * and 9 words) have their own unrolled code (ec_field.h); other sizes,
+ * and 32-bit targets, use mont_mul(), mont_sqr(), mod_add() and mod_sub().
  */
 void fe_mul(EcWs *ws, uint64_t *out, const uint64_t *a, const uint64_t *b);
 void fe_sqr(EcWs *ws, uint64_t *out, const uint64_t *a);
@@ -71,8 +101,13 @@ static inline void fe_copy(EcWs *ws, uint64_t *out, const uint64_t *a)
 /** out = 1/a (Fermat: a^(p-2)), and 0 for a = 0 **/
 int fe_inv(EcWs *ws, uint64_t *out, const uint64_t *a, const Nat *p_minus_2);
 
+/** out = the number x (x < p), in the representation of the field **/
+void fe_from_words(EcWs *ws, uint64_t *out, const uint64_t *x);
+/** out = the number that a stands for (smaller than p) **/
+void fe_to_words(EcWs *ws, uint64_t *out, const uint64_t *a);
+
 /**
- * out (Montgomery form) = the big-endian number in (len bytes).
+ * out = the big-endian number in (len bytes).
  * If reduce is 0, the number must be smaller than p (ERR_VALUE otherwise);
  * if it is 1, it must be smaller than 2p, and it is reduced.
  */

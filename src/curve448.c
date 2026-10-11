@@ -141,7 +141,7 @@ EXPORT_SYM void curve448_free_context(Curve448Context *ctx)
 {
     if (NULL == ctx)
         return;
-    mont_ctx_free(ctx->field);
+    ec_field_free(ctx->field);
     nat_free(ctx->p_minus_2);
     nat_words_free(ctx->a24, NW);
     free(ctx);
@@ -171,7 +171,7 @@ EXPORT_SYM int curve448_new_context(Curve448Context **out)
 
     res = nat_from_bytes(p, curve448_p, CURVE448_BYTES, 0);
     if (res == 0)
-        res = mont_ctx_new(&ctx->field, p);
+        res = ec_field_new(&ctx->field, p);
     two->w[0] = 2;
     if (res == 0)
         res = nat_sub(ctx->p_minus_2, p, two);
@@ -181,7 +181,7 @@ EXPORT_SYM int curve448_new_context(Curve448Context **out)
 
     /* a24 = (A + 2)/4 */
     a24->w[0] = 39082;
-    mont_to(ctx->a24, a24->w, ctx->field);
+    ec_field_from_words(ctx->field, ctx->a24, a24->w);
 
 cleanup:
     nat_free(p);

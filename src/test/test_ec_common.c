@@ -57,14 +57,14 @@ static void to_bytes(uint8_t *out, const uint64_t *x)
             out[8*NW - 1 - 8*i - j] = (uint8_t)(x[i] >> (8*j));
 }
 
-static void test_ws(const MontCtx *field)
+static void test_ws(const EcField *field)
 {
     EcWs ws;
     unsigned i, j;
 
     assert(ec_ws_new(&ws, field) == 0);
     assert(ws.nw == NW);
-    assert(ws.m != field && ws.m->n == field->n);
+    assert(ws.f == field && ws.m != field->m && ws.m->n == field->m->n);
     assert(words_is_zero(ws.zero, NW));
     for (i=0; i<EC_WS_TEMPS; i++) {
         /* Distinct and not overlapping */
@@ -78,7 +78,7 @@ static void test_ws(const MontCtx *field)
 }
 
 /* The field operations, against nat_mulmod() and nat_submod() */
-static void test_field(const MontCtx *field, const Nat *n, const Nat *p_minus_2)
+static void test_field(const EcField *field, const Nat *n, const Nat *p_minus_2)
 {
     EcWs ws;
     uint64_t a[NW], b[NW], am[NW], bm[NW], r[NW];
@@ -117,11 +117,11 @@ static void test_field(const MontCtx *field, const Nat *n, const Nat *p_minus_2)
 
         /* mul, sqr */
         fe_mul(&ws, r, am, bm);
-        mont_from(r, r, ws.m);
+        fe_to_words(&ws, r, r);
         assert(nat_mulmod(expected, na, nb, n) == 0);
         assert(memcmp(r, expected->w, sizeof r) == 0);
         fe_sqr(&ws, r, am);
-        mont_from(r, r, ws.m);
+        fe_to_words(&ws, r, r);
         assert(nat_mulmod(expected, na, na, n) == 0);
         assert(memcmp(r, expected->w, sizeof r) == 0);
 
@@ -131,7 +131,7 @@ static void test_field(const MontCtx *field, const Nat *n, const Nat *p_minus_2)
         fe_sub(&ws, r, r, bm);
         assert(memcmp(r, am, sizeof r) == 0);
         fe_sub(&ws, r, am, bm);
-        mont_from(r, r, ws.m);
+        fe_to_words(&ws, r, r);
         assert(nat_submod(expected, na, nb, n) == 0);
         assert(memcmp(r, expected->w, sizeof r) == 0);
         fe_neg(&ws, r, am);
@@ -156,7 +156,7 @@ static void test_field(const MontCtx *field, const Nat *n, const Nat *p_minus_2)
 }
 
 /* fe_from_bytes: the range checks and the reduction; fe_to_bytes: the lengths */
-static void test_conversions(const MontCtx *field)
+static void test_conversions(const EcField *field)
 {
     EcWs ws;
     uint8_t buf[8*NW + 8], out[8*NW + 8];
@@ -210,7 +210,7 @@ static void test_conversions(const MontCtx *field)
     ec_ws_free(&ws);
 }
 
-static void test_random(const MontCtx *field)
+static void test_random(const EcField *field)
 {
     EcWs ws;
     uint64_t a[NW], b[NW], state1 = 1, state2 = 1;
@@ -276,7 +276,7 @@ static void test_table_select(void)
 }
 
 /* Batch conversion to affine, against one inversion per point */
-static void test_batch_to_affine(const MontCtx *field, const Nat *p_minus_2)
+static void test_batch_to_affine(const EcField *field, const Nat *p_minus_2)
 {
     EcWs ws;
     uint64_t proj[10*3*NW], affine[10*2*NW], zinv[NW], x[NW];
@@ -313,7 +313,7 @@ static void test_field_sizes(void)
     size_t nw;
 
     for (nw=1; nw<=10; nw++) {
-        MontCtx *field;
+        EcField *field;
         Nat *n, *na, *nb, *expected;
         uint64_t a[10], b[10], am[10], bm[10], r[10];
         EcWs ws;
@@ -329,7 +329,7 @@ static void test_field_sizes(void)
         n->w[nw-1] |= (uint64_t)1 << 63;
         if (nw % 2)
             n->w[nw-1] = ~(uint64_t)0;              /* the top word at its maximum */
-        assert(mont_ctx_new(&field, n) == 0);
+        assert(ec_field_new(&field, n) == 0);
         assert(ec_ws_new(&ws, field) == 0);
 
         for (t=0; t<100; t++) {
@@ -349,11 +349,11 @@ static void test_field_sizes(void)
             }
             memcpy(na->w, a, nw*8);
             memcpy(nb->w, b, nw*8);
-            mont_to(am, a, field);
-            mont_to(bm, b, field);
+            fe_from_words(&ws, am, a);
+            fe_from_words(&ws, bm, b);
 
             fe_mul(&ws, r, am, bm);
-            mont_from(r, r, field);
+            fe_to_words(&ws, r, r);
             assert(nat_mulmod(expected, na, nb, n) == 0);
             assert(memcmp(r, expected->w, nw*8) == 0);
 
@@ -362,16 +362,16 @@ static void test_field_sizes(void)
             fe_mul(&ws, r, r, bm);
             fe_mul(&ws, r, bm, r);
             assert(nat_mulmod(expected, expected, nb, n) == 0);
-            mont_from(r, r, field);
+            fe_to_words(&ws, r, r);
             assert(memcmp(r, expected->w, nw*8) == 0);
 
             fe_sqr(&ws, r, am);
-            mont_from(r, r, field);
+            fe_to_words(&ws, r, r);
             assert(nat_mulmod(expected, na, na, n) == 0);
             assert(memcmp(r, expected->w, nw*8) == 0);
             memcpy(r, am, nw*8);
             fe_sqr(&ws, r, r);
-            mont_from(r, r, field);
+            fe_to_words(&ws, r, r);
             assert(memcmp(r, expected->w, nw*8) == 0);
 
             /* a + b = a - (n - b) mod n */
@@ -401,8 +401,300 @@ static void test_field_sizes(void)
         }
 
         ec_ws_free(&ws);
-        mont_ctx_free(field);
+        ec_field_free(field);
         nat_free(n);
+        nat_free(na);
+        nat_free(nb);
+        nat_free(expected);
+    }
+}
+
+/* ---------------------------------------------------------------- */
+/* The primes of a special form (ec_special.h)                      */
+/* ---------------------------------------------------------------- */
+
+void red_p448(uint64_t *out, const uint64_t *t);
+void red_p521(uint64_t *out, const uint64_t *t);
+
+static const uint64_t sp448[7] = {
+    0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL,
+    0xFFFFFFFEFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL,
+    0xFFFFFFFFFFFFFFFFULL
+};
+
+static const uint64_t sp521[9] = {
+    0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL,
+    0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL,
+    0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL, 0x1FF
+};
+
+/* red_p448 (nw = 7) or red_p521 (nw = 9) of t (2*nw words), against nat_divmod() */
+static void check_reduction(size_t nw, const uint64_t *t)
+{
+    Nat *nt, *np, *nr;
+    uint64_t out[9];
+
+    assert(nat_new(&nt, 2*nw) == 0);
+    assert(nat_new(&np, nw) == 0);
+    assert(nat_new(&nr, nw) == 0);
+    memcpy(nt->w, t, 2*nw*8);
+    memcpy(np->w, nw == 7 ? sp448 : sp521, nw*8);
+    assert(nat_divmod(NULL, nr, nt, np) == 0);
+    if (nw == 7)
+        red_p448(out, t);
+    else
+        red_p521(out, t);
+    assert(memcmp(out, nr->w, nw*8) == 0);
+    nat_free(nt);
+    nat_free(np);
+    nat_free(nr);
+}
+
+/* t (2*nw words) = a*b, with a and b of nw words */
+static void wide_product(uint64_t *t, const uint64_t *a, const uint64_t *b, size_t nw)
+{
+    Nat *na, *nb, *nt;
+
+    assert(nat_new(&na, nw) == 0);
+    assert(nat_new(&nb, nw) == 0);
+    assert(nat_new(&nt, 2*nw) == 0);
+    memcpy(na->w, a, nw*8);
+    memcpy(nb->w, b, nw*8);
+    assert(nat_mul(nt, na, nb) == 0);
+    memcpy(t, nt->w, 2*nw*8);
+    nat_free(na);
+    nat_free(nb);
+    nat_free(nt);
+}
+
+/*
+ * The reductions on their own: any input below 2^896 for p448, and below
+ * 2^1042 (the largest product) for p521, with the edge cases.
+ */
+static void test_special_reductions(void)
+{
+    uint64_t t[18], pm1[9], x[9];
+    size_t nw, i;
+    unsigned it;
+
+    for (nw=7; nw<=9; nw+=2) {
+        const uint64_t *p = nw == 7 ? sp448 : sp521;
+
+        memcpy(pm1, p, nw*8);
+        pm1[0]--;
+
+        for (it=0; it<3000; it++) {
+            for (i=0; i<2*nw; i++)
+                t[i] = rnd();
+            if (nw == 9) {
+                t[16] &= 0x3FFFF;               /* t < 2^1042 */
+                t[17] = 0;
+            }
+            switch (it) {
+            case 0:                             /* 0 */
+                memset(t, 0, sizeof t);
+                break;
+            case 1:                             /* p */
+                memset(t, 0, sizeof t);
+                memcpy(t, p, nw*8);
+                break;
+            case 2:                             /* p - 1 */
+                memset(t, 0, sizeof t);
+                memcpy(t, pm1, nw*8);
+                break;
+            case 3:                             /* (p - 1)^2, the largest product */
+                wide_product(t, pm1, pm1, nw);
+                break;
+            case 4:                             /* p * (p - 1) */
+                wide_product(t, p, pm1, nw);
+                break;
+            case 5:                             /* the largest input */
+                memset(t, 0xFF, sizeof t);
+                if (nw == 9) {
+                    t[16] = 0x3FFFF;
+                    t[17] = 0;
+                }
+                break;
+            case 6:                             /* the top half only, all ones */
+                memset(t, 0, sizeof t);
+                if (nw == 7) {
+                    memset(t + 7, 0xFF, 7*8);
+                } else {
+                    t[8] = ~(uint64_t)0x1FF;    /* hi = 2^521 - 1 */
+                    memset(t + 9, 0xFF, 7*8);
+                    t[16] = 0x3FFFF;
+                }
+                break;
+            case 7:                             /* both halves at their maximum */
+                memset(t, 0xFF, sizeof t);
+                if (nw == 9) {
+                    t[16] = 0x3FFFF;
+                    t[17] = 0;
+                } else {
+                    t[3] = 0xFFFFFFFEFFFFFFFFULL;
+                }
+                break;
+            case 8:                             /* 2^448 or 2^521: 2^224 + 1, or 1 */
+                memset(t, 0, sizeof t);
+                if (nw == 7)
+                    t[7] = 1;
+                else
+                    t[8] = 0x200;
+                break;
+            default:
+                if (it % 7 == 0)                /* the first half all ones */
+                    memset(t, 0xFF, nw*8);
+                if (it % 11 == 0)               /* bits 224..447 of the top half all ones */
+                    for (i=10; i<14 && nw == 7; i++)
+                        t[i] = ~(uint64_t)0;
+                break;
+            }
+            check_reduction(nw, t);
+        }
+
+        /* Products of values near p, and of powers of two with values near them */
+        for (it=0; it<64; it++) {
+            uint64_t y[9];
+
+            memset(x, 0, sizeof x);
+            memcpy(y, pm1, nw*8);
+            if (it < 32) {
+                x[0] = 1;
+                y[0] -= it;
+            } else {
+                size_t k = (it - 32) * (64*nw - 1) / 31;    /* a bit position below p */
+
+                if (k >= (nw == 7 ? 448 : 521))
+                    k = (nw == 7 ? 447 : 520);
+                x[k/64] = (uint64_t)1 << (k % 64);
+                memcpy(y, x, nw*8);
+                y[0] -= 1;
+                if (k == 0)
+                    y[0] = 0;
+            }
+            wide_product(t, x, y, nw);
+            check_reduction(nw, t);
+            wide_product(t, pm1, y, nw);
+            check_reduction(nw, t);
+        }
+    }
+}
+
+/*
+ * The field operations with the primes of a special form (plain
+ * representation), against nat_mulmod() and nat_submod().
+ */
+static void test_special_fields(void)
+{
+    size_t nw, i;
+
+    for (nw=7; nw<=9; nw+=2) {
+        const uint64_t *p = nw == 7 ? sp448 : sp521;
+        EcField *field;
+        EcWs ws;
+        Nat *n, *two, *p_minus_2, *na, *nb, *expected;
+        uint64_t a[9], b[9], am[9], bm[9], r[9];
+        uint8_t buf[72], ab[72];
+        size_t len = nw == 7 ? 56 : 66;
+        unsigned t;
+
+        assert(nat_new(&n, nw) == 0);
+        assert(nat_new(&two, 1) == 0);
+        assert(nat_new(&p_minus_2, nw) == 0);
+        assert(nat_new(&na, nw) == 0);
+        assert(nat_new(&nb, nw) == 0);
+        assert(nat_new(&expected, nw) == 0);
+        memcpy(n->w, p, nw*8);
+        two->w[0] = 2;
+        assert(nat_sub(p_minus_2, n, two) == 0);
+
+        assert(ec_field_new(&field, n) == 0);
+        assert(field->kind == (nw == 7 ? EC_FIELD_P448 : EC_FIELD_P521));
+        assert(field->one[0] == 1);
+        for (i=1; i<nw; i++)
+            assert(field->one[i] == 0);
+        assert(ec_ws_new(&ws, field) == 0);
+
+        for (t=0; t<300; t++) {
+            for (i=0; i<nw; i++) {
+                a[i] = rnd();
+                b[i] = rnd();
+            }
+            if (nw == 9) {
+                a[8] &= 0x1FF;
+                b[8] &= 0x1FF;
+            }
+            /* below p (p448: also fine, unless the value is p or more) */
+            if (words_lt(a, p, nw) == 0)
+                a[0] = 0;
+            if (words_lt(b, p, nw) == 0)
+                b[0] = 0;
+            if (t == 0)
+                memset(a, 0, nw*8);
+            if (t == 1 || t == 2) {
+                memcpy(a, p, nw*8);
+                a[0]--;
+                memcpy(b, a, nw*8);
+                if (t == 2)
+                    b[0] = 1, memset(b + 1, 0, (nw - 1)*8);
+            }
+            memcpy(na->w, a, nw*8);
+            memcpy(nb->w, b, nw*8);
+
+            fe_from_words(&ws, am, a);
+            fe_from_words(&ws, bm, b);
+            /* plain representation */
+            assert(memcmp(am, a, nw*8) == 0);
+
+            fe_mul(&ws, r, am, bm);
+            fe_to_words(&ws, r, r);
+            assert(nat_mulmod(expected, na, nb, n) == 0);
+            assert(memcmp(r, expected->w, nw*8) == 0);
+
+            /* In place, on either input */
+            memcpy(r, am, nw*8);
+            fe_mul(&ws, r, r, bm);
+            assert(memcmp(r, expected->w, nw*8) == 0);
+            memcpy(r, bm, nw*8);
+            fe_mul(&ws, r, am, r);
+            assert(memcmp(r, expected->w, nw*8) == 0);
+
+            fe_sqr(&ws, r, am);
+            assert(nat_mulmod(expected, na, na, n) == 0);
+            assert(memcmp(r, expected->w, nw*8) == 0);
+            memcpy(r, am, nw*8);
+            fe_sqr(&ws, r, r);
+            assert(memcmp(r, expected->w, nw*8) == 0);
+
+            fe_sub(&ws, r, am, bm);
+            assert(nat_submod(expected, na, nb, n) == 0);
+            assert(memcmp(r, expected->w, nw*8) == 0);
+            fe_add(&ws, r, r, bm);
+            assert(memcmp(r, am, nw*8) == 0);
+
+            /* inv: a * 1/a = 1, and 1/0 = 0 */
+            assert(fe_inv(&ws, r, am, p_minus_2) == 0);
+            if (t == 0) {
+                assert(words_is_zero(r, nw));
+            } else {
+                fe_mul(&ws, r, r, am);
+                assert(memcmp(r, field->one, nw*8) == 0);
+            }
+
+            /* bytes */
+            for (i=0; i<len; i++)
+                ab[i] = (uint8_t)(a[(len - 1 - i)/8] >> (8*((len - 1 - i) % 8)));
+            assert(fe_from_bytes(r, &ws, ab, len, 0) == 0);
+            assert(memcmp(r, am, nw*8) == 0);
+            assert(fe_to_bytes(buf, len, &ws, am) == 0);
+            assert(memcmp(buf, ab, len) == 0);
+        }
+
+        ec_ws_free(&ws);
+        ec_field_free(field);
+        nat_free(n);
+        nat_free(two);
+        nat_free(p_minus_2);
         nat_free(na);
         nat_free(nb);
         nat_free(expected);
@@ -411,7 +703,7 @@ static void test_field_sizes(void)
 
 int main(void)
 {
-    MontCtx *field;
+    EcField *field;
     Nat *n, *two, *p_minus_2;
 
     n = modulus();
@@ -419,18 +711,20 @@ int main(void)
     assert(nat_new(&p_minus_2, NW) == 0);
     two->w[0] = 2;
     assert(nat_sub(p_minus_2, n, two) == 0);
-    assert(mont_ctx_new(&field, n) == 0);
+    assert(ec_field_new(&field, n) == 0);
 
     test_ws(field);
     test_field(field, n, p_minus_2);
     test_field_sizes();
+    test_special_reductions();
+    test_special_fields();
     test_conversions(field);
     test_random(field);
     test_sizes();
     test_table_select();
     test_batch_to_affine(field, p_minus_2);
 
-    mont_ctx_free(field);
+    ec_field_free(field);
     nat_free(n);
     nat_free(two);
     nat_free(p_minus_2);

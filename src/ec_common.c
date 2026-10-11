@@ -16,18 +16,75 @@
 #include "nat_ct.h"
 #include "ec_common.h"
 #include "ec_field.h"
+#include "ec_special.h"
 
 /* ---------------------------------------------------------------- */
-/* Workspace                                                        */
+/* Field and workspace                                              */
 /* ---------------------------------------------------------------- */
 
-int ec_ws_new(EcWs *ws, const MontCtx *field)
+int ec_field_new(EcField **out, const Nat *p)
+{
+    EcField *f;
+    int res;
+
+    *out = f = (EcField*)calloc(1, sizeof(EcField));
+    if (NULL == f)
+        return ERR_MEMORY;
+
+    res = mont_ctx_new(&f->m, p);
+    if (res)
+        goto fail;
+    f->nw = p->nw;
+    f->one = nat_words_alloc(f->nw);
+    if (NULL == f->one) {
+        res = ERR_MEMORY;
+        goto fail;
+    }
+
+    /* p is public */
+    f->kind = EC_FIELD_MONT;
+    if (P448_WORDS == f->nw && words_eq(p->w, ec_p448, P448_WORDS))
+        f->kind = EC_FIELD_P448;
+    if (P521_WORDS == f->nw && words_eq(p->w, ec_p521, P521_WORDS))
+        f->kind = EC_FIELD_P521;
+
+    if (EC_FIELD_MONT == f->kind)
+        memcpy(f->one, f->m->one, f->nw*sizeof(uint64_t));
+    else
+        f->one[0] = 1;
+    return 0;
+
+fail:
+    ec_field_free(f);
+    *out = NULL;
+    return res;
+}
+
+void ec_field_free(EcField *f)
+{
+    if (NULL == f)
+        return;
+    mont_ctx_free(f->m);
+    nat_words_free(f->one, f->nw);
+    free(f);
+}
+
+void ec_field_from_words(EcField *f, uint64_t *out, const uint64_t *x)
+{
+    if (EC_FIELD_MONT == f->kind)
+        mont_to(out, x, f->m);
+    else
+        memmove(out, x, f->nw*sizeof(uint64_t));
+}
+
+int ec_ws_new(EcWs *ws, const EcField *field)
 {
     unsigned i;
 
     memset(ws, 0, sizeof *ws);
+    ws->f = field;
     ws->nw = field->nw;
-    if (mont_ctx_new_private(&ws->m, field))
+    if (mont_ctx_new_private(&ws->m, field->m))
         return ERR_MEMORY;
     ws->buf = nat_words_alloc((EC_WS_TEMPS + 1)*ws->nw);
     if (NULL == ws->buf) {
@@ -56,7 +113,7 @@ void ec_ws_free(EcWs *ws)
  * The size is public, and so is the switch. With BMI2 and ADX, P-521
  * (9 words) is faster with the MULX/ADX kernel of mont_mul().
  */
-void fe_mul(EcWs *ws, uint64_t *out, const uint64_t *a, const uint64_t *b)
+static void fe_mont_mul(EcWs *ws, uint64_t *out, const uint64_t *a, const uint64_t *b)
 {
     const uint64_t *n = ws->m->n;
     uint64_t m0 = ws->m->m0;
@@ -73,7 +130,7 @@ void fe_mul(EcWs *ws, uint64_t *out, const uint64_t *a, const uint64_t *b)
     }
 }
 
-void fe_sqr(EcWs *ws, uint64_t *out, const uint64_t *a)
+static void fe_mont_sqr(EcWs *ws, uint64_t *out, const uint64_t *a)
 {
     const uint64_t *n = ws->m->n;
     uint64_t m0 = ws->m->m0;
@@ -120,12 +177,12 @@ void fe_sub(EcWs *ws, uint64_t *out, const uint64_t *a, const uint64_t *b)
 
 #else
 
-void fe_mul(EcWs *ws, uint64_t *out, const uint64_t *a, const uint64_t *b)
+static void fe_mont_mul(EcWs *ws, uint64_t *out, const uint64_t *a, const uint64_t *b)
 {
     mont_mul(out, a, b, ws->m);
 }
 
-void fe_sqr(EcWs *ws, uint64_t *out, const uint64_t *a)
+static void fe_mont_sqr(EcWs *ws, uint64_t *out, const uint64_t *a)
 {
     mont_sqr(out, a, ws->m);
 }
@@ -142,14 +199,86 @@ void fe_sub(EcWs *ws, uint64_t *out, const uint64_t *a, const uint64_t *b)
 
 #endif /* NAT_32BIT */
 
+/* The kind of field is public, and so is the switch */
+void fe_mul(EcWs *ws, uint64_t *out, const uint64_t *a, const uint64_t *b)
+{
+    switch (ws->f->kind) {
+    case EC_FIELD_P448: fe_p448_mul(ws, out, a, b); break;
+    case EC_FIELD_P521: fe_p521_mul(ws, out, a, b); break;
+    default: fe_mont_mul(ws, out, a, b); break;
+    }
+}
+
+void fe_sqr(EcWs *ws, uint64_t *out, const uint64_t *a)
+{
+    switch (ws->f->kind) {
+    case EC_FIELD_P448: fe_p448_sqr(ws, out, a); break;
+    case EC_FIELD_P521: fe_p521_sqr(ws, out, a); break;
+    default: fe_mont_sqr(ws, out, a); break;
+    }
+}
+
 void fe_neg(EcWs *ws, uint64_t *out, const uint64_t *a)
 {
     fe_sub(ws, out, ws->zero, a);
 }
 
+#define FE_POW_WINDOW 4
+#define FE_POW_MAX_WORDS 9
+
+/**
+ * out = a^e, for a public exponent e, with fe_mul() and fe_sqr()
+ * (fixed windows of 4 bits; the table is indexed by public digits).
+ */
+static void fe_pow_public(EcWs *ws, uint64_t *out, const uint64_t *a, const Nat *e)
+{
+    uint64_t table[1 << FE_POW_WINDOW][FE_POW_MAX_WORDS], acc[FE_POW_MAX_WORDS];
+    const size_t nw = ws->nw;
+    size_t bits, windows, i;
+    unsigned j;
+
+    fe_copy(ws, table[0], ws->f->one);
+    fe_copy(ws, table[1], a);
+    for (j=2; j < (1U << FE_POW_WINDOW); j++)
+        fe_mul(ws, table[j], table[j-1], a);
+
+    bits = (size_t)nat_bit_length(e);
+    windows = (bits + FE_POW_WINDOW - 1) / FE_POW_WINDOW;
+    fe_copy(ws, acc, ws->f->one);
+    for (i=windows; i-- > 0;) {
+        uint64_t digit = ec_get_bits(e->w, e->nw, i*FE_POW_WINDOW, FE_POW_WINDOW);
+
+        if (i + 1 < windows)
+            for (j=0; j<FE_POW_WINDOW; j++)
+                fe_sqr(ws, acc, acc);
+        if (digit)
+            fe_mul(ws, acc, acc, table[digit]);
+    }
+    memcpy(out, acc, nw*sizeof(uint64_t));
+}
+
 int fe_inv(EcWs *ws, uint64_t *out, const uint64_t *a, const Nat *p_minus_2)
 {
-    return mont_pow(out, a, p_minus_2, (size_t)nat_bit_length(p_minus_2), ws->m);
+    if (EC_FIELD_MONT == ws->f->kind)
+        return mont_pow(out, a, p_minus_2, (size_t)nat_bit_length(p_minus_2), ws->m);
+    fe_pow_public(ws, out, a, p_minus_2);
+    return 0;
+}
+
+void fe_from_words(EcWs *ws, uint64_t *out, const uint64_t *x)
+{
+    if (EC_FIELD_MONT == ws->f->kind)
+        mont_to(out, x, ws->m);
+    else
+        memmove(out, x, ws->nw*sizeof(uint64_t));
+}
+
+void fe_to_words(EcWs *ws, uint64_t *out, const uint64_t *a)
+{
+    if (EC_FIELD_MONT == ws->f->kind)
+        mont_from(out, a, ws->m);
+    else
+        memmove(out, a, ws->nw*sizeof(uint64_t));
 }
 
 int fe_from_bytes(uint64_t *out, EcWs *ws, const uint8_t *in, size_t len, int reduce)
@@ -174,7 +303,7 @@ int fe_from_bytes(uint64_t *out, EcWs *ws, const uint8_t *in, size_t len, int re
         res = ERR_VALUE;
         goto cleanup;
     }
-    mont_to(out, x->w, ws->m);
+    fe_from_words(ws, out, x->w);
 
 cleanup:
     nat_free(x);
@@ -190,7 +319,7 @@ int fe_to_bytes(uint8_t *out, size_t len, EcWs *ws, const uint64_t *a)
     x.w = nat_words_alloc(ws->nw);
     if (NULL == x.w)
         return ERR_MEMORY;
-    mont_from(x.w, a, ws->m);
+    fe_to_words(ws, x.w, a);
     res = nat_to_bytes(out, len, &x, 0);
     nat_words_free(x.w, ws->nw);
     return res;

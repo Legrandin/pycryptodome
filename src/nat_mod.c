@@ -202,17 +202,24 @@ STATIC void mont_mul32(uint32_t *out, const uint32_t *a, const uint32_t *b, Mont
     final_sub32(out, t, t[2*n], m, n);
 }
 
-/** 32-bit version of mont_sqr(): out = a*a/R mod m (n = 2*nw words) **/
-STATIC void mont_sqr32(uint32_t *out, const uint32_t *a, MontCtx *ctx)
+/** t (2n words) = a*b (n words each), the full product **/
+STATIC void mul_rows32(uint32_t *t, const uint32_t *a, const uint32_t *b, size_t n)
 {
-    uint32_t *t = ctx->t32;
-    const uint32_t *m = ctx->n32;
-    size_t n = 2*ctx->nw;
+    size_t i;
+
+    memset(t, 0, 2*n*sizeof(uint32_t));
+    for (i=0; i<n; i++)
+        t[i + n] = addmul_row32(t + i, a, b[i], n);
+}
+
+/** t (2n words) = a*a (n words), the full square **/
+STATIC void sqr_rows32(uint32_t *t, const uint32_t *a, size_t n)
+{
     size_t i;
     uint32_t top;
     uint64_t c;
 
-    memset(t, 0, (2*n + 2)*sizeof(uint32_t));
+    memset(t, 0, 2*n*sizeof(uint32_t));
 
     /* Cross products a[i]*a[j], i < j; t[i+n] is still zero */
     for (i=0; i+1<n; i++)
@@ -238,6 +245,19 @@ STATIC void mont_sqr32(uint32_t *out, const uint32_t *a, MontCtx *ctx)
         t[2*i + 1] = (uint32_t)c;
         c >>= 32;
     }
+}
+
+/** 32-bit version of mont_sqr(): out = a*a/R mod m (n = 2*nw words) **/
+STATIC void mont_sqr32(uint32_t *out, const uint32_t *a, MontCtx *ctx)
+{
+    uint32_t *t = ctx->t32;
+    const uint32_t *m = ctx->n32;
+    size_t n = 2*ctx->nw;
+    size_t i;
+    uint32_t top;
+
+    /* t[2n] and t[2n+1] are not used */
+    sqr_rows32(t, a, n);
 
     /* Montgomery reduction, one word at a time */
     top = 0;
@@ -493,6 +513,51 @@ STATIC uint64_t addmul_row(uint64_t *t, const uint64_t *a, uint64_t b, size_t nw
 
 #endif
 
+#if !defined(NAT_32BIT) || defined(NAT_TESTS)
+
+/** t (2*nw words) = a*b (nw words each), the full product **/
+STATIC void mul_rows(uint64_t *t, const uint64_t *a, const uint64_t *b, size_t nw)
+{
+    size_t i;
+
+    memset(t, 0, 2*nw*sizeof(uint64_t));
+    for (i=0; i<nw; i++)
+        t[i + nw] = addmul_row(t + i, a, b[i], nw);
+}
+
+/** t (2*nw words) = a*a (nw words), the full square **/
+STATIC void sqr_rows(uint64_t *t, const uint64_t *a, size_t nw)
+{
+    size_t i;
+    uint64_t c, top;
+
+    memset(t, 0, 2*nw*sizeof(uint64_t));
+
+    /* t = sum of a[i]*a[j]*2^(64*(i+j)), for i < j; t[i+nw] is still zero */
+    for (i=0; i+1<nw; i++)
+        t[i + nw] = addmul_row(t + 2*i + 1, a + i + 1, a[i], nw - i - 1);
+
+    /* t = 2*t */
+    top = 0;
+    for (i=0; i<2*nw; i++) {
+        uint64_t next = t[i] >> 63;
+        t[i] = (t[i] << 1) | top;
+        top = next;
+    }
+
+    /* t += a[i]^2 * 2^(128*i) */
+    c = 0;
+    for (i=0; i<nw; i++) {
+        uint64_t lo, hi;
+
+        lo = ct_mac(a[i], a[i], 0, 0, &hi);
+        t[2*i] = ct_add(t[2*i], lo, c, &c);
+        t[2*i + 1] = ct_add(t[2*i + 1], hi, c, &c);
+    }
+}
+
+#endif
+
 /*
  * Montgomery multiplication: out = a*b/R mod n.
  * a and b must be smaller than n. out may alias a or b.
@@ -557,31 +622,9 @@ void mont_sqr(uint64_t *out, const uint64_t *a, MontCtx *ctx)
     const uint64_t *n = ctx->n;
     size_t nw = ctx->nw;
     size_t i;
-    uint64_t c, top, borrow;
+    uint64_t top, borrow;
 
-    memset(t, 0, (2*nw + 2)*sizeof(uint64_t));
-
-    /* t = sum of a[i]*a[j]*2^(64*(i+j)), for i < j; t[i+nw] is still zero */
-    for (i=0; i+1<nw; i++)
-        t[i + nw] = addmul_row(t + 2*i + 1, a + i + 1, a[i], nw - i - 1);
-
-    /* t = 2*t */
-    top = 0;
-    for (i=0; i<2*nw; i++) {
-        uint64_t next = t[i] >> 63;
-        t[i] = (t[i] << 1) | top;
-        top = next;
-    }
-
-    /* t += a[i]^2 * 2^(128*i) */
-    c = 0;
-    for (i=0; i<nw; i++) {
-        uint64_t lo, hi;
-
-        lo = ct_mac(a[i], a[i], 0, 0, &hi);
-        t[2*i] = ct_add(t[2*i], lo, c, &c);
-        t[2*i + 1] = ct_add(t[2*i + 1], hi, c, &c);
-    }
+    sqr_rows(t, a, nw);
 
     /* Montgomery reduction: t = t / R mod n, with t < n^2 */
     top = 0;
@@ -606,6 +649,35 @@ void mont_to(uint64_t *out, const uint64_t *x, MontCtx *ctx)
 void mont_from(uint64_t *out, const uint64_t *x, MontCtx *ctx)
 {
     mont_mul(out, x, ctx->unit, ctx);
+}
+
+/*
+ * The full products, without reduction (for moduli with a special form,
+ * which have their own reduction): out = a*b and out = a*a, with 2*nw
+ * words. They use the scratchpads of ctx, and the fastest rows of the
+ * target (32-bit words on 32-bit targets, MULX/ADX in that build).
+ */
+void mul_wide(uint64_t *out, const uint64_t *a, const uint64_t *b, MontCtx *ctx)
+{
+#if defined(NAT_32BIT)
+    to_words32(ctx->x32, a, ctx->nw);
+    to_words32(ctx->y32, b, ctx->nw);
+    mul_rows32(ctx->t32, ctx->x32, ctx->y32, 2*ctx->nw);
+    from_words32(out, ctx->t32, 2*ctx->nw);
+#else
+    mul_rows(out, a, b, ctx->nw);
+#endif
+}
+
+void sqr_wide(uint64_t *out, const uint64_t *a, MontCtx *ctx)
+{
+#if defined(NAT_32BIT)
+    to_words32(ctx->x32, a, ctx->nw);
+    sqr_rows32(ctx->t32, ctx->x32, 2*ctx->nw);
+    from_words32(out, ctx->t32, 2*ctx->nw);
+#else
+    sqr_rows(out, a, ctx->nw);
+#endif
 }
 
 #define WINDOW_SIZE 4

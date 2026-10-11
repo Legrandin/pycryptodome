@@ -100,16 +100,31 @@ FE_INLINE void fe_mont_mul_n(uint64_t *out, const uint64_t *a, const uint64_t *b
     fe_final_sub(out, t + nw, t[2*nw], n, nw);
 }
 
-FE_INLINE void fe_mont_sqr_n(uint64_t *out, const uint64_t *a,
-                                 const uint64_t *n, uint64_t m0, size_t nw)
+/* t (2*nw words) = a*b, the full product */
+FE_INLINE void fe_mul_wide_n(uint64_t *t, const uint64_t *a, const uint64_t *b, size_t nw)
 {
-    uint64_t t[2*FE_MAX_WORDS + 2];
+    size_t i;
+
+    FE_UNROLL
+
+    for (i=0; i<2*nw; i++)
+        t[i] = 0;
+
+    FE_UNROLL
+
+    for (i=0; i<nw; i++)
+        t[i + nw] = fe_addmul_row(t + i, a, b[i], nw);
+}
+
+/* t (2*nw words) = a*a, the full square */
+FE_INLINE void fe_sqr_wide_n(uint64_t *t, const uint64_t *a, size_t nw)
+{
     uint64_t c, top;
     size_t i;
 
     FE_UNROLL
 
-    for (i=0; i<2*nw + 2; i++)
+    for (i=0; i<2*nw; i++)
         t[i] = 0;
 
     FE_UNROLL
@@ -134,6 +149,16 @@ FE_INLINE void fe_mont_sqr_n(uint64_t *out, const uint64_t *a,
         t[2*i] = ct_add(t[2*i], lo, c, &c);
         t[2*i + 1] = ct_add(t[2*i + 1], hi, c, &c);
     }
+}
+
+FE_INLINE void fe_mont_sqr_n(uint64_t *out, const uint64_t *a,
+                                 const uint64_t *n, uint64_t m0, size_t nw)
+{
+    uint64_t t[2*FE_MAX_WORDS];
+    uint64_t top;
+    size_t i;
+
+    fe_sqr_wide_n(t, a, nw);
 
     top = 0;
     FE_UNROLL
@@ -198,6 +223,19 @@ FE_INSTANCE_MUL(7)
 FE_INSTANCE_MUL(9)
 #endif
 
+/* The full products, for the primes of a special form (ec_special.h) */
+#define FE_INSTANCE_WIDE(N) \
+static void fe_mul_wide_##N(uint64_t *o, const uint64_t *a, const uint64_t *b) \
+    { fe_mul_wide_n(o, a, b, N); } \
+static void fe_sqr_wide_##N(uint64_t *o, const uint64_t *a) \
+    { fe_sqr_wide_n(o, a, N); }
+
+FE_INSTANCE_WIDE(7)
+/* With BMI2 and ADX, P-521 uses the MULX/ADX rows of mul_wide() instead */
+#if !defined(NAT_BMI2_ADX)
+FE_INSTANCE_WIDE(9)
+#endif
+
 FE_INSTANCE_ADD(3)
 FE_INSTANCE_ADD(4)
 FE_INSTANCE_ADD(6)
@@ -205,6 +243,7 @@ FE_INSTANCE_ADD(7)
 FE_INSTANCE_ADD(9)
 
 #undef FE_INSTANCE_MUL
+#undef FE_INSTANCE_WIDE
 #undef FE_INSTANCE_ADD
 
 #endif /* !NAT_32BIT */

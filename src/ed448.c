@@ -11,7 +11,8 @@
  * with d = -39081, over the prime field p = 2^448 - 2^224 - 1, on the
  * constant-time arithmetic of the nat library (nat_mod.c).
  *
- * - Field elements: arrays of 7 64-bit words, in Montgomery form.
+ * - Field elements: arrays of 7 64-bit words, in plain representation
+ *   (the reduction of p = 2^448 - 2^224 - 1: see ec_special.h).
  * - Points: projective coordinates (X:Y:Z), with x = X/Z and y = Y/Z;
  *   the neutral point is (0:1:1). The addition and doubling formulas
  *   of RFC 8032 (5.2.4) are complete, as d is not a square: they have
@@ -364,7 +365,7 @@ EXPORT_SYM void ed448_free_context(Ed448Context *ctx)
 {
     if (NULL == ctx)
         return;
-    mont_ctx_free(ctx->field);
+    ec_field_free(ctx->field);
     nat_free(ctx->p_minus_2);
     nat_free(ctx->group_order);
     nat_words_free(ctx->d, NW);
@@ -406,7 +407,7 @@ EXPORT_SYM int ed448_new_context(Ed448Context **out)
 
     res = nat_from_bytes(p, ed448_p, ED448_BYTES, 0);
     if (res == 0)
-        res = mont_ctx_new(&ctx->field, p);
+        res = ec_field_new(&ctx->field, p);
     two->w[0] = 2;
     if (res == 0)
         res = nat_sub(ctx->p_minus_2, p, two);
