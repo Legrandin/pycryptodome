@@ -119,7 +119,15 @@ uint64_t words_sub(uint64_t *out, const uint64_t *a, const uint64_t *b, size_t n
 uint64_t words_cond_sub(uint64_t mask, uint64_t *x, const uint64_t *y, size_t nw);
 /** x = x + (y & mask), return carry (nw words) **/
 uint64_t words_cond_add(uint64_t mask, uint64_t *x, const uint64_t *y, size_t nw);
-/** x = (x >> 1) | (top << 63 of the last word) (nw words) **/
+/**
+ * Halve a number (rounding down): x = (x + top*2^(64*nw)) / 2.
+ *
+ * With top = 0, it halves x itself (nw words), as in the steps of the
+ * binary GCD. With top = 1, it halves a number one bit longer than x:
+ * the result of an addition whose carry did not fit in x, which becomes
+ * the most significant bit. For example, mod_half() computes x/2 mod n
+ * by adding n to an odd x, and then halves the sum and its carry.
+ */
 void words_shr1(uint64_t *x, uint64_t top, size_t nw);
 /** Shift x right by k bits; k is secret, at most 64*nw. tmp has nw words. **/
 void words_shr_secret(uint64_t *x, uint64_t k, uint64_t *tmp, size_t nw);
