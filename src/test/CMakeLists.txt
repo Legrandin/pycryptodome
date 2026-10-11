@@ -175,6 +175,13 @@ foreach(ec_test test_ec_common test_ec_nat test_ed448 test_curve448)
     endif()
 endforeach()
 
+# The same tests, without the precomputed tables of the generator (EC_NO_TABLES)
+foreach(ec_test test_ec_nat test_ed448)
+    add_executable(${ec_test}_no_tables ${ec_test}.c ${EC_SOURCES} ${NAT_SOURCES})
+    target_compile_definitions(${ec_test}_no_tables PRIVATE EC_NO_TABLES)
+    add_test(NAME ${ec_test}_no_tables COMMAND ${ec_test}_no_tables)
+endforeach()
+
 # Constant-time check of the natural numbers, with Valgrind memcheck
 find_program(VALGRIND valgrind)
 CHECK_INCLUDE_FILE("valgrind/memcheck.h" HAVE_VALGRIND_MEMCHECK_H)
@@ -346,6 +353,9 @@ add_test(NAME tests_ladder_step COMMAND tests_ladder_step)
 # ed25519
 add_executable(test_ed25519 test_ed25519.c ../ed25519.c)
 add_test(NAME test_ed25519 COMMAND test_ed25519)
+add_executable(test_ed25519_no_tables test_ed25519.c ../ed25519.c)
+target_compile_definitions(test_ed25519_no_tables PRIVATE EC_NO_TABLES)
+add_test(NAME test_ed25519_no_tables COMMAND test_ed25519_no_tables)
 
 # aesni
 if (AESNI)

@@ -131,7 +131,7 @@ class IntegerNat(IntegerBase):
     _p: SmartPointer
     _bits: int
 
-    def __init__(self, value: Union[IntegerBase, int], _min_bits: int = 0, public: bool = False) -> None:
+    def __init__(self, value: Union[IntegerBase, int], _min_bits: int = 0, *, public: bool = False) -> None:
         # A copy keeps the value public
         self._public = public or (isinstance(value, IntegerBase) and value._public)
         if isinstance(value, IntegerNat):
@@ -254,6 +254,7 @@ class IntegerNat(IntegerBase):
         byte_string: Union[bytes, bytearray, memoryview],
         byteorder: str = "big",
         _min_bits: int = 0,
+        *,
         public: bool = False,
     ) -> IntegerNat:
         if byteorder not in ("big", "little"):

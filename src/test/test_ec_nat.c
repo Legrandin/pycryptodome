@@ -696,8 +696,12 @@ static void test_formulas(const TestCurve *tc, const EcCurve *c)
     r2 = load_point(c, "0", "0");
 
     for (t=0; t<20; t++) {
+#if EC_USE_TABLES
         const uint64_t *qx = c->g_table + (rnd() % (c->windows*EC_DIGITS))*2*nw;
         const uint64_t *qy = qx + nw;
+#else
+        const uint64_t *qx = c->gx, *qy = c->gy;
+#endif
 
         /* p: projective (Z != 1); q: affine, from the tables */
         assert(ec_nat_double(p) == 0);
@@ -749,8 +753,10 @@ static void test_formulas(const TestCurve *tc, const EcCurve *c)
         memcpy(r1->y, c->gy, nw*8);
         memcpy(r1->z, c->field->one, nw*8);
         assert(scalar_mul_var(&ws, c, r1->x, r1->y, r1->z, r1->x, r1->y, r1->z, kb, lambda) == 0);
+#if EC_USE_TABLES
         assert(scalar_mul_g(&ws, c, r2->x, r2->y, r2->z, kb, c->windows, lambda) == 0);
         assert(ec_nat_cmp(r1, r2) == 0);
+#endif
         assert(point_on_curve(&ws, c, r1->x, r1->y, r1->z));
     }
 
@@ -892,7 +898,11 @@ int main(void)
         test_blind_scalar(c[i]);
         test_scalar(&curves[i], c[i]);
         test_scalar_public(&curves[i], c[i]);
+#if EC_USE_TABLES
         test_g_table(&curves[i], c[i]);
+#else
+        (void)test_g_table;
+#endif
         test_formulas(&curves[i], c[i]);
         test_random(&curves[i], c[i]);
     }
