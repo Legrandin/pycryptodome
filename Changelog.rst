@@ -1,6 +1,15 @@
 Changelog
 =========
 
+3.24.1 (11 October 2026)
+++++++++++++++++++++++++++
+
+Resolved issues
+---------------
+* Security: the time to create an ECDSA, EdDSA or DSA signature depended
+  on the secret nonce, enough to recover the private key with a lattice attack.
+  DSA signing is now about 40% slower with GMP. Thanks to Daniel Bleichenbacher.
+
 3.24.0 (4 October 2026)
 ++++++++++++++++++++++++++
 

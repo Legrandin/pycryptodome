@@ -261,8 +261,9 @@ STATIC void ec_full_double(uint64_t *x3, uint64_t *y3, uint64_t *z3,
  * Input and output points can match. The correct is produced if both or either
  * input points are at infinity.
  *
- * @warning The function is regular (constant-time) only if the second point (affine)
- * is NOT the point-at-infinity.
+ * The second point (affine) can be the point-at-infinity, encoded as (0, 0):
+ * the result is then the first point. The function is constant-time
+ * in both cases (a zero digit of a secret scalar selects that point).
  */
 STATIC void ec_mix_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
                        const uint64_t *x13, const uint64_t *y13, const uint64_t *z13,
@@ -280,17 +281,19 @@ STATIC void ec_mix_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     uint64_t *y1 = tmp->g;
     uint64_t *z1 = tmp->h;
     uint64_t *s = tmp->scratch;
+    uint64_t sum, mask;
+    unsigned i;
 
     /*
     * Algorithm 5 in "Complete addition formulas for prime order elliptic curves", Renes et al.
     */
-    
-    if (mont_is_zero(x2, ctx) & mont_is_zero(y2, ctx)) {
-        mont_copy(x3, x13, ctx);
-        mont_copy(y3, y13, ctx);
-        mont_copy(z3, z13, ctx);
-        return;
+
+    /* mask is all ones if the second point is the point-at-infinity (0, 0) */
+    sum = 0;
+    for (i=0; i<ctx->words; i++) {
+        sum |= x2[i] | y2[i];
     }
+    mask = ((sum | (0 - sum)) >> 63) - 1;
 
     memcpy(x1, x13, ctx->bytes);
     memcpy(y1, y13, ctx->bytes);
@@ -343,6 +346,13 @@ STATIC void ec_mix_add(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     mont_mult(z3, t4, z3, s, ctx);      /* 34 */
     mont_mult(t1, t3, t0, s, ctx);
     mont_add(z3, z3, t1, s, ctx);
+
+    /* For the point-at-infinity, the result is the first point (x1, y1, z1 are intact) */
+    for (i=0; i<ctx->words; i++) {
+        x3[i] = (x1[i] & mask) | (x3[i] & ~mask);
+        y3[i] = (y1[i] & mask) | (y3[i] & ~mask);
+        z3[i] = (z1[i] & mask) | (z3[i] & ~mask);
+    }
 }
 
 /*
@@ -532,8 +542,10 @@ STATIC int ec_scalar(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     mont_set(y3, 1, ctx);
     mont_set(z3, 0, ctx);
 
-    /** Find first non-zero byte in exponent **/
-    for (; exp_size && *exp==0; exp++, exp_size--);
+    /**
+     * All the bytes of the exponent are processed, including the leading
+     * zero bytes: the time must not depend on the (secret) exponent.
+     **/
     bw = init_bit_window_lr(WINDOW_SIZE_BITS, exp, exp_size);
 
     /** For every nibble, double 16 times and add window value **/
@@ -725,8 +737,12 @@ STATIC int ec_scalar_g_p256(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     mont_set(y3, 1, ctx);
     mont_set(z3, 0, ctx);
 
-    /** Find first non-zero byte in exponent **/
-    for (; exp_size && *exp==0; exp++, exp_size--);
+    /**
+     * Skip the leading zero bytes only beyond the size of the order (32 bytes):
+     * a scalar of that size is always processed in full, so that the time
+     * does not depend on its (secret) value.
+     **/
+    for (; exp_size > 32 && *exp==0; exp++, exp_size--);
     bw = init_bit_window_rl(p256_window_size, exp, exp_size);
 
     if (bw.nr_windows > p256_n_tables)
@@ -767,8 +783,12 @@ STATIC int ec_scalar_g_p384(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     mont_set(y3, 1, ctx);
     mont_set(z3, 0, ctx);
 
-    /** Find first non-zero byte in exponent **/
-    for (; exp_size && *exp==0; exp++, exp_size--);
+    /**
+     * Skip the leading zero bytes only beyond the size of the order (48 bytes):
+     * a scalar of that size is always processed in full, so that the time
+     * does not depend on its (secret) value.
+     **/
+    for (; exp_size > 48 && *exp==0; exp++, exp_size--);
     bw = init_bit_window_rl(p384_window_size, exp, exp_size);
 
     if (bw.nr_windows > p384_n_tables)
@@ -810,8 +830,12 @@ STATIC int ec_scalar_g_p521(uint64_t *x3, uint64_t *y3, uint64_t *z3,
     mont_set(y3, 1, ctx);
     mont_set(z3, 0, ctx);
 
-    /** Find first non-zero byte in exponent **/
-    for (; exp_size && *exp==0; exp++, exp_size--);
+    /**
+     * Skip the leading zero bytes only beyond the size of the order (66 bytes):
+     * a scalar of that size is always processed in full, so that the time
+     * does not depend on its (secret) value.
+     **/
+    for (; exp_size > 66 && *exp==0; exp++, exp_size--);
     bw = init_bit_window_rl(p521_window_size, exp, exp_size);
 
     if (exp_size == 66) {

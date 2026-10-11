@@ -47,6 +47,12 @@ from Crypto.PublicKey import (_expand_subject_public_key_info,
                               _create_subject_public_key_info,
                               _extract_subject_public_key_info)
 
+try:
+    # Constant-time modular exponentiation (C extension _modexp)
+    from Crypto.Math._IntegerCustom import IntegerCustom as _IntegerCT
+except (ImportError, OSError, AttributeError):
+    _IntegerCT = None
+
 #   ; The following ASN.1 types are relevant for DSA
 #
 #   SubjectPublicKeyInfo    ::=     SEQUENCE {
@@ -125,7 +131,21 @@ class DsaKey(object):
         inv_blind_k = (blind_factor * k).inverse(q)
         blind_x = x * blind_factor
 
-        r = pow(g, k, p) % q  # r = (g**k mod p) mod q
+        # r = (g**k mod p) mod q, in constant time: with an exponent that
+        # always has one bit more than q (k + q or k + 2q, which gives the same
+        # power, as g has order q), and with a constant-time exponentiation
+        # (mpz_powm_sec with GMP, otherwise the Montgomery exponentiation of
+        # the library), as the time of mpz_powm depends on the exponent
+        k1 = Integer(k) + q
+        k2 = k1 + q
+        k_fixed = (k2, k1)[int(k1 >> q.size_in_bits())]
+        if hasattr(Integer, "_inplace_pow_ct"):
+            gk = Integer(g)._inplace_pow_ct(k_fixed, p)
+        elif _IntegerCT is not None:
+            gk = _IntegerCT(int(g)).inplace_pow(int(k_fixed), int(p))
+        else:
+            gk = pow(g, k_fixed, p)
+        r = Integer(int(gk)) % q
         s = (inv_blind_k * (blind_factor * m + blind_x * r)) % q
         return map(int, (r, s))
 

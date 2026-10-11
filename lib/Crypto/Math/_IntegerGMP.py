@@ -70,6 +70,8 @@ gmp_defs = """typedef unsigned long UNIX_ULONG;
                           mpz_t mod);
         void __gmpz_powm_ui (mpz_t rop, const mpz_t base, UNIX_ULONG exp,
                              const mpz_t mod);
+        void __gmpz_powm_sec (mpz_t rop, const mpz_t base, const mpz_t exp,
+                              const mpz_t mod);
         void __gmpz_pow_ui (mpz_t rop, const mpz_t base, UNIX_ULONG exp);
         void __gmpz_sqrt(mpz_t rop, const mpz_t op);
         void __gmpz_mod (mpz_t r, const mpz_t n, const mpz_t d);
@@ -463,6 +465,20 @@ class IntegerGMP(IntegerBase):
                           modulus._mpz_p)
         return self
 
+    def _inplace_pow_ct(self, exponent, modulus):
+        """Modular exponentiation in constant time (mpz_powm_sec),
+        for a secret exponent: the modulus must be odd, and the
+        exponent positive. Not defined if GMP is older than 5.0."""
+
+        if not isinstance(exponent, IntegerGMP):
+            exponent = IntegerGMP(exponent)
+        if not isinstance(modulus, IntegerGMP):
+            modulus = IntegerGMP(modulus)
+        if not modulus.is_odd() or exponent <= 0:
+            raise ValueError("mpz_powm_sec needs an odd modulus and a positive exponent")
+        _gmp.mpz_powm_sec(self._mpz_p, self._mpz_p, exponent._mpz_p, modulus._mpz_p)
+        return self
+
     def __pow__(self, exponent, modulus=None):
         result = IntegerGMP(self)
         return result.inplace_pow(exponent, modulus)
@@ -797,3 +813,8 @@ class IntegerGMP(IntegerBase):
             self._mpz_p = None
         except AttributeError:
             pass
+
+
+# mpz_powm_sec appeared in GMP 5.0
+if not hasattr(lib, "__gmpz_powm_sec"):
+    del IntegerGMP._inplace_pow_ct

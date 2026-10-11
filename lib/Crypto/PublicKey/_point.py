@@ -316,7 +316,11 @@ class EccPoint(object):
         scalar_func = self._curve.rawlib.scalar
         if scalar < 0:
             raise ValueError("Scalar multiplication is only defined for non-negative integers")
-        sb = long_to_bytes(scalar)
+        # The scalar may be secret (a nonce, a private key): it is encoded on
+        # at least as many bytes as the order, so that the time of the
+        # multiplication does not depend on its length
+        order_bytes = (self._curve.order.size_in_bits() + 7) // 8
+        sb = long_to_bytes(scalar, order_bytes)
         result = scalar_func(self._point.get(),
                              c_uint8_ptr(sb),
                              c_size_t(len(sb)),
