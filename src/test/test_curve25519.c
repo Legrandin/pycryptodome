@@ -6,7 +6,8 @@ void mul_25519(uint32_t out[10], const uint32_t f[10], const uint32_t g[10]);
 int convert_behex_to_le25p5(uint32_t out[10], const char *in);
 void curve25519_scalar_internal(Point *Pout,
                                 const uint8_t *k, size_t len,
-                                const Point *Pin);
+                                const Point *Pin,
+                                uint64_t seed);
 int convert_le25p5_to_behex(char **out, uint32_t in[10]);
 
 void print_point(Point *p)
@@ -39,6 +40,8 @@ void test_ladder_1(void)
                           0x4F,0x08,0x8D,0xF2,0x4D,0xEA,0x94,0x8E,
                           0x90,0xC6,0xE9,0x9D,0x37,0x55,0xDA,0xC3};
     uint8_t out[32];
+    const uint64_t seeds[3] = { 0, 1, UINT64_MAX };
+    unsigned i;
 
     Point *Pin;
     Point Pout;
@@ -50,11 +53,12 @@ void test_ladder_1(void)
     scalar[31-31] &= 127;
     scalar[31-31] |= 64;
 
-    curve25519_scalar_internal(&Pout, scalar, 32, Pin);
-
-    curve25519_get_x(out, 32, &Pout);
-
-    assert(0 == memcmp(out, expout, 32));
+    /* The random coordinates do not change the result */
+    for (i=0; i<3; i++) {
+        curve25519_scalar_internal(&Pout, scalar, 32, Pin, seeds[i]);
+        curve25519_get_x(out, 32, &Pout);
+        assert(0 == memcmp(out, expout, 32));
+    }
 
     curve25519_free_point(Pin);
 }
@@ -69,7 +73,7 @@ void test_ladder_2(void)
     G.X[0] = 9;
     G.Z[0] = 1;
 
-    curve25519_scalar_internal(&Pout, scalar, sizeof scalar, &G);
+    curve25519_scalar_internal(&Pout, scalar, sizeof scalar, &G, 2);
     assert(memcmp(Pout.Z, zeroes32, 32) == 0);
 }
 
@@ -134,7 +138,7 @@ void test_small_group(void)
     convert_behex_to_le25p5(G.X, c1_hex);
     G.Z[0] = 1;
 
-    curve25519_scalar_internal(&P, scalar, 1, &G);
+    curve25519_scalar_internal(&P, scalar, 1, &G, 3);
 
     assert(memcmp(P.Z, zeroes32, 32) == 0);
 }

@@ -13,7 +13,8 @@
  *  A point is represented by coordinates (X, Z) so that x = X/Z for a
  *  non-zero Z, with two possible y-coordinates.
  *
- *  In this implementation, Z is always 1.
+ *  In this implementation, Z is always 1 (or 0 for the PAI), except inside
+ *  a scalar multiplication, where the coordinates are randomized.
  *
  *  The PAI (or neutral point) is (X, 0).
  */
@@ -95,20 +96,25 @@ STATIC void curve25519_ladder_step(uint32_t x2[10], uint32_t z2[10], uint32_t x3
  * @param[in]   k       The scalar encoded in big-endian mode.
  * @param[in]   len     Length of the scalar in bytes.
  * @param[in]   Pin     The input point B.
+ * @param[in]   seed    A random value, for the randomization of the coordinates.
  */
 STATIC void curve25519_scalar_internal(Point *Pout,
                                        const uint8_t *k, size_t len,
-                                       const Point *Pin)
+                                       const Point *Pin,
+                                       uint64_t seed)
 {
     Point P2, P3;
+    uint32_t mu[10];
+    uint64_t state = seed;
     unsigned bit_idx, swap;
     size_t scan;
 
-    /* P2 = PAI */
+    /* P2 = PAI = (lambda : 0), P3 = (mu*X : mu*Z): randomized coordinates */
     memset(&P2, 0, sizeof P2);
-    P2.X[0] = 1;
-
-    P3 = *Pin;
+    random_fe_25519(P2.X, &state);
+    random_fe_25519(mu, &state);
+    mul_25519(P3.X, Pin->X, mu);
+    mul_25519(P3.Z, Pin->Z, mu);
 
     /*
      * https://eprint.iacr.org/2020/956.pdf
@@ -224,7 +230,7 @@ EXPORT_SYM int curve25519_scalar(Point *P, const uint8_t *scalar, size_t scalar_
     if ((NULL == P) || (NULL == scalar))
         return ERR_NULL;
 
-    curve25519_scalar_internal(P, scalar, scalar_len, P);
+    curve25519_scalar_internal(P, scalar, scalar_len, P, seed);
     return 0;
 }
 
@@ -269,7 +275,7 @@ int main(void)
     }
 
     for (i=0; i<10000 && res == 0; i++) {
-        curve25519_scalar_internal(&Pout, secret, sizeof secret, Pin);
+        curve25519_scalar_internal(&Pout, secret, sizeof secret, Pin, i);
     }
 
     curve25519_free_point(Pin);

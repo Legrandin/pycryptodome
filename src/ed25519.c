@@ -158,30 +158,6 @@ static void print_point_le8(const Point *p)
  */
 static const uint64_t order8[4] = { 0xc09318d2e7ae9f68ULL, 0xa6f7cef517bce6b2ULL, 0, 0x8000000000000000ULL };
 
-/** The next value of a SplitMix64 generator, as ec_next_random() in ec_common.c **/
-static uint64_t ed25519_next_random(uint64_t *state)
-{
-    uint64_t z;
-
-    *state += 0x9E3779B97F4A7C15ULL;
-    z = *state;
-    z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ULL;
-    z = (z ^ (z >> 27)) * 0x94D049BB133111EBULL;
-    return z ^ (z >> 31);
-}
-
-/** A random field element in [1, 2²⁵⁴), so never zero modulo 2²⁵⁵ - 19 **/
-static void ed25519_random_fe(uint32_t out[10], uint64_t *state)
-{
-    unsigned i;
-
-    for (i=0; i<10; i++) {
-        out[i] = (uint32_t)(ed25519_next_random(state) & ((i & 1) ? MASK25 : MASK26));
-    }
-    out[9] &= (1U << 24) - 1;
-    out[0] |= 1;
-}
-
 /*
  * Allocate the 64-bit words (little-endian) for a number of nbits bits,
  * and load the big-endian scalar k (len bytes, with 8*len <= nbits) in it.
@@ -437,14 +413,14 @@ STATIC int ed25519_scalar_internal(Point *Pout,
         return ERR_MEMORY;
 
     /* kb = k + r*8L */
-    r = ed25519_next_random(&state) >> (64 - ED25519_BLIND_BITS);
+    r = next_random_25519(&state) >> (64 - ED25519_BLIND_BITS);
     carry = 0;
     for (i=0; i<nw; i++) {
         kb[i] = ct_mac(i < 4 ? order8[i] : 0, r, kb[i], carry, &carry);
     }
 
     /* R0 = (0, lambda, lambda, 0), the neutral point */
-    ed25519_random_fe(lambda, &state);
+    random_fe_25519(lambda, &state);
     memset(&R0, 0, sizeof R0);
     memcpy(R0.Y, lambda, sizeof lambda);
     memcpy(R0.Z, lambda, sizeof lambda);
