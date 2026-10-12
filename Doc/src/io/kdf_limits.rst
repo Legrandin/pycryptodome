@@ -26,6 +26,10 @@ Both are keyword arguments of:
 The limits do not apply when encrypting a key (for instance, with ``export_key()``):
 the caller chooses the parameters then.
 
+A similar limit, ``max_cost``, protects :func:`Crypto.Protocol.KDF.bcrypt_check`,
+when it verifies a password against a bcrypt hash that states its own cost
+(see `bcrypt password hashes`_).
+
 Default limits
 --------------
 
@@ -215,6 +219,6 @@ What is not covered
 * Private keys encrypted with the legacy PEM encryption (``Proc-Type: 4,ENCRYPTED``):
   their key derivation has a fixed, low cost.
 * Password hashes checked with :func:`Crypto.Protocol.KDF.bcrypt_check`:
-  they have their own limit (see below).
+  they have their own limit, ``max_cost`` (see `bcrypt password hashes`_).
 
 .. _`PKCS#8`: https://datatracker.ietf.org/doc/html/rfc5208
