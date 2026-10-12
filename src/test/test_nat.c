@@ -6,8 +6,8 @@
 
 /* Private functions (they are not static when STATIC is defined as empty) */
 void wipe(void *p, size_t len);
-void words_shr_public(uint64_t *out, const uint64_t *x, size_t s, size_t nw);
-void words_shl_public(uint64_t *out, const uint64_t *x, size_t s, size_t nw);
+void words_shr_public(uint64_t *out, size_t out_nw, const uint64_t *x, size_t x_nw, size_t s);
+void words_shl_public(uint64_t *out, size_t out_nw, const uint64_t *x, size_t x_nw, size_t s);
 int mulmod_words(uint64_t *out, const uint64_t *x, const uint64_t *y, const Nat *m, Nat *prod);
 uint64_t div128_ct(uint64_t hi, uint64_t lo, uint64_t d);
 uint64_t reciprocal_ct(uint64_t d);
@@ -546,7 +546,7 @@ void test_words_add_sub(void)
 void test_words_shifts(void)
 {
     uint64_t x[3] = { 0x8000000000000001ULL, 0x0123456789ABCDEFULL, 0xF000000000000000ULL };
-    uint64_t a[3], b[3], tmp[3];
+    uint64_t a[3], b[3], c[4], tmp[3];
     size_t k;
 
     memcpy(a, x, sizeof x);
@@ -558,37 +558,51 @@ void test_words_shifts(void)
     words_shr1(a, 1, 3);
     assert(a[2] == 0xF800000000000000ULL);
 
-    words_shr_public(a, x, 0, 3);
+    words_shr_public(a, 3, x, 3, 0);
     assert(memcmp(a, x, sizeof x) == 0);
-    words_shr_public(a, x, 64, 3);
+    words_shr_public(a, 3, x, 3, 64);
     assert(a[0] == x[1] && a[1] == x[2] && a[2] == 0);
-    words_shr_public(a, x, 68, 3);
+    words_shr_public(a, 3, x, 3, 68);
     assert(a[0] == 0x00123456789ABCDEULL);
     assert(a[1] == 0x0F00000000000000ULL && a[2] == 0);
-    words_shr_public(a, x, 192, 3);
+    words_shr_public(a, 3, x, 3, 192);
     assert(a[0] == 0 && a[1] == 0 && a[2] == 0);
 
-    words_shl_public(a, x, 0, 3);
+    words_shl_public(a, 3, x, 3, 0);
     assert(memcmp(a, x, sizeof x) == 0);
-    words_shl_public(a, x, 64, 3);
+    words_shl_public(a, 3, x, 3, 64);
     assert(a[0] == 0 && a[1] == x[0] && a[2] == x[1]);
-    words_shl_public(a, x, 4, 3);
+    words_shl_public(a, 3, x, 3, 4);
     assert(a[0] == 0x0000000000000010ULL);
     assert(a[1] == 0x123456789ABCDEF8ULL);
     assert(a[2] == 0x0000000000000000ULL);
-    words_shl_public(a, x, 192, 3);
+    words_shl_public(a, 3, x, 3, 192);
     assert(a[0] == 0 && a[1] == 0 && a[2] == 0);
+
+    /* Output shorter and longer than the input, and huge shifts */
+    words_shr_public(a, 2, x, 3, 4);
+    assert(a[0] == 0xF800000000000000ULL && a[1] == 0x00123456789ABCDEULL);
+    words_shr_public(c, 4, x, 3, 4);
+    assert(c[0] == a[0] && c[1] == a[1] && c[2] == 0x0F00000000000000ULL && c[3] == 0);
+    words_shl_public(c, 4, x, 3, 68);
+    assert(c[0] == 0 && c[1] == 0x10 && c[2] == 0x123456789ABCDEF8ULL && c[3] == 0);
+    words_shl_public(a, 1, x, 3, 4);
+    assert(a[0] == 0x0000000000000010ULL);
+    words_shr_public(c, 4, x, 3, SIZE_MAX);
+    assert(c[0] == 0 && c[1] == 0 && c[2] == 0 && c[3] == 0);
+    words_shl_public(c, 4, x, 3, SIZE_MAX);
+    assert(c[0] == 0 && c[1] == 0 && c[2] == 0 && c[3] == 0);
 
     /* The secret shifts give the same result as the public ones */
     for (k=0; k<=192; k++) {
         memcpy(a, x, sizeof x);
         words_shr_secret(a, k, tmp, 3);
-        words_shr_public(b, x, k, 3);
+        words_shr_public(b, 3, x, 3, k);
         assert(memcmp(a, b, sizeof a) == 0);
 
         memcpy(a, x, sizeof x);
         words_shl_secret(a, k, tmp, 3);
-        words_shl_public(b, x, k, 3);
+        words_shl_public(b, 3, x, 3, k);
         assert(memcmp(a, b, sizeof a) == 0);
     }
 
