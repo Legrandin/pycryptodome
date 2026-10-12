@@ -375,7 +375,7 @@ class IntegerNat(IntegerBase):
 
     @staticmethod
     def _check_modulus(
-        modulus: Any, name: str = "Modulus", zero_error: type = ZeroDivisionError
+        modulus: IntLike, name: str = "Modulus", zero_error: type[Exception] = ZeroDivisionError
     ) -> IntegerNat:
         """Convert a modulus into an IntegerNat.
 
