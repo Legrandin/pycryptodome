@@ -37,6 +37,10 @@ Breaking changes
 * Ed25519 and Ed448 points (public keys, and ``R`` in signatures) are decoded
   strictly as in RFC 8032: an encoding with x = 0 and the sign bit of x set,
   or (for Ed448) with any of the 7 low bits of the last byte set, is now rejected.
+* RSA keys are limited to a modulus of 16384 bits: ``RSA.generate()``,
+  ``RSA.construct()`` and ``RSA.import_key()`` raise ``ValueError`` for
+  larger ones. The constant-time arithmetic is slower than GMP, and a large
+  public key from an untrusted source could take minutes to import or use.
 
 Resolved issues
 ---------------

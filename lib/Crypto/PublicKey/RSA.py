@@ -36,6 +36,7 @@ from typing import TYPE_CHECKING, Callable, Optional, Union
 __all__ = ["generate", "construct", "import_key", "RsaKey", "oid"]
 
 import binascii
+import math
 import struct
 
 from Crypto import Random
@@ -49,6 +50,10 @@ from Crypto.PublicKey import (
 from Crypto.Util._bytes import tobytes
 from Crypto.Util.asn1 import DerNull, DerSequence
 from Crypto.Util.number import bytes_to_long
+
+# The largest RSA modulus accepted, in bits. The cost of the operations
+# grows quickly with the size, and a public key may come from anyone.
+MAX_MODULUS_BITS = 16384
 
 if TYPE_CHECKING:
     from Crypto.IO._PBES import ProtParams
@@ -530,6 +535,7 @@ def generate(bits: int, randfunc: Optional[RNG] = None, e: Int = 65537) -> RsaKe
         Key length, or size (in bits) of the RSA modulus.
         It must be at least 1024, but **2048 is recommended.**
         The FIPS standard only defines 1024, 2048 and 3072.
+        It cannot be larger than 16384.
     Keyword Args:
       randfunc (callable):
         Function that returns random bytes.
@@ -548,6 +554,8 @@ def generate(bits: int, randfunc: Optional[RNG] = None, e: Int = 65537) -> RsaKe
 
     if bits < 1024:
         raise ValueError("RSA modulus length must be >= 1024")
+    if bits > MAX_MODULUS_BITS:
+        raise ValueError("RSA modulus length must be <= %d" % MAX_MODULUS_BITS)
     if e % 2 == 0 or e < 3:
         raise ValueError("RSA public exponent must be a positive, odd integer larger than 2.")
 
@@ -608,7 +616,8 @@ def construct(
 ) -> RsaKey:
     r"""Construct an RSA key from a tuple of valid RSA components.
 
-    The modulus **n** must be the product of two primes.
+    The modulus **n** must be the product of two primes,
+    and it cannot be larger than 16384 bits.
     The public exponent **e** must be odd and larger than 1.
 
     In case of a private key, the following equations must apply:
@@ -652,6 +661,9 @@ def construct(
 
     n = input_comps["n"]
     e = input_comps["e"]
+    # Also without the consistency check: n is public, and it bounds the cost of everything else
+    if n.size_in_bits() > MAX_MODULUS_BITS:
+        raise ValueError("RSA modulus is larger than %d bits" % MAX_MODULUS_BITS)
     if "d" not in input_comps:
         key = RsaKey(n=n, e=e)
     else:
@@ -710,7 +722,7 @@ def construct(
         # Modulus and public exponent must be coprime
         if e <= 1 or e >= n:
             raise ValueError("Invalid RSA public exponent")
-        if Integer(n).gcd(e) != 1:
+        if math.gcd(int(n), int(e)) != 1:
             raise ValueError("RSA public exponent is not coprime to modulus")
 
         # For RSA, modulus must be odd
