@@ -16,30 +16,11 @@
 #include "nat.h"
 #include "ec_common.h"
 
-typedef struct {
-    size_t nw;              /* 64-bit words of a field element */
-    size_t len;             /* bytes of an encoded coordinate */
-    EcField *field;         /* the field: arithmetic modulo p (constants only) */
-    Nat *p_minus_2;         /* the exponent of the inversion (Fermat) */
-    size_t p_bits;
-    uint64_t *b;            /* b, as a field element */
-    uint64_t *gx, *gy;      /* the generator G (affine, field elements) */
-    Nat *order;             /* n */
-    size_t k_words;         /* 64-bit words of a blinded scalar */
-    size_t windows;         /* windows of a blinded scalar */
-    uint64_t *g_table;      /* windows*EC_DIGITS affine points, x then y:
-                               entry j of window i is (j+1) * 32^i * G */
-} EcCurve;
+/* A curve (b is the constant of the formulas: g->param) */
+typedef EcGroup EcCurve;
 
-/*
- * A point in projective coordinates (X:Y:Z), as field elements.
- * It can be freed after its curve (nw is a copy).
- */
-typedef struct {
-    const EcCurve *curve;
-    size_t nw;
-    uint64_t *x, *y, *z;
-} EcPointN;
+/* A point in projective coordinates (X:Y:Z); the point at infinity is (0:1:0) */
+typedef EcPoint EcPointN;
 
 EXPORT_SYM int ec_nat_new_curve(EcCurve **out,
                                 const uint8_t *p, const uint8_t *b, const uint8_t *order,

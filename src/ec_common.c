@@ -512,3 +512,553 @@ cleanup:
     nat_words_free(zinv, nw);
     return res;
 }
+
+/* ---------------------------------------------------------------- */
+/* Curves with points in projective coordinates (X:Y:Z)             */
+/* ---------------------------------------------------------------- */
+
+void ec_point_set_neutral(const EcGroup *g, uint64_t *x, uint64_t *y, uint64_t *z)
+{
+    const size_t nw = g->nw;
+
+    memset(x, 0, nw*sizeof(uint64_t));
+    memcpy(y, g->field->one, nw*sizeof(uint64_t));
+    if (g->edwards)
+        memcpy(z, g->field->one, nw*sizeof(uint64_t));
+    else
+        memset(z, 0, nw*sizeof(uint64_t));
+}
+
+/** The offset of the coordinate that a negation changes: X (Edwards) or Y **/
+static size_t ec_neg_offset(const EcGroup *g)
+{
+    return g->edwards ? 0 : g->nw;
+}
+
+/*
+ * (rx:ry:rz) = k * (px:py:pz), for any point (variable base), with the
+ * scalar kb (g->k_words words) over its lowest windows.
+ *
+ * A table of the multiples 0P ... 16P (projective) is built, from a
+ * randomized copy of P (coordinates multiplied by lambda); then, for each
+ * window from the top: 5 doublings, a full scan of the table for the
+ * digit, a conditional negation, and an addition. The output may be
+ * the input.
+ *
+ * For a public scalar, windows can be fewer than for a blinded one.
+ */
+STATIC int ec_mul_var(EcWs *ws, const EcGroup *g,
+                      uint64_t *rx, uint64_t *ry, uint64_t *rz,
+                      const uint64_t *px, const uint64_t *py, const uint64_t *pz,
+                      const uint64_t *kb, size_t windows, const uint64_t *lambda)
+{
+    const size_t nw = g->nw;
+    const size_t entries = EC_DIGITS + 1;
+    const size_t neg = ec_neg_offset(g);
+    uint64_t *table, *acc, *sel, *t;
+    size_t i, j, w;
+    int res = ERR_MEMORY;
+
+    table = nat_words_alloc(3*entries*nw);
+    acc = nat_words_alloc(3*nw);
+    sel = nat_words_alloc(3*nw);
+    t = nat_words_alloc(nw);
+    if (!table || !acc || !sel || !t)
+        goto cleanup;
+
+#define TX(j) (table + (3*(j) + 0)*nw)
+#define TY(j) (table + (3*(j) + 1)*nw)
+#define TZ(j) (table + (3*(j) + 2)*nw)
+
+    /* T[0] = neutral, T[1] = P (randomized), T[j] = T[j-1] + P */
+    ec_point_set_neutral(g, TX(0), TY(0), TZ(0));
+    fe_mul(ws, TX(1), px, lambda);
+    fe_mul(ws, TY(1), py, lambda);
+    fe_mul(ws, TZ(1), pz, lambda);
+    for (j=2; j<entries; j++)
+        g->add(ws, g, TX(j), TY(j), TZ(j), TX(j-1), TY(j-1), TZ(j-1), TX(1), TY(1), TZ(1));
+
+#undef TX
+#undef TY
+#undef TZ
+
+    ec_point_set_neutral(g, acc, acc + nw, acc + 2*nw);
+
+    for (w=windows; w-- > 0;) {
+        uint64_t sign, digit;
+
+        for (i=0; i<EC_WINDOW; i++)
+            g->dbl(ws, g, acc, acc + nw, acc + 2*nw, acc, acc + nw, acc + 2*nw);
+
+        ec_booth_digit(kb, g->k_words, w, &sign, &digit);
+        ec_table_select(sel, table, entries, 3*nw, digit);
+
+        /* Negative digit */
+        fe_neg(ws, t, sel + neg);
+        words_select(sel + neg, ct_mask(sign), t, sel + neg, nw);
+
+        g->add(ws, g, acc, acc + nw, acc + 2*nw, acc, acc + nw, acc + 2*nw, sel, sel + nw, sel + 2*nw);
+    }
+
+    fe_copy(ws, rx, acc);
+    fe_copy(ws, ry, acc + nw);
+    fe_copy(ws, rz, acc + 2*nw);
+    res = 0;
+
+cleanup:
+    nat_words_free(table, 3*entries*nw);
+    nat_words_free(acc, 3*nw);
+    nat_words_free(sel, 3*nw);
+    nat_words_free(t, nw);
+    return res;
+}
+
+/*
+ * (rx:ry:rz) = k * G, with the precomputed tables (fixed base) and the
+ * scalar kb (g->k_words words) over its lowest windows.
+ *
+ * For each window i: a full scan of its table for the digit, a
+ * conditional negation, and an addition of the affine point. There are
+ * no doublings. A zero digit selects no point: the addition is computed
+ * anyway, and its result discarded with a mask. The accumulator starts as
+ * the neutral point with randomized coordinates (multiplied by lambda).
+ *
+ * For a public scalar, windows can be fewer than for a blinded one.
+ */
+STATIC int ec_mul_g(EcWs *ws, const EcGroup *g,
+                    uint64_t *rx, uint64_t *ry, uint64_t *rz,
+                    const uint64_t *kb, size_t windows, const uint64_t *lambda)
+{
+    const size_t nw = g->nw;
+    const size_t neg = ec_neg_offset(g);
+    uint64_t *acc, *sum, *sel, *t;
+    size_t i, w;
+    int res = ERR_MEMORY;
+
+    acc = nat_words_alloc(3*nw);
+    sum = nat_words_alloc(3*nw);
+    sel = nat_words_alloc(2*nw);
+    t = nat_words_alloc(nw);
+    if (!acc || !sum || !sel || !t)
+        goto cleanup;
+
+    ec_point_set_neutral(g, acc, acc + nw, acc + 2*nw);
+    for (i=0; i<3; i++)
+        fe_mul(ws, acc + i*nw, acc + i*nw, lambda);
+
+    for (w=0; w<windows; w++) {
+        const uint64_t *window = g->g_table + w*EC_DIGITS*2*nw;
+        uint64_t sign, digit;
+
+        ec_booth_digit(kb, g->k_words, w, &sign, &digit);
+
+        /* Entry d of the window is (d+1)*32^w*G; digit 0 selects nothing */
+        ec_table_select(sel, window, EC_DIGITS, 2*nw, digit - 1);
+
+        fe_neg(ws, t, sel + neg);
+        words_select(sel + neg, ct_mask(sign), t, sel + neg, nw);
+
+        g->add_affine(ws, g, sum, sum + nw, sum + 2*nw, acc, acc + nw, acc + 2*nw, sel, sel + nw);
+        words_select(acc, ct_mask(ct_z(digit)), acc, sum, 3*nw);
+    }
+
+    fe_copy(ws, rx, acc);
+    fe_copy(ws, ry, acc + nw);
+    fe_copy(ws, rz, acc + 2*nw);
+    res = 0;
+
+cleanup:
+    nat_words_free(acc, 3*nw);
+    nat_words_free(sum, 3*nw);
+    nat_words_free(sel, 2*nw);
+    nat_words_free(t, nw);
+    return res;
+}
+
+/*
+ * The tables of the generator: for each window i, the affine points
+ * j * 32^i * G for j = 1..16. The data is public.
+ */
+STATIC int ec_build_g_table(EcWs *ws, EcGroup *g)
+{
+    const size_t nw = g->nw;
+    const size_t count = g->windows*EC_DIGITS;
+    uint64_t *proj, *base;
+    size_t i, j, k;
+    int res = ERR_MEMORY;
+
+    g->g_table = nat_words_alloc(2*count*nw);
+    proj = nat_words_alloc(3*count*nw);
+    base = nat_words_alloc(3*nw);
+    if (!g->g_table || !proj || !base)
+        goto cleanup;
+
+#define PX(k) (proj + (3*(k) + 0)*nw)
+#define PY(k) (proj + (3*(k) + 1)*nw)
+#define PZ(k) (proj + (3*(k) + 2)*nw)
+
+    /* base = 32^i * G */
+    fe_copy(ws, base, g->gx);
+    fe_copy(ws, base + nw, g->gy);
+    fe_copy(ws, base + 2*nw, g->field->one);
+
+    for (i=0; i<g->windows; i++) {
+        k = i*EC_DIGITS;
+        memcpy(PX(k), base, 3*nw*sizeof(uint64_t));
+        for (j=1; j<EC_DIGITS; j++)
+            g->add(ws, g, PX(k+j), PY(k+j), PZ(k+j), PX(k+j-1), PY(k+j-1), PZ(k+j-1),
+                   base, base + nw, base + 2*nw);
+        /* 32 * base = 2 * (16 * base) */
+        g->dbl(ws, g, base, base + nw, base + 2*nw, PX(k+15), PY(k+15), PZ(k+15));
+    }
+
+#undef PX
+#undef PY
+#undef PZ
+
+    /* No Z is zero: the order of G is a prime larger than 16 */
+    res = ec_batch_to_affine(ws, g->g_table, proj, count, g->p_minus_2);
+
+cleanup:
+    nat_words_free(proj, 3*count*nw);
+    nat_words_free(base, 3*nw);
+    return res;
+}
+
+int ec_group_init(EcGroup *g, const uint8_t *p, const uint8_t *param, const uint8_t *n,
+                  unsigned cofactor_bits, const uint8_t *gx, const uint8_t *gy, size_t len)
+{
+    Nat *pn = NULL, *nn = NULL, *two = NULL;
+    EcWs ws;
+    int ws_ready = 0;
+    size_t nw, order_bits;
+    int res;
+
+    if (len == 0 || len > 8*NAT_MAX_WORDS)
+        return ERR_VALUE;
+    g->nw = nw = (len + 7) / 8;
+    g->len = len;
+
+    res = ERR_MEMORY;
+    pn = nat_alloc(nw);
+    nn = nat_alloc(nw);
+    two = nat_alloc(1);
+    g->p_minus_2 = nat_alloc(nw);
+    g->order = nat_alloc(nw);
+    g->param = nat_words_alloc(nw);
+    g->gx = nat_words_alloc(nw);
+    g->gy = nat_words_alloc(nw);
+    if (!pn || !nn || !two || !g->p_minus_2 || !g->order || !g->param || !g->gx || !g->gy)
+        goto cleanup;
+
+    /* The field, and the exponent p - 2 of the inversion */
+    res = nat_from_bytes(pn, p, len, 0);
+    if (res)
+        goto cleanup;
+    res = ec_field_new(&g->field, pn);
+    if (res)
+        goto cleanup;
+    two->w[0] = 2;
+    res = nat_sub(g->p_minus_2, pn, two);
+    if (res)
+        goto cleanup;
+    g->p_bits = (size_t)nat_bit_length(pn);
+
+    /* The order of the whole group, and the size of the blinded scalars */
+    res = nat_from_bytes(nn, n, len, 0);
+    if (res)
+        goto cleanup;
+    res = nat_shl(g->order, nn, cofactor_bits);
+    if (res)
+        goto cleanup;
+    order_bits = (size_t)nat_bit_length(g->order);
+    g->k_words = ec_k_words(order_bits);
+    g->windows = ec_windows(order_bits);
+
+    res = ec_ws_new(&ws, g->field);
+    if (res)
+        goto cleanup;
+    ws_ready = 1;
+
+    res = fe_from_bytes(g->param, &ws, param, len, 0);
+    if (res == 0)
+        res = fe_from_bytes(g->gx, &ws, gx, len, 0);
+    if (res == 0)
+        res = fe_from_bytes(g->gy, &ws, gy, len, 0);
+    if (res)
+        goto cleanup;
+
+    /* The generator must be on the curve */
+    if (!g->on_curve(&ws, g, g->gx, g->gy, g->field->one)) {
+        res = ERR_EC_POINT;
+        goto cleanup;
+    }
+
+    if (EC_USE_TABLES)
+        res = ec_build_g_table(&ws, g);
+
+cleanup:
+    if (ws_ready)
+        ec_ws_free(&ws);
+    nat_free(pn);
+    nat_free(nn);
+    nat_free(two);
+    return res;
+}
+
+void ec_group_clear(EcGroup *g)
+{
+    ec_field_free(g->field);
+    nat_free(g->p_minus_2);
+    nat_free(g->order);
+    nat_words_free(g->param, g->nw);
+    nat_words_free(g->gx, g->nw);
+    nat_words_free(g->gy, g->nw);
+    nat_words_free(g->g_table, 2*g->windows*EC_DIGITS*g->nw);
+}
+
+EcPoint *ec_point_alloc(const EcGroup *g)
+{
+    EcPoint *p;
+
+    p = (EcPoint*)calloc(1, sizeof(EcPoint));
+    if (NULL == p)
+        return NULL;
+    p->g = g;
+    p->nw = g->nw;
+    p->x = nat_words_alloc(3*g->nw);
+    if (NULL == p->x) {
+        free(p);
+        return NULL;
+    }
+    p->y = p->x + g->nw;
+    p->z = p->y + g->nw;
+    return p;
+}
+
+void ec_point_free(EcPoint *p)
+{
+    if (NULL == p)
+        return;
+    nat_words_free(p->x, 3*p->nw);
+    free(p);
+}
+
+int ec_point_clone(EcPoint **out, const EcPoint *p)
+{
+    if (!out || !p)
+        return ERR_NULL;
+    *out = ec_point_alloc(p->g);
+    if (NULL == *out)
+        return ERR_MEMORY;
+    memcpy((*out)->x, p->x, 3*p->nw*sizeof(uint64_t));
+    return 0;
+}
+
+int ec_point_copy(EcPoint *dst, const EcPoint *src)
+{
+    if (!dst || !src)
+        return ERR_NULL;
+    if (dst->g != src->g)
+        return ERR_EC_CURVE;
+    memcpy(dst->x, src->x, 3*src->nw*sizeof(uint64_t));
+    return 0;
+}
+
+int ec_point_get_xy(uint8_t *x, uint8_t *y, size_t len, const EcPoint *p)
+{
+    uint64_t *zinv;
+    EcWs ws;
+    int res;
+
+    if (!x || !y || !p)
+        return ERR_NULL;
+    if (len < p->g->len)
+        return ERR_NOT_ENOUGH_DATA;
+
+    res = ec_ws_new(&ws, p->g->field);
+    if (res)
+        return res;
+    zinv = ws.t[0];
+
+    /* For the point at infinity (Z = 0), 1/Z is 0 (Fermat), and so are X/Z and Y/Z */
+    res = fe_inv(&ws, zinv, p->z, p->g->p_minus_2);
+    if (res == 0) {
+        fe_mul(&ws, ws.t[1], p->x, zinv);
+        fe_mul(&ws, ws.t[2], p->y, zinv);
+        res = fe_to_bytes(x, len, &ws, ws.t[1]);
+    }
+    if (res == 0)
+        res = fe_to_bytes(y, len, &ws, ws.t[2]);
+
+    ec_ws_free(&ws);
+    return res;
+}
+
+int ec_point_cmp(const EcPoint *a, const EcPoint *b)
+{
+    uint64_t equal;
+    EcWs ws;
+
+    if (!a || !b)
+        return ERR_NULL;
+    if (a->g != b->g)
+        return ERR_EC_CURVE;
+    if (ec_ws_new(&ws, a->g->field))
+        return ERR_MEMORY;
+
+    /* X1*Z2 = X2*Z1 and Y1*Z2 = Y2*Z1 */
+    fe_mul(&ws, ws.t[0], a->x, b->z);
+    fe_mul(&ws, ws.t[1], b->x, a->z);
+    fe_mul(&ws, ws.t[2], a->y, b->z);
+    fe_mul(&ws, ws.t[3], b->y, a->z);
+    equal = words_eq(ws.t[0], ws.t[1], ws.nw) & words_eq(ws.t[2], ws.t[3], ws.nw);
+
+    ec_ws_free(&ws);
+    return ct_declassify(equal) ? 0 : ERR_VALUE;
+}
+
+int ec_point_neg(EcPoint *p)
+{
+    uint64_t *c;
+    EcWs ws;
+
+    if (!p)
+        return ERR_NULL;
+    if (ec_ws_new(&ws, p->g->field))
+        return ERR_MEMORY;
+    c = p->x + ec_neg_offset(p->g);
+    fe_neg(&ws, c, c);
+    ec_ws_free(&ws);
+    return 0;
+}
+
+int ec_point_double(EcPoint *p)
+{
+    EcWs ws;
+
+    if (!p)
+        return ERR_NULL;
+    if (ec_ws_new(&ws, p->g->field))
+        return ERR_MEMORY;
+    p->g->dbl(&ws, p->g, p->x, p->y, p->z, p->x, p->y, p->z);
+    ec_ws_free(&ws);
+    return 0;
+}
+
+int ec_point_add(EcPoint *a, const EcPoint *b)
+{
+    EcWs ws;
+
+    if (!a || !b)
+        return ERR_NULL;
+    if (a->g != b->g)
+        return ERR_EC_CURVE;
+    if (ec_ws_new(&ws, a->g->field))
+        return ERR_MEMORY;
+    a->g->add(&ws, a->g, a->x, a->y, a->z, a->x, a->y, a->z, b->x, b->y, b->z);
+    ec_ws_free(&ws);
+    return 0;
+}
+
+/** 1 if p is the generator with Z = 1, 0 otherwise **/
+static uint64_t ec_point_is_g(const EcPoint *p)
+{
+    const EcGroup *g = p->g;
+
+    return words_eq(p->x, g->gx, g->nw) & words_eq(p->y, g->gy, g->nw) &
+           words_eq(p->z, g->field->one, g->nw);
+}
+
+int ec_point_scalar(EcPoint *p, const uint8_t *k, size_t len, uint64_t seed)
+{
+    const EcGroup *g;
+    uint64_t *kb, *lambda;
+    uint64_t state = seed;
+    EcWs ws;
+    int res;
+
+    if (!p || !k)
+        return ERR_NULL;
+    if (len == 0)
+        return ERR_NOT_ENOUGH_DATA;
+    g = p->g;
+
+    res = ec_ws_new(&ws, g->field);
+    if (res)
+        return res;
+    kb = nat_words_alloc(g->k_words);
+    lambda = nat_words_alloc(g->nw);
+    if (!kb || !lambda) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
+
+    /* The random values: r for the scalar, lambda for the coordinates */
+    res = ec_blind_scalar(kb, g->k_words, g->order, k, len, ec_next_random(&state));
+    if (res)
+        goto cleanup;
+    fe_random(&ws, lambda, g->p_bits, &state);
+
+    /* Only the fact that p is the generator leaks */
+    if (EC_USE_TABLES && ct_declassify(ec_point_is_g(p)))
+        res = ec_mul_g(&ws, g, p->x, p->y, p->z, kb, g->windows, lambda);
+    else
+        res = ec_mul_var(&ws, g, p->x, p->y, p->z, p->x, p->y, p->z, kb, g->windows, lambda);
+    if (res)
+        goto cleanup;
+
+    if (!ct_declassify(g->on_curve(&ws, g, p->x, p->y, p->z)))
+        res = ERR_EC_POINT;
+
+cleanup:
+    nat_words_free(kb, g->k_words);
+    nat_words_free(lambda, g->nw);
+    ec_ws_free(&ws);
+    return res;
+}
+
+int ec_point_scalar_public(EcPoint *p, const uint8_t *k, size_t len)
+{
+    const EcGroup *g;
+    uint64_t *kw;
+    size_t windows;
+    EcWs ws;
+    int res;
+
+    if (!p || !k)
+        return ERR_NULL;
+    if (len == 0)
+        return ERR_NOT_ENOUGH_DATA;
+    g = p->g;
+
+    res = ec_ws_new(&ws, g->field);
+    if (res)
+        return res;
+    kw = nat_words_alloc(g->k_words);
+    if (!kw) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
+
+    res = ec_public_scalar(kw, g->k_words, &windows, g->order, k, len);
+    if (res)
+        goto cleanup;
+
+    if (EC_USE_TABLES && ec_point_is_g(p))
+        res = ec_mul_g(&ws, g, p->x, p->y, p->z, kw, windows, g->field->one);
+    else if (g->mul_public)
+        res = g->mul_public(&ws, g, p->x, p->y, p->z, kw, windows);
+    else
+        res = ec_mul_var(&ws, g, p->x, p->y, p->z, p->x, p->y, p->z, kw, windows, g->field->one);
+    if (res)
+        goto cleanup;
+
+    if (!g->on_curve(&ws, g, p->x, p->y, p->z))
+        res = ERR_EC_POINT;
+
+cleanup:
+    nat_words_free(kw, g->k_words);
+    ec_ws_free(&ws);
+    return res;
+}

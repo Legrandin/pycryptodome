@@ -19,28 +19,17 @@
 #define ED448_WORDS 7
 #define ED448_BYTES 56
 
-typedef struct {
-    EcField *field;         /* the field: arithmetic modulo p (constants only) */
-    Nat *p_minus_2;         /* the exponent of the inversion (Fermat) */
-    Nat *sqrt_exp;          /* (p-3)/4, for the square roots (RFC 8032, 5.2.3) */
-    size_t p_bits;
-    uint64_t *d;            /* d, as a field element */
-    uint64_t *gx, *gy;      /* the generator G (affine, field elements) */
-    Nat *group_order;       /* 4*n: the order of the whole group (cofactor 4) */
-    size_t k_words;         /* 64-bit words of a blinded scalar */
-    size_t windows;         /* windows of a blinded scalar */
-    uint64_t *g_table;      /* windows*EC_DIGITS affine points, x then y:
-                               entry j of window i is (j+1) * 32^i * G */
-} Ed448Context;
-
 /*
- * A point in projective coordinates (X:Y:Z), as field elements.
- * It can be freed after its context.
+ * The curve (d is the constant of the formulas: g.param; the scalars are
+ * taken modulo 4n, the order of the whole group, as the cofactor is 4).
  */
 typedef struct {
-    const Ed448Context *ctx;
-    uint64_t *x, *y, *z;
-} PointEd448;
+    EcGroup g;
+    Nat *sqrt_exp;          /* (p-3)/4, for the square roots (RFC 8032, 5.2.3) */
+} Ed448Context;
+
+/* A point in projective coordinates (X:Y:Z); the neutral point is (0:1:1) */
+typedef EcPoint PointEd448;
 
 EXPORT_SYM int ed448_new_context(Ed448Context **out);
 EXPORT_SYM void ed448_free_context(Ed448Context *ctx);

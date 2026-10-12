@@ -139,7 +139,7 @@ static void get_xy(const EcPointN *p)
 {
     uint8_t x[MAX_LEN], y[MAX_LEN];
 
-    assert(ec_nat_get_xy(x, y, p->curve->len, p) == 0);
+    assert(ec_nat_get_xy(x, y, p->g->len, p) == 0);
 }
 
 static void scalar(EcPointN *p, size_t len)
