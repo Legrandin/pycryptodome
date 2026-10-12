@@ -34,11 +34,12 @@ static uint64_t rnd(void)
 /* Secret scalar, public and secret u-coordinate */
 int main(void)
 {
-    Point *p;
+    Point *p, *pai;
     uint8_t u[32], k[32], x[32];
     uint64_t seed;
     unsigned i, j;
 
+    assert(curve25519_new_point(&pai, NULL, 0, NULL) == 0);
     for (i=0; i<4; i++) {
         for (j=0; j<32; j++) {
             u[j] = (uint8_t)rnd();
@@ -57,7 +58,9 @@ int main(void)
         assert(curve25519_scalar(p, k, 32, seed) == 0);
         /* Only the fact that the result is the point at infinity leaks */
         (void)curve25519_get_x(x, 32, p);
+        (void)curve25519_cmp(p, pai);
         curve25519_free_point(p);
     }
+    curve25519_free_point(pai);
     return 0;
 }

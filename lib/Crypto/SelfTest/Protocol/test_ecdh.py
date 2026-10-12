@@ -422,6 +422,17 @@ class TestX448:
                 DH.import_x448_public_key(unhexlify(x))
 
 
+@pytest.mark.parametrize("curve", ["P-256", "P-521", "Curve25519", "Curve448"])
+def test_shared_point_at_infinity(curve):
+    """The shared point is the point at infinity: no secret is derived"""
+
+    priv = ECC.generate(curve=curve)
+    # The point at infinity, as a public key (not validated)
+    pai = ECC.EccKey(curve=curve, point=priv.pointQ.point_at_infinity())
+    with pytest.raises(ValueError, match="Invalid ECDH point"):
+        key_agreement(static_priv=priv, static_pub=pai, kdf=lambda x: x)
+
+
 def load_wycheproof_vectors_x25519():
     vectors = []
 

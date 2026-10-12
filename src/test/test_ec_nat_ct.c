@@ -271,12 +271,13 @@ static void run_ed448(void)
 static void run_x448(void)
 {
     Curve448Context *ctx;
-    Curve448Point *p;
+    Curve448Point *p, *pai;
     uint8_t u[56], k[56], x[56];
     uint64_t seed;
     unsigned i, j;
 
     assert(curve448_new_context(&ctx) == 0);
+    assert(curve448_new_point(&pai, NULL, 0, ctx) == 0);
     for (i=0; i<4; i++) {
         for (j=0; j<56; j++) {
             u[j] = (uint8_t)rnd();
@@ -295,8 +296,10 @@ static void run_x448(void)
         assert(curve448_scalar(p, k, 56, seed) == 0);
         /* Only the fact that the result is the point at infinity leaks */
         (void)curve448_get_x(x, 56, p);
+        (void)curve448_cmp(p, pai);
         curve448_free_point(p);
     }
+    curve448_free_point(pai);
     curve448_free_context(ctx);
 }
 

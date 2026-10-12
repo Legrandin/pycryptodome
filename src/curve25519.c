@@ -210,7 +210,8 @@ EXPORT_SYM int curve25519_get_x(uint8_t *xb, size_t modsize, const Point *p)
     if (modsize != 32)
         return ERR_MODULUS;
 
-    if (is_le25p5_zero(p->Z))
+    /* Only the fact that it is the point at infinity leaks */
+    if (ct_declassify(is_le25p5_zero(p->Z)))
         return ERR_EC_PAI;
 
     convert_le25p5_to_be8(xb, p->X);
@@ -232,17 +233,18 @@ EXPORT_SYM int curve25519_cmp(const Point *p1, const Point *p2)
     uint32_t tmp[10];
     uint8_t bin1[32], bin2[32];
     unsigned int i;
-    int res = 0;
+    uint8_t diff = 0;
 
     mul_25519(tmp, p1->X, p2->Z);
     convert_le25p5_to_le8(bin1, tmp);
     mul_25519(tmp, p2->X, p1->Z);
     convert_le25p5_to_le8(bin2, tmp);
     for (i=0; i<sizeof bin1; i++) {
-        res |= bin1[i] != bin2[i];
+        diff |= bin1[i] ^ bin2[i];
     }
 
-    return res;
+    /* The points may be secret (ECDH): only the result leaks */
+    return (int)ct_declassify(ct_nz(diff));
 }
 
 #ifdef PROFILE

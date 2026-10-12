@@ -143,7 +143,7 @@ STATIC int is_le25p5_zero(const uint32_t in[10])
     convert_le25p5_to_le64(out64, in);
     reduce_25519_le64(out64);
 
-    return (out64[0] | out64[1] | out64[2] | out64[3]) == 0;
+    return (int)ct_z(out64[0] | out64[1] | out64[2] | out64[3]);
 }
 
 static int hex2bin(char in)
@@ -393,7 +393,7 @@ STATIC void cswap(uint32_t a[10], uint32_t b[10], uint32_t c[10], uint32_t d[10]
 {
     uint32_t mask, i, e, f;
 
-    mask = (uint32_t)(0 - (swap!=0));   /* 0 if swap is 0, all 1s if swap is !=0 */
+    mask = (uint32_t)ct_mask(ct_nz(swap));  /* 0 if swap is 0, all 1s if swap is !=0 */
     for (i=0; i<10; i++) {
         e = mask & (a[i] ^ c[i]);
         a[i] ^= e;

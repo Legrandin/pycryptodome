@@ -39,12 +39,15 @@ def _encode_coordinate(value: Union[int, IntegerBase], length: int) -> bytes:
 def _encode_scalar(scalar: Union[int, IntegerBase], min_length: int) -> bytes:
     """Encode a scalar (big endian).
 
-    An Integer (possibly secret) is encoded with at least ``min_length``
-    bytes, so that its actual length does not leak.
+    An Integer (possibly secret) is encoded with ``min_length`` bytes,
+    so that its actual length does not leak. Only a longer one needs more.
     """
 
     if isinstance(scalar, IntegerBase):
-        return scalar.to_bytes(max(min_length, scalar.size_in_bytes()))
+        try:
+            return scalar.to_bytes(min_length)
+        except ValueError:
+            return scalar.to_bytes()
     return long_to_bytes(scalar)
 
 
@@ -310,10 +313,8 @@ class EccPoint:
     def is_point_at_infinity(self) -> bool:
         """``True`` if this is the *point-at-infinity*."""
 
-        if self._curve.is_edwards:
-            return self.x == 0
-        else:
-            return self.xy == (0, 0)
+        # Compared in C, as the point may be secret (ECDH): only the result leaks
+        return self == self.point_at_infinity()
 
     def point_at_infinity(self) -> EccPoint:
         """Return the *point-at-infinity* for the curve."""
@@ -523,17 +524,18 @@ class EccXPoint:
     def copy(self) -> EccXPoint:
         """Return a copy of this point."""
 
-        try:
-            x = self.x
-        except ValueError:
-            return self.point_at_infinity()
-        return EccXPoint(x, self.curve)
+        np = EccXPoint.__new__(EccXPoint)
+        np._curve = self._curve
+        np.curve = self.curve
+        return np.set(self)
 
     def is_point_at_infinity(self) -> bool:
         """``True`` if this is the *point-at-infinity*."""
 
+        # The x coordinate stays in bytes, as the point may be secret (ECDH):
+        # only the result leaks
         try:
-            _ = self.x
+            self._get_x_bytes()
         except ValueError:
             return True
         return False
