@@ -66,7 +66,9 @@ def _pbkdf2_hmac_assist(inner, outer, first_digest: bytes, iterations: int) -> b
     because :func:`Crypto.Protocol.KDF.PBKDF2` looks for it there.
     """
 
-    assert iterations > 0
+    # Not an assert: a negative number would become a huge one in C
+    if iterations < 1:
+        raise ValueError("The number of iterations must be positive")
 
     bfr = create_string_buffer(len(first_digest))
     result = _raw_keccak_lib.keccak_pbkdf2_hmac_assist(

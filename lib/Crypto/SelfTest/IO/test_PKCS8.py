@@ -547,8 +547,12 @@ class TestKeyKdfParams:
             assert module.import_key(encrypted, "pw", threads=threads) == key
         assert scrypt_threads == [min(available_cores(), 3), 1, 3]
 
-    # Each scrypt thread needs 128 * N * r bytes
-    memory = 128 * 1024 * 1
+    @staticmethod
+    def _memory(threads):
+        """The memory of scrypt with N=1024, r=1 and p=3 (see self.prot):
+        128*r*p bytes for the input and the output of all flows,
+        and 128*(N+2)*r bytes for each thread."""
+        return 2 * 128 * 1 * 3 + threads * 128 * (1024 + 2) * 1
 
     @pytest.mark.parametrize("name", ["RSA", "DSA", "ECC"])
     @pytest.mark.parametrize("fmt", ["DER", "PEM"])
@@ -557,16 +561,35 @@ class TestKeyKdfParams:
         encrypted = self._export(name, key, fmt, 1)
         del scrypt_threads[:]
         # Fewer threads (2 instead of 3), so that the memory is within the limit
-        for limit in (2 * self.memory, 3 * self.memory - 1):
+        for limit in (self._memory(2), self._memory(3) - 1):
             assert module.import_key(encrypted, "pw", threads=3, max_memory=limit) == key
         assert module.import_key(encrypted, "pw", threads=3, max_memory=0) == key
         assert scrypt_threads == [2, 2, 3]
         # Not even one thread fits: the specific error is not hidden
-        expected = _PBES._MEMORY_ERROR.format(memory=self.memory, limit=self.memory - 1)
+        expected = _PBES._MEMORY_ERROR.format(memory=self._memory(1), limit=self._memory(1) - 1)
         with pytest.raises(PKCS8.PbesMemoryError) as ctx:
-            module.import_key(encrypted, "pw", max_memory=self.memory - 1)
+            module.import_key(encrypted, "pw", max_memory=self._memory(1) - 1)
         assert str(ctx.value) == expected
         assert isinstance(ctx.value, PKCS8.PbesLimitError)
+
+    def test_rsa_payload_is_pkcs1(self, keys):
+        """The payload of an RSA PKCS#8 key must be an RSAPrivateKey:
+        not another PKCS#8 container (encrypted or not), nor a public key."""
+        from Crypto.PublicKey import RSA
+
+        _, key = keys["RSA"]
+        rsa_oid = "1.2.840.113549.1.1.1"
+        pkcs8_clear = key.export_key(format="DER", pkcs=8)
+        pkcs8_encrypted = key.export_key(format="DER", passphrase="pw", pkcs=8, **self.prot)
+        public = key.public_key().export_key(format="DER")
+        for payload in (pkcs8_clear, pkcs8_encrypted, public):
+            wrapped = PKCS8.wrap(payload, rsa_oid, "pw", key_params=DerNull(), **self.prot)
+            with pytest.raises(ValueError):
+                RSA.import_key(wrapped, "pw")
+        # The usual payload
+        pkcs1 = key.export_key(format="DER", pkcs=1)
+        wrapped = PKCS8.wrap(pkcs1, rsa_oid, "pw", key_params=DerNull(), **self.prot)
+        assert RSA.import_key(wrapped, "pw") == key
 
     @pytest.mark.parametrize("name", ["RSA", "DSA", "ECC"])
     def test_max_memory_negative(self, keys, name):

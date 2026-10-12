@@ -65,6 +65,13 @@ _DEFAULT_MAX_ITERATION_COUNT = 50_000_000
 #: Maximum scrypt cost N*r*p/8 (that is, N for r=8 and p=1)
 _DEFAULT_MAX_SCRYPT_COST = 2**25
 
+#: Besides the N*r*p work of its flows, scrypt does some work in proportion to
+#: r*p only (the two PBKDF2 steps, over 128*r*p bytes), about as much as
+#: 128*r*p of the former. In the cost, N counts as at least this value,
+#: which accounts for that work within ~12%, and leaves the cost of any
+#: real key (N >= 1024) unchanged.
+_SCRYPT_MIN_N_COST = 1024
+
 #: Maximum memory for the key derivation (when max_memory is None): 256 MiB,
 #: for all threads together. Only scrypt needs a significant amount
 #: (128*N*r bytes for each thread).
@@ -126,11 +133,20 @@ def _check_iteration_count(what: str, count: int, max_iteration_count: Optional[
         raise PbesIterationCountError(_ITERATION_COUNT_ERROR.format(what=what, count=count, limit=limit))
 
 
+def _check_scrypt_params(N: int, r: int, p: int) -> None:
+    """Raise :class:`PbesError` if the parameters are not valid for scrypt
+    (RFC 7914): N a power of 2 larger than 1, r and p positive."""
+
+    if N < 2 or (N & (N - 1)) or r < 1 or p < 1:
+        raise PbesError("Invalid scrypt parameters")
+
+
 def _check_scrypt_cost(N: int, r: int, p: int, max_iteration_count: Optional[int]) -> None:
     """Raise :class:`PbesIterationCountError` if the cost N*r*p/8 of scrypt
-    is above ``max_iteration_count`` (``None`` for the default limit)."""
+    (with N at least :data:`_SCRYPT_MIN_N_COST`) is above ``max_iteration_count``
+    (``None`` for the default limit)."""
 
-    cost = (N * r * p + 7) // 8
+    cost = (max(N, _SCRYPT_MIN_N_COST) * r * p + 7) // 8
     _check_iteration_count(_SCRYPT_COST, cost, max_iteration_count, _DEFAULT_MAX_SCRYPT_COST)
 
 
@@ -149,11 +165,12 @@ def _scrypt_threads(N: int, r: int, p: int, threads: int, max_memory: Optional[i
         limit = str(max_memory)
 
     threads = min(threads_param(threads), p)
-    memory = 128 * N * r  # For each thread
+    shared = 2 * 128 * r * p  # The input and the output of all flows
+    each = 128 * (N + 2) * r  # The memory of ROMix, for each thread
     if max_memory:
-        if memory > max_memory:
-            raise PbesMemoryError(_MEMORY_ERROR.format(memory=memory, limit=limit))
-        threads = min(threads, max_memory // memory)
+        if shared + each > max_memory:
+            raise PbesMemoryError(_MEMORY_ERROR.format(memory=shared + each, limit=limit))
+        threads = min(threads, (max_memory - shared) // each)
     return max(threads, 1)
 
 
@@ -286,6 +303,8 @@ class PBES1:
         salt = DerOctetString().decode(pbe_params[0]).payload
         iterations = pbe_params[1]
 
+        if iterations < 1:
+            raise PbesError("Invalid PBKDF1 iteration count")
         _check_iteration_count(_PBKDF1_COUNT, iterations, max_iteration_count, _DEFAULT_MAX_ITERATION_COUNT)
 
         key_iv = PBKDF1(passphrase, salt, 16, iterations, hashmod)
@@ -557,6 +576,8 @@ class PBES2:
             pbkdf2_params = DerSequence().decode(kdf_info[1], nr_elements=(2, 3, 4))
             salt = DerOctetString().decode(pbkdf2_params[0]).payload
             iteration_count = pbkdf2_params[1]
+            if iteration_count < 1:
+                raise PbesError("Invalid PBKDF2 iteration count")
 
             left = len(pbkdf2_params) - 2
             idx = 2
@@ -591,6 +612,7 @@ class PBES2:
             salt = DerOctetString().decode(scrypt_params[0]).payload
             iteration_count, scrypt_r, scrypt_p = (scrypt_params[x] for x in (1, 2, 3))
 
+            _check_scrypt_params(iteration_count, scrypt_r, scrypt_p)
             _check_scrypt_cost(iteration_count, scrypt_r, scrypt_p, max_iteration_count)
             threads = _scrypt_threads(iteration_count, scrypt_r, scrypt_p, threads, max_memory)
 

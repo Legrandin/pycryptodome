@@ -796,7 +796,9 @@ def _import_pkcs8(encoded, passphrase, max_iteration_count=None, threads=1, max_
     k = PKCS8.unwrap(encoded, passphrase, max_iteration_count, threads=threads, max_memory=max_memory)
     if k[0] not in oids:
         raise ValueError("No PKCS#8 encoded RSA key")
-    return _import_keyDER(k[1], passphrase)
+    # The private key inside PKCS#8 is an RSAPrivateKey (RFC 8017),
+    # and never another (possibly encrypted) container
+    return _import_pkcs1_private(k[1])
 
 
 def _import_keyDER(extern_key, passphrase, max_iteration_count=None, threads=1, max_memory=None):
@@ -904,8 +906,8 @@ def import_key(
         The maximum memory (in bytes) for the key derivation of a `PKCS#8`_
         encrypted key, as a limit on the **total** of all threads together
         (not on each thread).
-        Only scrypt uses a significant amount: 128 · *N* · *r* bytes for
-        **each** thread, so *t* threads need *t* · 128 · *N* · *r* bytes.
+        Only scrypt uses a significant amount: 128 · (*N* + 2) · *r* bytes for
+        **each** thread, plus 256 · *r* · *p* bytes for all the flows together.
         If the requested threads do not fit, fewer are used (down to one);
         if a single thread does not fit, the key is rejected.
         The default value is None (a limit of 256 MiB).

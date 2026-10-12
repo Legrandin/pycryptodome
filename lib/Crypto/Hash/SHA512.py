@@ -189,7 +189,9 @@ block_size: int = 128
 def _pbkdf2_hmac_assist(inner, outer, first_digest, iterations):
     """Compute the expensive inner loop in PBKDF-HMAC."""
 
-    assert iterations > 0
+    # Not an assert: a negative number would become a huge one in C
+    if iterations < 1:
+        raise ValueError("The number of iterations must be positive")
 
     bfr = create_string_buffer(len(first_digest))
     result = _raw_sha512_lib.SHA512_pbkdf2_hmac_assist(

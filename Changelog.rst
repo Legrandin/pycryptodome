@@ -56,6 +56,13 @@ Resolved issues
 * GH#937: Importing a malformed PEM key could take quadratic time. Thanks to Brian Willows.
 * ``Crypto.Protocol.HPKE.new()`` raised ``TypeError`` with Python 3.9 to 3.11
   when ``aead_id`` was a plain integer, and not an ``HPKE.AEAD`` member.
+* ``Crypto.PublicKey.RSA.import_key()`` accepted a PKCS#8 key whose private key was
+  not an ``RSAPrivateKey`` (PKCS#1), including another, possibly encrypted, PKCS#8 key:
+  now such a key is rejected.
+* An encrypted PKCS#8 key with an iteration count lower than 1, or with invalid scrypt
+  parameters (*N* not a power of 2 larger than 1, *r* or *p* not positive), raised
+  other exceptions than ``ValueError`` (like ``ZeroDivisionError``): now it is rejected
+  with ``ValueError``, before any key derivation.
 * Encrypted PKCS#8 keys protected with PBKDF2 (PBES2) were exported and imported
   with the slow Python implementation of PBKDF2-HMAC, and not with the C one:
   now they are about 50x-150x faster (SHA-1 and SHA-2).
@@ -162,9 +169,12 @@ New features
 * For scrypt, ``max_iteration_count`` now limits *N·r·p/8* (that is, *N* for the
   usual *r=8* and *p=1*), and not only *N*: before, a key with a large *r* or *p*
   could require any amount of time and memory. By default, the limit is 2\ :sup:`25`.
+  Since scrypt also does some work in proportion to *r·p* only, *N* counts as
+  at least 1024 in the cost.
 * New parameter ``max_memory`` for ``Crypto.IO.PKCS8.unwrap()`` and for ``import_key()``
   of RSA, DSA and ECC keys: the maximum memory for the key derivation of an encrypted
-  PKCS#8 key (scrypt), as a total for all threads together, not for each thread.
+  PKCS#8 key (scrypt), as a total for all threads together, not for each thread
+  (and including the memory for the input and the output of all the flows).
   The default is 256 MiB. Fewer threads are used if needed; if even one thread
   does not fit, ``Crypto.IO.PKCS8.PbesMemoryError`` is raised.
 

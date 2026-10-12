@@ -35,8 +35,8 @@ from Crypto.Random import get_random_bytes
 from Crypto.Util._bytes import tobytes
 from Crypto.Util._raw_api import (
     c_size_t,
-    create_string_buffer,
-    get_raw_buffer,
+    c_uint8_ptr,
+    c_uint8_ptr_out,
     is_buffer,
     load_pycryptodome_raw_lib,
 )
@@ -422,14 +422,18 @@ def HKDF(
     return list(kol[:num_keys])
 
 
-def _PBKDF2_HMAC_SHA256_1(password: Union[str, Buffer], salt: Union[str, Buffer], dkLen: int) -> bytes:
+def _PBKDF2_HMAC_SHA256_1(password: Union[str, Buffer], salt: Union[str, Buffer], dkLen: int) -> bytearray:
     """Same as ``PBKDF2(password, salt, dkLen, 1, hmac_hash_module=SHA256)``,
     but much faster: HMAC is computed directly on top of SHA-256,
     and the hash states for the key and the salt are reused for every block.
+
+    The salt can be any buffer (it is not copied), and the output is a
+    bytearray (written in place, without intermediate objects).
     """
 
     password = tobytes(password)
-    salt = tobytes(salt)
+    if isinstance(salt, str):
+        salt = tobytes(salt)
 
     if len(password) > SHA256.block_size:
         password = SHA256.new(password).digest()
@@ -439,14 +443,17 @@ def _PBKDF2_HMAC_SHA256_1(password: Union[str, Buffer], salt: Union[str, Buffer]
     inner.update(salt)
     outer = SHA256.new(strxor_c(password, 0x5C))
 
-    blocks = []
-    for i in range(1, (dkLen + SHA256.digest_size - 1) // SHA256.digest_size + 1):
+    size = SHA256.digest_size
+    nblocks = (dkLen + size - 1) // size
+    output = bytearray(nblocks * size)
+    for i in range(nblocks):
         h_in = inner.copy()
-        h_in.update(struct.pack(">I", i))
+        h_in.update(struct.pack(">I", i + 1))
         h_out = outer.copy()
         h_out.update(h_in.digest())
-        blocks.append(h_out.digest())
-    return b"".join(blocks)[:dkLen]
+        output[i * size : (i + 1) * size] = h_out.digest()
+    del output[dkLen:]
+    return output
 
 
 @overload
@@ -545,29 +552,35 @@ def scrypt(
     threads = max(1, min(threads_param(threads), p))
 
     flow_len = 128 * r
-    stage_1 = _PBKDF2_HMAC_SHA256_1(password, salt, p * flow_len)
+    # Each flow reads its 128*r bytes from stage_1, and writes them into data_out
+    stage_1 = memoryview(_PBKDF2_HMAC_SHA256_1(password, salt, p * flow_len))
+    data_out = bytearray(p * flow_len)
+    data_out_view = memoryview(data_out)
 
-    def romix(flow: int) -> bytes:
-        buffer_out = create_string_buffer(flow_len)
-        result = _raw_scrypt_lib.scryptROMix(
-            stage_1[flow * flow_len : (flow + 1) * flow_len], buffer_out, c_size_t(flow_len), N
-        )
+    def romix(flow: int) -> None:
+        start, end = flow * flow_len, (flow + 1) * flow_len
+        with c_uint8_ptr_out(data_out_view[start:end]) as out_ptr:
+            result = _raw_scrypt_lib.scryptROMix(
+                c_uint8_ptr(stage_1[start:end]), out_ptr, c_size_t(flow_len), N
+            )
         if result:
             raise ValueError("Error %X while running scrypt" % result)
-        return get_raw_buffer(buffer_out)
 
     # The p flows are independent: each thread computes a contiguous range of them
     bounds = range_boundaries(p, threads)
 
-    def worker(i: int) -> bytes:
-        return b"".join(romix(flow) for flow in range(bounds[i], bounds[i + 1]))
+    def worker(i: int) -> None:
+        for flow in range(bounds[i], bounds[i + 1]):
+            romix(flow)
 
     if threads > 1:
-        data_out = run_in_threads(worker, threads)
+        run_in_threads(worker, threads)
     else:
-        data_out = [worker(0)]
+        worker(0)
 
-    dk = _PBKDF2_HMAC_SHA256_1(password, b"".join(data_out), key_len * num_keys)
+    stage_1.release()
+    data_out_view.release()
+    dk = bytes(_PBKDF2_HMAC_SHA256_1(password, data_out, key_len * num_keys))
 
     if num_keys == 1:
         return dk

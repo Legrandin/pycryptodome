@@ -70,6 +70,11 @@ The total work of scrypt (its CPU time) is proportional to *N·r·p*: for this r
 ``max_iteration_count`` limits *N·r·p/8* (rounded up) and not *N* alone.
 For the usual *r* = 8 and *p* = 1, it is just *N*.
 
+scrypt also does some work in proportion to *r·p* only, whatever *N* is
+(two PBKDF2 steps over *128·r·p* bytes): about as much as with *N* = 128.
+To account for it, *N* counts as 1024 in the cost when it is smaller.
+This changes nothing for real keys, whose *N* is larger.
+
 The *p* flows of scrypt are independent, and they can run on several threads
 (see below). With *t* threads, each one computes at most *⌈p/t⌉* flows,
 so the elapsed time is proportional to *N·r·⌈p/t⌉*: that is the best case,
@@ -87,8 +92,11 @@ on 8 threads (16 MiB for each one).
 Memory and threads
 ------------------
 
-Only scrypt needs a significant amount of memory: *128·N·r* bytes for **each** thread,
-so *t* threads need *t·128·N·r* bytes.
+Only scrypt needs a significant amount of memory:
+
+* *128·(N+2)·r* bytes for **each** thread, so a little more than *128·N·r* bytes;
+* *256·r·p* bytes for all the flows together (their input and their output).
+
 With *p* larger than 1, scrypt can run on up to *p* threads, as requested
 with the ``threads`` parameter (see :func:`Crypto.Protocol.KDF.scrypt`).
 
@@ -98,10 +106,12 @@ if a single thread does not fit, the key is rejected.
 
 For instance, with the default limit of 256 MiB:
 
-* *N* = 2\ :sup:`17` and *r* = 8 (128 MiB for each thread): at most 2 threads are used,
-  even with ``threads=4``;
-* *N* = 2\ :sup:`18` and *r* = 8 (256 MiB for each thread): only 1 thread is used;
-* *N* = 2\ :sup:`19` and *r* = 8 (512 MiB for one thread): the key is rejected.
+* *N* = 2\ :sup:`16` and *r* = 8 (a little more than 64 MiB for each thread):
+  at most 3 threads are used, even with ``threads=4``;
+* *N* = 2\ :sup:`17` and *r* = 8 (a little more than 128 MiB for each thread):
+  only 1 thread is used;
+* *N* = 2\ :sup:`18` and *r* = 8 (a little more than 256 MiB for one thread):
+  the key is rejected.
 
 Keys created by OpenSSL (at most 32 MiB) and by this library with the default
 parameters (16 MiB) are well within the default limit.
@@ -119,6 +129,18 @@ Only use ``0`` with keys that come from a trusted source.
 Both parameters must be integers (or ``None``), and not negative:
 otherwise, ``TypeError`` or ``ValueError`` is raised,
 even if the key turns out not to be encrypted.
+
+Invalid parameters
+------------------
+
+Keys with parameters that make no sense are rejected with a ``ValueError``,
+before any key derivation: an iteration count of PBKDF1 or PBKDF2 lower than 1,
+or scrypt parameters other than a power of 2 (and at least 2) for *N*,
+and positive values for *r* and *p* (RFC 7914).
+
+The private key inside an RSA `PKCS#8`_ key must be an ``RSAPrivateKey``
+(PKCS#1, RFC 8017): another container (for instance, another encrypted PKCS#8 key)
+is rejected.
 
 Errors
 ------
