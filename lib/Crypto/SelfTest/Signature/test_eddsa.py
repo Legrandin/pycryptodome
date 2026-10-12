@@ -549,3 +549,19 @@ class TestVectorsEdDSAWycheproof:
     def test(self, tv):
         self.check_sign(tv)
         self.check_verify(tv)
+
+
+@pytest.mark.parametrize("curve", ["Ed25519", "Ed448"])
+def test_s_not_reduced(curve):
+    """S must be smaller than the order L (RFC 8032, 5.1.7 and 5.2.7)"""
+
+    key = ECC.generate(curve=curve)
+    signature = eddsa.new(key, "rfc8032").sign(b"message")
+    half = len(signature) // 2
+    order = int(key._curve.order)
+    verifier = eddsa.new(key.public_key(), "rfc8032")
+
+    for s in (order, order + 1):
+        bad = signature[:half] + s.to_bytes(half, "little")
+        with pytest.raises(ValueError, match=r"\(S\)"):
+            verifier.verify(b"message", bad)

@@ -257,7 +257,7 @@ class EdDSASigScheme:
         except ValueError:
             raise ValueError("The signature is not authentic (R)")
         s = Integer.from_bytes(signature[32:], "little", public=True)
-        if s > self._order:
+        if s >= self._order:
             raise ValueError("The signature is not authentic (S)")
         # Step 2
         k_hash = SHA512.new(dom2 + signature[:32] + self._A + PHM).digest()
@@ -287,7 +287,7 @@ class EdDSASigScheme:
         except ValueError:
             raise ValueError("The signature is not authentic (R)")
         s = Integer.from_bytes(signature[57:], "little", public=True)
-        if s > self._order:
+        if s >= self._order:
             raise ValueError("The signature is not authentic (S)")
         # Step 2
         k_hash = SHAKE256.new(dom4 + signature[:57] + self._A + PHM).read(114)
