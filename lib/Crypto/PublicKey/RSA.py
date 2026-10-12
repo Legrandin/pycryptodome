@@ -829,10 +829,10 @@ def _import_keyDER(extern_key, passphrase, max_iteration_count=None, threads=1, 
     raise ValueError("RSA key format is not supported")
 
 
-def _import_openssh_private_rsa(data, password):
+def _import_openssh_private_rsa(data, password, max_iteration_count=None):
     from ._openssh import check_padding, import_openssh_private_generic, read_bytes, read_string
 
-    ssh_name, decrypted = import_openssh_private_generic(data, password)
+    ssh_name, decrypted = import_openssh_private_generic(data, password, max_iteration_count)
 
     if ssh_name != "ssh-rsa":
         raise ValueError("This SSH key is not RSA")
@@ -888,7 +888,8 @@ def import_key(
       max_iteration_count (integer):
         The maximum value allowed for the PBKDF2 iteration count or
         the scrypt cost *N·r·p/8* (that is, *N* for the usual *r=8* and *p=1*)
-        of a `PKCS#8`_ encrypted key.
+        of a `PKCS#8`_ encrypted key, or for the number of rounds of
+        bcrypt_pbkdf of an encrypted OpenSSH key.
         A malicious key could require an extremely high number of
         iterations, tying up the CPU for hours.
         The default value is None: a limit for each KDF, which keeps
@@ -937,7 +938,7 @@ def import_key(
     if extern_key.startswith(b"-----BEGIN OPENSSH PRIVATE KEY"):
         text_encoded = extern_key.decode("latin-1")
         openssh_encoded, _marker, enc_flag = PEM.decode(text_encoded, passphrase)
-        result = _import_openssh_private_rsa(openssh_encoded, passphrase)
+        result = _import_openssh_private_rsa(openssh_encoded, passphrase, max_iteration_count)
         return result
 
     if extern_key.startswith(b"-----"):

@@ -72,6 +72,10 @@ _DEFAULT_MAX_SCRYPT_COST = 2**25
 #: real key (N >= 1024) unchanged.
 _SCRYPT_MIN_N_COST = 1024
 
+#: Maximum number of rounds of bcrypt_pbkdf, for OpenSSH private keys
+#: (each round is two bcrypt hashes with cost 6)
+_DEFAULT_MAX_BCRYPT_ROUNDS = 16_384
+
 #: Maximum memory for the key derivation (when max_memory is None): 256 MiB,
 #: for all threads together. Only scrypt needs a significant amount
 #: (128*N*r bytes for each thread).
@@ -109,6 +113,7 @@ _DEFAULT_LIMIT = "{} (the default)"
 _PBKDF1_COUNT = "PBKDF1 iteration count"
 _PBKDF2_COUNT = "PBKDF2 iteration count"
 _SCRYPT_COST = "scrypt cost N*r*p/8"
+_BCRYPT_ROUNDS = "bcrypt_pbkdf rounds count"
 
 #: Message of :class:`PbesMemoryError`
 _MEMORY_ERROR = (

@@ -3,9 +3,10 @@
 Limits when decrypting private keys
 ===================================
 
-An encrypted private key (`PKCS#8`_, in DER or PEM format) states how expensive
+An encrypted private key (`PKCS#8`_ in DER or PEM format, or OpenSSH) states how expensive
 the derivation of its decryption key from the passphrase is:
-the iteration count of PBKDF2, or the cost parameters of scrypt.
+the iteration count of PBKDF2, the cost parameters of scrypt,
+or the number of rounds of bcrypt (for OpenSSH keys).
 A malicious key can therefore require an extremely expensive derivation, and tie up
 the CPU for hours, or all the memory, before the passphrase is even checked.
 
@@ -19,7 +20,8 @@ Both are keyword arguments of:
 
 * :func:`Crypto.IO.PKCS8.unwrap`;
 * :func:`Crypto.PublicKey.RSA.import_key`, :func:`Crypto.PublicKey.DSA.import_key`
-  and :func:`Crypto.PublicKey.ECC.import_key`.
+  and :func:`Crypto.PublicKey.ECC.import_key`
+  (for RSA and ECC, also with OpenSSH private keys).
 
 The limits do not apply when encrypting a key (for instance, with ``export_key()``):
 the caller chooses the parameters then.
@@ -41,6 +43,8 @@ with a single thread:
 | scrypt                                       | *N·r·p/8* up to 2\ :sup:`25`     |
 |                                              | (33,554,432)                     |
 +----------------------------------------------+----------------------------------+
+| bcrypt_pbkdf (OpenSSH private keys)          | 16,384 rounds                    |
++----------------------------------------------+----------------------------------+
 
 +----------------------------------------------+----------------------------------+
 | Key derivation                               | Default ``max_memory``           |
@@ -48,7 +52,7 @@ with a single thread:
 | scrypt                                       | 256 MiB, for all threads         |
 |                                              | together                         |
 +----------------------------------------------+----------------------------------+
-| PBKDF1, PBKDF2                               | (they need very little memory)   |
+| PBKDF1, PBKDF2, bcrypt_pbkdf                 | (they need very little memory)   |
 +----------------------------------------------+----------------------------------+
 
 These limits are far above the recommended minimum costs for passwords:
@@ -116,12 +120,36 @@ For instance, with the default limit of 256 MiB:
 Keys created by OpenSSL (at most 32 MiB) and by this library with the default
 parameters (16 MiB) are well within the default limit.
 
+OpenSSH keys and bcrypt
+-----------------------
+
+An encrypted OpenSSH private key (``-----BEGIN OPENSSH PRIVATE KEY-----``) derives
+its key and IV with ``bcrypt_pbkdf``: at every round, it computes two bcrypt hashes
+with cost 6 (about 3 ms in total on a recent x86-64 laptop, as the two run
+interleaved on a single core).
+The key states the number of rounds (up to 2\ :sup:`32`-1), and ``max_iteration_count``
+limits it. The default limit of 16,384 rounds takes about one minute,
+and it is far above what OpenSSH uses (16 rounds by default, with ``ssh-keygen -a``
+to change it).
+
+A key with less than one round is rejected, before any key derivation.
+bcrypt needs very little memory (about 8 KiB), so ``max_memory`` does not apply.
+
 Explicit limits
 ---------------
 
 An explicit ``max_iteration_count`` is the maximum number of iterations
-for PBKDF1 and PBKDF2, whatever the hash, and the maximum *N·r·p/8* for scrypt.
+for PBKDF1 and PBKDF2, whatever the hash, the maximum *N·r·p/8* for scrypt,
+and the maximum number of rounds for bcrypt_pbkdf (OpenSSH keys).
 An explicit ``max_memory`` is the maximum number of bytes, for all threads together.
+
+.. warning::
+
+    The unit of ``max_iteration_count`` depends on the key derivation, and so does
+    the time of one unit: about 0.1 to 1 microseconds for PBKDF2, but 3 milliseconds
+    for bcrypt_pbkdf. A value chosen for PBKDF2 (for instance, 10,000,000) would allow
+    an OpenSSH key with as many rounds, that is, about 9 hours.
+    When the type of the key is not known in advance, keep the default (``None``).
 
 With ``max_iteration_count=0`` or ``max_memory=0``, the corresponding limit does not apply.
 Only use ``0`` with keys that come from a trusted source.
@@ -168,7 +196,8 @@ What is not covered
 
 * Private keys encrypted with the legacy PEM encryption (``Proc-Type: 4,ENCRYPTED``):
   their key derivation has a fixed, low cost.
-* OpenSSH private keys (``-----BEGIN OPENSSH PRIVATE KEY-----``): their bcrypt
-  rounds are not limited.
+* Password hashes checked with :func:`Crypto.Protocol.KDF.bcrypt_check`: the hash states
+  its cost, up to 31 (about one day on a recent laptop). Only check hashes that come from
+  a trusted source, or verify their cost first.
 
 .. _`PKCS#8`: https://datatracker.ietf.org/doc/html/rfc5208

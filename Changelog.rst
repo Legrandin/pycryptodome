@@ -56,6 +56,11 @@ Resolved issues
 * GH#937: Importing a malformed PEM key could take quadratic time. Thanks to Brian Willows.
 * ``Crypto.Protocol.HPKE.new()`` raised ``TypeError`` with Python 3.9 to 3.11
   when ``aead_id`` was a plain integer, and not an ``HPKE.AEAD`` member.
+* Importing an encrypted OpenSSH private key (with ``RSA.import_key()`` or
+  ``ECC.import_key()``) had no limit on the number of rounds of bcrypt_pbkdf,
+  which the key states: a malicious key could tie up the CPU for months.
+  Now ``max_iteration_count`` limits it (by default, 16,384 rounds, about one minute),
+  and a key with less than one round is rejected.
 * ``Crypto.PublicKey.RSA.import_key()`` accepted a PKCS#8 key whose private key was
   not an ``RSAPrivateKey`` (PKCS#1), including another, possibly encrypted, PKCS#8 key:
   now such a key is rejected.
@@ -136,6 +141,8 @@ New features
   HMAC based on SHA-1, SHA-224, SHA-256, SHA-384 and SHA-512.
 * ``Crypto.Protocol.KDF.PBKDF2()`` with HMAC based on SHA-3 runs its inner loop in C,
   as for SHA-1 and SHA-2: it is about 25x-35x faster.
+* Encrypted OpenSSH private keys are imported about 1.9x faster: the two bcrypt
+  hashes of each round of bcrypt_pbkdf run interleaved, in C.
 * ``Crypto.Protocol.KDF.PBKDF1()`` with MD5 and SHA-1 (also used to import keys
   protected with the legacy PBES1 algorithms) runs its inner loop in C:
   it is about 15x faster.

@@ -9,6 +9,7 @@ from binascii import unhexlify
 import pytest
 
 from Crypto.Hash import SHAKE128
+from Crypto.IO.PKCS8 import PbesIterationCountError
 from Crypto.PublicKey import ECC
 from Crypto.PublicKey.ECC import _import_rfc5915_der
 from Crypto.Util.asn1 import DerBitString, DerSequence
@@ -2282,6 +2283,68 @@ vv6oYkMIIi7r5oQWAiQDrR2mlrrFDL9V7GH/r8SWQw==
         key2 = ECC.import_key(pem2)
         low16 = int(key2.pointQ.y % 65536)
         assert low16 == 0x9643
+
+
+def _patch_openssh_rounds(pem, rounds):
+    """Return the encrypted OpenSSH private key ``pem``, with another
+    number of rounds for bcrypt_pbkdf."""
+    import base64
+    import struct
+
+    lines = pem.decode().strip().splitlines()
+    body = base64.b64decode("".join(lines[1:-1]))
+    prefix = b"openssh-key-v1\x00"
+    pos = len(prefix)
+    for _ in range(2):  # ciphername, kdfname
+        pos += 4 + struct.unpack(">I", body[pos : pos + 4])[0]
+    salt_len = struct.unpack(">I", body[pos + 4 : pos + 8])[0]
+    rounds_pos = pos + 8 + salt_len
+    body = body[:rounds_pos] + struct.pack(">I", rounds) + body[rounds_pos + 4 :]
+    b64 = base64.b64encode(body).decode()
+    lines = [b64[i : i + 70] for i in range(0, len(b64), 70)]
+    return (
+        "%s\n%s\n%s\n"
+        % (pem.decode().splitlines()[0], "\n".join(lines), pem.decode().strip().splitlines()[-1])
+    ).encode()
+
+
+class TestImportOpenSSHLimits:
+    """The number of rounds of bcrypt_pbkdf in an encrypted OpenSSH key
+    is limited by max_iteration_count (the vector has 16 rounds)."""
+
+    def setup_method(self):
+        self.pem = load_file("ecc_ed25519_private_openssh_pwd.pem")
+        self.ref = ECC.import_key(self.pem, b"password")
+
+    def test_rounds_of_the_vector(self):
+        assert _patch_openssh_rounds(self.pem, 16).strip() == self.pem.strip().replace(b"\r", b"")
+
+    def test_explicit_limit(self):
+        for limit in (16, 17, 0, None):
+            assert ECC.import_key(self.pem, b"password", max_iteration_count=limit) == self.ref
+        with pytest.raises(PbesIterationCountError, match="bcrypt_pbkdf rounds count of 16"):
+            ECC.import_key(self.pem, b"password", max_iteration_count=15)
+
+    def test_default_limit(self):
+        from Crypto.IO._PBES import _DEFAULT_LIMIT, _DEFAULT_MAX_BCRYPT_ROUNDS
+
+        rounds = _DEFAULT_MAX_BCRYPT_ROUNDS + 1
+        with pytest.raises(PbesIterationCountError) as ctx:
+            ECC.import_key(_patch_openssh_rounds(self.pem, rounds), b"password")
+        assert "of %d," % rounds in str(ctx.value)
+        assert _DEFAULT_LIMIT.format(_DEFAULT_MAX_BCRYPT_ROUNDS) in str(ctx.value)
+
+    @pytest.mark.parametrize("rounds", [2**31, 2**32 - 1])
+    def test_huge_rounds(self, rounds):
+        # Rejected before any key derivation, even with a high explicit limit
+        with pytest.raises(PbesIterationCountError):
+            ECC.import_key(_patch_openssh_rounds(self.pem, rounds), b"password")
+        with pytest.raises(PbesIterationCountError):
+            ECC.import_key(_patch_openssh_rounds(self.pem, rounds), b"password", max_iteration_count=10**6)
+
+    def test_zero_rounds(self):
+        with pytest.raises(ValueError, match="Invalid bcrypt_pbkdf rounds count"):
+            ECC.import_key(_patch_openssh_rounds(self.pem, 0), b"password", max_iteration_count=0)
 
 
 class TestImport_Ed25519:

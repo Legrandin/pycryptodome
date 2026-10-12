@@ -37,6 +37,8 @@ from Crypto.Util._raw_api import (
     c_size_t,
     c_uint8_ptr,
     c_uint8_ptr_out,
+    create_string_buffer,
+    get_raw_buffer,
     is_buffer,
     load_pycryptodome_raw_lib,
 )
@@ -627,7 +629,10 @@ def _bcrypt_decode(data: bytes) -> bytes:
 
 
 def _bcrypt_hash(password: bytes, cost: int, salt: bytes, constant: bytes, invert: bool) -> bytes:
-    from Crypto.Cipher import _EKSBlowfish
+    """The core of bcrypt: the EKSBlowfish key setup with ``password`` and
+    ``salt``, then the encryption of ``constant`` 64 times in ECB mode (in C)."""
+
+    from Crypto.Cipher._EKSBlowfish import _raw_blowfish_lib
 
     if len(password) > 72:
         raise ValueError("The password is too long. It must be 72 bytes at most.")
@@ -635,11 +640,58 @@ def _bcrypt_hash(password: bytes, cost: int, salt: bytes, constant: bytes, inver
     if not (4 <= cost <= 31):
         raise ValueError("bcrypt cost factor must be in the range 4..31")
 
-    cipher = _EKSBlowfish.new(password, _EKSBlowfish.MODE_ECB, salt, cost, invert)
-    ctext = constant
-    for _ in range(64):
-        ctext = cipher.encrypt(ctext)
-    return ctext
+    out = create_string_buffer(len(constant))
+    result = _raw_blowfish_lib.EKSBlowfish_bcrypt(
+        c_uint8_ptr(password),
+        c_size_t(len(password)),
+        c_uint8_ptr(salt),
+        c_size_t(len(salt)),
+        cost,
+        int(invert),
+        c_uint8_ptr(constant),
+        c_size_t(len(constant)),
+        out,
+    )
+    if result:
+        raise ValueError("Error %d while computing bcrypt" % result)
+    return get_raw_buffer(out)
+
+
+def _bcrypt_hash2(
+    password: bytes, cost: int, salt1: bytes, salt2: bytes, constant: bytes, invert: bool
+) -> tuple[bytes, bytes]:
+    """Like :func:`_bcrypt_hash`, for two salts of the same length at once:
+    about twice as fast as two calls (on a single core)."""
+
+    from Crypto.Cipher._EKSBlowfish import _raw_blowfish_lib
+
+    if len(password) > 72:
+        raise ValueError("The password is too long. It must be 72 bytes at most.")
+
+    if not (4 <= cost <= 31):
+        raise ValueError("bcrypt cost factor must be in the range 4..31")
+
+    if len(salt1) != len(salt2):
+        raise ValueError("The two salts must have the same length")
+
+    out1 = create_string_buffer(len(constant))
+    out2 = create_string_buffer(len(constant))
+    result = _raw_blowfish_lib.EKSBlowfish_bcrypt2(
+        c_uint8_ptr(password),
+        c_size_t(len(password)),
+        c_uint8_ptr(salt1),
+        c_uint8_ptr(salt2),
+        c_size_t(len(salt1)),
+        cost,
+        int(invert),
+        c_uint8_ptr(constant),
+        c_size_t(len(constant)),
+        out1,
+        out2,
+    )
+    if result:
+        raise ValueError("Error %d while computing bcrypt" % result)
+    return get_raw_buffer(out1), get_raw_buffer(out2)
 
 
 def bcrypt(password: Union[bytes, str], cost: int, salt: Optional[bytes] = None) -> bytes:

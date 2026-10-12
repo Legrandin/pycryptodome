@@ -622,6 +622,50 @@ class TestScryptThreads:
         assert keys == [ref[:4], ref[4:8], ref[8:]]
 
 
+class TestBcryptHash2:
+    """_bcrypt_hash2() (two salts at once) matches two calls to _bcrypt_hash()."""
+
+    @pytest.mark.parametrize("invert", [False, True])
+    @pytest.mark.parametrize("salt_len", [1, 16, 64, 100])
+    @pytest.mark.parametrize("password", [b"p", b"x" * 72])
+    def test_same_output(self, invert, salt_len, password):
+        from Crypto.Protocol.KDF import _bcrypt_hash, _bcrypt_hash2
+
+        salt1 = bytes(range(salt_len))
+        salt2 = bytes(255 - (i % 256) for i in range(salt_len))
+        constant = b"OxychromaticBlowfishSwatDynamite"
+        expected = (
+            _bcrypt_hash(password, 4, salt1, constant, invert),
+            _bcrypt_hash(password, 4, salt2, constant, invert),
+        )
+        assert _bcrypt_hash2(password, 4, salt1, salt2, constant, invert) == expected
+
+    def test_invalid(self):
+        from Crypto.Protocol.KDF import _bcrypt_hash, _bcrypt_hash2
+
+        constant = b"OrpheanBeholderScryDoubt"
+        for cost in (3, 32):
+            with pytest.raises(ValueError):
+                _bcrypt_hash(b"p", cost, b"s" * 16, constant, False)
+            with pytest.raises(ValueError):
+                _bcrypt_hash2(b"p", cost, b"s" * 16, b"t" * 16, constant, False)
+        with pytest.raises(ValueError):
+            _bcrypt_hash2(b"p" * 73, 4, b"s" * 16, b"t" * 16, constant, False)
+        with pytest.raises(ValueError):
+            _bcrypt_hash2(b"p", 4, b"s" * 16, b"t" * 15, constant, False)
+        with pytest.raises(ValueError):
+            _bcrypt_hash(b"p", 4, b"s" * 16, b"x" * 7, False)
+        # An empty password or salt cannot fill the state of Blowfish
+        with pytest.raises(ValueError):
+            _bcrypt_hash(b"", 4, b"s" * 16, constant, False)
+        with pytest.raises(ValueError):
+            _bcrypt_hash2(b"", 4, b"s" * 16, b"t" * 16, constant, False)
+        with pytest.raises(ValueError):
+            _bcrypt_hash(b"p", 4, b"", constant, False)
+        with pytest.raises(ValueError):
+            _bcrypt_hash2(b"p", 4, b"", b"", constant, False)
+
+
 class TestBcrypt:
     def test_negative_cases(self):
         with pytest.raises(ValueError):

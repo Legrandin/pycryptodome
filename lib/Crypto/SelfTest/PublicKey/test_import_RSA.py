@@ -625,6 +625,15 @@ class TestImport_2048:
 
         assert key == key_old
 
+    def test_import_openssh_private_limit(self):
+        # The vector has 16 rounds of bcrypt_pbkdf
+        from Crypto.IO.PKCS8 import PbesIterationCountError
+
+        key_file = load_file("rsa2048_private_openssh_pwd.pem")
+        assert RSA.import_key(key_file, b"password", max_iteration_count=16).has_private()
+        with pytest.raises(PbesIterationCountError):
+            RSA.import_key(key_file, b"password", max_iteration_count=15)
+
     def test_import_openssh_private_password(self):
         key_file = load_file("rsa2048_private_openssh_pwd.pem")
         key_file_old = load_file("rsa2048_private_openssh_pwd_old.pem")
