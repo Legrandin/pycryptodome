@@ -16,7 +16,7 @@ from Crypto.PublicKey.ECC import (
 )
 from Crypto.Util._raw_api import is_buffer
 
-# A public constant, for scalar multiplications with no blinding
+# A public constant (a Python int is not), for scalar multiplications with no blinding
 _EIGHT = Integer(8, public=True)
 
 
@@ -263,9 +263,9 @@ class EdDSASigScheme:
         k_hash = SHA512.new(dom2 + signature[:32] + self._A + PHM).digest()
         k = Integer.from_bytes(k_hash, "little", public=True) % self._order
         # Step 3 (no blinding: s and k are public)
-        point1 = s * 8 * self._key._curve.G
+        point1 = s * _EIGHT * self._key._curve.G
         # OPTIMIZE: with double-scalar multiplication
-        point2 = _EIGHT * R + k * 8 * self._key.pointQ
+        point2 = _EIGHT * R + k * _EIGHT * self._key.pointQ
         if point1 != point2:
             raise ValueError("The signature is not authentic")
 
@@ -293,9 +293,9 @@ class EdDSASigScheme:
         k_hash = SHAKE256.new(dom4 + signature[:57] + self._A + PHM).read(114)
         k = Integer.from_bytes(k_hash, "little", public=True) % self._order
         # Step 3 (no blinding: s and k are public)
-        point1 = s * 8 * self._key._curve.G
+        point1 = s * _EIGHT * self._key._curve.G
         # OPTIMIZE: with double-scalar multiplication
-        point2 = _EIGHT * R + k * 8 * self._key.pointQ
+        point2 = _EIGHT * R + k * _EIGHT * self._key.pointQ
         if point1 != point2:
             raise ValueError("The signature is not authentic")
 

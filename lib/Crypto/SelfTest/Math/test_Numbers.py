@@ -720,10 +720,15 @@ class IntegerTests:
         assert Integer(pub)._public
         assert not Integer(sec)._public
 
-        # +, -, *, // and %: public if both operands are (an int is public)
-        for result in (pub + pub, pub + 1, pub - 1, pub * 8, pub // 3, pub % 7, pub % pub):
+        # +, -, *, // and %: public if both operands are public Integers
+        for result in (pub + pub, pub - pub, pub * pub, pub // pub, pub % pub):
             assert result._public
         for result in (
+            pub + 1,
+            pub - 1,
+            pub * 8,
+            pub // 3,
+            pub % 7,
             pub + sec,
             sec + pub,
             sec + 1,
@@ -736,8 +741,9 @@ class IntegerTests:
         ):
             assert not result._public
 
-        # Modular inverse: public if both operands are
-        assert pub.inverse(7)._public and pub.inverse(Integer(7, public=True))._public
+        # Modular inverse: public if both operands are public Integers
+        assert pub.inverse(Integer(7, public=True))._public
+        assert not pub.inverse(7)._public
         assert not pub.inverse(Integer(7))._public and not sec.inverse(7)._public
 
         # Any other operation gives a potentially secret result
@@ -746,11 +752,14 @@ class IntegerTests:
 
         # In place
         x = Integer(3, public=True)
-        x += 1
-        x *= 2
-        x %= 5
-        x -= 1
+        one, two, five = (Integer(v, public=True) for v in (1, 2, 5))
+        x += one
+        x *= two
+        x %= five
+        x -= one
         assert x._public and x == 2
+        x += 1
+        assert not x._public
         x *= sec
         assert not x._public
         for op in (
@@ -897,9 +906,12 @@ class NatIntegerTests:
     """Tests for the implementations without negative values"""
 
     def test_public_flag_reflected(self):
-        pub = self.Integer(10, public=True)
+        Integer = self.Integer
+        pub = Integer(10, public=True)
         sec = self.Integer(10)
-        assert (1 + pub)._public and (8 * pub)._public and (20 - pub)._public
+        # A Python int is not public
+        assert not (1 + pub)._public and not (8 * pub)._public and not (20 - pub)._public
+        assert (Integer(1, public=True) + pub)._public
         assert not (1 + sec)._public and not (8 * sec)._public and not (20 - sec)._public
 
     def test_no_negative_values(self):

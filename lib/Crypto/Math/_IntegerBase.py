@@ -32,16 +32,14 @@ class IntegerBase(ABC):
     # (for instance, a value in a signature to verify): then operations
     # on it can be faster, with no countermeasures against side channels.
     # The result of +, -, *, // and %, and of a modular inverse, is public
-    # if both operands are (a Python int counts as a public constant);
-    # any other operation gives a potentially secret result.
+    # if both operands are public Integers (a Python int may hold a secret,
+    # so it is not public); any other operation gives a potentially secret result.
     _public: bool = False
 
     def _is_public_with(self, term: Any) -> bool:
         """Whether the result of an operation between this number and term is public"""
 
-        if isinstance(term, IntegerBase):
-            return self._public and term._public
-        return self._public and isinstance(term, int)
+        return self._public and isinstance(term, IntegerBase) and term._public
 
     # Conversions
     @abstractmethod
