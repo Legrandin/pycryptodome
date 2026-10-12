@@ -726,8 +726,10 @@ cleanup:
 
 /**
  * out = a^e mod m.
- * e_bits is a public bound on the size of e (e < 2^e_bits): only that
- * many bits of e are processed, whatever its value.
+ * e_bits is a public bound on the size of e, and e must be smaller than
+ * 2^e_bits (otherwise the result is wrong): the running time only depends
+ * on e_bits, not on the value of e. For an odd m, the bits are processed
+ * in windows of 4, so up to 3 bits above e_bits are read.
  */
 EXPORT_SYM int nat_powmod(Nat *out, const Nat *a, const Nat *e, size_t e_bits, const Nat *m)
 {
