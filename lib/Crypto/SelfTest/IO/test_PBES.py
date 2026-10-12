@@ -10,9 +10,8 @@ import pytest
 
 from Crypto.IO._PBES import (
     _DEFAULT_LIMIT,
+    _DEFAULT_MAX_ITERATION_COUNT,
     _DEFAULT_MAX_MEMORY,
-    _DEFAULT_MAX_PBKDF1,
-    _DEFAULT_MAX_PBKDF2,
     _DEFAULT_MAX_SCRYPT_COST,
     _ITERATION_COUNT_ERROR,
     _MEMORY_ERROR,
@@ -170,7 +169,7 @@ class TestPBES2_IterationLimit:
         with pytest.raises(PbesError) as ctx:
             PBES2.decrypt(blob, self.passphrase)
         assert str(ctx.value) == _ITERATION_COUNT_ERROR.format(
-            what=_PBKDF2_COUNT, count=2**31 - 1, limit=_DEFAULT_LIMIT.format(_DEFAULT_MAX_PBKDF2)
+            what=_PBKDF2_COUNT, count=2**31 - 1, limit=_DEFAULT_LIMIT.format(_DEFAULT_MAX_ITERATION_COUNT)
         )
 
     def test_pbkdf2_custom_limit(self):
@@ -231,11 +230,11 @@ class TestPBES2_IterationLimit:
     @pytest.mark.parametrize("hash_name", ["SHA1", "SHA256", "SHA512-224", "SHA3-224", "SHA3-512"])
     def test_pbkdf2_default_limit_same_for_all_hashes(self, hash_name):
         """The default limit is the same for all hashes."""
-        count = _DEFAULT_MAX_PBKDF2 + 1
+        count = _DEFAULT_MAX_ITERATION_COUNT + 1
         with pytest.raises(PbesIterationCountError) as ctx:
             PBES2.decrypt(self._make_pbkdf2_blob(count, hash_name), self.passphrase)
         assert str(ctx.value) == _ITERATION_COUNT_ERROR.format(
-            what=_PBKDF2_COUNT, count=count, limit=_DEFAULT_LIMIT.format(_DEFAULT_MAX_PBKDF2)
+            what=_PBKDF2_COUNT, count=count, limit=_DEFAULT_LIMIT.format(_DEFAULT_MAX_ITERATION_COUNT)
         )
 
     def test_scrypt_default_limit_rejects_high_r_p(self):
@@ -303,7 +302,7 @@ class TestPBES2_IterationLimit:
 class TestPBES1_IterationLimit:
     def test_pbkdf1_default_limit(self):
         """PBES1.decrypt rejects a PBKDF1 iteration count above the default limit."""
-        count = _DEFAULT_MAX_PBKDF1 + 1
+        count = _DEFAULT_MAX_ITERATION_COUNT + 1
         blob = DerSequence(
             [
                 DerSequence(
@@ -318,5 +317,5 @@ class TestPBES1_IterationLimit:
         with pytest.raises(PbesIterationCountError) as ctx:
             PBES1.decrypt(blob, b"passphrase")
         assert str(ctx.value) == _ITERATION_COUNT_ERROR.format(
-            what=_PBKDF1_COUNT, count=count, limit=_DEFAULT_LIMIT.format(_DEFAULT_MAX_PBKDF1)
+            what=_PBKDF1_COUNT, count=count, limit=_DEFAULT_LIMIT.format(_DEFAULT_MAX_ITERATION_COUNT)
         )

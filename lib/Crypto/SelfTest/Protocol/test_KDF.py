@@ -68,6 +68,25 @@ class TestPBKDF1:
         assert res == t2b(v[4])
 
 
+class TestPBKDF1_C:
+    """The C loop of PBKDF1 (MD5 and SHA-1) matches the generic one."""
+
+    @pytest.mark.parametrize("hashmod", [MD5, SHA1], ids=["MD5", "SHA1"])
+    @pytest.mark.parametrize("password", [b"", b"xxx", b"p" * 200], ids=["empty_pw", "short_pw", "long_pw"])
+    @pytest.mark.parametrize("count", [1, 2, 3, 77])
+    def test_same_output(self, hashmod, password, count):
+        from Crypto.Protocol.KDF import _hash_assist
+
+        assert _hash_assist(hashmod, "_pbkdf1_assist") is not None
+
+        h = hashmod.new(password + b"saltsalt")
+        for _ in range(count - 1):
+            h = hashmod.new(h.digest())
+
+        for dk_len in (1, 8, hashmod.digest_size):
+            assert PBKDF1(password, b"saltsalt", dk_len, count, hashmod) == h.digest()[:dk_len]
+
+
 class TestPBKDF2:
     # List of tuples with test data.
     # Each tuple is made up by:

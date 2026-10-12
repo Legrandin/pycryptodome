@@ -105,22 +105,32 @@ def PBKDF1(
         raise TypeError("Selected hash algorithm has a too short digest (%d bytes)." % digest)
     if len(salt) != 8:
         raise ValueError("Salt is not 8 bytes long (%d bytes instead)." % len(salt))
+    assist = _hash_assist(hashAlgo, "_pbkdf1_assist")
+    if assist is not None and count > 1:
+        return assist(pHash.digest(), count)[:dkLen]
     for _i in range(count - 1):
         pHash = pHash.new(pHash.digest())
     return pHash.digest()[:dkLen]
 
 
-def _pbkdf2_hmac_assist(hmac_hash_module: Any) -> Optional[Callable[..., bytes]]:
-    """Return the C function for the inner loop of PBKDF2-HMAC with this hash,
-    or None if there is none.
+def _hash_assist(hash_module: Any, name: str) -> Optional[Callable[..., bytes]]:
+    """Return the C function ``name`` for the inner loop of a KDF with this hash
+    (like ``_pbkdf2_hmac_assist``), or None if there is none.
 
-    ``hmac_hash_module`` can also be a hash object, like the ones returned by
+    ``hash_module`` can also be a hash object, like the ones returned by
     :func:`Crypto.Hash.new`: the function is in the module of its class.
     """
 
-    if not isinstance(hmac_hash_module, types.ModuleType):
-        hmac_hash_module = sys.modules.get(type(hmac_hash_module).__module__)
-    return getattr(hmac_hash_module, "_pbkdf2_hmac_assist", None)
+    if not isinstance(hash_module, types.ModuleType):
+        hash_module = sys.modules.get(type(hash_module).__module__)
+    return getattr(hash_module, name, None)
+
+
+def _pbkdf2_hmac_assist(hmac_hash_module: Any) -> Optional[Callable[..., bytes]]:
+    """Return the C function for the inner loop of PBKDF2-HMAC with this hash,
+    or None if there is none (see :func:`_hash_assist`)."""
+
+    return _hash_assist(hmac_hash_module, "_pbkdf2_hmac_assist")
 
 
 def PBKDF2(

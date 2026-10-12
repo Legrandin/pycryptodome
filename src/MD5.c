@@ -366,6 +366,54 @@ EXPORT_SYM int MD5_pbkdf2_hmac_assist(const hash_state *inner, const hash_state 
     return 0;
 }
 
+/**
+ * Compute the expensive inner loop of PBKDF1 (PKCS#5 v1.5),
+ * where T_1 = MD5(password || salt) and T_i = MD5(T_{i-1}).
+ *
+ * - first_digest, T_1
+ * - result, T_iterations
+ * - iterations, the total number of PBKDF1 iterations (>0)
+ */
+EXPORT_SYM int MD5_pbkdf1_assist(const uint8_t first_digest[DIGEST_SIZE],
+                                 uint8_t result[DIGEST_SIZE],
+                                 size_t iterations)
+{
+    hash_state hs;
+    size_t i;
+    unsigned j;
+
+    if (NULL == first_digest || NULL == result) {
+        return ERR_NULL;
+    }
+
+    if (iterations == 0) {
+        return ERR_NR_ROUNDS;
+    }
+
+    /**
+     * Each hash in the loop processes a single, already padded block
+     * (the previous digest), so we call the compression function directly.
+     **/
+    memset(&hs, 0, sizeof hs);
+    memcpy(hs.buf, first_digest, DIGEST_SIZE);
+    hs.buf[DIGEST_SIZE] = 0x80;
+    hs.buf[BLOCK_SIZE-8] = DIGEST_SIZE*8;   /** Length in bits, little-endian **/
+
+    for (i=1; i<iterations; i++) {
+        hs.h[0] = 0x67452301;
+        hs.h[1] = 0xefcdab89;
+        hs.h[2] = 0x98badcfe;
+        hs.h[3] = 0x10325476;
+        md5_compress(&hs);
+        for (j=0; j<4; j++) {
+            STORE_U32_LITTLE(&hs.buf[j*4], hs.h[j]);
+        }
+    }
+
+    memcpy(result, hs.buf, DIGEST_SIZE);
+    return 0;
+}
+
 #ifdef MAIN
 int main(void)
 {

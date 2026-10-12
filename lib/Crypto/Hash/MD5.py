@@ -53,6 +53,10 @@ _raw_md5_lib = load_pycryptodome_raw_lib(
                                             const uint8_t first_digest[MD5_DIGEST_SIZE],
                                             uint8_t final_digest[MD5_DIGEST_SIZE],
                                             size_t iterations);
+
+                        int MD5_pbkdf1_assist(const uint8_t first_digest[MD5_DIGEST_SIZE],
+                                            uint8_t final_digest[MD5_DIGEST_SIZE],
+                                            size_t iterations);
                         """,
 )
 
@@ -182,5 +186,21 @@ def _pbkdf2_hmac_assist(inner, outer, first_digest, iterations):
 
     if result:
         raise ValueError("Error %d with PBKDF2-HMAC assis for MD5" % result)
+
+    return get_raw_buffer(bfr)
+
+
+def _pbkdf1_assist(first_digest, iterations):
+    """Compute the expensive inner loop in PBKDF1:
+    hash the digest again and again, up to the total number of iterations."""
+
+    assert len(first_digest) == digest_size
+    assert iterations > 0
+
+    bfr = create_string_buffer(digest_size)
+    result = _raw_md5_lib.MD5_pbkdf1_assist(first_digest, bfr, c_size_t(iterations))
+
+    if result:
+        raise ValueError("Error %d with PBKDF1 assist for MD5" % result)
 
     return get_raw_buffer(bfr)

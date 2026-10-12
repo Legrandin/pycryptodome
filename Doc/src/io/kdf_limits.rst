@@ -34,9 +34,8 @@ so that the derivation takes at most about one minute on a recent x86-64 laptop:
 +----------------------------------------------+----------------------------------+
 | Key derivation                               | Default ``max_iteration_count``  |
 +==============================================+==================================+
-| PBKDF2 (with any hash)                       | 50,000,000 iterations            |
-+----------------------------------------------+----------------------------------+
-| PBKDF1 (legacy PBES1 algorithms)             | 20,000,000 iterations            |
+| PBKDF2 (with any hash), and PBKDF1           | 50,000,000 iterations            |
+| (legacy PBES1 algorithms)                    |                                  |
 +----------------------------------------------+----------------------------------+
 | scrypt                                       | *N·r·p/8* up to 2\ :sup:`25`     |
 |                                              | (33,554,432)                     |

@@ -57,13 +57,10 @@ _OID_AES256_GCM = "2.16.840.1.101.3.4.1.46"
 # the key derivation takes at most about one minute on a recent x86-64 laptop,
 # for the worst key length (32 bytes) and without SHA-NI.
 
-#: Maximum PBKDF1 iteration count (PBES1)
-_DEFAULT_MAX_PBKDF1 = 20_000_000
-
-#: Maximum PBKDF2 iteration count, whatever the hash of the HMAC.
-#: The slowest are SHA-1, SHA-224, SHA-512/224 and SHA3-224 with a 32-byte key:
-#: their digest is shorter than the key, so PBKDF2 has to run twice.
-_DEFAULT_MAX_PBKDF2 = 50_000_000
+#: Maximum iteration count of PBKDF1 (PBES1) and PBKDF2 (PBES2), whatever the hash.
+#: The slowest are PBKDF2 with SHA-1, SHA-224, SHA-512/224 and SHA3-224 and a
+#: 32-byte key: their digest is shorter than the key, so PBKDF2 has to run twice.
+_DEFAULT_MAX_ITERATION_COUNT = 50_000_000
 
 #: Maximum scrypt cost N*r*p/8 (that is, N for r=8 and p=1)
 _DEFAULT_MAX_SCRYPT_COST = 2**25
@@ -238,7 +235,7 @@ class PBES1:
             An attacker could craft a malicious key blob that requires an
             extremely high number of iterations, tying up the CPU for hours.
             The default value is None (enforcing the limit
-            :data:`_DEFAULT_MAX_PBKDF1`).
+            :data:`_DEFAULT_MAX_ITERATION_COUNT`).
             Set it to ``0`` to disable the check.
         :Returns:
           The decrypted data, as a binary string.
@@ -289,7 +286,7 @@ class PBES1:
         salt = DerOctetString().decode(pbe_params[0]).payload
         iterations = pbe_params[1]
 
-        _check_iteration_count(_PBKDF1_COUNT, iterations, max_iteration_count, _DEFAULT_MAX_PBKDF1)
+        _check_iteration_count(_PBKDF1_COUNT, iterations, max_iteration_count, _DEFAULT_MAX_ITERATION_COUNT)
 
         key_iv = PBKDF1(passphrase, salt, 16, iterations, hashmod)
         key, iv = key_iv[:8], key_iv[8:]
@@ -523,7 +520,7 @@ class PBES2:
             An attacker could craft a malicious key blob that requires an
             extremely high number of iterations, tying up the CPU for hours.
             The default value is None (enforcing the limits
-            :data:`_DEFAULT_MAX_PBKDF2`, or
+            :data:`_DEFAULT_MAX_ITERATION_COUNT`, or
             :data:`_DEFAULT_MAX_SCRYPT_COST`).
             Set it to ``0`` to disable the check.
           threads : integer
@@ -585,7 +582,9 @@ class PBES2:
             except KeyError:
                 raise PbesError("Unsupported HMAC %s" % pbkdf2_prf_oid)
 
-            _check_iteration_count(_PBKDF2_COUNT, iteration_count, max_iteration_count, _DEFAULT_MAX_PBKDF2)
+            _check_iteration_count(
+                _PBKDF2_COUNT, iteration_count, max_iteration_count, _DEFAULT_MAX_ITERATION_COUNT
+            )
 
         elif kdf_oid == _OID_SCRYPT:
             scrypt_params = DerSequence().decode(kdf_info[1], nr_elements=(4, 5))
