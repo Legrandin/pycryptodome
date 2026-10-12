@@ -105,14 +105,16 @@ STATIC void curve25519_scalar_internal(Point *Pout,
 {
     Point P2, P3;
     uint32_t mu[10];
-    uint64_t state = seed;
+    BlindPrf prf;
     unsigned bit_idx, swap;
     size_t scan;
 
+    blind_prf_init(&prf, seed);
+
     /* P2 = PAI = (lambda : 0), P3 = (mu*X : mu*Z): randomized coordinates */
     memset(&P2, 0, sizeof P2);
-    random_fe_25519(P2.X, &state);
-    random_fe_25519(mu, &state);
+    random_fe_25519(P2.X, &prf);
+    random_fe_25519(mu, &prf);
     mul_25519(P3.X, Pin->X, mu);
     mul_25519(P3.Z, Pin->Z, mu);
 

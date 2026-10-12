@@ -17,7 +17,6 @@
 #include "ec_common.h"
 #include "ec_field.h"
 #include "ec_special.h"
-#include "splitmix64.h"
 
 /* ---------------------------------------------------------------- */
 /* Field and workspace                                              */
@@ -329,13 +328,13 @@ int fe_to_bytes(uint8_t *out, size_t len, EcWs *ws, const uint64_t *a)
     return res;
 }
 
-void fe_random(EcWs *ws, uint64_t *out, size_t p_bits, uint64_t *state)
+void fe_random(EcWs *ws, uint64_t *out, size_t p_bits, BlindPrf *prf)
 {
     const size_t nw = ws->nw;
     size_t i;
 
     for (i=0; i<nw; i++)
-        out[i] = splitmix64_next(state);
+        out[i] = blind_prf_next(prf);
     /* Fewer bits than p, and not zero */
     for (i=(p_bits - 1)/64 + 1; i<nw; i++)
         out[i] = 0;
@@ -948,7 +947,7 @@ int ec_point_scalar(EcPoint *p, const uint8_t *k, size_t len, uint64_t seed)
 {
     const EcGroup *g;
     uint64_t *kb, *lambda;
-    uint64_t state = seed;
+    BlindPrf prf;
     EcWs ws;
     int res;
 
@@ -957,6 +956,7 @@ int ec_point_scalar(EcPoint *p, const uint8_t *k, size_t len, uint64_t seed)
     if (len == 0)
         return ERR_NOT_ENOUGH_DATA;
     g = p->g;
+    blind_prf_init(&prf, seed);
 
     res = ec_ws_new(&ws, g->field);
     if (res)
@@ -969,10 +969,10 @@ int ec_point_scalar(EcPoint *p, const uint8_t *k, size_t len, uint64_t seed)
     }
 
     /* The random values: r for the scalar, lambda for the coordinates */
-    res = ec_blind_scalar(kb, g->k_words, g->order, k, len, splitmix64_next(&state));
+    res = ec_blind_scalar(kb, g->k_words, g->order, k, len, blind_prf_next(&prf));
     if (res)
         goto cleanup;
-    fe_random(&ws, lambda, g->field->p_bits, &state);
+    fe_random(&ws, lambda, g->field->p_bits, &prf);
 
     /* Only the fact that p is the generator leaks */
     if (EC_USE_TABLES && ct_declassify(ec_point_is_g(p)))

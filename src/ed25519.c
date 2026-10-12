@@ -369,7 +369,8 @@ STATIC int ed25519_scalar_internal(Point *Pout,
 {
     Point R0, R1;
     uint32_t lambda[10];
-    uint64_t *kb, r, carry, state = seed;
+    uint64_t *kb, r, carry;
+    BlindPrf prf;
     volatile uint64_t *wipe;
     size_t nbits, nw, i;
 
@@ -385,14 +386,15 @@ STATIC int ed25519_scalar_internal(Point *Pout,
         return ERR_MEMORY;
 
     /* kb = k + r*8L */
-    r = splitmix64_next(&state) >> (64 - ED25519_BLIND_BITS);
+    blind_prf_init(&prf, seed);
+    r = blind_prf_next(&prf) >> (64 - ED25519_BLIND_BITS);
     carry = 0;
     for (i=0; i<nw; i++) {
         kb[i] = ct_mac(i < 4 ? order8[i] : 0, r, kb[i], carry, &carry);
     }
 
     /* R0 = (0, lambda, lambda, 0), the neutral point */
-    random_fe_25519(lambda, &state);
+    random_fe_25519(lambda, &prf);
     memset(&R0, 0, sizeof R0);
     memcpy(R0.Y, lambda, sizeof lambda);
     memcpy(R0.Z, lambda, sizeof lambda);

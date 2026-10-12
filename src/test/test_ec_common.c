@@ -10,7 +10,7 @@
 #include "common.h"
 #include "nat.h"
 #include "ec_common.h"
-#include "splitmix64.h"
+#include "siphash.h"
 
 #define NW 4
 
@@ -214,42 +214,52 @@ static void test_conversions(const EcField *field)
 static void test_random(const EcField *field)
 {
     EcWs ws;
-    uint64_t a[NW], b[NW], state1 = 1, state2 = 1;
+    uint64_t a[NW], b[NW];
+    BlindPrf prf1, prf2;
     unsigned t, bits;
 
+    blind_prf_init(&prf1, 1);
+    blind_prf_init(&prf2, 1);
     assert(ec_ws_new(&ws, field) == 0);
     for (t=0; t<1000; t++) {
-        fe_random(&ws, a, 256, &state1);
-        fe_random(&ws, b, 256, &state2);
+        fe_random(&ws, a, 256, &prf1);
+        fe_random(&ws, b, 256, &prf2);
         assert(memcmp(a, b, sizeof a) == 0);    /* deterministic */
         assert((a[0] & 1) == 1);                /* not zero */
         assert(a[NW-1] >> 63 == 0);             /* fewer bits than p */
     }
     /* Shorter field elements */
     for (bits=2; bits<=256; bits+=37) {
-        fe_random(&ws, a, bits, &state1);
+        fe_random(&ws, a, bits, &prf1);
         assert(a[0] & 1);
         for (t=bits-1; t<64*NW; t++)
             assert(((a[t/64] >> (t%64)) & 1) == 0);
     }
-    /* Different states give different values */
-    state2 = 2;
-    fe_random(&ws, a, 256, &state1);
-    fe_random(&ws, b, 256, &state2);
+    /* Different seeds give different values */
+    blind_prf_init(&prf2, 2);
+    fe_random(&ws, a, 256, &prf1);
+    fe_random(&ws, b, 256, &prf2);
     assert(memcmp(a, b, sizeof a) != 0);
     ec_ws_free(&ws);
 }
 
-/* The generator that expands the random seeds (splitmix64.h) */
-static void test_splitmix64(void)
+/* The generator that expands the random seeds (siphash.h) */
+static void test_siphash(void)
 {
-    uint64_t state = 0, r1, r2;
+    BlindPrf prf;
 
-    r1 = splitmix64_next(&state);
-    r2 = splitmix64_next(&state);
-    assert(r1 == 0xE220A8397B1DCDAFULL);
-    assert(r2 == 0x6E789E6AA1B965F4ULL);
-    assert(state == 2*0x9E3779B97F4A7C15ULL);
+    /* The reference test vector: key 00..0F, message 00..07 */
+    assert(siphash24_u64(0x0706050403020100ULL, 0x0F0E0D0C0B0A0908ULL,
+                         0x0706050403020100ULL) == 0x93F5F5799A932462ULL);
+
+    /* SipHash-2-4 with the key (seed, 0) of the counter 0, 1, 2... */
+    blind_prf_init(&prf, 0);
+    assert(blind_prf_next(&prf) == 0xE849E8BB6FFE2567ULL);
+    assert(blind_prf_next(&prf) == 0x8004C5A694105F5EULL);
+    blind_prf_init(&prf, 1);
+    assert(blind_prf_next(&prf) == 0x1CC1D069B22D7407ULL);
+    assert(blind_prf_next(&prf) == 0x66B9B4D4603B2E62ULL);
+    assert(prf.counter == 2);
 }
 
 static void test_sizes(void)
@@ -743,7 +753,7 @@ int main(void)
     test_special_fields();
     test_conversions(field);
     test_random(field);
-    test_splitmix64();
+    test_siphash();
     test_sizes();
     test_table_select();
     test_batch_to_affine(field);

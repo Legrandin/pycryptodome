@@ -88,9 +88,12 @@ STATIC int curve448_ladder(EcWs *ws, const Curve448Context *ctx, Curve448Point *
                            const uint8_t *k, size_t len, uint64_t seed)
 {
     uint64_t *x2, *z2, *x3, *z3, *zinv, *x1 = ws->t[2];
-    uint64_t state = seed, swap = 0, z_zero;
+    uint64_t swap = 0, z_zero;
+    BlindPrf prf;
     size_t i;
     int res = ERR_MEMORY;
+
+    blind_prf_init(&prf, seed);
 
     x2 = nat_words_alloc(5*NW);
     if (NULL == x2)
@@ -102,8 +105,8 @@ STATIC int curve448_ladder(EcWs *ws, const Curve448Context *ctx, Curve448Point *
 
     /* (x2:z2) = (lambda:0), (x3:z3) = (mu*x1:mu) */
     fe_copy(ws, x1, p->x);
-    fe_random(ws, x2, ctx->field->p_bits, &state);
-    fe_random(ws, z3, ctx->field->p_bits, &state);
+    fe_random(ws, x2, ctx->field->p_bits, &prf);
+    fe_random(ws, z3, ctx->field->p_bits, &prf);
     fe_mul(ws, x3, x1, z3);
 
     /* From the most significant bit */

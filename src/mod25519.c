@@ -4,7 +4,7 @@
 #include "common.h"
 #include "endianess.h"
 #include "nat_ct.h"
-#include "splitmix64.h"
+#include "siphash.h"
 
 /*
  * Operations over the field of integers modulo 2²⁵⁵ - 19
@@ -393,13 +393,13 @@ STATIC void cswap(uint32_t a[10], uint32_t b[10], uint32_t c[10], uint32_t d[10]
 
 #define sqr_25519(a,b) mul_25519(a,b,b)
 
-/** A random field element in [1, 2²⁵⁴), so never zero modulo 2²⁵⁵ - 19 (splitmix64.h) **/
-STATIC void random_fe_25519(uint32_t out[10], uint64_t *state)
+/** A random field element in [1, 2²⁵⁴), so never zero modulo 2²⁵⁵ - 19 (siphash.h) **/
+STATIC void random_fe_25519(uint32_t out[10], BlindPrf *prf)
 {
     unsigned i;
 
     for (i=0; i<10; i++) {
-        out[i] = (uint32_t)(splitmix64_next(state) & ((i & 1) ? MASK25 : MASK26));
+        out[i] = (uint32_t)(blind_prf_next(prf) & ((i & 1) ? MASK25 : MASK26));
     }
     out[9] &= (1U << 24) - 1;
     out[0] |= 1;
