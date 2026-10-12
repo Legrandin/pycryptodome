@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import importlib
 import threading
-from typing import Any, Optional, Union
+from typing import Any, Optional, TypeVar, Union
 
 from Crypto.Math._IntegerBase import IntegerBase
 from Crypto.Math.Numbers import Integer
@@ -21,6 +21,11 @@ from Crypto.Util._raw_api import (
     null_pointer,
 )
 from Crypto.Util.number import bytes_to_long, long_to_bytes
+
+from ._curve import _Curve
+
+# EccPoint or EccXPoint (defined below)
+_PointT = TypeVar("_PointT", "EccPoint", "EccXPoint")
 
 
 def _encode_coordinate(value: Union[int, IntegerBase], length: int) -> bytes:
@@ -52,13 +57,16 @@ def _encode_scalar(scalar: Union[int, IntegerBase], min_length: int) -> bytes:
     return long_to_bytes(scalar)
 
 
-def _curve_context(curve: Any) -> Any:
-    """The context of the C code of a curve (a null pointer if it has none)"""
+def _curve_context(curve: _Curve) -> Any:
+    """The context of the C code of a curve (a null pointer if it has none).
+
+    The type of the pointer depends on the FFI backend (cffi or ctypes).
+    """
 
     return null_pointer if curve.context is None else curve.context.get()
 
 
-def _clone_raw_point(curve: Any, point: Any) -> SmartPointer:
+def _clone_raw_point(curve: _Curve, point: Union[EccPoint, EccXPoint]) -> SmartPointer:
     """A copy of the C point of an EccPoint or EccXPoint (on curve)"""
 
     raw_point = VoidPointer()
@@ -68,7 +76,7 @@ def _clone_raw_point(curve: Any, point: Any) -> SmartPointer:
     return SmartPointer(raw_point.get(), curve.rawlib.free_point)
 
 
-def _copy_point(point: Any) -> Any:
+def _copy_point(point: _PointT) -> _PointT:
     """A copy of an EccPoint or EccXPoint, of the same class"""
 
     copy = point.__class__.__new__(point.__class__)
