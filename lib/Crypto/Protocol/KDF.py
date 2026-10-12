@@ -38,9 +38,10 @@ from Crypto.Util._raw_api import (
     is_buffer,
     load_pycryptodome_raw_lib,
 )
+from Crypto.Util._threads import range_boundaries, run_in_threads, threads_param
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 from Crypto.Util.number import size as bit_size
-from Crypto.Util.strxor import strxor
+from Crypto.Util.strxor import strxor, strxor_c
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -49,20 +50,11 @@ Buffer = Union[bytes, bytearray, memoryview]
 RNG = Callable[[int], bytes]
 PRF = Callable[[bytes, bytes], bytes]
 
-_raw_salsa20_lib = load_pycryptodome_raw_lib(
-    "Crypto.Cipher._Salsa20",
-    """
-                    int Salsa20_8_core(const uint8_t *x, const uint8_t *y,
-                                       uint8_t *out);
-                    """,
-)
-
 _raw_scrypt_lib = load_pycryptodome_raw_lib(
     "Crypto.Protocol._scrypt",
     """
-                    typedef int (core_t)(const uint8_t [64], const uint8_t [64], uint8_t [64]);
                     int scryptROMix(const uint8_t *data_in, uint8_t *data_out,
-                           size_t data_len, unsigned N, core_t *core);
+                           size_t data_len, unsigned N);
                     """,
 )
 
@@ -404,6 +396,33 @@ def HKDF(
     return list(kol[:num_keys])
 
 
+def _PBKDF2_HMAC_SHA256_1(password: Union[str, Buffer], salt: Union[str, Buffer], dkLen: int) -> bytes:
+    """Same as ``PBKDF2(password, salt, dkLen, 1, hmac_hash_module=SHA256)``,
+    but much faster: HMAC is computed directly on top of SHA-256,
+    and the hash states for the key and the salt are reused for every block.
+    """
+
+    password = tobytes(password)
+    salt = tobytes(salt)
+
+    if len(password) > SHA256.block_size:
+        password = SHA256.new(password).digest()
+    password = password.ljust(SHA256.block_size, b"\x00")
+
+    inner = SHA256.new(strxor_c(password, 0x36))
+    inner.update(salt)
+    outer = SHA256.new(strxor_c(password, 0x5C))
+
+    blocks = []
+    for i in range(1, (dkLen + SHA256.digest_size - 1) // SHA256.digest_size + 1):
+        h_in = inner.copy()
+        h_in.update(struct.pack(">I", i))
+        h_out = outer.copy()
+        h_out.update(h_in.digest())
+        blocks.append(h_out.digest())
+    return b"".join(blocks)[:dkLen]
+
+
 @overload
 def scrypt(
     password: Union[str, Buffer],
@@ -413,6 +432,8 @@ def scrypt(
     r: int,
     p: int,
     num_keys: Literal[1] = 1,
+    *,
+    threads: int = 1,
 ) -> bytes: ...
 
 
@@ -425,6 +446,8 @@ def scrypt(
     r: int,
     p: int,
     num_keys: int,
+    *,
+    threads: int = 1,
 ) -> Union[bytes, list[bytes]]: ...
 
 
@@ -436,6 +459,8 @@ def scrypt(
     r: int,
     p: int,
     num_keys: int = 1,
+    *,
+    threads: int = 1,
 ) -> Union[bytes, list[bytes]]:
     """Derive one or more keys from a passphrase.
 
@@ -462,6 +487,14 @@ def scrypt(
         By default, only 1 key is generated.
         The maximum cumulative length of all keys is :math:`(2^{32}-1)*32`
         (that is, 128TB).
+     threads (integer):
+        The maximum number of threads used to compute the
+        :data:`p` independent flows in parallel
+        (default: 1, no extra threads; 0 for all CPU cores).
+        At most :data:`p` threads are used, so there is no benefit when
+        :data:`p` is 1. Each thread needs its own :math:`128 \\cdot r \\cdot N`
+        bytes of memory, at the same time.
+        The output does not depend on the number of threads.
 
     A good choice of parameters *(N, r , p)* was suggested
     by Colin Percival in his `presentation in 2009`__:
@@ -481,25 +514,33 @@ def scrypt(
         raise ValueError("N is too big")
     if p > ((2**32 - 1) * 32) // (128 * r):
         raise ValueError("p or r are too big")
+    # At least one "thread" (the caller), even when p is 0
+    threads = max(1, min(threads_param(threads), p))
 
-    prf_hmac_sha256 = lambda p, s: HMAC.new(p, s, SHA256).digest()
+    flow_len = 128 * r
+    stage_1 = _PBKDF2_HMAC_SHA256_1(password, salt, p * flow_len)
 
-    stage_1 = PBKDF2(password, salt, p * 128 * r, 1, prf=prf_hmac_sha256)
-
-    scryptROMix = _raw_scrypt_lib.scryptROMix
-    core = _raw_salsa20_lib.Salsa20_8_core
-
-    # Parallelize into p flows
-    data_out = []
-    for flow in range(p):
-        idx = flow * 128 * r
-        buffer_out = create_string_buffer(128 * r)
-        result = scryptROMix(stage_1[idx : idx + 128 * r], buffer_out, c_size_t(128 * r), N, core)
+    def romix(flow: int) -> bytes:
+        buffer_out = create_string_buffer(flow_len)
+        result = _raw_scrypt_lib.scryptROMix(
+            stage_1[flow * flow_len : (flow + 1) * flow_len], buffer_out, c_size_t(flow_len), N
+        )
         if result:
             raise ValueError("Error %X while running scrypt" % result)
-        data_out += [get_raw_buffer(buffer_out)]
+        return get_raw_buffer(buffer_out)
 
-    dk = PBKDF2(password, b"".join(data_out), key_len * num_keys, 1, prf=prf_hmac_sha256)
+    # The p flows are independent: each thread computes a contiguous range of them
+    bounds = range_boundaries(p, threads)
+
+    def worker(i: int) -> bytes:
+        return b"".join(romix(flow) for flow in range(bounds[i], bounds[i + 1]))
+
+    if threads > 1:
+        data_out = run_in_threads(worker, threads)
+    else:
+        data_out = [worker(0)]
+
+    dk = _PBKDF2_HMAC_SHA256_1(password, b"".join(data_out), key_len * num_keys)
 
     if num_keys == 1:
         return dk

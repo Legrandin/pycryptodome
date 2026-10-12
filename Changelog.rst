@@ -129,6 +129,13 @@ New features
 * Set the environment variable ``PYCRYPTODOME_NO_SELFTEST`` when building
   from source to leave out the self-tests (``Crypto.SelfTest``), whose test keys
   and certificates may be reported by security scanners.
+* ``Crypto.Protocol.KDF.scrypt()`` is about 1.15x-1.3x faster for ``p=1``,
+  and up to 1.7x faster for small ``N`` and large ``p``. On Linux, its memory is
+  backed by transparent huge pages where available.
+* New parameter ``threads`` for ``Crypto.Protocol.KDF.scrypt()``, to compute
+  the ``p`` independent flows on several CPU cores (``threads=0`` for all of them).
+  Each thread uses ``128 * r * N`` bytes of memory at the same time.
+  The output does not depend on the number of threads.
 
 3.24.0 (4 October 2026)
 ++++++++++++++++++++++++++

@@ -27,6 +27,7 @@ import pytest
 from Crypto.Cipher import AES, DES3
 from Crypto.Hash import CMAC, HMAC, MD5, SHA1, SHA224, SHA256, SHA384, SHA512
 from Crypto.Protocol.KDF import (
+    _PBKDF2_HMAC_SHA256_1,
     _S2V,
     HKDF,
     PBKDF1,
@@ -476,6 +477,61 @@ class TestScrypt:
         # Same output, but this time split over 3 keys
         key1, key2, key3 = scrypt(b"password", b"salt", 4, 16, 1, 1, 3)
         assert (ref[:4], ref[4:8], ref[8:]) == (key1, key2, key3)
+
+    # The fast PBKDF2 used internally by scrypt must match the generic one,
+    # also for passwords shorter, as long as, and longer than a SHA-256 block
+    @pytest.mark.parametrize("password", [b"", b"pw", b"x" * 64, b"y" * 65, b"z" * 200])
+    @pytest.mark.parametrize("dkLen", [1, 32, 33, 1000])
+    def test_pbkdf2_hmac_sha256_1(self, password, dkLen):
+        expected = PBKDF2(password, b"salt", dkLen, 1, hmac_hash_module=SHA256)
+        assert _PBKDF2_HMAC_SHA256_1(password, b"salt", dkLen) == expected
+
+    def test_str_password(self):
+        # Strings are encoded as Latin-1
+        ref = scrypt("p\xe4ss".encode("latin-1"), b"salt", 32, 16, 1, 1)
+        assert scrypt("p\xe4ss", "salt", 32, 16, 1, 1) == ref
+
+
+class TestScryptThreads:
+    def test_threads_negative(self):
+        for threads in (1.0, "2", None, True):
+            with pytest.raises(TypeError):
+                scrypt(b"password", b"salt", 16, 16, 1, 2, threads=threads)
+        for threads in (-1, -8):
+            with pytest.raises(ValueError):
+                scrypt(b"password", b"salt", 16, 16, 1, 2, threads=threads)
+        # Keyword only
+        with pytest.raises(TypeError):
+            scrypt(b"password", b"salt", 16, 16, 1, 2, 1, 2)
+
+    @pytest.mark.parametrize("p", [1, 2, 3, 5, 16])
+    def test_output_independent_of_threads(self, p):
+        ref = scrypt(b"password", b"salt", 40, 64, 2, p)
+        for threads in (0, 2, 3, 4, 8, 32):
+            assert scrypt(b"password", b"salt", 40, 64, 2, p, threads=threads) == ref
+
+    def test_rfc7914(self):
+        # Test vector from RFC 7914 (N=1024, r=8, p=16)
+        expected = t2b(
+            """
+            fd ba be 1c 9d 34 72 00 78 56 e7 19 0d 01 e9 fe
+            7c 6a d7 cb c8 23 78 30 e7 73 76 63 4b 37 31 62
+            2e af 30 d9 2e 22 a3 88 6f f1 09 27 9d 98 30 da
+            c7 27 af b9 4a 83 ee 6d 83 60 cb df a2 cc 06 40
+            """
+        )
+        assert scrypt(b"password", b"NaCl", 64, 1024, 8, 16, threads=4) == expected
+
+    def test_p_zero(self):
+        # No flows at all: as in 3.24, only the final PBKDF2 is left (with an empty salt)
+        expected = PBKDF2(b"password", b"", 16, 1, hmac_hash_module=SHA256)
+        for threads in (1, 4):
+            assert scrypt(b"password", b"salt", 16, 16, 1, 0, threads=threads) == expected
+
+    def test_multiple_keys(self):
+        ref = scrypt(b"password", b"salt", 12, 16, 1, 4)
+        keys = scrypt(b"password", b"salt", 4, 16, 1, 4, 3, threads=2)
+        assert keys == [ref[:4], ref[4:8], ref[8:]]
 
 
 class TestBcrypt:
