@@ -79,8 +79,9 @@ _DEFAULT_MAX_PBKDF2 = {
 #: Maximum scrypt cost N*r*p/8 (that is, N for r=8 and p=1)
 _DEFAULT_MAX_SCRYPT_COST = 2**25
 
-#: Maximum memory for the key derivation (when max_memory is None): 256 MiB.
-#: Only scrypt needs a significant amount (128*N*r bytes for each thread).
+#: Maximum memory for the key derivation (when max_memory is None): 256 MiB,
+#: for all threads together. Only scrypt needs a significant amount
+#: (128*N*r bytes for each thread).
 _DEFAULT_MAX_MEMORY = 256 * 2**20
 
 
@@ -540,8 +541,9 @@ class PBES2:
             The maximum number of threads used by scrypt
             (see :func:`Crypto.Protocol.KDF.scrypt`).
           max_memory : integer
-            The maximum memory (in bytes) for the key derivation, all threads included.
-            Fewer threads are used if needed.
+            The maximum memory (in bytes) for the key derivation, as a limit on the
+            total of all threads together (scrypt needs 128*N*r bytes for each thread).
+            Fewer threads are used if needed, down to one.
             The default value is None (enforcing the limit :data:`_DEFAULT_MAX_MEMORY`).
             Set it to ``0`` to disable the check.
         :Returns:

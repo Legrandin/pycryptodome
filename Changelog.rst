@@ -140,7 +140,7 @@ New features
   2.6x with SSE2 (4 blocks at a time), and 1.3x otherwise.
 * New parameter ``threads`` for ``Crypto.Protocol.KDF.scrypt()``, to compute
   the ``p`` independent flows on several CPU cores (``threads=0`` for all of them).
-  Each thread uses ``128 * r * N`` bytes of memory at the same time.
+  Each thread uses its own ``128 * r * N`` bytes of memory at the same time.
   The output does not depend on the number of threads.
 * New parameter ``threads`` for ``Crypto.IO.PKCS8.wrap()`` and ``unwrap()``,
   for ``import_key()`` of RSA, DSA and ECC keys, and for ``export_key()`` of RSA and ECC keys:
@@ -162,8 +162,9 @@ New features
   could require any amount of time and memory. By default, the limit is 2\ :sup:`25`.
 * New parameter ``max_memory`` for ``Crypto.IO.PKCS8.unwrap()`` and for ``import_key()``
   of RSA, DSA and ECC keys: the maximum memory for the key derivation of an encrypted
-  PKCS#8 key (scrypt), all threads included. The default is 256 MiB.
-  Above it, ``Crypto.IO.PKCS8.PbesMemoryError`` is raised.
+  PKCS#8 key (scrypt), as a total for all threads together, not for each thread.
+  The default is 256 MiB. Fewer threads are used if needed; if even one thread
+  does not fit, ``Crypto.IO.PKCS8.PbesMemoryError`` is raised.
 
 3.24.0 (4 October 2026)
 ++++++++++++++++++++++++++

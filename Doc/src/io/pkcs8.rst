@@ -82,7 +82,7 @@ computations, which can run on several CPU cores: use the ``threads`` parameter
 of :func:`wrap` and :func:`unwrap`, of ``import_key()`` for RSA, DSA and ECC keys,
 and of ``export_key()`` for RSA and ECC keys.
 With ``threads=0``, as many threads as the CPU cores available are used.
-Each thread needs its own block of memory (128 · *r* · *N* bytes).
+Each thread needs its own block of memory (128 · *r* · *N* bytes), at the same time.
 The result does not depend on the number of threads.
 
 
@@ -124,9 +124,15 @@ An explicit ``max_iteration_count`` is the maximum number of iterations
 for PBKDF1 and PBKDF2, whatever the hash, and the maximum *N·r·p/8* for scrypt
 (that is, *N* for the usual *r=8* and *p=1*).
 
-Only scrypt needs a significant amount of memory: *128·N·r* bytes for each thread.
-By default (``max_memory=None``), the limit is 256 MiB, all threads included.
-Fewer threads are used if needed, down to one.
+Only scrypt needs a significant amount of memory: *128·N·r* bytes for **each** thread,
+so *t* threads need *t·128·N·r* bytes.
+``max_memory`` limits the **total** of all threads together, not each thread:
+by default (``max_memory=None``), it is 256 MiB.
+If the requested threads do not fit, fewer are used, down to one;
+if a single thread does not fit, the key is rejected.
+For instance, with *N* = 2\ :sup:`17` and *r* = 8 (128 MiB for each thread) and
+the default limit, at most 2 threads are used, even with ``threads=4``;
+with *N* = 2\ :sup:`19` (512 MiB for one thread), the key is rejected.
 
 With ``max_iteration_count=0`` or ``max_memory=0``, the corresponding limit does not apply.
 

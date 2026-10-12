@@ -62,7 +62,8 @@ independent flows, which can run on several CPU cores with the ``threads`` param
 
 With ``threads=0``, it uses as many threads as the CPU cores available to the process.
 The output does not depend on the number of threads, but each thread
-uses :math:`128 \cdot r \cdot N` bytes of memory at the same time.
+uses its own :math:`128 \cdot r \cdot N` bytes of memory, at the same time:
+with 4 threads, scrypt needs 4 times as much memory as with one.
 
 .. _scrypt_func:
 

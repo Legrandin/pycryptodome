@@ -509,7 +509,8 @@ def scrypt(
         (default: 1, no extra threads; 0 for all CPU cores).
         At most :data:`p` threads are used, so there is no benefit when
         :data:`p` is 1. Each thread needs its own :math:`128 \\cdot r \\cdot N`
-        bytes of memory, at the same time.
+        bytes of memory, at the same time: in total,
+        :math:`\\min(threads, p) \\cdot 128 \\cdot r \\cdot N` bytes.
         The output does not depend on the number of threads.
 
     A good choice of parameters *(N, r , p)* was suggested

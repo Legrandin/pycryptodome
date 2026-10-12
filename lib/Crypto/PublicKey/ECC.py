@@ -1308,11 +1308,14 @@ def import_key(
         parameter larger than 1 can use them.
 
       max_memory (integer):
-        The maximum memory (in bytes) that the key derivation of a `PKCS#8`_
-        encrypted key can use, all threads included (fewer threads are used
-        if needed). Only scrypt uses a significant amount:
-        128 · *N* · *r* bytes for each thread.
-        The default value is None (enforcing the default limit of 256 MiB).
+        The maximum memory (in bytes) for the key derivation of a `PKCS#8`_
+        encrypted key, as a limit on the **total** of all threads together
+        (not on each thread).
+        Only scrypt uses a significant amount: 128 · *N* · *r* bytes for
+        **each** thread, so *t* threads need *t* · 128 · *N* · *r* bytes.
+        If the requested threads do not fit, fewer are used (down to one);
+        if a single thread does not fit, the key is rejected.
+        The default value is None (a limit of 256 MiB).
         Set it to ``0`` to disable the check.
 
     .. note::
