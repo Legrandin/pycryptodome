@@ -77,9 +77,9 @@ static const uint8_t sigma[16] = "expand 32-byte k";
 static const uint8_t tau[16]   = "expand 16-byte k";
 
 typedef struct  {
-    uint32_t input[16];             /* Words in the natural order */
+    uint32_t input[16];             /* Words in the natural order (counter of the block after keystream[]) */
     unsigned ks_index;              /* Next unused byte in keystream[] */
-    uint8_t  keystream[KS_SIZE];
+    uint8_t  keystream[KS_SIZE];    /* Always computed (KS_BLOCKS blocks before the counter) */
 } stream_state;
 
 #if defined(SALSA20_AVX2)
@@ -250,6 +250,60 @@ static void xor_keystream(uint8_t *out, const uint8_t *in, const uint8_t *ks, si
     }
 }
 
+/*
+ * The key stream is 2^64 blocks long (2^70 bytes): it ends with the block
+ * whose counter is 2^64 - 1. Using the blocks after it would mean
+ * reusing the key stream from block 0, so that must fail.
+ *
+ * keystream[] always holds the KS_BLOCKS blocks computed last, and the
+ * counter in input[8..9] is the one of the block after them.
+ * The counter of the first block in keystream[] is always a multiple of
+ * KS_BLOCKS (1, 4 or 8), which divides 2^64: the last KS_BLOCKS blocks of
+ * the key stream end exactly with block 2^64 - 1, and the counter after
+ * them is 0.
+ */
+
+/** Block counter after keystream[] **/
+static uint64_t get_next_counter(const stream_state *salsaState)
+{
+    return ((uint64_t)salsaState->input[9] << 32) | salsaState->input[8];
+}
+
+static void set_next_counter(stream_state *salsaState, uint64_t next_counter)
+{
+    salsaState->input[8] = (uint32_t)next_counter;
+    salsaState->input[9] = (uint32_t)(next_counter >> 32);
+}
+
+/** Move the block counter past the KS_BLOCKS blocks just computed in keystream[] **/
+static void advance_counter(stream_state *salsaState)
+{
+    set_next_counter(salsaState, get_next_counter(salsaState) + KS_BLOCKS);
+}
+
+/**
+ * Return 0 if len more bytes of key stream are available,
+ * when ks_avail bytes are left in keystream[].
+ **/
+static int check_length(uint64_t next_counter, unsigned ks_avail, size_t len)
+{
+    uint64_t left;
+
+    if (len <= ks_avail)
+        return 0;
+
+    /*
+     * Blocks after keystream[] (none if the counter is 0, after the
+     * last block): with 2^58 or more, any len fits
+     */
+    left = 0 - next_counter;
+    if (left >= ((uint64_t)1 << 58))
+        return 0;
+    if ((uint64_t)(len - ks_avail) > 64 * left)
+        return ERR_MAX_DATA;
+    return 0;
+}
+
 EXPORT_SYM int Salsa20_stream_init(uint8_t *key, size_t keylen,
                         uint8_t *nonce, size_t nonce_len,
                         stream_state **pSalsaState)
@@ -294,7 +348,38 @@ EXPORT_SYM int Salsa20_stream_init(uint8_t *key, size_t keylen,
         input[i+11] = LOAD_U32_LITTLE(key + 4*i);
     input[15] = LOAD_U32_LITTLE(constants + 12);
 
-    salsaState->ks_index = KS_SIZE;
+    salsa20_keystream(input, salsaState->keystream);
+    advance_counter(salsaState);
+    salsaState->ks_index = 0;
+    return 0;
+}
+
+/*
+ * Move to a position in the key stream: byte offset (0..63) of
+ * block block_high * 2^32 + block_low (each a 32-bit value).
+ */
+EXPORT_SYM int Salsa20_stream_seek(stream_state *salsaState,
+                                   unsigned long block_high,
+                                   unsigned long block_low,
+                                   unsigned offset)
+{
+    uint64_t block;
+    unsigned in_batch;
+
+    if (NULL == salsaState)
+        return ERR_NULL;
+
+    if (offset >= 64 || block_high > 0xFFFFFFFFUL || block_low > 0xFFFFFFFFUL)
+        return ERR_MAX_OFFSET;
+
+    /* Compute the KS_BLOCKS blocks that include this one, from a multiple of KS_BLOCKS */
+    block = ((uint64_t)block_high << 32) | block_low;
+    in_batch = (unsigned)(block % KS_BLOCKS);
+    set_next_counter(salsaState, block - in_batch);
+    salsa20_keystream(salsaState->input, salsaState->keystream);
+    advance_counter(salsaState);
+    salsaState->ks_index = 64*in_batch + offset;
+
     return 0;
 }
 
@@ -308,6 +393,7 @@ EXPORT_SYM int Salsa20_stream_encrypt(stream_state *salsaState, const uint8_t in
                            uint8_t out[], size_t len)
 {
     unsigned ks_index;
+    int result;
 
     if (NULL == salsaState || NULL == in || NULL == out)
         return ERR_NULL;
@@ -322,21 +408,18 @@ EXPORT_SYM int Salsa20_stream_encrypt(stream_state *salsaState, const uint8_t in
     if (ks_index > KS_SIZE)
         return ERR_STATE;
 
+    /* Fail before encrypting anything if the key stream would run out */
+    result = check_length(get_next_counter(salsaState), KS_SIZE - ks_index, len);
+    if (result)
+        return result;
+
     while (len > 0) {
         size_t n;
 
         if (ks_index == KS_SIZE) {
-            uint32_t *input = salsaState->input;
-
-            salsa20_keystream(input, salsaState->keystream);
+            salsa20_keystream(salsaState->input, salsaState->keystream);
+            advance_counter(salsaState);
             ks_index = 0;
-
-            /* Increment block counter */
-            input[8] += KS_BLOCKS;
-            if (input[8] < KS_BLOCKS) {
-                input[9]++;
-                /* stopping at 2^70 bytes per nonce is user's responsibility */
-            }
         }
 
         n = MIN(len, KS_SIZE - ks_index);

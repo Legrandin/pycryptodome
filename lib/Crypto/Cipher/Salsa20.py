@@ -33,6 +33,7 @@ from Crypto.Util._raw_api import (
     c_size_t,
     c_uint8_ptr_len,
     c_uint8_ptr_out,
+    c_ulong,
     create_output_buffer,
     get_raw_buffer,
     is_writeable_buffer,
@@ -49,6 +50,10 @@ _salsa20_cdecl = """
                     int Salsa20_stream_encrypt(void *salsaState,
                                                const uint8_t in[],
                                                uint8_t out[], size_t len);
+                    int Salsa20_stream_seek(void *salsaState,
+                                            unsigned long block_high,
+                                            unsigned long block_low,
+                                            unsigned offset);
                     """
 
 _raw_salsa20_portable_lib = load_pycryptodome_raw_lib("Crypto.Cipher._Salsa20", _salsa20_cdecl)
@@ -120,6 +125,9 @@ class Salsa20Cipher:
         Returns:
           If ``output`` is ``None``, the ciphertext is returned as ``bytes``.
           Otherwise, ``None``.
+        Raises:
+          OverflowError: if the data goes beyond the end of the key stream
+            (2**70 bytes); nothing is encrypted then.
         """
 
         if output is None:
@@ -141,6 +149,8 @@ class Salsa20Cipher:
             result = _raw_salsa20_lib.Salsa20_stream_encrypt(
                 self._state.get(), plaintext_ptr, ciphertext_ptr, c_size_t(plaintext_len)
             )
+        if result == 10:  # ERR_MAX_DATA
+            raise OverflowError("The key stream of Salsa20 is exhausted (2**70 bytes per nonce)")
         if result:
             raise ValueError("Error %d while encrypting with Salsa20" % result)
 
@@ -173,12 +183,41 @@ class Salsa20Cipher:
         Returns:
           If ``output`` is ``None``, the plaintext is returned as ``bytes``.
           Otherwise, ``None``.
+        Raises:
+          OverflowError: if the data goes beyond the end of the key stream
+            (2**70 bytes); nothing is decrypted then.
         """
 
         try:
             return self.encrypt(ciphertext, output=output)
         except ValueError as e:
             raise ValueError(str(e).replace("enc", "dec"))
+
+    def seek(self, position: int) -> None:
+        """Seek to a certain position in the key stream.
+
+        The key stream is made of 64-byte blocks, numbered by a 64-bit counter.
+        If you want to start from a certain block (that is,
+        to set the initial block counter), use ``seek(block_number * 64)``.
+
+        Args:
+          position (integer):
+            The absolute position within the key stream, in bytes.
+            It must be in the range [0, 2**70).
+        """
+
+        if not 0 <= position < 2**70:
+            raise ValueError("The position must be between 0 and 2**70 - 1")
+
+        block_number, offset = divmod(position, 64)
+        block_low = block_number & 0xFFFFFFFF
+        block_high = block_number >> 32
+
+        result = _raw_salsa20_lib.Salsa20_stream_seek(
+            self._state.get(), c_ulong(block_high), c_ulong(block_low), offset
+        )
+        if result:
+            raise ValueError("Error %d while seeking with Salsa20" % result)
 
 
 def new(key: Buffer, nonce: Optional[Buffer] = None) -> Salsa20Cipher:

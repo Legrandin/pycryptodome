@@ -33,6 +33,7 @@ from Crypto.Util._raw_api import (
     VoidPointer,
     c_size_t,
     c_uint8_ptr,
+    c_ulong,
     create_string_buffer,
     get_raw_buffer,
 )
@@ -382,6 +383,151 @@ class TestChunks:
         assert buf == ref
 
 
+def _salsa20_block(key, nonce, counter):
+    """Reference Salsa20 block function (one 64-byte block of key stream)"""
+
+    def rotl(v, c):
+        return ((v << c) | (v >> (32 - c))) & 0xFFFFFFFF
+
+    def quarter(x, a, b, c, d):
+        x[b] ^= rotl((x[a] + x[d]) & 0xFFFFFFFF, 7)
+        x[c] ^= rotl((x[b] + x[a]) & 0xFFFFFFFF, 9)
+        x[d] ^= rotl((x[c] + x[b]) & 0xFFFFFFFF, 13)
+        x[a] ^= rotl((x[d] + x[c]) & 0xFFFFFFFF, 18)
+
+    def words(b):
+        return [int.from_bytes(b[i : i + 4], "little") for i in range(0, len(b), 4)]
+
+    if len(key) == 32:
+        c, k1, k2 = words(b"expand 32-byte k"), words(key[:16]), words(key[16:])
+    else:
+        c, k1, k2 = words(b"expand 16-byte k"), words(key), words(key)
+    n = words(nonce)
+    ctr = [counter & 0xFFFFFFFF, counter >> 32]
+    inp = [c[0], *k1, c[1], *n, *ctr, c[2], *k2, c[3]]
+
+    x = list(inp)
+    for _ in range(10):
+        quarter(x, 0, 4, 8, 12)
+        quarter(x, 5, 9, 13, 1)
+        quarter(x, 10, 14, 2, 6)
+        quarter(x, 15, 3, 7, 11)
+        quarter(x, 0, 1, 2, 3)
+        quarter(x, 5, 6, 7, 4)
+        quarter(x, 10, 11, 8, 9)
+        quarter(x, 15, 12, 13, 14)
+    return b"".join(((a + b) & 0xFFFFFFFF).to_bytes(4, "little") for a, b in zip(x, inp))
+
+
+# The modules that compute the key stream: the one in use and,
+# if different (AVX2), the portable one (SSE2 on x86)
+_salsa20_libs = [Salsa20._raw_salsa20_lib]
+if Salsa20._raw_salsa20_portable_lib is not Salsa20._raw_salsa20_lib:
+    _salsa20_libs.append(Salsa20._raw_salsa20_portable_lib)
+
+
+@pytest.fixture(
+    params=_salsa20_libs, ids=lambda lib: "avx2" if lib is Salsa20._raw_salsa20_avx2_bmi2_lib else "portable"
+)
+def salsa20_lib(request, monkeypatch):
+    monkeypatch.setattr(Salsa20, "_raw_salsa20_lib", request.param)
+    return request.param
+
+
+@pytest.mark.usefixtures("salsa20_lib")
+class TestSeek:
+    key = bytes(range(32))
+    nonce = b"\x5a" * 8
+
+    def test_reference(self):
+        # The reference block function agrees with the cipher from position 0
+        cipher = Salsa20.new(key=self.key, nonce=self.nonce)
+        ks = cipher.encrypt(b"\x00" * 64 * 3)
+        assert ks == b"".join(_salsa20_block(self.key, self.nonce, i) for i in range(3))
+
+    @pytest.mark.parametrize("offset", [0, 1, 63, 64, 65, 64 * 900 + 7, 64 * 4 * 8 + 3])
+    def test_seek(self, offset):
+        pt = bytes(range(200))
+
+        cipher1 = Salsa20.new(key=self.key, nonce=self.nonce)
+        cipher1.encrypt(b"0" * offset)
+        ct1 = cipher1.encrypt(pt)
+
+        cipher2 = Salsa20.new(key=self.key, nonce=self.nonce)
+        cipher2.seek(offset)
+        ct2 = cipher2.encrypt(pt)
+
+        assert ct1 == ct2
+
+    def test_seek_after_use(self):
+        pt = bytes(range(100))
+        ref = Salsa20.new(key=self.key, nonce=self.nonce).encrypt(b"\x00" * 1000 + pt)
+
+        cipher = Salsa20.new(key=self.key, nonce=self.nonce)
+        cipher.encrypt(b"\x00" * 333)
+        cipher.seek(2000)
+        cipher.encrypt(b"\x00" * 17)
+        cipher.seek(1000)
+        assert cipher.encrypt(pt) == ref[1000:]
+
+        cipher.seek(0)
+        assert cipher.encrypt(b"\x00" * 50) == ref[:50]
+
+    @pytest.mark.parametrize("key_len", [16, 32])
+    @pytest.mark.parametrize(
+        "block",
+        [0xDE7A8B6883EEED8D, 2**32 - 3, 2**32 - 1, 2**33 - 2, 2**64 - 16],
+    )
+    def test_counter(self, key_len, block):
+        # Across the carry into the high word of the counter,
+        # for all the blocks computed at once (up to 8)
+        key = self.key[:key_len]
+        cipher = Salsa20.new(key=key, nonce=self.nonce)
+        cipher.seek(block * 64 + 5)
+        ks = cipher.encrypt(b"\x00" * (64 * 10 - 5))
+        ref = b"".join(_salsa20_block(key, self.nonce, block + i) for i in range(10))
+        assert ks == ref[5:]
+
+    @pytest.mark.parametrize("last_blocks", [1, 3, 8, 9])
+    def test_end_of_key_stream(self, last_blocks):
+        # The key stream ends with block 2**64 - 1: it can be used
+        # up to its last byte, but not beyond
+        start = 2**70 - 64 * last_blocks + 5
+        ref = b"".join(
+            _salsa20_block(self.key, self.nonce, 2**64 - last_blocks + i) for i in range(last_blocks)
+        )
+        to_end = 2**70 - start
+
+        cipher = Salsa20.new(key=self.key, nonce=self.nonce)
+        cipher.seek(start)
+        assert cipher.encrypt(b"\x00" * (to_end - 1)) + cipher.encrypt(b"\x00") == ref[5:]
+        with pytest.raises(OverflowError):
+            cipher.encrypt(b"\x00")
+        with pytest.raises(OverflowError):
+            cipher.decrypt(b"\x00")
+        assert cipher.encrypt(b"") == b""
+
+        # Beyond the end in one call: nothing is encrypted
+        cipher.seek(start)
+        output = bytearray(to_end + 1)
+        with pytest.raises(OverflowError):
+            cipher.encrypt(b"\x00" * (to_end + 1), output=output)
+        assert output == bytearray(to_end + 1)
+        assert cipher.encrypt(b"\x00" * to_end) == ref[5:]
+
+        # A seek makes the key stream usable again
+        cipher.seek(0)
+        assert cipher.encrypt(b"\x00" * 64) == _salsa20_block(self.key, self.nonce, 0)
+
+    def test_invalid_position(self):
+        cipher = Salsa20.new(key=self.key, nonce=self.nonce)
+        with pytest.raises(ValueError):
+            cipher.seek(-1)
+        with pytest.raises(ValueError):
+            cipher.seek(2**70)
+        cipher.seek(2**70 - 1)
+
+
 @pytest.mark.skipif(Salsa20._raw_salsa20_avx2_bmi2_lib is None, reason="AVX2 and BMI2 not available")
 class TestSalsa20Implementations:
     """The test vectors only exercise the implementation in use.
@@ -422,6 +568,34 @@ class TestSalsa20Implementations:
                 for lib in (Salsa20._raw_salsa20_portable_lib, Salsa20._raw_salsa20_avx2_bmi2_lib)
             ]
             assert results[0] == results[1]
+
+    @pytest.mark.parametrize("block", [0, 2**32 - 3, 2**64 - 16])
+    def test_same_output_seek(self, block):
+        key = bytes(range(32))
+        nonce = b"\x77" * 8
+        data = bytes(range(256)) * 3
+        results = []
+        for lib in (Salsa20._raw_salsa20_portable_lib, Salsa20._raw_salsa20_avx2_bmi2_lib):
+            state = VoidPointer()
+            assert (
+                lib.Salsa20_stream_init(
+                    c_uint8_ptr(key),
+                    c_size_t(len(key)),
+                    c_uint8_ptr(nonce),
+                    c_size_t(len(nonce)),
+                    state.address_of(),
+                )
+                == 0
+            )
+            assert (
+                lib.Salsa20_stream_seek(state.get(), c_ulong(block >> 32), c_ulong(block & 0xFFFFFFFF), 9)
+                == 0
+            )
+            out = create_string_buffer(len(data))
+            assert lib.Salsa20_stream_encrypt(state.get(), c_uint8_ptr(data), out, c_size_t(len(data))) == 0
+            results.append(get_raw_buffer(out))
+            lib.Salsa20_stream_destroy(state.get())
+        assert results[0] == results[1]
 
 
 TestVectors = make_stream_tests(Salsa20, "Salsa20", test_data)

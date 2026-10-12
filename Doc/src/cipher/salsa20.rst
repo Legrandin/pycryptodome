@@ -24,6 +24,13 @@ And this is how you would decrypt it:
     >>> cipher = Salsa20.new(key=secret, nonce=msg_nonce)
     >>> plaintext = cipher.decrypt(ciphertext)
 
+The key stream is made of 64-byte blocks, numbered by a 64-bit counter
+that starts at 0. With the method :meth:`~Crypto.Cipher.Salsa20.Salsa20Cipher.seek`, you can move
+to any position in the key stream, for instance to start from a given block::
+
+    >>> cipher = Salsa20.new(key=secret, nonce=msg_nonce)
+    >>> cipher.seek(block_counter * 64)
+
 .. warning::
 
     ``Salsa20`` does not guarantee authenticity of the data you decrypt!

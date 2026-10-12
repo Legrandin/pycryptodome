@@ -206,6 +206,8 @@ jobs:
         # On x64, the tests of the BMI2/ADX build of the big integer code
         # must run (they fail instead of skipping on a CPU without them)
         NAT_REQUIRE_BMI2_ADX: ${{ matrix.arch == 'x64' && '1' || '' }}
+        # Likewise for the AVX2 build of Salsa20
+        SALSA20_REQUIRE_AVX2: ${{ matrix.arch == 'x64' && '1' || '' }}
       run: |
         cd src/test
         mkdir build

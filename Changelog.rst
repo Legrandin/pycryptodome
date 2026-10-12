@@ -203,6 +203,10 @@ New features
 * DES and Triple DES are reimplemented from scratch, in constant time
   (no table lookups at secret addresses), and no longer use LibTomCrypt.
   They are about 3.5x slower than before.
+* GH#908: New method ``seek()`` for Salsa20 cipher objects, to move to any
+  position in the key stream (for instance, to start from a given block counter).
+* Salsa20 raises ``OverflowError`` instead of silently reusing the key stream,
+  when the data goes beyond its end (2\ :sup:`70` bytes per nonce).
 
 3.24.1 (11 October 2026)
 ++++++++++++++++++++++++++
