@@ -56,6 +56,9 @@ Resolved issues
 * GH#937: Importing a malformed PEM key could take quadratic time. Thanks to Brian Willows.
 * ``Crypto.Protocol.HPKE.new()`` raised ``TypeError`` with Python 3.9 to 3.11
   when ``aead_id`` was a plain integer, and not an ``HPKE.AEAD`` member.
+* Encrypted PKCS#8 keys protected with PBKDF2 (PBES2) were exported and imported
+  with the slow Python implementation of PBKDF2-HMAC, and not with the C one:
+  now they are about 50x-150x faster (SHA-1 and SHA-2).
 
 New features
 ------------

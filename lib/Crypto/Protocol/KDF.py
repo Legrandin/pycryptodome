@@ -25,6 +25,8 @@ from __future__ import annotations
 
 import re
 import struct
+import sys
+import types
 from functools import reduce
 from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, Union, overload
 
@@ -108,6 +110,19 @@ def PBKDF1(
     return pHash.digest()[:dkLen]
 
 
+def _pbkdf2_hmac_assist(hmac_hash_module: Any) -> Optional[Callable[..., bytes]]:
+    """Return the C function for the inner loop of PBKDF2-HMAC with this hash,
+    or None if there is none.
+
+    ``hmac_hash_module`` can also be a hash object, like the ones returned by
+    :func:`Crypto.Hash.new`: the function is in the module of its class.
+    """
+
+    if not isinstance(hmac_hash_module, types.ModuleType):
+        hmac_hash_module = sys.modules.get(type(hmac_hash_module).__module__)
+    return getattr(hmac_hash_module, "_pbkdf2_hmac_assist", None)
+
+
 def PBKDF2(
     password: Union[str, Buffer],
     salt: Union[str, Buffer],
@@ -172,7 +187,8 @@ def PBKDF2(
     if prf is None and hmac_hash_module is None:
         hmac_hash_module = SHA1
 
-    if prf or not hasattr(hmac_hash_module, "_pbkdf2_hmac_assist"):
+    assist = None if prf else _pbkdf2_hmac_assist(hmac_hash_module)
+    if assist is None:
         # Generic (and slow) implementation
 
         if prf is None:
@@ -196,7 +212,7 @@ def PBKDF2(
         while len(key) < dkLen:
             base = HMAC.new(password, b"", hmac_hash_module)
             first_digest = base.copy().update(salt + struct.pack(">I", i)).digest()
-            key += base._pbkdf2_hmac_assist(first_digest, count)
+            key += assist(base._inner, base._outer, first_digest, count)
             i += 1
 
     return key[:dkLen]

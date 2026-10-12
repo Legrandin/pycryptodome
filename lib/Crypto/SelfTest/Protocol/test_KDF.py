@@ -212,6 +212,27 @@ class TestPBKDF2:
         res = PBKDF2(b"p", b"s", 28, 3, hmac_hash_module=hashmod)
         assert res == t2b("f494b312268f820917e98f0b2f6fadc12778d9d300412603d8a51541")
 
+    @pytest.mark.parametrize(
+        "name",
+        ["SHA1", "SHA224", "SHA256", "SHA384", "SHA512", "SHA512-224", "SHA512-256", "SHA3-256"],
+    )
+    def test_hash_object(self, name):
+        # A hash object (like the ones of Crypto.Hash.new(), which PBES2 uses)
+        # takes the C path too, if the hash has one (not SHA-3)
+        from Crypto import Hash
+        from Crypto.Protocol.KDF import _pbkdf2_hmac_assist
+
+        hash_obj = Hash.new(name)
+        assert (_pbkdf2_hmac_assist(hash_obj) is None) == name.startswith("SHA3-")
+
+        def prf(p, s):
+            return HMAC.new(p, s, hash_obj).digest()
+
+        dk_len = hash_obj.digest_size * 2 + 5
+        for password in (b"xxx", b"p" * 200):
+            expected = PBKDF2(password, b"yyy", dk_len, 77, prf=prf)
+            assert PBKDF2(password, b"yyy", dk_len, 77, hmac_hash_module=hash_obj) == expected
+
 
 class TestS2V:
     # Sequence of test vectors.
