@@ -363,7 +363,8 @@ EXPORT_SYM int Salsa20_stream_seek(stream_state *salsaState,
                                    unsigned long block_low,
                                    unsigned offset)
 {
-    uint64_t block;
+    uint32_t input[16];
+    uint64_t block, first;
     unsigned in_batch;
 
     if (NULL == salsaState)
@@ -375,9 +376,18 @@ EXPORT_SYM int Salsa20_stream_seek(stream_state *salsaState,
     /* Compute the KS_BLOCKS blocks that include this one, from a multiple of KS_BLOCKS */
     block = ((uint64_t)block_high << 32) | block_low;
     in_batch = (unsigned)(block % KS_BLOCKS);
-    set_next_counter(salsaState, block - in_batch);
-    salsa20_keystream(salsaState->input, salsaState->keystream);
-    advance_counter(salsaState);
+    first = block - in_batch;
+
+    /*
+     * Use a copy of the input, so that the state never holds the counter
+     * of the first block: if several threads used the object at once
+     * (not supported), a counter of 0 would look like the end of the key stream
+     */
+    memcpy(input, salsaState->input, sizeof input);
+    input[8] = (uint32_t)first;
+    input[9] = (uint32_t)(first >> 32);
+    salsa20_keystream(input, salsaState->keystream);
+    set_next_counter(salsaState, first + KS_BLOCKS);
     salsaState->ks_index = 64*in_batch + offset;
 
     return 0;
