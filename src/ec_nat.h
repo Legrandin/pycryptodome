@@ -57,5 +57,6 @@ EXPORT_SYM int ec_nat_neg(EcPointN *p);
 EXPORT_SYM int ec_nat_double(EcPointN *p);
 EXPORT_SYM int ec_nat_add(EcPointN *a, const EcPointN *b);
 EXPORT_SYM int ec_nat_scalar(EcPointN *p, const uint8_t *k, size_t len, uint64_t seed);
+EXPORT_SYM int ec_nat_scalar_public(EcPointN *p, const uint8_t *k, size_t len);
 
 #endif

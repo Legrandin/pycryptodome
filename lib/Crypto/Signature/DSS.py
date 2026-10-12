@@ -118,11 +118,12 @@ class DssSigScheme:
         if not self._valid_hash(msg_hash):
             raise ValueError("Hash is not sufficiently strong")
 
+        # All values are public: the verification needs no countermeasures
         if self._encoding == "binary":
             if len(signature) != (2 * self._order_bytes):
                 raise ValueError("The signature is not authentic (length)")
             r_prime, s_prime = (
-                Integer.from_bytes(x)
+                Integer.from_bytes(x, public=True)
                 for x in (signature[: self._order_bytes], signature[self._order_bytes :])
             )
         else:
@@ -132,12 +133,12 @@ class DssSigScheme:
                 raise ValueError("The signature is not authentic (DER)")
             if len(der_seq) != 2 or not der_seq.hasOnlyInts():
                 raise ValueError("The signature is not authentic (DER content)")
-            r_prime, s_prime = Integer(der_seq[0]), Integer(der_seq[1])
+            r_prime, s_prime = Integer(der_seq[0], public=True), Integer(der_seq[1], public=True)
 
         if not (0 < r_prime < self._order) or not (0 < s_prime < self._order):
             raise ValueError("The signature is not authentic (d)")
 
-        z = Integer.from_bytes(msg_hash.digest()[: self._order_bytes])
+        z = Integer.from_bytes(msg_hash.digest()[: self._order_bytes], public=True)
         result = self._key._verify(z, (r_prime, s_prime))
         if not result:
             raise ValueError("The signature is not authentic")

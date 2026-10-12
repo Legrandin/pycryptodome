@@ -35,8 +35,10 @@ void ed448_point_add(EcWs *ws, const Ed448Context *ctx,
                      uint64_t *x3, uint64_t *y3, uint64_t *z3,
                      const uint64_t *x1, const uint64_t *y1, const uint64_t *z1,
                      const uint64_t *x2, const uint64_t *y2, const uint64_t *z2);
-int ed448_mul_var(EcWs *ws, const Ed448Context *ctx, PointEd448 *p, const uint64_t *kb, const uint64_t *lambda);
-int ed448_mul_g(EcWs *ws, const Ed448Context *ctx, PointEd448 *p, const uint64_t *kb, const uint64_t *lambda);
+int ed448_mul_var(EcWs *ws, const Ed448Context *ctx, PointEd448 *p, const uint64_t *kb, size_t windows,
+                  const uint64_t *lambda);
+int ed448_mul_g(EcWs *ws, const Ed448Context *ctx, PointEd448 *p, const uint64_t *kb, size_t windows,
+                const uint64_t *lambda);
 
 typedef struct {
     int base;                       /* 0: G, 1: Q, 2: Q + T (T of order 4) */
@@ -450,8 +452,8 @@ static void test_formulas(const Ed448Context *ctx)
         assert(ed448_copy(r1, q) == 0);
         memcpy(r1->x, ctx->gx, nw*8);
         memcpy(r1->y, ctx->gy, nw*8);
-        assert(ed448_mul_var(&ws, ctx, r1, kb, lambda) == 0);
-        assert(ed448_mul_g(&ws, ctx, r2, kb, lambda) == 0);
+        assert(ed448_mul_var(&ws, ctx, r1, kb, ctx->windows, lambda) == 0);
+        assert(ed448_mul_g(&ws, ctx, r2, kb, ctx->windows, lambda) == 0);
         assert(ed448_cmp(r1, r2) == 0);
         assert(ed448_on_curve(&ws, ctx, r1->x, r1->y, r1->z));
     }
@@ -510,6 +512,54 @@ static void test_random(const Ed448Context *ctx)
     }
 }
 
+/*
+ * The multiplication for public scalars gives the same result as the
+ * blinded one: for G (tables), Q and Q + T (T of order 4), for random
+ * scalars of several lengths (also longer than the order), 0 and 4n.
+ */
+static void test_scalar_public(const Ed448Context *ctx)
+{
+    const size_t lens[] = { 1, 2, 8, LEN, LEN + 8, 2*LEN };
+    const char *bxs[] = { gx, qx, qtx }, *bys[] = { gy, qy, qty };
+    uint8_t k[2*LEN];
+    unsigned base, t;
+    size_t i, l;
+
+    for (base=0; base<3; base++) {
+        for (l=0; l<sizeof lens / sizeof lens[0]; l++) {
+            for (t=0; t<5; t++) {
+                PointEd448 *a, *b;
+
+                for (i=0; i<lens[l]; i++)
+                    k[i] = (uint8_t)rnd();
+                a = load_point(ctx, bxs[base], bys[base]);
+                b = load_point(ctx, bxs[base], bys[base]);
+                assert(ed448_scalar(a, k, lens[l], rnd()) == 0);
+                assert(ed448_scalar_public(b, k, lens[l]) == 0);
+                assert(ed448_cmp(a, b) == 0);
+                ed448_free_point(a);
+                ed448_free_point(b);
+            }
+        }
+
+        /* 0 and 4n */
+        for (t=0; t<2; t++) {
+            PointEd448 *a, *b;
+
+            memset(k, 0, LEN + 1);
+            if (t == 1)
+                assert(nat_to_bytes(k, LEN + 1, ctx->group_order, 0) == 0);
+            a = load_point(ctx, bxs[base], bys[base]);
+            b = load_point(ctx, bxs[base], bys[base]);
+            assert(ed448_scalar(a, k, LEN + 1, rnd()) == 0);
+            assert(ed448_scalar_public(b, k, LEN + 1) == 0);
+            assert(ed448_cmp(a, b) == 0);
+            ed448_free_point(a);
+            ed448_free_point(b);
+        }
+    }
+}
+
 static void test_other_context(const Ed448Context *ctx)
 {
     Ed448Context *ctx2;
@@ -549,6 +599,7 @@ int main(void)
     test_g_table(ctx);
     test_formulas(ctx);
     test_random(ctx);
+    test_scalar_public(ctx);
     test_other_context(ctx);
     ed448_free_context(ctx);
     return 0;

@@ -196,6 +196,17 @@ if (VALGRIND AND HAVE_VALGRIND_MEMCHECK_H)
         LINK_LIBRARIES "")
     add_test(NAME test_ec_nat_ct COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_ec_nat_ct>)
 
+    # Ed25519 and X25519 (each includes mod25519.c, so one executable per curve)
+    foreach(CURVE ed25519 curve25519)
+        add_executable(test_${CURVE}_ct test_${CURVE}_ct.c ../${CURVE}.c)
+        target_compile_definitions(test_${CURVE}_ct PRIVATE NAT_CTGRIND)
+        set_target_properties(test_${CURVE}_ct PROPERTIES
+            COMPILE_OPTIONS "-O2;-g;-Wall;-Werror"
+            LINK_OPTIONS ""
+            LINK_LIBRARIES "")
+        add_test(NAME test_${CURVE}_ct COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_${CURVE}_ct>)
+    endforeach()
+
     if (NAT_32BIT_TESTS)
         add_executable(test_nat_ct_32 test_nat_ct.c ../nat.c ../nat_div.c ../nat_mod.c ../nat_gcd.c ../nat_prime.c)
         target_compile_definitions(test_nat_ct_32 PRIVATE NAT_CTGRIND)
@@ -228,6 +239,24 @@ if (VALGRIND AND HAVE_VALGRIND_MEMCHECK_H)
             LINK_OPTIONS "-m32"
             LINK_LIBRARIES "")
         add_test(NAME test_ec_nat_ct_32_sse2 COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_ec_nat_ct_32_sse2>)
+
+        foreach(CURVE ed25519 curve25519)
+            add_executable(test_${CURVE}_ct_32 test_${CURVE}_ct.c ../${CURVE}.c)
+            target_compile_definitions(test_${CURVE}_ct_32 PRIVATE NAT_CTGRIND)
+            set_target_properties(test_${CURVE}_ct_32 PROPERTIES
+                COMPILE_OPTIONS "-m32;-O2;-g;-Wall;-Werror;-UHAVE_UINT128;-USYS_BITS;-DSYS_BITS=32"
+                LINK_OPTIONS "-m32"
+                LINK_LIBRARIES "")
+            add_test(NAME test_${CURVE}_ct_32 COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_${CURVE}_ct_32>)
+
+            add_executable(test_${CURVE}_ct_32_sse2 test_${CURVE}_ct.c ../${CURVE}.c)
+            target_compile_definitions(test_${CURVE}_ct_32_sse2 PRIVATE NAT_CTGRIND)
+            set_target_properties(test_${CURVE}_ct_32_sse2 PROPERTIES
+                COMPILE_OPTIONS "-m32;-msse2;-DUSE_SSE2;-O2;-g;-Wall;-Werror;-UHAVE_UINT128;-USYS_BITS;-DSYS_BITS=32"
+                LINK_OPTIONS "-m32"
+                LINK_LIBRARIES "")
+            add_test(NAME test_${CURVE}_ct_32_sse2 COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_${CURVE}_ct_32_sse2>)
+        endforeach()
     endif()
 
     if (NAT_BMI2_ADX_TESTS)

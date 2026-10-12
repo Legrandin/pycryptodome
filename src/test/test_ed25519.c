@@ -390,6 +390,72 @@ void test_neg_1(void)
     free(c);
 }
 
+/* k*P by double-and-add, without blinding (k big-endian, public) */
+static void ref_scalar(Point *out, const uint8_t *k, size_t len, const Point *P)
+{
+    size_t i;
+    int j;
+
+    memset(out, 0, sizeof *out);
+    out->Y[0] = out->Z[0] = 1;
+    for (i=0; i<len; i++) {
+        for (j=7; j>=0; j--) {
+            ed25519_double(out);
+            if ((k[i] >> j) & 1)
+                ed25519_add(out, P);
+        }
+    }
+}
+
+/*
+ * The blinded scalar multiplication gives the same result for any seed,
+ * also for a point with a component of order 8 (G + T8), and for scalars
+ * shorter or longer than the blinded one.
+ * The multiplication for public scalars gives the same result too.
+ */
+void test_scalar_blinding(void)
+{
+    char Gx_hex[] = "216936d3cd6e53fec0a4e231fdd6dc5c692cc7609525a7b2c9562d608f25d51a";
+    char Gy_hex[] = "6666666666666666666666666666666666666666666666666666666666666658";
+    char T8x_hex[] = "1fd5b9a006394a28e933993238de4abb5c193c7013e5e238dea14646c545d14a";
+    char T8y_hex[] = "7a03ac9277fdc74ec6cc392cfa53202a0f67100d760b3cba4fd84d3d706a17c7";
+    static const size_t lens[] = { 1, 32, 64 };
+    uint8_t k[64];
+    Point P[2], Q, R;
+    unsigned i, l, n;
+    uint64_t seed;
+
+    memset(P, 0, sizeof P);
+    convert_behex_to_le25p5(P[0].X, Gx_hex);
+    convert_behex_to_le25p5(P[0].Y, Gy_hex);
+    P[0].Z[0] = 1;
+    mul_25519(P[0].T, P[0].X, P[0].Y);
+
+    /* P[1] = G + T8 */
+    convert_behex_to_le25p5(P[1].X, T8x_hex);
+    convert_behex_to_le25p5(P[1].Y, T8y_hex);
+    P[1].Z[0] = 1;
+    mul_25519(P[1].T, P[1].X, P[1].Y);
+    assert(ed25519_add(&P[1], &P[0]) == 0);
+
+    for (i=0; i<sizeof k; i++)
+        k[i] = (uint8_t)(i*37 + 11);
+
+    for (n=0; n<2; n++) {
+        for (l=0; l<sizeof lens / sizeof lens[0]; l++) {
+            ref_scalar(&R, k, lens[l], &P[n]);
+            Q = P[n];
+            assert(ed25519_scalar_public(&Q, k, lens[l]) == 0);
+            assert(ed25519_cmp(&Q, &R) == 0);
+            for (seed=0; seed<16; seed++) {
+                Q = P[n];
+                assert(ed25519_scalar(&Q, k, lens[l], seed * 0x9E3779B97F4A7C15ULL) == 0);
+                assert(ed25519_cmp(&Q, &R) == 0);
+            }
+        }
+    }
+}
+
 int main(void)
 {
     test_point_add_1();
@@ -398,6 +464,7 @@ int main(void)
     test_point_double_1();
     test_point_double_2();
     test_scalar_mult();
+    test_scalar_blinding();
     test_cmp_1();
     test_neg_1();
     return 0;

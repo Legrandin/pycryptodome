@@ -3,7 +3,7 @@
 
 #include "common.h"
 #include "endianess.h"
-#include "bignum.c"
+#include "nat_ct.h"
 
 /*
  * Operations over the field of integers modulo 2²⁵⁵ - 19
@@ -50,17 +50,10 @@ STATIC void convert_le64_to_le25p5(uint32_t out[10], const uint64_t in[4])
  */
 STATIC void convert_le25p5_to_le64(uint64_t out[4], const uint32_t in[10])
 {
-    /** We assume that the 6 or 7 upper bits of in[] words is set to 0 */
-    assert(in[0] >> 26 == 0);
-    assert(in[1] >> 25 == 0);
-    assert(in[2] >> 26 == 0);
-    assert(in[3] >> 25 == 0);
-    assert(in[4] >> 26 == 0);
-    assert(in[5] >> 25 == 0);
-    assert(in[6] >> 26 == 0);
-    assert(in[7] >> 25 == 0);
-    assert(in[8] >> 26 == 0);
-    assert(in[9] >> 26 == 0);
+    /*
+     * We assume that the 6 or 7 upper bits of in[] words is set to 0.
+     * The limbs may be secret: no assert() on them, as that is a branch.
+     */
 
     out[0] = in[0] | (uint64_t)in[1] << 26 | ((uint64_t)in[2] & MASK13) << 51;  /* 64 = 26 + 25 + 13: 13 bits left in in[2] */
     out[1] = in[2] >> 13 | (uint64_t)in[3] << 13 | (uint64_t)in[4] << 38;       /* 64 = 13 + 25 + 26: no bits left in[4] */
@@ -249,15 +242,21 @@ static void print_le25p5(char *str, const uint32_t n[10])
  */
 STATIC void reduce_25519_le64(uint64_t x[4])
 {
-    unsigned borrow;
-    uint64_t tmp1[4], tmp2[4];
     static const uint64_t modulus[4] = { 0xffffffffffffffedULL, 0xffffffffffffffffULL, 0xffffffffffffffffULL, 0x7fffffffffffffffULL };
+    uint64_t tmp[4], borrow, mask;
+    unsigned round, i;
 
-    borrow = sub(tmp1, x, modulus, 4);
-    mod_select(tmp2, x, tmp1, borrow, 4);
-
-    borrow = sub(tmp1, tmp2, modulus, 4);
-    mod_select(x, tmp2, tmp1, borrow, 4);
+    /* x < 2²⁵⁶ < 3p: subtract p twice, keeping x when it goes negative (constant time) */
+    for (round=0; round<2; round++) {
+        borrow = 0;
+        for (i=0; i<4; i++) {
+            tmp[i] = ct_sub(x[i], modulus[i], borrow, &borrow);
+        }
+        mask = ct_mask(borrow);
+        for (i=0; i<4; i++) {
+            x[i] = ct_select(mask, x[i], tmp[i]);
+        }
+    }
 }
 
 /*

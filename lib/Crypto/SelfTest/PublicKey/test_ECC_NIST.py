@@ -1402,3 +1402,46 @@ class TestEccModule_P521:
             ECC.construct(curve="P-521", **coord)
         with pytest.raises(ValueError):
             ECC.construct(curve="P-521", d=2, **coordG)
+
+
+def _spy_scalar(monkeypatch, rawlib):
+    """Record the names of the scalar multiplications called on rawlib"""
+
+    calls = []
+    for name in ("scalar", "scalar_public"):
+        func = getattr(rawlib, name)
+        monkeypatch.setattr(rawlib, name, lambda *args, _f=func, _n=name: calls.append(_n) or _f(*args))
+    return calls
+
+
+@pytest.mark.parametrize("curve", ["P-192", "P-224", "P-256", "P-384", "P-521"])
+def test_scalar_multiply_public(curve, monkeypatch):
+    key = ECC.generate(curve=curve)
+    order = int(key._curve.order)
+    scalars = [0, 1, 2, 255, order - 1, order, order + 1, 8 * order + 5, 2**600 + 3]
+    scalars += [int(Integer.random_range(min_inclusive=1, max_exclusive=order)) for _ in range(5)]
+    calls = _spy_scalar(monkeypatch, key._curve.rawlib)
+
+    for point in (key._curve.G, key.pointQ):
+        for k in scalars:
+            del calls[:]
+            expected = point * k
+            assert calls == ["scalar"]
+            del calls[:]
+            assert point * Integer(k, public=True) == expected
+            assert calls == ["scalar_public"]
+
+    # The verification of an ECDSA signature only uses public scalars,
+    # the signature only secret ones
+    from Crypto.Hash import SHA256
+    from Crypto.Signature import DSS
+
+    h = SHA256.new(b"message")
+    del calls[:]
+    signature = DSS.new(key, "fips-186-3").sign(h)
+    assert set(calls) == {"scalar"}
+    del calls[:]
+    DSS.new(key.public_key(), "fips-186-3").verify(h, signature)
+    assert set(calls) == {"scalar_public"}
+    with pytest.raises(ValueError):
+        DSS.new(key.public_key(), "fips-186-3").verify(SHA256.new(b"other"), signature)

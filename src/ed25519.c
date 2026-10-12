@@ -131,60 +131,204 @@ static void print_point_le8(const Point *p)
 #endif
 
 /*
- * Scalar multiplication Q = k*B
- *
- * @param[out]  xout    The X-coordinate of the resulting point Q.
- * @param[out]  yout    The Y-coordinate of the resulting point Q.
- * @param[in]   k       The scalar encoded in little-endian mode.
- * @param[in]   len     Length of the scalar in bytes.
- * @param[in]   xin     The X-coordinate of the input point B.
- * @param[in]   yin     The Y-coordinate of the input point B.
+ * Size of the random factor for the blinding of the scalar.
+ * Each bit adds one step to the ladder: 32 bits cost about 13%
+ * (64 bits, as for Ed448, would cost about 25%).
  */
-STATIC void ed25519_scalar_internal(Point *Pout,
-                                    const uint8_t *k, size_t len,
-                                    const Point *Pin)
+#ifndef ED25519_BLIND_BITS
+#define ED25519_BLIND_BITS 32
+#endif
+
+#if (ED25519_BLIND_BITS < 1) || (ED25519_BLIND_BITS > 64)
+#error ED25519_BLIND_BITS must be between 1 and 64
+#endif
+
+/*
+ * 8L, the order of the whole group (L is the order of the base point),
+ * in little-endian 64-bit words.
+ */
+static const uint64_t order8[4] = { 0xc09318d2e7ae9f68ULL, 0xa6f7cef517bce6b2ULL, 0, 0x8000000000000000ULL };
+
+/** The next value of a SplitMix64 generator, as ec_next_random() in ec_common.c **/
+static uint64_t ed25519_next_random(uint64_t *state)
 {
-    Point R0, R1;
-    unsigned bit_idx, swap;
-    size_t scan;
+    uint64_t z;
 
-    /* Point R0 */
-    memset(&R0, 0, sizeof R0);
-    R0.Y[0] = R0.Z[0] = 1;
+    *state += 0x9E3779B97F4A7C15ULL;
+    z = *state;
+    z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ULL;
+    z = (z ^ (z >> 27)) * 0x94D049BB133111EBULL;
+    return z ^ (z >> 31);
+}
 
-    /* Point R1 */
-    R1 = *Pin;
+/** A random field element in [1, 2²⁵⁴), so never zero modulo 2²⁵⁵ - 19 **/
+static void ed25519_random_fe(uint32_t out[10], uint64_t *state)
+{
+    unsigned i;
+
+    for (i=0; i<10; i++) {
+        out[i] = (uint32_t)(ed25519_next_random(state) & ((i & 1) ? MASK25 : MASK26));
+    }
+    out[9] &= (1U << 24) - 1;
+    out[0] |= 1;
+}
+
+/*
+ * Allocate the 64-bit words (little-endian) for a number of nbits bits,
+ * and load the big-endian scalar k (len bytes, with 8*len <= nbits) in it.
+ */
+static uint64_t *ed25519_load_scalar(size_t *nw, size_t nbits, const uint8_t *k, size_t len)
+{
+    uint64_t *kw;
+    size_t i;
+
+    *nw = (nbits + 63) / 64;
+    if (*nw == 0)
+        *nw = 1;
+    kw = (uint64_t*)calloc(*nw, sizeof(uint64_t));
+    if (NULL == kw)
+        return NULL;
+    for (i=0; i<len; i++) {
+        kw[i/8] |= (uint64_t)k[len-1-i] << (8*(i%8));
+    }
+    return kw;
+}
+
+/*
+ * Montgomery ladder over the nbits lowest bits of kw (little-endian words).
+ *
+ * R0 is the neutral point and R1 the input point, in any
+ * projective coordinates. The result goes into R0.
+ */
+static void ed25519_ladder(Point *R0, Point *R1, const uint64_t *kw, size_t nbits)
+{
+    size_t i;
+    unsigned swap;
 
     /* https://eprint.iacr.org/2020/956.pdf */
 
     /* OPTIMIZE: with pre-computed tables in case of fixed-point multiplication */
 
     /* Scan all bits from MSB to LSB */
-    bit_idx = 7;
     swap = 0;
-    scan = 0;
-    while (scan<len) {
+    for (i=nbits; i-- > 0;) {
         unsigned bit;
 
-        bit = (k[scan] >> bit_idx) & 1;
+        bit = (unsigned)(kw[i/64] >> (i%64)) & 1;
         swap ^= bit;
 
-        cswap(R0.X, R0.Y, R1.X, R1.Y, swap);
-        cswap(R0.Z, R0.T, R1.Z, R1.T, swap);
+        cswap(R0->X, R0->Y, R1->X, R1->Y, swap);
+        cswap(R0->Z, R0->T, R1->Z, R1->T, swap);
 
-        ed25519_add_internal(&R1, &R0, &R1);     /* R1 <-- R0 + R1 */
-        ed25519_double_internal(&R0, &R0);       /* R0 <-- 2R0 */
+        ed25519_add_internal(R1, R0, R1);       /* R1 <-- R0 + R1 */
+        ed25519_double_internal(R0, R0);        /* R0 <-- 2R0 */
 
         swap = bit;
-        if (bit_idx-- == 0) {
-            bit_idx = 7;
-            scan++;
-        }
     }
-    cswap(R0.X, R0.Y, R1.X, R1.Y, swap);
-    cswap(R0.Z, R0.T, R1.Z, R1.T, swap);
+    cswap(R0->X, R0->Y, R1->X, R1->Y, swap);
+    cswap(R0->Z, R0->T, R1->Z, R1->T, swap);
+}
 
+/*
+ * Scalar multiplication Q = k*B, for a scalar k that can be secret.
+ *
+ * The scalar is blinded: the ladder runs over k + r*8L, for a random r of
+ * ED25519_BLIND_BITS bits, which gives the same point for any B on the curve.
+ * The projective coordinates are randomized too.
+ *
+ * @param[out]  Pout    The resulting point Q (it can be the same as Pin).
+ * @param[in]   k       The scalar encoded in big-endian mode.
+ * @param[in]   len     Length of the scalar in bytes.
+ * @param[in]   Pin     The input point B.
+ * @param[in]   seed    A random value, for the blinding.
+ */
+STATIC int ed25519_scalar_internal(Point *Pout,
+                                   const uint8_t *k, size_t len,
+                                   const Point *Pin,
+                                   uint64_t seed)
+{
+    Point R0, R1;
+    uint32_t lambda[10];
+    uint64_t *kb, r, carry, state = seed;
+    volatile uint64_t *wipe;
+    size_t nbits, nw, i;
+
+    if (len > (SIZE_MAX - 64) / 8)
+        return ERR_MAX_DATA;
+
+    /* k + r*8L < 2^nbits */
+    nbits = 8*len > 256 + ED25519_BLIND_BITS ? 8*len : 256 + ED25519_BLIND_BITS;
+    nbits++;
+
+    kb = ed25519_load_scalar(&nw, nbits, k, len);
+    if (NULL == kb)
+        return ERR_MEMORY;
+
+    /* kb = k + r*8L */
+    r = ed25519_next_random(&state) >> (64 - ED25519_BLIND_BITS);
+    carry = 0;
+    for (i=0; i<nw; i++) {
+        kb[i] = ct_mac(i < 4 ? order8[i] : 0, r, kb[i], carry, &carry);
+    }
+
+    /* R0 = (0, lambda, lambda, 0), the neutral point */
+    ed25519_random_fe(lambda, &state);
+    memset(&R0, 0, sizeof R0);
+    memcpy(R0.Y, lambda, sizeof lambda);
+    memcpy(R0.Z, lambda, sizeof lambda);
+
+    /* R1 = (lambda*X, lambda*Y, lambda*Z, lambda*T), the input point */
+    mul_25519(R1.X, Pin->X, lambda);
+    mul_25519(R1.Y, Pin->Y, lambda);
+    mul_25519(R1.Z, Pin->Z, lambda);
+    mul_25519(R1.T, Pin->T, lambda);
+
+    ed25519_ladder(&R0, &R1, kb, nbits);
     *Pout = R0;
+
+    wipe = kb;
+    for (i=0; i<nw; i++) {
+        wipe[i] = 0;
+    }
+    free(kb);
+    return 0;
+}
+
+/*
+ * Scalar multiplication Q = k*B, for a public scalar k (as in the
+ * verification of a signature): no blinding, and the ladder only runs
+ * over the bits of k. Its running time depends on the length of k.
+ *
+ * @param[out]  Pout    The resulting point Q (it can be the same as Pin).
+ * @param[in]   k       The scalar encoded in big-endian mode.
+ * @param[in]   len     Length of the scalar in bytes.
+ * @param[in]   Pin     The input point B.
+ */
+STATIC int ed25519_scalar_public_internal(Point *Pout,
+                                          const uint8_t *k, size_t len,
+                                          const Point *Pin)
+{
+    Point R0, R1;
+    uint64_t *kw;
+    size_t nw;
+
+    if (len > SIZE_MAX / 8)
+        return ERR_MAX_DATA;
+
+    kw = ed25519_load_scalar(&nw, 8*len, k, len);
+    if (NULL == kw)
+        return ERR_MEMORY;
+
+    /* R0 = (0, 1, 1, 0), the neutral point */
+    memset(&R0, 0, sizeof R0);
+    R0.Y[0] = R0.Z[0] = 1;
+    R1 = *Pin;
+
+    ed25519_ladder(&R0, &R1, kw, 8*len);
+    *Pout = R0;
+
+    free(kw);
+    return 0;
 }
 
 /* ---- */
@@ -328,6 +472,13 @@ EXPORT_SYM int ed25519_scalar(Point *P, const uint8_t *scalar, size_t scalar_len
     if ((NULL == P) || (NULL == scalar))
         return ERR_NULL;
 
-    ed25519_scalar_internal(P, scalar, scalar_len, P);
-    return 0;
+    return ed25519_scalar_internal(P, scalar, scalar_len, P, seed);
+}
+
+EXPORT_SYM int ed25519_scalar_public(Point *P, const uint8_t *scalar, size_t scalar_len)
+{
+    if ((NULL == P) || (NULL == scalar))
+        return ERR_NULL;
+
+    return ed25519_scalar_public_internal(P, scalar, scalar_len, P);
 }

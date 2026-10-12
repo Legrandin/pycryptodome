@@ -23,6 +23,9 @@
  *   so that the blinding also works for points with a small-order
  *   component), with tables that are scanned in full for each digit.
  *   The coordinates are randomized.
+ *   A PUBLIC scalar (ed448_scalar_public(), as in the verification of a
+ *   signature) is not blinded, and only the windows that it needs are
+ *   computed; the code is the same.
  *
  * Nothing branches on, or accesses memory at an address that depends on,
  * secret values. Intended leaks go through ct_declassify(). Checked with
@@ -195,15 +198,18 @@ STATIC uint64_t ed448_on_curve(EcWs *ws, const Ed448Context *ctx,
 #define NW ED448_WORDS
 
 /*
- * p = k*p, for any point (variable base), with the blinded scalar kb.
+ * p = k*p, for any point (variable base), with the scalar kb
+ * (k_words words) over its lowest windows.
  *
  * A table of the multiples 0P ... 16P (projective) is built, from a
  * randomized copy of P (coordinates multiplied by lambda); then, for each
  * window from the top: 5 doublings, a full scan of the table for the
  * digit, a conditional negation, and an addition.
+ *
+ * For a public scalar, windows can be fewer than for a blinded one.
  */
 STATIC int ed448_mul_var(EcWs *ws, const Ed448Context *ctx, PointEd448 *p,
-                         const uint64_t *kb, const uint64_t *lambda)
+                         const uint64_t *kb, size_t windows, const uint64_t *lambda)
 {
     const size_t entries = EC_DIGITS + 1;
     uint64_t *table, *acc, *sel, *nx;
@@ -237,7 +243,7 @@ STATIC int ed448_mul_var(EcWs *ws, const Ed448Context *ctx, PointEd448 *p,
     fe_copy(ws, acc + NW, ctx->field->one);
     fe_copy(ws, acc + 2*NW, ctx->field->one);
 
-    for (w=ctx->windows; w-- > 0;) {
+    for (w=windows; w-- > 0;) {
         uint64_t sign, digit;
 
         for (i=0; i<EC_WINDOW; i++)
@@ -266,16 +272,18 @@ cleanup:
 }
 
 /*
- * p = k*G, with the precomputed tables (fixed base) and the blinded
- * scalar kb.
+ * p = k*G, with the precomputed tables (fixed base) and the scalar kb
+ * (k_words words) over its lowest windows.
  *
  * For each window i: a full scan of its table for the digit, a
  * conditional negation, and a mixed addition. There are no doublings.
  * A zero digit selects the neutral point (0, 1). The accumulator starts as
  * (0:lambda:lambda), the neutral point with randomized coordinates.
+ *
+ * For a public scalar, windows can be fewer than for a blinded one.
  */
 STATIC int ed448_mul_g(EcWs *ws, const Ed448Context *ctx, PointEd448 *p,
-                       const uint64_t *kb, const uint64_t *lambda)
+                       const uint64_t *kb, size_t windows, const uint64_t *lambda)
 {
     uint64_t *sel = ws->t[8], *sel_y = ws->t[9], *nx = ws->t[10];
     uint64_t *sel_xy;
@@ -289,7 +297,7 @@ STATIC int ed448_mul_g(EcWs *ws, const Ed448Context *ctx, PointEd448 *p,
     fe_copy(ws, p->y, lambda);
     fe_copy(ws, p->z, lambda);
 
-    for (w=0; w<ctx->windows; w++) {
+    for (w=0; w<windows; w++) {
         const uint64_t *window = ctx->g_table + w*EC_DIGITS*2*NW;
         uint64_t sign, digit;
 
@@ -690,9 +698,9 @@ EXPORT_SYM int ed448_scalar(PointEd448 *p, const uint8_t *k, size_t len, uint64_
            words_eq(p->z, ctx->field->one, NW);
 
     if (ct_declassify(is_g))
-        res = ed448_mul_g(&ws, ctx, p, kb, lambda);
+        res = ed448_mul_g(&ws, ctx, p, kb, ctx->windows, lambda);
     else
-        res = ed448_mul_var(&ws, ctx, p, kb, lambda);
+        res = ed448_mul_var(&ws, ctx, p, kb, ctx->windows, lambda);
     if (res)
         goto cleanup;
 
@@ -702,6 +710,58 @@ EXPORT_SYM int ed448_scalar(PointEd448 *p, const uint8_t *k, size_t len, uint64_
 cleanup:
     nat_words_free(kb, ctx->k_words);
     nat_words_free(lambda, NW);
+    ec_ws_free(&ws);
+    return res;
+}
+
+/**
+ * p = k*p, for the big-endian scalar k (len bytes, any length), which
+ * must be PUBLIC (as in the verification of a signature): there is no
+ * blinding, and the running time depends on k.
+ *
+ * If p is the generator, the precomputed tables are used. The result is
+ * checked to be on the curve (ERR_EC_POINT otherwise).
+ */
+EXPORT_SYM int ed448_scalar_public(PointEd448 *p, const uint8_t *k, size_t len)
+{
+    const Ed448Context *ctx;
+    uint64_t *kw;
+    size_t windows;
+    EcWs ws;
+    int res;
+
+    if (!p || !k)
+        return ERR_NULL;
+    if (len == 0)
+        return ERR_NOT_ENOUGH_DATA;
+    ctx = p->ctx;
+
+    res = ec_ws_new(&ws, ctx->field);
+    if (res)
+        return res;
+    kw = nat_words_alloc(ctx->k_words);
+    if (NULL == kw) {
+        res = ERR_MEMORY;
+        goto cleanup;
+    }
+
+    /* Modulo the order of the whole group, also for points with a small-order component */
+    res = ec_public_scalar(kw, ctx->k_words, &windows, ctx->group_order, k, len);
+    if (res)
+        goto cleanup;
+
+    if (words_eq(p->x, ctx->gx, NW) & words_eq(p->y, ctx->gy, NW) & words_eq(p->z, ctx->field->one, NW))
+        res = ed448_mul_g(&ws, ctx, p, kw, windows, ctx->field->one);
+    else
+        res = ed448_mul_var(&ws, ctx, p, kw, windows, ctx->field->one);
+    if (res)
+        goto cleanup;
+
+    if (!ed448_on_curve(&ws, ctx, p->x, p->y, p->z))
+        res = ERR_EC_POINT;
+
+cleanup:
+    nat_words_free(kw, ctx->k_words);
     ec_ws_free(&ws);
     return res;
 }

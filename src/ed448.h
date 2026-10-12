@@ -52,6 +52,7 @@ EXPORT_SYM int ed448_get_xy(uint8_t *x, uint8_t *y, size_t len, const PointEd448
 EXPORT_SYM int ed448_add(PointEd448 *a, const PointEd448 *b);
 EXPORT_SYM int ed448_double(PointEd448 *p);
 EXPORT_SYM int ed448_scalar(PointEd448 *p, const uint8_t *k, size_t len, uint64_t seed);
+EXPORT_SYM int ed448_scalar_public(PointEd448 *p, const uint8_t *k, size_t len);
 EXPORT_SYM int ed448_cmp(const PointEd448 *a, const PointEd448 *b);
 EXPORT_SYM int ed448_neg(PointEd448 *p);
 

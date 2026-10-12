@@ -128,6 +128,13 @@ uint64_t ec_next_random(uint64_t *state);
  */
 int ec_blind_scalar(uint64_t *kb, size_t k_words, const Nat *order, const uint8_t *k, size_t len, uint64_t r);
 
+/**
+ * kw (k_words words) = k mod order, for the big-endian scalar k (len bytes,
+ * any length), which is PUBLIC; the number of windows that it needs
+ * goes into *windows (at most the one of a blinded scalar).
+ */
+int ec_public_scalar(uint64_t *kw, size_t k_words, size_t *windows, const Nat *order, const uint8_t *k, size_t len);
+
 /** The number of windows for a blinded scalar, for an order of order_bits bits **/
 size_t ec_windows(size_t order_bits);
 /** The number of words of a blinded scalar, for an order of order_bits bits **/

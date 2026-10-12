@@ -380,14 +380,26 @@ class EccPoint:
         return np
 
     def __imul__(self, scalar: int) -> EccPoint:
-        """Multiply this point by a scalar"""
+        """Multiply this point by a scalar.
 
-        scalar_func = self._curve.rawlib.scalar
+        The scalar is treated as secret, unless it is an Integer created as public.
+        """
+
         if scalar < 0:
             raise ValueError("Scalar multiplication is only defined for non-negative integers")
-        sb = _encode_scalar(scalar, self.size_in_bytes())
-        sb_ptr, sb_len = c_uint8_ptr_len(sb)
-        result = scalar_func(self._point.get(), sb_ptr, c_size_t(sb_len), c_ulonglong(getrandbits(64)))
+
+        # A public scalar: no blinding, and only as many bits as needed
+        public_func = getattr(self._curve.rawlib, "scalar_public", None)
+        if public_func is not None and isinstance(scalar, IntegerBase) and scalar._public:
+            sb = scalar.to_bytes()
+            sb_ptr, sb_len = c_uint8_ptr_len(sb)
+            result = public_func(self._point.get(), sb_ptr, c_size_t(sb_len))
+        else:
+            sb = _encode_scalar(scalar, self.size_in_bytes())
+            sb_ptr, sb_len = c_uint8_ptr_len(sb)
+            result = self._curve.rawlib.scalar(
+                self._point.get(), sb_ptr, c_size_t(sb_len), c_ulonglong(getrandbits(64))
+            )
         if result:
             raise ValueError("Error %d during scalar multiplication" % result)
         return self

@@ -137,9 +137,9 @@ STATIC void curve25519_scalar_internal(Point *Pout,
     }
     cswap(P2.X, P2.Z, P3.X, P3.Z, swap);
 
-    /* P2 is the result */
+    /* P2 is the result. Only the fact that it is the point at infinity leaks */
     memset(Pout, 0, sizeof *Pout);
-    if (is_le25p5_zero(P2.Z)) {
+    if (ct_declassify(is_le25p5_zero(P2.Z))) {
         Pout->X[0] = 1;
     } else {
         uint32_t invz[10];
