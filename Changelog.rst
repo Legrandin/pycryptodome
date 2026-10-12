@@ -127,6 +127,8 @@ New features
   must always be specified, and all parameters after the key are keyword-only.
 * ``Crypto.Protocol.KDF.PBKDF2()`` is about 1.25x-1.35x faster with
   HMAC based on SHA-1, SHA-224, SHA-256, SHA-384 and SHA-512.
+* ``Crypto.Protocol.KDF.PBKDF2()`` with HMAC based on SHA-3 runs its inner loop in C,
+  as for SHA-1 and SHA-2: it is about 25x-35x faster.
 * On x86 CPUs with the SHA extensions (SHA-NI), SHA-224 and SHA-256 use them:
   hashing long messages is about 4x faster, and ``PBKDF2()`` with HMAC-SHA256 about 3.5x.
 * Set the environment variable ``PYCRYPTODOME_NO_SELFTEST`` when building
@@ -156,7 +158,7 @@ New features
 * The default limit for decrypting PKCS#8 keys (``max_iteration_count=None``)
   depends on the key derivation and on the hash, so that it takes at most about
   one minute: for instance, 200,000,000 iterations for PBKDF2 with SHA-256,
-  and 1,500,000 with SHA-3. It was 50,000,000 iterations for all of them.
+  and 50,000,000 with SHA-512/224. It was 50,000,000 iterations for all of them.
 * For scrypt, ``max_iteration_count`` now limits *N·r·p/8* (that is, *N* for the
   usual *r=8* and *p=1*), and not only *N*: before, a key with a large *r* or *p*
   could require any amount of time and memory. By default, the limit is 2\ :sup:`25`.

@@ -22,6 +22,7 @@ from __future__ import annotations
 
 from typing import Optional, Union
 
+from Crypto.Hash.keccak import _pbkdf2_hmac_assist as _pbkdf2_hmac_assist  # For PBKDF2
 from Crypto.Hash.keccak import _raw_keccak_lib
 from Crypto.Util._raw_api import (
     SmartPointer,

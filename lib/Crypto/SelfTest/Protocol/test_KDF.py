@@ -25,7 +25,7 @@ from binascii import unhexlify
 import pytest
 
 from Crypto.Cipher import AES, DES3
-from Crypto.Hash import CMAC, HMAC, MD5, SHA1, SHA224, SHA256, SHA384, SHA512
+from Crypto.Hash import CMAC, HMAC, MD5, SHA1, SHA224, SHA256, SHA384, SHA512, keccak
 from Crypto.Protocol.KDF import (
     _PBKDF2_HMAC_SHA256_1,
     _S2V,
@@ -214,16 +214,28 @@ class TestPBKDF2:
 
     @pytest.mark.parametrize(
         "name",
-        ["SHA1", "SHA224", "SHA256", "SHA384", "SHA512", "SHA512-224", "SHA512-256", "SHA3-256"],
+        [
+            "SHA1",
+            "SHA224",
+            "SHA256",
+            "SHA384",
+            "SHA512",
+            "SHA512-224",
+            "SHA512-256",
+            "SHA3-224",
+            "SHA3-256",
+            "SHA3-384",
+            "SHA3-512",
+        ],
     )
     def test_hash_object(self, name):
         # A hash object (like the ones of Crypto.Hash.new(), which PBES2 uses)
-        # takes the C path too, if the hash has one (not SHA-3)
+        # takes the C path too
         from Crypto import Hash
         from Crypto.Protocol.KDF import _pbkdf2_hmac_assist
 
         hash_obj = Hash.new(name)
-        assert (_pbkdf2_hmac_assist(hash_obj) is None) == name.startswith("SHA3-")
+        assert _pbkdf2_hmac_assist(hash_obj) is not None
 
         def prf(p, s):
             return HMAC.new(p, s, hash_obj).digest()
@@ -232,6 +244,42 @@ class TestPBKDF2:
         for password in (b"xxx", b"p" * 200):
             expected = PBKDF2(password, b"yyy", dk_len, 77, prf=prf)
             assert PBKDF2(password, b"yyy", dk_len, 77, hmac_hash_module=hash_obj) == expected
+
+
+# Both Keccak modules, if the CPU supports the AVX2/BMI2 one
+_keccak_libs = [pytest.param(keccak._raw_keccak_portable_lib, id="portable")]
+if keccak._raw_keccak_avx2_bmi2_lib is not None:
+    _keccak_libs.append(pytest.param(keccak._raw_keccak_avx2_bmi2_lib, id="avx2_bmi2"))
+
+
+class TestPBKDF2_SHA3:
+    """The C loop for SHA-3 (in both Keccak modules) matches the generic one."""
+
+    @pytest.mark.parametrize("lib", _keccak_libs)
+    @pytest.mark.parametrize("bits", [224, 256, 384, 512])
+    @pytest.mark.parametrize("password", [b"xxx", b"p" * 200], ids=["short_pw", "long_pw"])
+    @pytest.mark.parametrize("count", [1, 2, 3, 77])
+    def test_same_output(self, monkeypatch, lib, bits, password, count):
+        import importlib
+
+        hashmod = importlib.import_module("Crypto.Hash.SHA3_%d" % bits)
+        monkeypatch.setattr(keccak, "_raw_keccak_lib", lib)
+        monkeypatch.setattr(hashmod, "_raw_keccak_lib", lib)
+
+        def prf(p, s):
+            return HMAC.new(p, s, hashmod).digest()
+
+        # More than one block of output too
+        dk_len = hashmod.digest_size * 2 + 5
+        expected = PBKDF2(password, b"yyy", dk_len, count, prf=prf)
+        assert PBKDF2(password, b"yyy", dk_len, count, hmac_hash_module=hashmod) == expected
+
+    def test_vector(self):
+        # PBKDF2-HMAC-SHA3-256 (cross-checked with OpenSSL)
+        from Crypto.Hash import SHA3_256
+
+        res = PBKDF2(b"password", b"salt", 32, 1000, hmac_hash_module=SHA3_256)
+        assert res == t2b("ee56a9b7311bb081d0bbfa8dc3c2798f30abbbec6344426829d956ed06eaecab")
 
 
 class TestS2V:

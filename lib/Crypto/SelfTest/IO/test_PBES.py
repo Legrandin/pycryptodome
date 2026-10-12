@@ -232,15 +232,20 @@ class TestPBES2_IterationLimit:
         pt = PBES2.decrypt(ct, self.passphrase, max_iteration_count=5000)
         assert self.ref == pt
 
-    def test_pbkdf2_default_limit_depends_on_hash(self):
-        """The default limit is lower for the hashes without a C loop (SHA-3)."""
-        count = _DEFAULT_MAX_PBKDF2[_OID_SHA3_256] + 1
-        assert count <= _DEFAULT_MAX_PBKDF2[_OID_SHA256]
+    def test_pbkdf2_default_limit_depends_on_hash(self, monkeypatch):
+        """The default limit depends on the hash of the HMAC."""
+        from Crypto.IO import _PBES
+
+        # Small limits, to keep the test fast
+        limits = dict(_DEFAULT_MAX_PBKDF2)
+        limits[_OID_SHA3_256] = 1000
+        limits[_OID_SHA256] = 2000
+        monkeypatch.setattr(_PBES, "_DEFAULT_MAX_PBKDF2", limits)
 
         with pytest.raises(PbesIterationCountError) as ctx:
-            PBES2.decrypt(self._make_pbkdf2_blob(count, "SHA3-256"), self.passphrase)
+            PBES2.decrypt(self._make_pbkdf2_blob(1001, "SHA3-256"), self.passphrase)
         assert str(ctx.value) == _ITERATION_COUNT_ERROR.format(
-            what=_PBKDF2_COUNT, count=count, limit=_DEFAULT_LIMIT.format(_DEFAULT_MAX_PBKDF2[_OID_SHA3_256])
+            what=_PBKDF2_COUNT, count=1001, limit=_DEFAULT_LIMIT.format(1000)
         )
 
         # The same count is fine with SHA-256
@@ -248,9 +253,15 @@ class TestPBES2_IterationLimit:
             self.ref,
             self.passphrase,
             "PBKDF2WithHMAC-SHA256AndAES128-CBC",
-            prot_params={"iteration_count": count},
+            prot_params={"iteration_count": 1001},
         )
         assert PBES2.decrypt(ct, self.passphrase) == self.ref
+
+    def test_pbkdf2_default_limits_table(self):
+        """There is a default limit for each hash that PBES2 supports."""
+        from Crypto.Hash import HMAC
+
+        assert set(_DEFAULT_MAX_PBKDF2) == set(HMAC._hmac2hash_oid.values())
 
     def test_scrypt_default_limit_rejects_high_r_p(self):
         """Large r or p are not hidden behind a small N."""

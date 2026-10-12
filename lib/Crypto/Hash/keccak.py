@@ -38,6 +38,13 @@ _keccak_cdecl = """
                                           uint8_t padding);
                         int keccak_copy(const void *src, void *dst);
                         int keccak_reset(void *state);
+                        int keccak_pbkdf2_hmac_assist(const void *inner,
+                                                      const void *outer,
+                                                      const uint8_t *first_hmac,
+                                                      uint8_t *result,
+                                                      size_t iterations,
+                                                      size_t digest_size,
+                                                      uint8_t padding);
                         """
 
 _raw_keccak_portable_lib = load_pycryptodome_raw_lib("Crypto.Hash._keccak", _keccak_cdecl)
@@ -50,6 +57,32 @@ if _raw_keccak_avx2_bmi2_lib is not None:
     _raw_keccak_lib = _raw_keccak_avx2_bmi2_lib
 else:
     _raw_keccak_lib = _raw_keccak_portable_lib
+
+
+def _pbkdf2_hmac_assist(inner, outer, first_digest: bytes, iterations: int) -> bytes:
+    """Compute the expensive inner loop in PBKDF2-HMAC, for the SHA-3 hashes.
+
+    The modules of the SHA-3 hashes import it,
+    because :func:`Crypto.Protocol.KDF.PBKDF2` looks for it there.
+    """
+
+    assert iterations > 0
+
+    bfr = create_string_buffer(len(first_digest))
+    result = _raw_keccak_lib.keccak_pbkdf2_hmac_assist(
+        inner._state.get(),
+        outer._state.get(),
+        first_digest,
+        bfr,
+        c_size_t(iterations),
+        c_size_t(len(first_digest)),
+        c_ubyte(inner._padding),
+    )
+
+    if result:
+        raise ValueError("Error %d with PBKDF2-HMAC assist for SHA-3" % result)
+
+    return get_raw_buffer(bfr)
 
 
 class Keccak_Hash:
