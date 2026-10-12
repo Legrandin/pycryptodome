@@ -78,7 +78,7 @@ static void test_ws(const EcField *field)
 }
 
 /* The field operations, against nat_mulmod() and nat_submod() */
-static void test_field(const EcField *field, const Nat *n, const Nat *p_minus_2)
+static void test_field(const EcField *field, const Nat *n)
 {
     EcWs ws;
     uint64_t a[NW], b[NW], am[NW], bm[NW], r[NW];
@@ -139,7 +139,7 @@ static void test_field(const EcField *field, const Nat *n, const Nat *p_minus_2)
         assert(words_is_zero(r, NW));
 
         /* inv: a * 1/a = 1 (R in Montgomery form), and 1/0 = 0 */
-        assert(fe_inv(&ws, r, am, p_minus_2) == 0);
+        assert(fe_inv(&ws, r, am) == 0);
         if (t == 0) {
             assert(words_is_zero(r, NW));
         } else {
@@ -276,7 +276,7 @@ static void test_table_select(void)
 }
 
 /* Batch conversion to affine, against one inversion per point */
-static void test_batch_to_affine(const EcField *field, const Nat *p_minus_2)
+static void test_batch_to_affine(const EcField *field)
 {
     EcWs ws;
     uint64_t proj[10*3*NW], affine[10*2*NW], zinv[NW], x[NW];
@@ -290,9 +290,9 @@ static void test_batch_to_affine(const EcField *field, const Nat *p_minus_2)
             random_fe(proj + 3*k*NW + 2*NW);
             proj[3*k*NW + 2*NW] |= 1;           /* Z != 0 */
         }
-        assert(ec_batch_to_affine(&ws, affine, proj, count, p_minus_2) == 0);
+        assert(ec_batch_to_affine(&ws, affine, proj, count) == 0);
         for (k=0; k<count; k++) {
-            assert(fe_inv(&ws, zinv, proj + 3*k*NW + 2*NW, p_minus_2) == 0);
+            assert(fe_inv(&ws, zinv, proj + 3*k*NW + 2*NW) == 0);
             fe_mul(&ws, x, proj + 3*k*NW, zinv);
             assert(memcmp(x, affine + 2*k*NW, sizeof x) == 0);
             fe_mul(&ws, x, proj + 3*k*NW + NW, zinv);
@@ -610,6 +610,8 @@ static void test_special_fields(void)
 
         assert(ec_field_new(&field, n) == 0);
         assert(field->kind == (nw == 7 ? EC_FIELD_P448 : EC_FIELD_P521));
+        assert(nat_cmp(field->p_minus_2, p_minus_2) == 0);
+        assert(field->p_bits == (nw == 7 ? 448 : 521));
         assert(field->one[0] == 1);
         for (i=1; i<nw; i++)
             assert(field->one[i] == 0);
@@ -673,7 +675,7 @@ static void test_special_fields(void)
             assert(memcmp(r, am, nw*8) == 0);
 
             /* inv: a * 1/a = 1, and 1/0 = 0 */
-            assert(fe_inv(&ws, r, am, p_minus_2) == 0);
+            assert(fe_inv(&ws, r, am) == 0);
             if (t == 0) {
                 assert(words_is_zero(r, nw));
             } else {
@@ -711,10 +713,18 @@ int main(void)
     assert(nat_new(&p_minus_2, NW) == 0);
     two->w[0] = 2;
     assert(nat_sub(p_minus_2, n, two) == 0);
+    assert(ec_field_new(&field, two) == ERR_VALUE);   /* even */
+    assert(field == NULL);
+    two->w[0] = 1;
+    assert(ec_field_new(&field, two) == ERR_VALUE);   /* p - 2 < 0 */
+    assert(field == NULL);
+    two->w[0] = 2;
     assert(ec_field_new(&field, n) == 0);
+    assert(nat_cmp(field->p_minus_2, p_minus_2) == 0);
+    assert(field->p_bits == (size_t)nat_bit_length(n));
 
     test_ws(field);
-    test_field(field, n, p_minus_2);
+    test_field(field, n);
     test_field_sizes();
     test_special_reductions();
     test_special_fields();
@@ -722,7 +732,7 @@ int main(void)
     test_random(field);
     test_sizes();
     test_table_select();
-    test_batch_to_affine(field, p_minus_2);
+    test_batch_to_affine(field);
 
     ec_field_free(field);
     nat_free(n);

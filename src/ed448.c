@@ -240,7 +240,7 @@ EXPORT_SYM int ed448_new_context(Ed448Context **out)
     /* (p-3)/4 = (p-2) >> 2, as p = 3 mod 4 */
     if (res == 0) {
         ctx->sqrt_exp = nat_alloc(NW);
-        res = ctx->sqrt_exp ? nat_shr(ctx->sqrt_exp, g->p_minus_2, 2) : ERR_MEMORY;
+        res = ctx->sqrt_exp ? nat_shr(ctx->sqrt_exp, g->field->p_minus_2, 2) : ERR_MEMORY;
     }
 
     if (res) {

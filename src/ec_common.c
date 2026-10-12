@@ -36,10 +36,18 @@ int ec_field_new(EcField **out, const Nat *p)
         goto fail;
     f->nw = p->nw;
     f->one = nat_words_alloc(f->nw);
-    if (NULL == f->one) {
+    f->p_minus_2 = nat_alloc(f->nw);
+    if (NULL == f->one || NULL == f->p_minus_2) {
         res = ERR_MEMORY;
         goto fail;
     }
+
+    /* p - 2 (ERR_VALUE for p = 1) */
+    f->p_minus_2->w[0] = 2;
+    res = nat_sub(f->p_minus_2, p, f->p_minus_2);
+    if (res)
+        goto fail;
+    f->p_bits = (size_t)nat_bit_length(p);
 
     /* p is public */
     f->kind = EC_FIELD_MONT;
@@ -66,6 +74,7 @@ void ec_field_free(EcField *f)
         return;
     mont_ctx_free(f->m);
     nat_words_free(f->one, f->nw);
+    nat_free(f->p_minus_2);
     free(f);
 }
 
@@ -257,11 +266,13 @@ void fe_pow_public(EcWs *ws, uint64_t *out, const uint64_t *a, const Nat *e)
     memcpy(out, acc, nw*sizeof(uint64_t));
 }
 
-int fe_inv(EcWs *ws, uint64_t *out, const uint64_t *a, const Nat *p_minus_2)
+int fe_inv(EcWs *ws, uint64_t *out, const uint64_t *a)
 {
+    const Nat *e = ws->f->p_minus_2;
+
     if (EC_FIELD_MONT == ws->f->kind)
-        return mont_pow(out, a, p_minus_2, (size_t)nat_bit_length(p_minus_2), ws->m);
-    fe_pow_public(ws, out, a, p_minus_2);
+        return mont_pow(out, a, e, (size_t)nat_bit_length(e), ws->m);
+    fe_pow_public(ws, out, a, e);
     return 0;
 }
 
@@ -464,7 +475,7 @@ void ec_table_select(uint64_t *out, const uint64_t *table, size_t entries, size_
 /* Tables                                                           */
 /* ---------------------------------------------------------------- */
 
-int ec_batch_to_affine(EcWs *ws, uint64_t *affine, const uint64_t *proj, size_t count, const Nat *p_minus_2)
+int ec_batch_to_affine(EcWs *ws, uint64_t *affine, const uint64_t *proj, size_t count)
 {
     const size_t nw = ws->nw;
     uint64_t *prefix, *inv, *zinv;
@@ -485,7 +496,7 @@ int ec_batch_to_affine(EcWs *ws, uint64_t *affine, const uint64_t *proj, size_t 
     fe_copy(ws, prefix, PZ(0));
     for (k=1; k<count; k++)
         fe_mul(ws, prefix + k*nw, prefix + (k-1)*nw, PZ(k));
-    res = fe_inv(ws, inv, prefix + (count-1)*nw, p_minus_2);
+    res = fe_inv(ws, inv, prefix + (count-1)*nw);
     if (res)
         goto cleanup;
 
@@ -717,7 +728,7 @@ STATIC int ec_build_g_table(EcWs *ws, EcGroup *g)
 #undef PZ
 
     /* No Z is zero: the order of G is a prime larger than 16 */
-    res = ec_batch_to_affine(ws, g->g_table, proj, count, g->p_minus_2);
+    res = ec_batch_to_affine(ws, g->g_table, proj, count);
 
 cleanup:
     nat_words_free(proj, 3*count*nw);
@@ -728,7 +739,7 @@ cleanup:
 int ec_group_init(EcGroup *g, const uint8_t *p, const uint8_t *param, const uint8_t *n,
                   unsigned cofactor_bits, const uint8_t *gx, const uint8_t *gy, size_t len)
 {
-    Nat *pn = NULL, *nn = NULL, *two = NULL;
+    Nat *pn = NULL, *nn = NULL;
     EcWs ws;
     int ws_ready = 0;
     size_t nw, order_bits;
@@ -742,27 +753,20 @@ int ec_group_init(EcGroup *g, const uint8_t *p, const uint8_t *param, const uint
     res = ERR_MEMORY;
     pn = nat_alloc(nw);
     nn = nat_alloc(nw);
-    two = nat_alloc(1);
-    g->p_minus_2 = nat_alloc(nw);
     g->order = nat_alloc(nw);
     g->param = nat_words_alloc(nw);
     g->gx = nat_words_alloc(nw);
     g->gy = nat_words_alloc(nw);
-    if (!pn || !nn || !two || !g->p_minus_2 || !g->order || !g->param || !g->gx || !g->gy)
+    if (!pn || !nn || !g->order || !g->param || !g->gx || !g->gy)
         goto cleanup;
 
-    /* The field, and the exponent p - 2 of the inversion */
+    /* The field */
     res = nat_from_bytes(pn, p, len, 0);
     if (res)
         goto cleanup;
     res = ec_field_new(&g->field, pn);
     if (res)
         goto cleanup;
-    two->w[0] = 2;
-    res = nat_sub(g->p_minus_2, pn, two);
-    if (res)
-        goto cleanup;
-    g->p_bits = (size_t)nat_bit_length(pn);
 
     /* The order of the whole group, and the size of the blinded scalars */
     res = nat_from_bytes(nn, n, len, 0);
@@ -802,14 +806,12 @@ cleanup:
         ec_ws_free(&ws);
     nat_free(pn);
     nat_free(nn);
-    nat_free(two);
     return res;
 }
 
 void ec_group_clear(EcGroup *g)
 {
     ec_field_free(g->field);
-    nat_free(g->p_minus_2);
     nat_free(g->order);
     nat_words_free(g->param, g->nw);
     nat_words_free(g->gx, g->nw);
@@ -882,7 +884,7 @@ int ec_point_get_xy(uint8_t *x, uint8_t *y, size_t len, const EcPoint *p)
     zinv = ws.t[0];
 
     /* For the point at infinity (Z = 0), 1/Z is 0 (Fermat), and so are X/Z and Y/Z */
-    res = fe_inv(&ws, zinv, p->z, p->g->p_minus_2);
+    res = fe_inv(&ws, zinv, p->z);
     if (res == 0) {
         fe_mul(&ws, ws.t[1], p->x, zinv);
         fe_mul(&ws, ws.t[2], p->y, zinv);
@@ -998,7 +1000,7 @@ int ec_point_scalar(EcPoint *p, const uint8_t *k, size_t len, uint64_t seed)
     res = ec_blind_scalar(kb, g->k_words, g->order, k, len, ec_next_random(&state));
     if (res)
         goto cleanup;
-    fe_random(&ws, lambda, g->p_bits, &state);
+    fe_random(&ws, lambda, g->field->p_bits, &state);
 
     /* Only the fact that p is the generator leaks */
     if (EC_USE_TABLES && ct_declassify(ec_point_is_g(p)))

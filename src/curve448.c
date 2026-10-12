@@ -102,8 +102,8 @@ STATIC int curve448_ladder(EcWs *ws, const Curve448Context *ctx, Curve448Point *
 
     /* (x2:z2) = (lambda:0), (x3:z3) = (mu*x1:mu) */
     fe_copy(ws, x1, p->x);
-    fe_random(ws, x2, ctx->p_bits, &state);
-    fe_random(ws, z3, ctx->p_bits, &state);
+    fe_random(ws, x2, ctx->field->p_bits, &state);
+    fe_random(ws, z3, ctx->field->p_bits, &state);
     fe_mul(ws, x3, x1, z3);
 
     /* From the most significant bit */
@@ -120,7 +120,7 @@ STATIC int curve448_ladder(EcWs *ws, const Curve448Context *ctx, Curve448Point *
     words_cswap(ct_mask(swap), z2, z3, NW);
 
     /* Normalize: (X/Z:1), or (1:0) for the point at infinity (1/0 is 0) */
-    res = fe_inv(ws, zinv, z2, ctx->p_minus_2);
+    res = fe_inv(ws, zinv, z2);
     if (res)
         goto cleanup;
     z_zero = ct_mask(words_is_zero(z2, NW));
@@ -142,7 +142,6 @@ EXPORT_SYM void curve448_free_context(Curve448Context *ctx)
     if (NULL == ctx)
         return;
     ec_field_free(ctx->field);
-    nat_free(ctx->p_minus_2);
     nat_words_free(ctx->a24, NW);
     free(ctx);
 }
@@ -150,7 +149,7 @@ EXPORT_SYM void curve448_free_context(Curve448Context *ctx)
 EXPORT_SYM int curve448_new_context(Curve448Context **out)
 {
     Curve448Context *ctx;
-    Nat *p = NULL, *two = NULL, *a24 = NULL;
+    Nat *p = NULL, *a24 = NULL;
     int res;
 
     if (NULL == out)
@@ -162,22 +161,16 @@ EXPORT_SYM int curve448_new_context(Curve448Context **out)
 
     res = ERR_MEMORY;
     p = nat_alloc(NW);
-    two = nat_alloc(1);
     a24 = nat_alloc(NW);
-    ctx->p_minus_2 = nat_alloc(NW);
     ctx->a24 = nat_words_alloc(NW);
-    if (!p || !two || !a24 || !ctx->p_minus_2 || !ctx->a24)
+    if (!p || !a24 || !ctx->a24)
         goto cleanup;
 
     res = nat_from_bytes(p, curve448_p, CURVE448_BYTES, 0);
     if (res == 0)
         res = ec_field_new(&ctx->field, p);
-    two->w[0] = 2;
-    if (res == 0)
-        res = nat_sub(ctx->p_minus_2, p, two);
     if (res)
         goto cleanup;
-    ctx->p_bits = (size_t)nat_bit_length(p);
 
     /* a24 = (A + 2)/4 */
     a24->w[0] = 39082;
@@ -185,7 +178,6 @@ EXPORT_SYM int curve448_new_context(Curve448Context **out)
 
 cleanup:
     nat_free(p);
-    nat_free(two);
     nat_free(a24);
     if (res) {
         curve448_free_context(ctx);

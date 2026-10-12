@@ -216,10 +216,10 @@ static void test_ladder_step(const Curve448Context *ctx)
         curve448_ladder_step(&ws, ctx, a->x, a->z, b->x, b->z, p->x);
 
         /* Normalize, and compare with the public API */
-        assert(fe_inv(&ws, s, a->z, ctx->p_minus_2) == 0);
+        assert(fe_inv(&ws, s, a->z) == 0);
         fe_mul(&ws, a->x, a->x, s);
         memcpy(a->z, ctx->field->one, nw*8);
-        assert(fe_inv(&ws, s, b->z, ctx->p_minus_2) == 0);
+        assert(fe_inv(&ws, s, b->z) == 0);
         fe_mul(&ws, b->x, b->x, s);
         memcpy(b->z, ctx->field->one, nw*8);
 

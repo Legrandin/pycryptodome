@@ -65,8 +65,11 @@ typedef struct {
     EcFieldKind kind;
     size_t nw;              /* 64-bit words of a field element */
     uint64_t *one;          /* 1, in the representation of the field (nw words) */
+    Nat *p_minus_2;         /* the exponent of the inversion (Fermat) */
+    size_t p_bits;          /* the size of p */
 } EcField;
 
+/** The field of the odd prime p (at least 3) **/
 int ec_field_new(EcField **out, const Nat *p);
 void ec_field_free(EcField *f);
 /** out = x in the representation of the field, for x < p (setup only: not thread safe) **/
@@ -113,7 +116,7 @@ static inline void fe_copy(EcWs *ws, uint64_t *out, const uint64_t *a)
 void fe_pow_public(EcWs *ws, uint64_t *out, const uint64_t *a, const Nat *e);
 
 /** out = 1/a (Fermat: a^(p-2)), and 0 for a = 0 **/
-int fe_inv(EcWs *ws, uint64_t *out, const uint64_t *a, const Nat *p_minus_2);
+int fe_inv(EcWs *ws, uint64_t *out, const uint64_t *a);
 
 /** out = the number x (x < p), in the representation of the field **/
 void fe_from_words(EcWs *ws, uint64_t *out, const uint64_t *x);
@@ -176,7 +179,7 @@ void ec_table_select(uint64_t *out, const uint64_t *table, size_t entries, size_
  * to affine points (x, y: 2*nw words each), with a single inversion
  * (Montgomery's trick). For public points only (the tables).
  */
-int ec_batch_to_affine(EcWs *ws, uint64_t *affine, const uint64_t *proj, size_t count, const Nat *p_minus_2);
+int ec_batch_to_affine(EcWs *ws, uint64_t *affine, const uint64_t *proj, size_t count);
 
 /* ---------------------------------------------------------------- */
 /* Curves with points in projective coordinates (X:Y:Z):            */
@@ -218,8 +221,6 @@ struct EcGroup {
     size_t nw;              /* 64-bit words of a field element */
     size_t len;             /* bytes of an encoded coordinate */
     EcField *field;         /* the field: arithmetic modulo p */
-    Nat *p_minus_2;         /* the exponent of the inversion (Fermat) */
-    size_t p_bits;
     uint64_t *param;        /* the constant of the formulas: b (NIST curves), d (Ed448) */
     uint64_t *gx, *gy;      /* the generator G (affine, field elements) */
     Nat *order;             /* the scalars are reduced and blinded modulo it: the order
