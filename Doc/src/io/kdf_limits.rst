@@ -29,7 +29,8 @@ Default limits
 
 By default (``max_iteration_count=None`` and ``max_memory=None``),
 the limits depend on the key derivation function,
-so that the derivation takes at most about one minute on a recent x86-64 laptop:
+so that the derivation takes at most about one minute on a recent x86-64 laptop,
+with a single thread:
 
 +----------------------------------------------+----------------------------------+
 | Key derivation                               | Default ``max_iteration_count``  |
@@ -65,13 +66,23 @@ the ones for which the default limit takes about one minute.
 The scrypt cost
 ---------------
 
-The time that scrypt takes is proportional to *N·r·p*, and for this reason
+The total work of scrypt (its CPU time) is proportional to *N·r·p*: for this reason,
 ``max_iteration_count`` limits *N·r·p/8* (rounded up) and not *N* alone.
 For the usual *r* = 8 and *p* = 1, it is just *N*.
 
-For instance, the default limit accepts *N* = 2\ :sup:`20` with *r* = 8 and *p* = 32,
-or *N* = 2\ :sup:`14` with *r* = 8 and *p* = 1024; it rejects *N* = 2\ :sup:`26` with *r* = 8
-and *p* = 1.
+The *p* flows of scrypt are independent, and they can run on several threads
+(see below). With *t* threads, each one computes at most *⌈p/t⌉* flows,
+so the elapsed time is proportional to *N·r·⌈p/t⌉*: that is the best case,
+when *t* CPU cores are free. The limit is on the total work instead,
+which does not depend on the number of threads, nor on how busy the CPU is.
+
+For instance, the default ``max_iteration_count`` accepts *N* = 2\ :sup:`20` with
+*r* = 8 and *p* = 32, or *N* = 2\ :sup:`14` with *r* = 8 and *p* = 2048 (both at the limit);
+it rejects *N* = 2\ :sup:`26` with *r* = 8 and *p* = 1.
+The memory is limited separately (see below): by default, the first example is rejected
+anyway, because each thread would need 1 GiB.
+The second example takes about 47 seconds on one thread, and at least 6 seconds
+on 8 threads (16 MiB for each one).
 
 Memory and threads
 ------------------
