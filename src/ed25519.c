@@ -496,13 +496,15 @@ STATIC int ed25519_scalar_public_internal(Point *Pout,
 
 /* ---- */
 
+/* d = -121665/121666 (mod 2^255 - 19), big-endian */
+static const char ed25519_d_hex[] = "52036cee2b6ffe738cc740797779e89800700a4d4141d8ab75eb4dca135978a3";
+
 EXPORT_SYM int ed25519_new_point(Point **out,
                       const uint8_t x[32], const uint8_t y[32],
                       size_t modsize, void *context)
 {
     uint32_t A[10], B[10], C[10];
     uint8_t bb[32], cb[32];
-    const char d[] = "52036cee2b6ffe738cc740797779e89800700a4d4141d8ab75eb4dca135978a3";
 
     if ((NULL == out) || (NULL == x) || (NULL == y))
         return ERR_NULL;
@@ -523,7 +525,7 @@ EXPORT_SYM int ed25519_new_point(Point **out,
     mul_25519(A, (*out)->X, (*out)->X);     /* x² */
     mul_25519(B, (*out)->Y, (*out)->Y);     /* y² */
 
-    convert_behex_to_le25p5(C, d);          /* d */
+    convert_behex_to_le25p5(C, ed25519_d_hex);  /* d */
     mul_25519(C, C, B);                     /* dy² */
     mul_25519(C, C, A);                     /* dx²y² */
     add_25519(C, C, A);                     /* dx²y² - ax² */
@@ -554,7 +556,6 @@ EXPORT_SYM int ed25519_new_point(Point **out,
  */
 EXPORT_SYM int ed25519_decode_point(Point **out, const uint8_t *encoded, size_t len, void *context)
 {
-    const char d_hex[] = "52036cee2b6ffe738cc740797779e89800700a4d4141d8ab75eb4dca135978a3";
     const char sqrtm1_hex[] = "2b8324804fc1df0b2b4d00993dfbd7a72f431806ad2fe478c4ee1b274a0ea0b0";
     const uint32_t zero[10] = { 0 };
     uint32_t y[10], x[10], u[10], v[10], v3[10], t[10], d[10];
@@ -577,7 +578,7 @@ EXPORT_SYM int ed25519_decode_point(Point **out, const uint8_t *encoded, size_t 
         return ERR_EC_POINT;
 
     /* u = y² - 1, v = dy² + 1 */
-    convert_behex_to_le25p5(d, d_hex);
+    convert_behex_to_le25p5(d, ed25519_d_hex);
     mul_25519(t, y, y);
     memset(u, 0, sizeof u);
     u[0] = 1;
