@@ -46,10 +46,10 @@ def miller_rabin_test(
     if not isinstance(candidate, Integer):
         candidate = Integer(candidate)
 
-    if candidate in (1, 2, 3, 5):
+    if candidate in (2, 3, 5):
         return PROBABLY_PRIME
 
-    if candidate.is_even():
+    if candidate == 1 or candidate.is_even():
         return COMPOSITE
 
     if randfunc is None:
@@ -90,8 +90,8 @@ def lucas_test(candidate: Union[int, Integer]) -> PrimeResult:
     if not isinstance(candidate, Integer):
         candidate = Integer(candidate)
 
-    # Step 1
-    if candidate in (1, 2, 3, 5):
+    # Step 1 (1 is a perfect square)
+    if candidate in (2, 3, 5):
         return PROBABLY_PRIME
     if candidate.is_even() or candidate.is_perfect_square():
         return COMPOSITE

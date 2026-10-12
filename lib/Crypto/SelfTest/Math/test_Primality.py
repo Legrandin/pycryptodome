@@ -22,7 +22,6 @@ from Crypto.Math.Primality import (
 
 class TestPrimality:
     primes = (
-        1,
         2,
         3,
         5,
@@ -37,6 +36,7 @@ class TestPrimality:
     )
     composites = (
         0,
+        1,
         4,
         6,
         8,
@@ -87,7 +87,7 @@ class TestPrimality:
             1334733877147062382486934807105197899496002201113849920496510541601,
             260849323075371835669784094383812120359260783810157225730623388382401,
         )
-        for np in not_primes:
+        for np in not_primes + (0, 1):
             assert Primality.test_probable_prime(np) == COMPOSITE
 
         from Crypto.Util.number import sieve_base
