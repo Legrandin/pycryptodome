@@ -60,22 +60,10 @@ _OID_AES256_GCM = "2.16.840.1.101.3.4.1.46"
 #: Maximum PBKDF1 iteration count (PBES1)
 _DEFAULT_MAX_PBKDF1 = 20_000_000
 
-#: Maximum PBKDF2 iteration count, for each hash (OID) of the HMAC.
-#: Lower for SHA-1, SHA-224, SHA-512/224 and SHA3-224: their digest is shorter
-#: than a 32-byte key, so PBKDF2 has to run twice.
-_DEFAULT_MAX_PBKDF2 = {
-    "1.3.14.3.2.26": 200_000_000,  # SHA-1
-    "2.16.840.1.101.3.4.2.4": 100_000_000,  # SHA-224
-    "2.16.840.1.101.3.4.2.1": 200_000_000,  # SHA-256
-    "2.16.840.1.101.3.4.2.2": 100_000_000,  # SHA-384
-    "2.16.840.1.101.3.4.2.3": 100_000_000,  # SHA-512
-    "2.16.840.1.101.3.4.2.5": 50_000_000,  # SHA-512/224
-    "2.16.840.1.101.3.4.2.6": 100_000_000,  # SHA-512/256
-    "2.16.840.1.101.3.4.2.7": 50_000_000,  # SHA3-224
-    "2.16.840.1.101.3.4.2.8": 100_000_000,  # SHA3-256
-    "2.16.840.1.101.3.4.2.9": 100_000_000,  # SHA3-384
-    "2.16.840.1.101.3.4.2.10": 100_000_000,  # SHA3-512
-}
+#: Maximum PBKDF2 iteration count, whatever the hash of the HMAC.
+#: The slowest are SHA-1, SHA-224, SHA-512/224 and SHA3-224 with a 32-byte key:
+#: their digest is shorter than the key, so PBKDF2 has to run twice.
+_DEFAULT_MAX_PBKDF2 = 50_000_000
 
 #: Maximum scrypt cost N*r*p/8 (that is, N for r=8 and p=1)
 _DEFAULT_MAX_SCRYPT_COST = 2**25
@@ -535,7 +523,7 @@ class PBES2:
             An attacker could craft a malicious key blob that requires an
             extremely high number of iterations, tying up the CPU for hours.
             The default value is None (enforcing the limits
-            :data:`_DEFAULT_MAX_PBKDF2` for each hash, or
+            :data:`_DEFAULT_MAX_PBKDF2`, or
             :data:`_DEFAULT_MAX_SCRYPT_COST`).
             Set it to ``0`` to disable the check.
           threads : integer
@@ -597,10 +585,7 @@ class PBES2:
             except KeyError:
                 raise PbesError("Unsupported HMAC %s" % pbkdf2_prf_oid)
 
-            # The default limit depends on the hash
-            _check_iteration_count(
-                _PBKDF2_COUNT, iteration_count, max_iteration_count, _DEFAULT_MAX_PBKDF2[hmac_hash_module_oid]
-            )
+            _check_iteration_count(_PBKDF2_COUNT, iteration_count, max_iteration_count, _DEFAULT_MAX_PBKDF2)
 
         elif kdf_oid == _OID_SCRYPT:
             scrypt_params = DerSequence().decode(kdf_info[1], nr_elements=(4, 5))

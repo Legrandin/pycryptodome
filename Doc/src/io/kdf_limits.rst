@@ -28,20 +28,13 @@ Default limits
 --------------
 
 By default (``max_iteration_count=None`` and ``max_memory=None``),
-the limits depend on the key derivation function and on the hash,
+the limits depend on the key derivation function,
 so that the derivation takes at most about one minute on a recent x86-64 laptop:
 
 +----------------------------------------------+----------------------------------+
 | Key derivation                               | Default ``max_iteration_count``  |
 +==============================================+==================================+
-| PBKDF2 with HMAC-SHA1 or HMAC-SHA256         | 200,000,000 iterations           |
-+----------------------------------------------+----------------------------------+
-| PBKDF2 with HMAC-SHA224, HMAC-SHA384,        | 100,000,000 iterations           |
-| HMAC-SHA512, HMAC-SHA512/256,                |                                  |
-| HMAC-SHA3-256, HMAC-SHA3-384 or              |                                  |
-| HMAC-SHA3-512                                |                                  |
-+----------------------------------------------+----------------------------------+
-| PBKDF2 with HMAC-SHA512/224 or HMAC-SHA3-224 | 50,000,000 iterations            |
+| PBKDF2 (with any hash)                       | 50,000,000 iterations            |
 +----------------------------------------------+----------------------------------+
 | PBKDF1 (legacy PBES1 algorithms)             | 20,000,000 iterations            |
 +----------------------------------------------+----------------------------------+
@@ -63,11 +56,12 @@ for instance, OWASP recommends at least 600,000 iterations for PBKDF2-HMAC-SHA25
 and *N* = 2\ :sup:`17` with *r* = 8 and *p* = 1 for scrypt
 (128 MiB, and a cost *N·r·p/8* of 2\ :sup:`17`).
 
-The limits for a hash depend on the time of one iteration, and on the length
-of the digest. When the digest is shorter than the key (for instance, the
+With PBKDF2, the time of one iteration depends on the hash, and on the length
+of its digest. When the digest is shorter than the key (for instance, the
 28 bytes of SHA-512/224 or SHA3-224, for a 32-byte AES-256 key), PBKDF2 has to
 compute two blocks of output, each one with the full iteration count:
-then, each iteration costs twice as much.
+then, each iteration costs twice as much. These are the slowest cases, and
+the ones for which the default limit takes about one minute.
 
 The scrypt cost
 ---------------

@@ -30,10 +30,6 @@ from Crypto.IO._PBES import (
 )
 from Crypto.Util.asn1 import DerInteger, DerObjectId, DerOctetString, DerSequence
 
-_OID_SHA1 = "1.3.14.3.2.26"
-_OID_SHA256 = "2.16.840.1.101.3.4.2.1"
-_OID_SHA3_256 = "2.16.840.1.101.3.4.2.8"
-
 
 class TestPBES2:
     def setup_method(self):
@@ -174,7 +170,7 @@ class TestPBES2_IterationLimit:
         with pytest.raises(PbesError) as ctx:
             PBES2.decrypt(blob, self.passphrase)
         assert str(ctx.value) == _ITERATION_COUNT_ERROR.format(
-            what=_PBKDF2_COUNT, count=2**31 - 1, limit=_DEFAULT_LIMIT.format(_DEFAULT_MAX_PBKDF2[_OID_SHA1])
+            what=_PBKDF2_COUNT, count=2**31 - 1, limit=_DEFAULT_LIMIT.format(_DEFAULT_MAX_PBKDF2)
         )
 
     def test_pbkdf2_custom_limit(self):
@@ -232,36 +228,15 @@ class TestPBES2_IterationLimit:
         pt = PBES2.decrypt(ct, self.passphrase, max_iteration_count=5000)
         assert self.ref == pt
 
-    def test_pbkdf2_default_limit_depends_on_hash(self, monkeypatch):
-        """The default limit depends on the hash of the HMAC."""
-        from Crypto.IO import _PBES
-
-        # Small limits, to keep the test fast
-        limits = dict(_DEFAULT_MAX_PBKDF2)
-        limits[_OID_SHA3_256] = 1000
-        limits[_OID_SHA256] = 2000
-        monkeypatch.setattr(_PBES, "_DEFAULT_MAX_PBKDF2", limits)
-
+    @pytest.mark.parametrize("hash_name", ["SHA1", "SHA256", "SHA512-224", "SHA3-224", "SHA3-512"])
+    def test_pbkdf2_default_limit_same_for_all_hashes(self, hash_name):
+        """The default limit is the same for all hashes."""
+        count = _DEFAULT_MAX_PBKDF2 + 1
         with pytest.raises(PbesIterationCountError) as ctx:
-            PBES2.decrypt(self._make_pbkdf2_blob(1001, "SHA3-256"), self.passphrase)
+            PBES2.decrypt(self._make_pbkdf2_blob(count, hash_name), self.passphrase)
         assert str(ctx.value) == _ITERATION_COUNT_ERROR.format(
-            what=_PBKDF2_COUNT, count=1001, limit=_DEFAULT_LIMIT.format(1000)
+            what=_PBKDF2_COUNT, count=count, limit=_DEFAULT_LIMIT.format(_DEFAULT_MAX_PBKDF2)
         )
-
-        # The same count is fine with SHA-256
-        ct = PBES2.encrypt(
-            self.ref,
-            self.passphrase,
-            "PBKDF2WithHMAC-SHA256AndAES128-CBC",
-            prot_params={"iteration_count": 1001},
-        )
-        assert PBES2.decrypt(ct, self.passphrase) == self.ref
-
-    def test_pbkdf2_default_limits_table(self):
-        """There is a default limit for each hash that PBES2 supports."""
-        from Crypto.Hash import HMAC
-
-        assert set(_DEFAULT_MAX_PBKDF2) == set(HMAC._hmac2hash_oid.values())
 
     def test_scrypt_default_limit_rejects_high_r_p(self):
         """Large r or p are not hidden behind a small N."""

@@ -889,7 +889,7 @@ def import_key(
         of a `PKCS#8`_ encrypted key.
         A malicious key could require an extremely high number of
         iterations, tying up the CPU for hours.
-        The default value is None: a limit for each KDF and hash, which keeps
+        The default value is None: a limit for each KDF, which keeps
         the key derivation to about one minute at most
         (see :ref:`the limits for decryption<pkcs8_limits>`).
         Set it to ``0`` to disable the check.

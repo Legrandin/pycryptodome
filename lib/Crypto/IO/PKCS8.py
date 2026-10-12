@@ -163,7 +163,7 @@ def unwrap(
         or for the scrypt cost *N·r·p/8* (that is, *N* for the usual *r=8* and *p=1*).
         An attacker could craft a malicious key blob that requires an
         extremely high number of iterations, tying up the CPU for hours.
-        The default value is None: a limit for each KDF and hash, which keeps
+        The default value is None: a limit for each KDF, which keeps
         the key derivation to about one minute at most
         (see :ref:`the limits for decryption<pkcs8_limits>`).
         Set it to ``0`` to disable the check.

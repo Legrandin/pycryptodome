@@ -156,9 +156,9 @@ New features
   says which value is too high and how to accept it, instead of a generic error
   about the key format.
 * The default limit for decrypting PKCS#8 keys (``max_iteration_count=None``)
-  depends on the key derivation and on the hash, so that it takes at most about
-  one minute: for instance, 200,000,000 iterations for PBKDF2 with SHA-256,
-  and 50,000,000 with SHA-512/224. It was 50,000,000 iterations for all of them.
+  depends on the key derivation, so that it takes at most about one minute:
+  it is still 50,000,000 iterations for PBKDF2, but 20,000,000 for PBKDF1
+  (the legacy PBES1 algorithms), which is slower.
   See the new page "Limits when decrypting private keys" in the documentation.
 * For scrypt, ``max_iteration_count`` now limits *N·r·p/8* (that is, *N* for the
   usual *r=8* and *p=1*), and not only *N*: before, a key with a large *r* or *p*
