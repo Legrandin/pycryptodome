@@ -105,7 +105,12 @@ and to check them::
     except ValueError:
         print("Incorrect password")
 
-.. warning:
+The bcrypt hash states its own cost (up to 31), and the time doubles at every step.
+To protect against a hash from an untrusted source, :func:`bcrypt_check` rejects
+a cost above 20 (about one minute on a recent laptop): use the parameter ``max_cost``
+to change this limit (see :ref:`the limits<pkcs8_limits>`).
+
+.. warning::
     The output of ``bcrypt`` is only meant to be stored. It is not meant to be
     used as key material.
 

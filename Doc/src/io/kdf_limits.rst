@@ -135,6 +135,24 @@ to change it).
 A key with less than one round is rejected, before any key derivation.
 bcrypt needs very little memory (about 8 KiB), so ``max_memory`` does not apply.
 
+bcrypt password hashes
+----------------------
+
+:func:`Crypto.Protocol.KDF.bcrypt_check` verifies a password against a bcrypt hash,
+which states its own cost, from 4 to 31. The time doubles at every step:
+cost 12 takes about 0.2 seconds on a recent x86-64 laptop, but cost 31 about one day.
+A hash from an untrusted source (for instance, user accounts imported from elsewhere)
+could therefore tie up the CPU.
+
+For this reason, ``bcrypt_check()`` rejects a hash whose cost is above ``max_cost``,
+before any hashing, with a ``ValueError``:
+
+* by default (``max_cost=None``), the limit is 20, about one minute;
+* an explicit ``max_cost`` is the highest cost allowed;
+* with ``max_cost=0``, no limit applies.
+
+The usual costs for passwords (10 to 14) are well within the default limit.
+
 Explicit limits
 ---------------
 
@@ -196,8 +214,7 @@ What is not covered
 
 * Private keys encrypted with the legacy PEM encryption (``Proc-Type: 4,ENCRYPTED``):
   their key derivation has a fixed, low cost.
-* Password hashes checked with :func:`Crypto.Protocol.KDF.bcrypt_check`: the hash states
-  its cost, up to 31 (about one day on a recent laptop). Only check hashes that come from
-  a trusted source, or verify their cost first.
+* Password hashes checked with :func:`Crypto.Protocol.KDF.bcrypt_check`:
+  they have their own limit (see below).
 
 .. _`PKCS#8`: https://datatracker.ietf.org/doc/html/rfc5208

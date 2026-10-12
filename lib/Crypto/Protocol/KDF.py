@@ -741,7 +741,20 @@ def bcrypt(password: Union[bytes, str], cost: int, salt: Optional[bytes] = None)
     return b"$2a" + cost_enc + salt_enc + hash_enc
 
 
-def bcrypt_check(password: Union[bytes, str], bcrypt_hash: Union[bytes, bytearray, str]) -> None:
+#: Default maximum cost of a bcrypt hash in bcrypt_check() (max_cost is None):
+#: the time doubles at every step, and cost 20 takes about one minute on a recent laptop
+_DEFAULT_MAX_BCRYPT_COST = 20
+
+#: Message of the error when the cost of a bcrypt hash is above max_cost
+_BCRYPT_COST_ERROR = (
+    "The bcrypt hash has a cost of {cost}, above the maximum allowed by max_cost: {limit}. "
+    "If you trust the hash, increase max_cost (or set it to 0 to disable the check)."
+)
+
+
+def bcrypt_check(
+    password: Union[bytes, str], bcrypt_hash: Union[bytes, bytearray, str], *, max_cost: Optional[int] = None
+) -> None:
     """Verify if the provided password matches the given bcrypt hash.
 
     Args:
@@ -753,9 +766,24 @@ def bcrypt_check(password: Union[bytes, str], bcrypt_hash: Union[bytes, bytearra
       bcrypt_hash (byte string, bytearray):
         The reference bcrypt hash the password needs to be checked against.
 
+      max_cost (integer):
+        The maximum cost allowed for the bcrypt hash.
+        The hash states its own cost (up to 31), and the time doubles at every step:
+        a hash from an untrusted source could tie up the CPU for a day.
+        The default value is None (a limit of 20, about one minute on a recent laptop).
+        Set it to ``0`` to disable the check.
+        See :ref:`the limits for decryption<pkcs8_limits>`.
+
     Raises:
-        ValueError: if the password does not match
+        ValueError: if the password does not match,
+          or if the cost of the hash is above ``max_cost``
     """
+
+    if max_cost is not None:
+        if not isinstance(max_cost, int) or isinstance(max_cost, bool):
+            raise TypeError("'max_cost' must be an integer or None")
+        if max_cost < 0:
+            raise ValueError("'max_cost' must be a non-negative integer")
 
     bcrypt_hash = tobytes(bcrypt_hash)
 
@@ -773,6 +801,15 @@ def bcrypt_check(password: Union[bytes, str], bcrypt_hash: Union[bytes, bytearra
     cost = int(r.group(1))
     if not (4 <= cost <= 31):
         raise ValueError("Incorrect cost")
+
+    # Before any hashing: the cost comes from the hash
+    if max_cost is None:
+        limit = "%d (the default)" % _DEFAULT_MAX_BCRYPT_COST
+        max_cost = _DEFAULT_MAX_BCRYPT_COST
+    else:
+        limit = str(max_cost)
+    if max_cost and cost > max_cost:
+        raise ValueError(_BCRYPT_COST_ERROR.format(cost=cost, limit=limit))
 
     salt = _bcrypt_decode(r.group(2))
 

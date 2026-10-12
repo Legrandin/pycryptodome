@@ -667,6 +667,42 @@ class TestBcryptHash2:
 
 
 class TestBcrypt:
+    def test_max_cost(self):
+        """The cost of the hash is checked before any hashing."""
+        from Crypto.Protocol.KDF import _BCRYPT_COST_ERROR, _DEFAULT_MAX_BCRYPT_COST
+
+        password = b"password"
+        hash5 = bcrypt(password, 5)
+        assert hash5[4:7] == b"05$"
+
+        for max_cost in (5, 6, 0, None):
+            bcrypt_check(password, hash5, max_cost=max_cost)
+        with pytest.raises(ValueError) as ctx:
+            bcrypt_check(password, hash5, max_cost=4)
+        assert str(ctx.value) == _BCRYPT_COST_ERROR.format(cost=5, limit=4)
+
+        # The same hash, with a cost above the default limit (never computed)
+        for cost in (_DEFAULT_MAX_BCRYPT_COST + 1, 31):
+            costly = hash5[:4] + b"%02d" % cost + hash5[6:]
+            with pytest.raises(ValueError) as ctx:
+                bcrypt_check(password, costly)
+            expected_limit = "%d (the default)" % _DEFAULT_MAX_BCRYPT_COST
+            assert str(ctx.value) == _BCRYPT_COST_ERROR.format(cost=cost, limit=expected_limit)
+            with pytest.raises(ValueError):
+                bcrypt_check(password, costly, max_cost=cost - 1)
+
+    def test_max_cost_negative(self):
+        hash5 = bcrypt(b"password", 5)
+        for max_cost, exc in ((1.5, TypeError), ("10", TypeError), (True, TypeError), (-1, ValueError)):
+            with pytest.raises(exc):
+                bcrypt_check(b"password", hash5, max_cost=max_cost)
+            # Checked even before the hash
+            with pytest.raises(exc):
+                bcrypt_check(b"password", b"not a hash", max_cost=max_cost)
+        # Keyword only
+        with pytest.raises(TypeError):
+            bcrypt_check(b"password", hash5, 10)
+
     def test_negative_cases(self):
         with pytest.raises(ValueError):
             bcrypt(b"1" * 73, 10)

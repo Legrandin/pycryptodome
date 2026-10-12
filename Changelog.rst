@@ -7,6 +7,9 @@ Changelog
 Breaking changes
 ----------------
 * Remove support for Python 2.7 and 3.8. The minimum supported version is now Python 3.9.
+* ``Crypto.Protocol.KDF.bcrypt_check()`` rejects (with ``ValueError``) a bcrypt hash whose cost
+  is above 20, which takes about one minute: use the new parameter ``max_cost``
+  to accept costs up to 31, as before.
 * The ``pycryptodomex`` package (``Cryptodome`` namespace) is no longer released
   (except for important security patches, but still on the 3.x branch).
   The library is only available as ``pycryptodome``, under the ``Crypto`` namespace.
@@ -141,6 +144,9 @@ New features
   HMAC based on SHA-1, SHA-224, SHA-256, SHA-384 and SHA-512.
 * ``Crypto.Protocol.KDF.PBKDF2()`` with HMAC based on SHA-3 runs its inner loop in C,
   as for SHA-1 and SHA-2: it is about 25x-35x faster.
+* New parameter ``max_cost`` for ``Crypto.Protocol.KDF.bcrypt_check()``: the maximum cost
+  of the bcrypt hash, which states its own cost (default: 20, about one minute;
+  0 for no limit). A hash from an untrusted source could otherwise tie up the CPU for a day.
 * Encrypted OpenSSH private keys are imported about 1.9x faster: the two bcrypt
   hashes of each round of bcrypt_pbkdf run interleaved, in C.
 * ``Crypto.Protocol.KDF.PBKDF1()`` with MD5 and SHA-1 (also used to import keys
