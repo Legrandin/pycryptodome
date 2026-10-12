@@ -49,6 +49,22 @@ def have_adx() -> int:
     return _raw_cpuid_lib.have_adx()
 
 
+def load_avx2_bmi2_lib(name: str, cdecl: str):
+    """Load the functions in ``cdecl`` from the module ``name``,
+    compiled for AVX2, BMI1 and BMI2.
+
+    Return None if the CPU does not support all three instruction sets,
+    or if the module was not compiled in.
+    """
+
+    if not (have_avx2() and have_bmi1() and have_bmi2()):
+        return None
+    try:
+        return load_pycryptodome_raw_lib(name, cdecl)
+    except OSError:
+        return None
+
+
 def available_cores() -> int:
     """Return the number of CPU cores this process can run on."""
 

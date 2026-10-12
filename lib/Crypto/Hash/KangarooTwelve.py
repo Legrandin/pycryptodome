@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from typing import Optional, Union
 
+from Crypto.Util._cpu_features import load_avx2_bmi2_lib
 from Crypto.Util._raw_api import (
     c_size_t,
     c_uint8_ptr_len,
@@ -17,7 +18,6 @@ from Crypto.Util._threads import range_boundaries, run_in_threads, threads_param
 from Crypto.Util.number import long_to_bytes
 
 from . import TurboSHAKE128
-from .keccak import _load_avx2_bmi2_lib
 
 Buffer = Union[bytes, bytearray, memoryview]
 
@@ -37,7 +37,7 @@ _raw_k12_portable_lib = load_pycryptodome_raw_lib("Crypto.Hash._k12", _k12_cdecl
 
 
 # It also hashes 4 leaves at a time with AVX2
-_raw_k12_avx2_bmi2_lib = _load_avx2_bmi2_lib("Crypto.Hash._k12_avx2_bmi2", _k12_cdecl)
+_raw_k12_avx2_bmi2_lib = load_avx2_bmi2_lib("Crypto.Hash._k12_avx2_bmi2", _k12_cdecl)
 
 # The implementation in use (the tests can replace it)
 if _raw_k12_avx2_bmi2_lib is not None:

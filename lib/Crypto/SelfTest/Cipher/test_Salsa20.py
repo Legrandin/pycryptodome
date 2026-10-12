@@ -23,10 +23,19 @@
 
 """Self-test suite for Crypto.Cipher.Salsa20"""
 
+import random
+
 import pytest
 
 from Crypto.Cipher import Salsa20
 from Crypto.SelfTest.Cipher.common import make_stream_tests
+from Crypto.Util._raw_api import (
+    VoidPointer,
+    c_size_t,
+    c_uint8_ptr,
+    create_string_buffer,
+    get_raw_buffer,
+)
 
 # This is a list of (plaintext, ciphertext, key[, description[, params]])
 # tuples.
@@ -346,6 +355,73 @@ class TestOutput:
         cipher = Salsa20.new(key=key, nonce=nonce)
         with pytest.raises(ValueError):
             cipher.decrypt(ct, output=shorter_output)
+
+
+class TestChunks:
+    # The key stream is computed several blocks at a time:
+    # pieces of any length must give the same result as a single call
+    @pytest.mark.parametrize("chunk_sizes", [[1] * 70, [63, 64, 65, 7], [256, 255, 300, 1000, 17], [3000]])
+    def test(self, chunk_sizes):
+        key = bytes(range(32))
+        nonce = b"\xaa" * 8
+        pt = bytes(i % 251 for i in range(sum(chunk_sizes)))
+        ref = Salsa20.new(key=key, nonce=nonce).encrypt(pt)
+
+        cipher = Salsa20.new(key=key, nonce=nonce)
+        ct = b""
+        offset = 0
+        for size in chunk_sizes:
+            ct += cipher.encrypt(pt[offset : offset + size])
+            offset += size
+        assert ct == ref
+
+        # In place
+        cipher = Salsa20.new(key=key, nonce=nonce)
+        buf = bytearray(pt)
+        cipher.encrypt(buf, output=buf)
+        assert buf == ref
+
+
+@pytest.mark.skipif(Salsa20._raw_salsa20_avx2_bmi2_lib is None, reason="AVX2 and BMI2 not available")
+class TestSalsa20Implementations:
+    """The test vectors only exercise the implementation in use.
+    Check that the other one (portable C) returns the same output."""
+
+    def _encrypt(self, lib, key, nonce, chunks):
+        state = VoidPointer()
+        assert (
+            lib.Salsa20_stream_init(
+                c_uint8_ptr(key),
+                c_size_t(len(key)),
+                c_uint8_ptr(nonce),
+                c_size_t(len(nonce)),
+                state.address_of(),
+            )
+            == 0
+        )
+        result = b""
+        for chunk in chunks:
+            out = create_string_buffer(len(chunk))
+            assert lib.Salsa20_stream_encrypt(state.get(), c_uint8_ptr(chunk), out, c_size_t(len(chunk))) == 0
+            result += get_raw_buffer(out)
+        lib.Salsa20_stream_destroy(state.get())
+        return result
+
+    @pytest.mark.parametrize("key_len", [16, 32])
+    def test_same_output(self, key_len):
+        rng = random.Random(key_len)
+        key = bytes(rng.getrandbits(8) for _ in range(key_len))
+        nonce = bytes(rng.getrandbits(8) for _ in range(8))
+        for length in (0, 1, 63, 64, 65, 255, 256, 511, 512, 513, 5000):
+            data = bytes(rng.getrandbits(8) for _ in range(length))
+            cut1 = rng.randint(0, length)
+            cut2 = rng.randint(cut1, length)
+            chunks = (data[:cut1], data[cut1:cut2], data[cut2:])
+            results = [
+                self._encrypt(lib, key, nonce, chunks)
+                for lib in (Salsa20._raw_salsa20_portable_lib, Salsa20._raw_salsa20_avx2_bmi2_lib)
+            ]
+            assert results[0] == results[1]
 
 
 TestVectors = make_stream_tests(Salsa20, "Salsa20", test_data)

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 from typing import Optional, Union
 
-from Crypto.Util import _cpu_features
+from Crypto.Util._cpu_features import load_avx2_bmi2_lib
 from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
@@ -43,23 +43,7 @@ _keccak_cdecl = """
 _raw_keccak_portable_lib = load_pycryptodome_raw_lib("Crypto.Hash._keccak", _keccak_cdecl)
 
 
-def _load_avx2_bmi2_lib(name: str, cdecl: str):
-    """Load the functions in ``cdecl`` from the module ``name``,
-    compiled for AVX2, BMI1 and BMI2.
-
-    Return None if the CPU does not support all three instruction sets,
-    or if the module was not compiled in.
-    """
-
-    if not (_cpu_features.have_avx2() and _cpu_features.have_bmi1() and _cpu_features.have_bmi2()):
-        return None
-    try:
-        return load_pycryptodome_raw_lib(name, cdecl)
-    except OSError:
-        return None
-
-
-_raw_keccak_avx2_bmi2_lib = _load_avx2_bmi2_lib("Crypto.Hash._keccak_avx2_bmi2", _keccak_cdecl)
+_raw_keccak_avx2_bmi2_lib = load_avx2_bmi2_lib("Crypto.Hash._keccak_avx2_bmi2", _keccak_cdecl)
 
 # The implementation used by all Keccak-based hashes
 if _raw_keccak_avx2_bmi2_lib is not None:

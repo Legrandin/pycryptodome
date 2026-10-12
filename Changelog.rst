@@ -132,6 +132,9 @@ New features
 * ``Crypto.Protocol.KDF.scrypt()`` is about 1.15x-1.3x faster for ``p=1``,
   and up to 1.7x faster for small ``N`` and large ``p``. On Linux, its memory is
   backed by transparent huge pages where available.
+* The Salsa20 stream cipher is faster on long messages: about 4.8x on x86-64 CPUs
+  with AVX2 and BMI2 (gcc and clang only; 8 blocks of key stream at a time),
+  2.6x with SSE2 (4 blocks at a time), and 1.3x otherwise.
 * New parameter ``threads`` for ``Crypto.Protocol.KDF.scrypt()``, to compute
   the ``p`` independent flows on several CPU cores (``threads=0`` for all of them).
   Each thread uses ``128 * r * N`` bytes of memory at the same time.
