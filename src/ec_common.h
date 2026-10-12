@@ -72,8 +72,6 @@ typedef struct {
 /** The field of the odd prime p (at least 3) **/
 int ec_field_new(EcField **out, const Nat *p);
 void ec_field_free(EcField *f);
-/** out = x in the representation of the field, for x < p (setup only: not thread safe) **/
-void ec_field_from_words(EcField *f, uint64_t *out, const uint64_t *x);
 
 /*
  * The workspace of one operation: a private copy of the Montgomery

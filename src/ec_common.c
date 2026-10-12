@@ -78,14 +78,6 @@ void ec_field_free(EcField *f)
     free(f);
 }
 
-void ec_field_from_words(EcField *f, uint64_t *out, const uint64_t *x)
-{
-    if (EC_FIELD_MONT == f->kind)
-        mont_to(out, x, f->m);
-    else
-        memmove(out, x, f->nw*sizeof(uint64_t));
-}
-
 int ec_ws_new(EcWs *ws, const EcField *field)
 {
     unsigned i;

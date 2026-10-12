@@ -149,7 +149,9 @@ EXPORT_SYM void curve448_free_context(Curve448Context *ctx)
 EXPORT_SYM int curve448_new_context(Curve448Context **out)
 {
     Curve448Context *ctx;
-    Nat *p = NULL, *a24 = NULL;
+    const uint64_t a24[NW] = { 39082 };     /* (A + 2)/4 */
+    Nat *p = NULL;
+    EcWs ws;
     int res;
 
     if (NULL == out)
@@ -161,24 +163,22 @@ EXPORT_SYM int curve448_new_context(Curve448Context **out)
 
     res = ERR_MEMORY;
     p = nat_alloc(NW);
-    a24 = nat_alloc(NW);
     ctx->a24 = nat_words_alloc(NW);
-    if (!p || !a24 || !ctx->a24)
+    if (!p || !ctx->a24)
         goto cleanup;
 
     res = nat_from_bytes(p, curve448_p, CURVE448_BYTES, 0);
     if (res == 0)
         res = ec_field_new(&ctx->field, p);
+    if (res == 0)
+        res = ec_ws_new(&ws, ctx->field);
     if (res)
         goto cleanup;
-
-    /* a24 = (A + 2)/4 */
-    a24->w[0] = 39082;
-    ec_field_from_words(ctx->field, ctx->a24, a24->w);
+    fe_from_words(&ws, ctx->a24, a24);
+    ec_ws_free(&ws);
 
 cleanup:
     nat_free(p);
-    nat_free(a24);
     if (res) {
         curve448_free_context(ctx);
         *out = NULL;
