@@ -58,7 +58,8 @@ _raw_scrypt_lib = load_pycryptodome_raw_lib(
     "Crypto.Protocol._scrypt",
     """
                     int scryptROMix(const uint8_t *data_in, uint8_t *data_out,
-                           size_t data_len, unsigned N);
+                           size_t data_len, unsigned N,
+                           size_t first, size_t count, size_t total_len);
                     """,
 )
 
@@ -555,33 +556,37 @@ def scrypt(
 
     flow_len = 128 * r
     # Each flow reads its 128*r bytes from stage_1, and writes them into data_out
-    stage_1 = memoryview(_PBKDF2_HMAC_SHA256_1(password, salt, p * flow_len))
+    stage_1 = _PBKDF2_HMAC_SHA256_1(password, salt, p * flow_len)
     data_out = bytearray(p * flow_len)
-    data_out_view = memoryview(data_out)
-
-    def romix(flow: int) -> None:
-        start, end = flow * flow_len, (flow + 1) * flow_len
-        with c_uint8_ptr_out(data_out_view[start:end]) as out_ptr:
-            result = _raw_scrypt_lib.scryptROMix(
-                c_uint8_ptr(stage_1[start:end]), out_ptr, c_size_t(flow_len), N
-            )
-        if result:
-            raise ValueError("Error %X while running scrypt" % result)
 
     # The p flows are independent: each thread computes a contiguous range of them
     bounds = range_boundaries(p, threads)
 
-    def worker(i: int) -> None:
-        for flow in range(bounds[i], bounds[i + 1]):
-            romix(flow)
+    # The pointers to the buffers are created once, by this thread: the workers
+    # only pass them to C, with their range of flows (like the CTR mode).
+    # No worker touches the Python buffer objects (not safe without the GIL).
+    in_ptr = c_uint8_ptr(stage_1)
+    with c_uint8_ptr_out(data_out) as out_ptr:
 
-    if threads > 1:
-        run_in_threads(worker, threads)
-    else:
-        worker(0)
+        def worker(i: int) -> None:
+            first, end = bounds[i], bounds[i + 1]
+            result = _raw_scrypt_lib.scryptROMix(
+                in_ptr,
+                out_ptr,
+                c_size_t(flow_len),
+                N,
+                c_size_t(first),
+                c_size_t(end - first),
+                c_size_t(len(data_out)),
+            )
+            if result:
+                raise ValueError("Error %X while running scrypt" % result)
 
-    stage_1.release()
-    data_out_view.release()
+        if threads > 1:
+            run_in_threads(worker, threads)
+        else:
+            worker(0)
+
     dk = bytes(_PBKDF2_HMAC_SHA256_1(password, data_out, key_len * num_keys))
 
     if num_keys == 1:

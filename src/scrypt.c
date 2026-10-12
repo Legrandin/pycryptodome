@@ -83,46 +83,16 @@ static void *alloc_v(size_t size)
 }
 
 /**
- * scrypt ROMix function
- *
- * @data_in:  input
- * @data_out: output
- * @data_len: Length in bytes of the two buffers `data_in` and `data_out`.
- *            It is a multiple of 128.
- * @N:        Memory/CPU cost. It must be a power of 2.
- *
+ * scrypt ROMix for one flow, with the memory @v of (N+2)*words words.
  * @data_in and @data_out may overlap.
  */
-EXPORT_SYM int scryptROMix(const uint8_t *data_in, uint8_t *data_out,
-                           size_t data_len, unsigned N)
+static void scryptROMix_one(uint32_t *v, const uint8_t *data_in, uint8_t *data_out,
+                            size_t r, size_t words, unsigned N)
 {
-    size_t r, words, i;
-    uint32_t *v, *x, *y, *t;
+    uint32_t *x, *y, *t;
+    size_t i;
 
-    if (NULL==data_in || NULL==data_out) {
-        return ERR_NULL;
-    }
-
-    if (data_len == 0 || data_len % 128) {
-        return ERR_BLOCK_SIZE;
-    }
-    r = data_len / 128;
-    words = data_len / 4;
-
-    if (N == 0 || (N & (N - 1))) {
-        return ERR_VALUE;
-    }
-
-    /** Allocate a possibly gigantic amount of memory **/
-    /* It takes in total (N+2) * (128r) bytes */
-    if (N > SIZE_MAX / data_len - 2) {
-        return ERR_MEMORY;
-    }
-    v = (uint32_t*)alloc_v((N + 2) * data_len);
-    if (NULL == v) {
-        return ERR_MEMORY;
-    }
-    x = v + N * words;
+    x = v + (size_t)N * words;
     y = x + words;
 
     for (i=0; i<words; i++) {
@@ -150,6 +120,70 @@ EXPORT_SYM int scryptROMix(const uint8_t *data_in, uint8_t *data_out,
 
     for (i=0; i<words; i++) {
         STORE_U32_LITTLE(&data_out[4*i], x[(i & ~(size_t)15) + SALSA20_WORD_POS(i & 15)]);
+    }
+}
+
+/**
+ * scrypt ROMix function, for the consecutive flows @first, @first+1, ...,
+ * @first+@count-1 (each one @data_len bytes long) of the buffers
+ * @data_in and @data_out.
+ *
+ * Several threads can call this function at the same time, with the same
+ * buffers and different flows: they only need the pointers to the buffers,
+ * which the calling thread creates once.
+ *
+ * @data_in:   input, @total_len bytes long
+ * @data_out:  output, @total_len bytes long
+ * @data_len:  Length in bytes of each flow. It is a multiple of 128.
+ * @N:         Memory/CPU cost. It must be a power of 2.
+ * @first:     The first flow to compute
+ * @count:     The number of flows to compute
+ * @total_len: Length in bytes of @data_in and @data_out
+ *
+ * The memory (N+2)*data_len bytes is allocated once, for all the flows.
+ * @data_in and @data_out may overlap.
+ */
+EXPORT_SYM int scryptROMix(const uint8_t *data_in, uint8_t *data_out,
+                           size_t data_len, unsigned N,
+                           size_t first, size_t count, size_t total_len)
+{
+    size_t r, words, k;
+    uint32_t *v;
+
+    if (NULL==data_in || NULL==data_out) {
+        return ERR_NULL;
+    }
+
+    if (data_len == 0 || data_len % 128) {
+        return ERR_BLOCK_SIZE;
+    }
+    r = data_len / 128;
+    words = data_len / 4;
+
+    if (N == 0 || (N & (N - 1))) {
+        return ERR_VALUE;
+    }
+
+    /** The flows must be within the buffers **/
+    if (first > total_len / data_len || count > total_len / data_len - first) {
+        return ERR_VALUE;
+    }
+    if (count == 0) {
+        return 0;
+    }
+
+    /** Allocate a possibly gigantic amount of memory **/
+    /* It takes in total (N+2) * (128r) bytes */
+    if (N > SIZE_MAX / data_len - 2) {
+        return ERR_MEMORY;
+    }
+    v = (uint32_t*)alloc_v((N + 2) * data_len);
+    if (NULL == v) {
+        return ERR_MEMORY;
+    }
+
+    for (k=first; k<first+count; k++) {
+        scryptROMix_one(v, data_in + k*data_len, data_out + k*data_len, r, words, N);
     }
 
     align_free(v);
