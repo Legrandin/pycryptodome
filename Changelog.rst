@@ -159,6 +159,7 @@ New features
   depends on the key derivation and on the hash, so that it takes at most about
   one minute: for instance, 200,000,000 iterations for PBKDF2 with SHA-256,
   and 50,000,000 with SHA-512/224. It was 50,000,000 iterations for all of them.
+  See the new page "Limits when decrypting private keys" in the documentation.
 * For scrypt, ``max_iteration_count`` now limits *N·r·p/8* (that is, *N* for the
   usual *r=8* and *p=1*), and not only *N*: before, a key with a large *r* or *p*
   could require any amount of time and memory. By default, the limit is 2\ :sup:`25`.

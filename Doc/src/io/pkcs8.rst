@@ -86,58 +86,12 @@ Each thread needs its own block of memory (128 · *r* · *N* bytes), at the same
 The result does not depend on the number of threads.
 
 
-.. _pkcs8_limits:
-
 Limits for decryption
 ---------------------
 
-A malicious encrypted key could require an extremely expensive key derivation,
-tying up the CPU for hours, or all the memory.
-Therefore, :func:`unwrap` and the ``import_key()`` functions of RSA, DSA and ECC keys
-reject keys above two limits:
-
-* ``max_iteration_count``, for the time;
-* ``max_memory``, for the memory (in bytes).
-
-By default (``max_iteration_count=None``), the limit depends on the key derivation
-function and on the hash, so that the derivation takes at most about one minute
-on a recent x86-64 laptop:
-
-  +--------------------------------------------+-----------------------------------+
-  | Key derivation                             | Default limit                     |
-  +============================================+===================================+
-  | PBKDF2 with SHA-1 or SHA-256               | 200 000 000 iterations            |
-  +--------------------------------------------+-----------------------------------+
-  | PBKDF2 with SHA-224, SHA-384, SHA-512      | 100 000 000 iterations            |
-  | or SHA-512/256                             |                                   |
-  +--------------------------------------------+-----------------------------------+
-  | PBKDF2 with SHA-512/224                    | 50 000 000 iterations             |
-  +--------------------------------------------+-----------------------------------+
-  | PBKDF2 with SHA-3 (any size)               | 1 500 000 iterations              |
-  +--------------------------------------------+-----------------------------------+
-  | PBKDF1 (legacy algorithms)                 | 20 000 000 iterations             |
-  +--------------------------------------------+-----------------------------------+
-  | scrypt                                     | *N·r·p/8* up to 2\ :sup:`25`      |
-  +--------------------------------------------+-----------------------------------+
-
-An explicit ``max_iteration_count`` is the maximum number of iterations
-for PBKDF1 and PBKDF2, whatever the hash, and the maximum *N·r·p/8* for scrypt
-(that is, *N* for the usual *r=8* and *p=1*).
-
-Only scrypt needs a significant amount of memory: *128·N·r* bytes for **each** thread,
-so *t* threads need *t·128·N·r* bytes.
-``max_memory`` limits the **total** of all threads together, not each thread:
-by default (``max_memory=None``), it is 256 MiB.
-If the requested threads do not fit, fewer are used, down to one;
-if a single thread does not fit, the key is rejected.
-For instance, with *N* = 2\ :sup:`17` and *r* = 8 (128 MiB for each thread) and
-the default limit, at most 2 threads are used, even with ``threads=4``;
-with *N* = 2\ :sup:`19` (512 MiB for one thread), the key is rejected.
-
-With ``max_iteration_count=0`` or ``max_memory=0``, the corresponding limit does not apply.
-
-When a key is above a limit, :class:`PbesIterationCountError` or :class:`PbesMemoryError`
-is raised (both are subclasses of :class:`PbesLimitError`, which is a ``ValueError``).
+To protect against malicious keys, :func:`unwrap` rejects keys whose key derivation
+is too expensive (parameters ``max_iteration_count`` and ``max_memory``).
+See :doc:`kdf_limits` for the default limits and how to change them.
 
 Legacy algorithms
 -----------------
