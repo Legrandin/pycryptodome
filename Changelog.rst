@@ -200,6 +200,9 @@ New features
 * Set the environment variable ``PYCRYPTODOME_NO_SELFTEST`` when building
   from source to leave out the self-tests (``Crypto.SelfTest``), whose test keys
   and certificates may be reported by security scanners.
+* DES and Triple DES are reimplemented from scratch, in constant time
+  (no table lookups at secret addresses), and no longer use LibTomCrypt.
+  They are about 3.5x slower than before.
 
 3.24.1 (11 October 2026)
 ++++++++++++++++++++++++++

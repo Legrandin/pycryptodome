@@ -110,13 +110,13 @@ ext_modules = [
     Extension("Crypto.Cipher._raw_cast", include_dirs=["src/"], sources=["src/CAST.c"], py_limited_api=True),
     Extension(
         "Crypto.Cipher._raw_des",
-        include_dirs=["src/", "src/libtom/"],
+        include_dirs=["src/"],
         sources=["src/DES.c"],
         py_limited_api=True,
     ),
     Extension(
         "Crypto.Cipher._raw_des3",
-        include_dirs=["src/", "src/libtom/"],
+        include_dirs=["src/"],
         sources=["src/DES3.c"],
         py_limited_api=True,
     ),
@@ -148,7 +148,7 @@ ext_modules = [
     Extension("Crypto.Cipher._ARC4", include_dirs=["src/"], sources=["src/ARC4.c"], py_limited_api=True),
     Extension(
         "Crypto.Cipher._Salsa20",
-        include_dirs=["src/", "src/libtom/"],
+        include_dirs=["src/"],
         sources=["src/Salsa20.c"],
         py_limited_api=True,
     ),

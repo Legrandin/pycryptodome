@@ -214,6 +214,31 @@ if (VALGRIND AND HAVE_VALGRIND_MEMCHECK_H)
         add_test(NAME test_${CURVE}_ct COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_${CURVE}_ct>)
     endforeach()
 
+    # DES and Triple DES (DES.c is included by the test)
+    foreach(CIPHER des des3)
+        add_executable(test_${CIPHER}_ct test_des_ct.c)
+        if (CIPHER STREQUAL "des3")
+            target_compile_definitions(test_${CIPHER}_ct PRIVATE PCT_DES3_MODULE)
+        endif()
+        set_target_properties(test_${CIPHER}_ct PROPERTIES
+            COMPILE_OPTIONS "-O2;-g;-Wall;-Werror"
+            LINK_OPTIONS ""
+            LINK_LIBRARIES "")
+        add_test(NAME test_${CIPHER}_ct COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_${CIPHER}_ct>)
+
+        if (NAT_32BIT_TESTS)
+            add_executable(test_${CIPHER}_ct_32 test_des_ct.c)
+            if (CIPHER STREQUAL "des3")
+                target_compile_definitions(test_${CIPHER}_ct_32 PRIVATE PCT_DES3_MODULE)
+            endif()
+            set_target_properties(test_${CIPHER}_ct_32 PROPERTIES
+                COMPILE_OPTIONS "-m32;-O2;-g;-Wall;-Werror;-UHAVE_UINT128;-USYS_BITS;-DSYS_BITS=32"
+                LINK_OPTIONS "-m32"
+                LINK_LIBRARIES "")
+            add_test(NAME test_${CIPHER}_ct_32 COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_${CIPHER}_ct_32>)
+        endif()
+    endforeach()
+
     if (NAT_32BIT_TESTS)
         add_executable(test_nat_ct_32 test_nat_ct.c ../nat.c ../nat_div.c ../nat_mod.c ../nat_gcd.c ../nat_prime.c)
         target_compile_definitions(test_nat_ct_32 PRIVATE NAT_CTGRIND)

@@ -407,9 +407,6 @@ def set_compiler_options(extensions):
     system_bits = 8 * struct.calcsize("P")
     extra_macros.append(("SYS_BITS", str(system_bits)))
 
-    # Disable any assembly in libtomcrypt files
-    extra_macros.append(("LTC_NO_ASM", None))
-
     # Native 128-bit integer
     if compiler_supports_uint128():
         extra_macros.append(("HAVE_UINT128", None))
