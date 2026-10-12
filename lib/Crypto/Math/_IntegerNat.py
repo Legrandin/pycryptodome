@@ -373,23 +373,26 @@ class IntegerNat(IntegerBase):
         return result
 
     def __mod__(self, divisor: IntLike) -> IntegerNat:
-        if isinstance(divisor, int) and divisor < 0:
-            raise ValueError("Modulus must be positive")
         public = self._is_public_with(divisor)
-        divisor = self._conv(divisor)
-        if divisor._is_zero():
-            raise ZeroDivisionError("Modulus cannot be zero")
+        divisor = self._check_modulus(divisor)
         result = IntegerNat._make(divisor._bits)
         _check(_lib.nat_divmod(null_pointer, result._p.get(), self._p.get(), divisor._p.get()), "nat_divmod")
         result._public = public
         return result
 
-    def _check_modulus(self, modulus: Any) -> IntegerNat:
+    @staticmethod
+    def _check_modulus(
+        modulus: Any, name: str = "Modulus", zero_error: type = ZeroDivisionError
+    ) -> IntegerNat:
+        """Convert a modulus into an IntegerNat.
+
+        ValueError if it is negative, zero_error if it is zero (only that fact leaks).
+        """
         if isinstance(modulus, int) and modulus < 0:
-            raise ValueError("Modulus must be positive")
-        modulus = self._conv(modulus)
+            raise ValueError("%s must be positive" % name)
+        modulus = IntegerNat._conv(modulus)
         if modulus._is_zero():
-            raise ZeroDivisionError("Modulus cannot be zero")
+            raise zero_error("%s cannot be zero" % name)
         return modulus
 
     def inplace_pow(self, exponent: IntLike, modulus: Optional[IntLike] = None) -> IntegerNat:
@@ -430,11 +433,7 @@ class IntegerNat(IntegerBase):
             _check(_lib.nat_isqrt(result._p.get(), self._p.get()), "nat_isqrt")
             return result
 
-        if isinstance(modulus, int) and modulus <= 0:
-            raise ValueError("Modulus must be positive")
-        modulus = self._conv(modulus)
-        if modulus._is_zero():
-            raise ValueError("Modulus must be positive")
+        modulus = self._check_modulus(modulus, zero_error=ValueError)
         return IntegerNat(self._tonelli_shanks(self % modulus, modulus))
 
     def __iadd__(self, term: IntLike) -> IntegerNat:
@@ -571,11 +570,7 @@ class IntegerNat(IntegerBase):
 
     @staticmethod
     def jacobi_symbol(a: IntLike, n: IntLike) -> int:
-        if isinstance(n, int) and n <= 0:
-            raise ValueError("n must be a positive integer")
-        n = IntegerNat._conv(n)
-        if n._is_zero():
-            raise ValueError("n must be a positive integer")
+        n = IntegerNat._check_modulus(n, "n", zero_error=ValueError)
         if not n.is_odd():
             raise ValueError("n must be odd for the Jacobi symbol")
 
@@ -591,15 +586,11 @@ class IntegerNat(IntegerBase):
 
     @staticmethod
     def _mult_modulo_bytes(term1: IntLike, term2: IntLike, modulus: IntLike) -> bytes:
-        if isinstance(modulus, int) and modulus < 0:
-            raise ValueError("Modulus must be positive")
-        modulus = IntegerNat._conv(modulus)
-        if modulus._is_zero():
-            raise ZeroDivisionError("Modulus cannot be zero")
+        modulus = IntegerNat._check_modulus(modulus)
         if not modulus.is_odd():
             raise ValueError("Odd modulus is required")
 
-        # Python ints are public and may be negative
+        # Python ints may be negative
         if isinstance(term1, int):
             term1 = term1 % int(modulus)
         if isinstance(term2, int):

@@ -254,6 +254,8 @@ class IntegerTests:
         assert v1 % 2**10 == 23
         with pytest.raises(ZeroDivisionError):
             v1 % 0
+        with pytest.raises(ZeroDivisionError):
+            v1 % self.Integer(0)
         with pytest.raises(ValueError):
             v1 % -6
 
@@ -315,6 +317,8 @@ class IntegerTests:
         # Invalid modulus (non positive)
         with pytest.raises(ValueError):
             self.Integer(5).sqrt(0)
+        with pytest.raises(ValueError):
+            self.Integer(5).sqrt(self.Integer(0))
         with pytest.raises(ValueError):
             self.Integer(5).sqrt(-1)
 
@@ -621,6 +625,8 @@ class IntegerTests:
             js(6, -1)
         with pytest.raises(ValueError):
             js(6, 0)
+        with pytest.raises(ValueError):
+            js(6, self.Integer(0))
         with pytest.raises(ValueError):
             js(0, 0)
         with pytest.raises(ValueError):
