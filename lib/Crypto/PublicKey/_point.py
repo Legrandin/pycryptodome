@@ -51,6 +51,32 @@ def _encode_scalar(scalar: Union[int, IntegerBase], min_length: int) -> bytes:
     return long_to_bytes(scalar)
 
 
+def _curve_context(curve: Any) -> Any:
+    """The context of the C code of a curve (a null pointer if it has none)"""
+
+    return null_pointer if curve.context is None else curve.context.get()
+
+
+def _clone_raw_point(curve: Any, point: Any) -> SmartPointer:
+    """A copy of the C point of an EccPoint or EccXPoint (on curve)"""
+
+    raw_point = VoidPointer()
+    result = curve.rawlib.clone(raw_point.address_of(), point._point.get())
+    if result:
+        raise ValueError("Error %d while cloning an EC point" % result)
+    return SmartPointer(raw_point.get(), curve.rawlib.free_point)
+
+
+def _copy_point(point: Any) -> Any:
+    """A copy of an EccPoint or EccXPoint, of the same class"""
+
+    copy = point.__class__.__new__(point.__class__)
+    copy._curve = point._curve
+    copy.curve = point.curve
+    copy._point = _clone_raw_point(point._curve, point)
+    return copy
+
+
 class CurveID:
     P192 = 1
     P224 = 2
@@ -233,10 +259,7 @@ class EccPoint:
         free_func = self._curve.rawlib.free_point
 
         raw_point = VoidPointer()
-        try:
-            context = self._curve.context.get()
-        except AttributeError:
-            context = null_pointer
+        context = _curve_context(self._curve)
         result = new_point(
             raw_point.address_of(), c_uint8_ptr(xb), c_uint8_ptr(yb), c_size_t(modulus_bytes), context
         )
@@ -262,10 +285,7 @@ class EccPoint:
         point.curve = point._curve.canonical
 
         raw_point = VoidPointer()
-        try:
-            context = point._curve.context.get()
-        except AttributeError:
-            context = null_pointer
+        context = _curve_context(point._curve)
         result = point._curve.rawlib.decode_point(
             raw_point.address_of(), c_uint8_ptr(encoded), c_size_t(len(encoded)), context
         )
@@ -275,16 +295,7 @@ class EccPoint:
         return point
 
     def set(self, point: EccPoint) -> EccPoint:
-        clone = self._curve.rawlib.clone
-        free_func = self._curve.rawlib.free_point
-
-        raw_point = VoidPointer()
-        result = clone(raw_point.address_of(), point._point.get())
-
-        if result:
-            raise ValueError("Error %d while cloning an EC point" % result)
-
-        self._point = SmartPointer(raw_point.get(), free_func)
+        self._point = _clone_raw_point(self._curve, point)
         return self
 
     def __eq__(self, point: object) -> bool:
@@ -305,10 +316,7 @@ class EccPoint:
     def copy(self) -> EccPoint:
         """Return a copy of this point."""
 
-        np = EccPoint.__new__(EccPoint)
-        np._curve = self._curve
-        np.curve = self.curve
-        return np.set(self)
+        return _copy_point(self)
 
     def is_point_at_infinity(self) -> bool:
         """``True`` if this is the *point-at-infinity*."""
@@ -475,10 +483,7 @@ class EccXPoint:
         new_point = self._curve.rawlib.new_point
         free_func = self._curve.rawlib.free_point
 
-        try:
-            context = self._curve.context.get()
-        except AttributeError:
-            context = null_pointer
+        context = _curve_context(self._curve)
 
         modulus_bytes = self.size_in_bytes()
 
@@ -500,15 +505,7 @@ class EccXPoint:
         self._point = SmartPointer(raw_point.get(), free_func)
 
     def set(self, point: EccXPoint) -> EccXPoint:
-        clone = self._curve.rawlib.clone
-        free_func = self._curve.rawlib.free_point
-
-        raw_point = VoidPointer()
-        result = clone(raw_point.address_of(), point._point.get())
-        if result:
-            raise ValueError("Error %d while cloning an EC point" % result)
-
-        self._point = SmartPointer(raw_point.get(), free_func)
+        self._point = _clone_raw_point(self._curve, point)
         return self
 
     def __eq__(self, point: object) -> bool:
@@ -524,10 +521,7 @@ class EccXPoint:
     def copy(self) -> EccXPoint:
         """Return a copy of this point."""
 
-        np = EccXPoint.__new__(EccXPoint)
-        np._curve = self._curve
-        np.curve = self.curve
-        return np.set(self)
+        return _copy_point(self)
 
     def is_point_at_infinity(self) -> bool:
         """``True`` if this is the *point-at-infinity*."""
