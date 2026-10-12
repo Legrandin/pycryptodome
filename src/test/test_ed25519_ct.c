@@ -84,6 +84,14 @@ int main(void)
         assert(ed25519_double(r) == 0);
         assert(ed25519_neg(r) == 0);
         (void)ed25519_cmp(r, g);    /* only the result leaks */
+        {
+            Point *s;
+            uint8_t x[32], y[32];
+
+            assert(ed25519_clone(&s, r) == 0);
+            assert(ed25519_get_xy(x, y, 32, s) == 0);
+            ed25519_free_point(s);
+        }
 
         ed25519_free_point(g);
         ed25519_free_point(r);

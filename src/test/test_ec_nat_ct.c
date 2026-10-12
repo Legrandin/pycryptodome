@@ -190,6 +190,13 @@ static void run(const Curve *tc)
         assert(ec_nat_neg(r) == 0);
         get_xy(r);
         (void)ec_nat_cmp(r, q);     /* only the result leaks */
+        {
+            EcPointN *s;
+
+            assert(ec_nat_clone(&s, r) == 0);
+            get_xy(s);
+            ec_nat_free_point(s);
+        }
 
         ec_nat_free_point(g);
         ec_nat_free_point(q);
@@ -258,6 +265,14 @@ static void run_ed448(void)
         assert(ed448_double(r) == 0);
         assert(ed448_neg(r) == 0);
         (void)ed448_cmp(r, q);      /* only the result leaks */
+        {
+            PointEd448 *s;
+            uint8_t x[56], y[56];
+
+            assert(ed448_clone(&s, r) == 0);
+            assert(ed448_get_xy(x, y, 56, s) == 0);
+            ed448_free_point(s);
+        }
 
         ed448_free_point(g);
         ed448_free_point(q);
@@ -297,10 +312,66 @@ static void run_x448(void)
         /* Only the fact that the result is the point at infinity leaks */
         (void)curve448_get_x(x, 56, p);
         (void)curve448_cmp(p, pai);
+        {
+            Curve448Point *s;
+
+            assert(curve448_clone(&s, p) == 0);
+            (void)curve448_get_x(x, 56, s);
+            curve448_free_point(s);
+        }
         curve448_free_point(p);
     }
     curve448_free_point(pai);
     curve448_free_context(ctx);
+}
+
+/*
+ * The field arithmetic for all the sizes of 1 to 10 words: the fixed-size
+ * code (3, 4, 6, 7 and 9 words on 64-bit targets) and the generic one,
+ * with a random odd modulus (public) and secret operands.
+ */
+static void run_fields(void)
+{
+    size_t nw, i;
+
+    for (nw=1; nw<=10; nw++) {
+        EcField *field;
+        EcWs ws;
+        Nat *n;
+        uint64_t a[10], b[10], r[10];
+
+        assert(nat_new(&n, nw) == 0);
+        for (i=0; i<nw; i++)
+            n->w[i] = rnd();
+        n->w[0] |= 1;
+        n->w[nw-1] |= (uint64_t)1 << 63;
+        assert(ec_field_new(&field, n) == 0);
+        assert(ec_ws_new(&ws, field) == 0);
+
+        /* Secret operands, smaller than n */
+        for (i=0; i<nw; i++) {
+            a[i] = rnd();
+            b[i] = rnd();
+        }
+        a[nw-1] >>= 1;
+        b[nw-1] >>= 1;
+        SECRET(a, nw*8);
+        SECRET(b, nw*8);
+
+        fe_from_words(&ws, a, a);
+        fe_from_words(&ws, b, b);
+        fe_mul(&ws, r, a, b);
+        fe_sqr(&ws, r, r);
+        fe_add(&ws, r, r, a);
+        fe_sub(&ws, r, r, b);
+        fe_neg(&ws, r, r);
+        assert(fe_inv(&ws, r, r) == 0);
+        fe_to_words(&ws, r, r);
+
+        ec_ws_free(&ws);
+        ec_field_free(field);
+        nat_free(n);
+    }
 }
 
 int main(void)
@@ -319,5 +390,6 @@ int main(void)
         run(&curves[i]);
     run_ed448();
     run_x448();
+    run_fields();
     return 0;
 }

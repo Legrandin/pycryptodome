@@ -59,6 +59,13 @@ int main(void)
         /* Only the fact that the result is the point at infinity leaks */
         (void)curve25519_get_x(x, 32, p);
         (void)curve25519_cmp(p, pai);
+        {
+            Point *s;
+
+            assert(curve25519_clone(&s, p) == 0);
+            (void)curve25519_get_x(x, 32, s);
+            curve25519_free_point(s);
+        }
         curve25519_free_point(p);
     }
     curve25519_free_point(pai);
