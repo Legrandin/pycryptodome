@@ -69,8 +69,6 @@ Resolved issues
 * Salsa20 never returned when encrypting or decrypting 4 GiB or more in a single call.
 * The package metadata declares the license as an SPDX expression
   (``BSD-2-Clause AND Unlicense``, PEP 639), which tools can process.
-  The SipHash code, which was under the CC0 license, is gone, together with
-  the old big integer code that used it.
 * ``Crypto.Protocol.HPKE.new()`` raised ``TypeError`` with Python 3.9 to 3.11
   when ``aead_id`` was a plain integer, and not an ``HPKE.AEAD`` member.
 * GH#937: Importing a malformed PEM key could take quadratic time. Thanks to Brian Willows.
