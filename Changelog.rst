@@ -150,8 +150,6 @@ New features
   ``Crypto.IO.PKCS8.PbesIterationCountError`` (a ``ValueError``), whose message
   says which value is too high and how to accept it, instead of a generic error
   about the key format.
-* ``Crypto.IO.PKCS8.unwrap()`` raises ``TypeError`` if ``max_iteration_count``
-  is not an integer (or ``None``), and ``ValueError`` if it is negative.
 
 3.24.0 (4 October 2026)
 ++++++++++++++++++++++++++
