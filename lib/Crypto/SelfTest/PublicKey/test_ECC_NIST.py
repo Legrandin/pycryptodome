@@ -1465,3 +1465,19 @@ def test_d_or_seed(curve, seed_len):
     with pytest.raises(ValueError, match="mutually exclusive"):
         ECC.construct(curve=curve, d=1, seed=b"H" * seed_len)
     assert ECC.construct(curve=curve, seed=b"H" * seed_len).has_private()
+
+
+def test_curve_names():
+    """All the names of a curve give the same object, with the right ID"""
+
+    for names, curve_id, _, _ in _curves.definitions:
+        curve = _curves[names[0]]
+        assert curve.id == curve_id
+        for name in names:
+            assert name in _curves
+            assert _curves[name] is curve
+    assert "P-999" not in _curves
+    with pytest.raises(ValueError, match="Unsupported curve"):
+        _curves.load("P-999")
+    with pytest.raises(ValueError, match="Unsupported curve"):
+        ECC.generate(curve="P-999")

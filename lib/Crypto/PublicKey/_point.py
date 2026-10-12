@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import importlib
 import threading
 from typing import Any, Optional, Union
 
@@ -106,17 +107,20 @@ class _Curves:
     curve25519_names = ["curve25519", "Curve25519", "X25519"]
     curve448_names = ["curve448", "Curve448", "X448"]
 
-    all_names = (
-        p192_names
-        + p224_names
-        + p256_names
-        + p384_names
-        + p521_names
-        + ed25519_names
-        + ed448_names
-        + curve25519_names
-        + curve448_names
+    # For each curve: its names, its ID, and the module and function that create it
+    definitions = (
+        (p192_names, CurveID.P192, "_nist_ecc", "p192_curve"),
+        (p224_names, CurveID.P224, "_nist_ecc", "p224_curve"),
+        (p256_names, CurveID.P256, "_nist_ecc", "p256_curve"),
+        (p384_names, CurveID.P384, "_nist_ecc", "p384_curve"),
+        (p521_names, CurveID.P521, "_nist_ecc", "p521_curve"),
+        (ed25519_names, CurveID.ED25519, "_edwards", "ed25519_curve"),
+        (ed448_names, CurveID.ED448, "_edwards", "ed448_curve"),
+        (curve25519_names, CurveID.CURVE25519, "_montgomery", "curve25519_curve"),
+        (curve448_names, CurveID.CURVE448, "_montgomery", "curve448_curve"),
     )
+
+    all_names = [name for definition in definitions for name in definition[0]]
 
     def __contains__(self, item):
         return item in self.all_names
@@ -125,63 +129,15 @@ class _Curves:
         return self.all_names
 
     def load(self, name):
-        if name in self.p192_names:
-            from . import _nist_ecc
-
-            p192 = _nist_ecc.p192_curve()
-            p192.id = CurveID.P192
-            self.curves.update(dict.fromkeys(self.p192_names, p192))
-        elif name in self.p224_names:
-            from . import _nist_ecc
-
-            p224 = _nist_ecc.p224_curve()
-            p224.id = CurveID.P224
-            self.curves.update(dict.fromkeys(self.p224_names, p224))
-        elif name in self.p256_names:
-            from . import _nist_ecc
-
-            p256 = _nist_ecc.p256_curve()
-            p256.id = CurveID.P256
-            self.curves.update(dict.fromkeys(self.p256_names, p256))
-        elif name in self.p384_names:
-            from . import _nist_ecc
-
-            p384 = _nist_ecc.p384_curve()
-            p384.id = CurveID.P384
-            self.curves.update(dict.fromkeys(self.p384_names, p384))
-        elif name in self.p521_names:
-            from . import _nist_ecc
-
-            p521 = _nist_ecc.p521_curve()
-            p521.id = CurveID.P521
-            self.curves.update(dict.fromkeys(self.p521_names, p521))
-        elif name in self.ed25519_names:
-            from . import _edwards
-
-            ed25519 = _edwards.ed25519_curve()
-            ed25519.id = CurveID.ED25519
-            self.curves.update(dict.fromkeys(self.ed25519_names, ed25519))
-        elif name in self.ed448_names:
-            from . import _edwards
-
-            ed448 = _edwards.ed448_curve()
-            ed448.id = CurveID.ED448
-            self.curves.update(dict.fromkeys(self.ed448_names, ed448))
-        elif name in self.curve25519_names:
-            from . import _montgomery
-
-            curve25519 = _montgomery.curve25519_curve()
-            curve25519.id = CurveID.CURVE25519
-            self.curves.update(dict.fromkeys(self.curve25519_names, curve25519))
-        elif name in self.curve448_names:
-            from . import _montgomery
-
-            curve448 = _montgomery.curve448_curve()
-            curve448.id = CurveID.CURVE448
-            self.curves.update(dict.fromkeys(self.curve448_names, curve448))
-        else:
+        definition = next((d for d in self.definitions if name in d[0]), None)
+        if definition is None:
             raise ValueError("Unsupported curve '%s'" % name)
-        return self.curves[name]
+        names, curve_id, module_name, function = definition
+        module = importlib.import_module("." + module_name, __package__)
+        curve = getattr(module, function)()
+        curve.id = curve_id
+        self.curves.update(dict.fromkeys(names, curve))
+        return curve
 
     def __getitem__(self, name):
         with self.curves_lock:
