@@ -49,7 +49,8 @@ int ec_nat_neg(EcPoint *p);
 """
 
 
-_ec_lib = load_ec_lib(_ec_cdecl)
+# _bmi2_adx is only read by CI (.github/workflows/integration.yml)
+_ec_lib, _bmi2_adx = load_ec_lib(_ec_cdecl)
 
 
 class EcLib:
