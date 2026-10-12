@@ -166,13 +166,8 @@ class DsaKey:
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, DsaKey):
             return False
-        if bool(self.has_private()) != bool(other.has_private()):
-            return False
-
-        result = True
-        for comp in self._keydata:
-            result = result and (getattr(self._key, comp, None) == getattr(other._key, comp, None))
-        return result
+        # Same components (x is only in private keys)
+        return self._key == other._key
 
     def __getstate__(self) -> None:
         # DSA key is not pickable

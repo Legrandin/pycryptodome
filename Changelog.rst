@@ -48,6 +48,7 @@ Resolved issues
   never ran (only the Miller-Rabin and Lucas tests did), which made the generation
   of RSA, DSA and ElGamal keys slower.
 * ElGamal key objects could not be compared for equality.
+* Two DSA keys always compared as equal, if both were public or both private.
 * Comparing an RSA, DSA or ElGamal key with an object of a different type now
   returns ``False`` instead of raising ``AttributeError``.
 * The legacy ``can_decrypt()`` method of PKCS#1 ciphers raised ``AttributeError``

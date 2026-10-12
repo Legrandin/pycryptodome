@@ -184,6 +184,22 @@ class TestDSA:
         assert dsaObj._verify(m_hash, (r, s))
         assert not dsaObj._verify(m_hash + 1, (r, s))
 
+    def test_equality(self):
+        (y, g, p, q, x) = (
+            bytes_to_long(a2b_hex(param)) for param in (self.y, self.g, self.p, self.q, self.x)
+        )
+        key = self.dsa.construct((y, g, p, q, x))
+        assert key == self.dsa.construct((y, g, p, q, x))
+        assert key.public_key() == self.dsa.construct((y, g, p, q))
+        assert key != key.public_key()
+        assert key != "key"
+
+        # Other keys, with the same domain or not
+        other = self.dsa.construct((pow(g, 2, p), g, p, q, 2))
+        assert key != other
+        assert key.public_key() != other.public_key()
+        assert key.public_key() != self.dsa.generate(1024).public_key()
+
     def test_repr(self):
         (y, g, p, q) = (bytes_to_long(a2b_hex(param)) for param in (self.y, self.g, self.p, self.q))
         dsaObj = self.dsa.construct((y, g, p, q))
