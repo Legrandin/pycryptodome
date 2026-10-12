@@ -638,10 +638,13 @@ def import_key(
 
       max_iteration_count (integer):
         The maximum value allowed for the PBKDF2 iteration count or
-        the scrypt cost parameter (*N*) of a `PKCS#8`_ encrypted key.
+        the scrypt cost *N·r·p/8* (that is, *N* for the usual *r=8* and *p=1*)
+        of a `PKCS#8`_ encrypted key.
         A malicious key could require an extremely high number of
         iterations, tying up the CPU for hours.
-        The default value is None (enforcing the default limit of 50,000,000).
+        The default value is None: a limit for each KDF and hash, which keeps
+        the key derivation to about one minute at most
+        (see :ref:`the limits for decryption<pkcs8_limits>`).
         Set it to ``0`` to disable the check.
 
       threads (integer):

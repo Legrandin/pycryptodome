@@ -147,12 +147,20 @@ New features
   a private key protected with scrypt (PBES2) and a parallelization parameter larger than 1
   is encrypted or decrypted on several CPU cores (``threads=0`` for all of them).
 * New parameter ``max_iteration_count`` for ``import_key()`` of RSA, DSA and ECC keys,
-  like the one of ``Crypto.IO.PKCS8.unwrap()``: the maximum PBKDF2 iteration count
-  or scrypt cost (*N*) accepted for an encrypted PKCS#8 key (default: 50,000,000).
+  like the one of ``Crypto.IO.PKCS8.unwrap()``: the maximum iteration count
+  accepted for an encrypted PKCS#8 key.
   When a key is above the limit, ``import_key()`` and ``PKCS8.unwrap()`` now raise
   ``Crypto.IO.PKCS8.PbesIterationCountError`` (a ``ValueError``), whose message
   says which value is too high and how to accept it, instead of a generic error
   about the key format.
+* The default limit for decrypting PKCS#8 keys (``max_iteration_count=None``)
+  depends on the key derivation and on the hash, so that it takes at most about
+  one minute: for instance, 200,000,000 iterations for PBKDF2 with SHA-256,
+  and 1,500,000 with SHA-3. It was 50,000,000 iterations for all of them.
+* For scrypt, ``max_iteration_count`` now limits *N·r·p/8* (that is, *N* for the
+  usual *r=8* and *p=1*), and not only *N*: before, a key with a large *r* or *p*
+  could require any amount of time and memory. By default, the limit is 2\ :sup:`25`,
+  with at most 1 GiB of memory.
 
 3.24.0 (4 October 2026)
 ++++++++++++++++++++++++++

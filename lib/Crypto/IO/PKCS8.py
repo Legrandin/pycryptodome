@@ -147,10 +147,13 @@ def unwrap(
       passphrase (byte string or string):
         The passphrase to use to decrypt the blob (if it is encrypted).
       max_iteration_count (integer):
-        The maximum value allowed for the PBKDF2/scrypt iteration count.
+        The maximum value allowed for the PBKDF1/PBKDF2 iteration count,
+        or for the scrypt cost *N·r·p/8* (that is, *N* for the usual *r=8* and *p=1*).
         An attacker could craft a malicious key blob that requires an
         extremely high number of iterations, tying up the CPU for hours.
-        The default value is None (enforcing the default limit of 50,000,000).
+        The default value is None: a limit for each KDF and hash, which keeps
+        the key derivation to about one minute at most
+        (see :ref:`the limits for decryption<pkcs8_limits>`).
         Set it to ``0`` to disable the check.
       threads (integer):
         The maximum number of threads used to derive the unwrapping key

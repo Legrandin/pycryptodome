@@ -51,10 +51,35 @@ _OID_AES128_GCM = "2.16.840.1.101.3.4.1.6"
 _OID_AES192_GCM = "2.16.840.1.101.3.4.1.26"
 _OID_AES256_GCM = "2.16.840.1.101.3.4.1.46"
 
-#: Default maximum iteration count for PBKDF2 and scrypt cost parameter
-#: in PBES1/PBES2 decryption.  This guards against denial-of-service
-#: attacks where a crafted blob declares an astronomically high count.
-_DEFAULT_MAX_ITERATION_COUNT: int = 50000000
+# Default limits for decryption (when max_iteration_count is None), against
+# crafted blobs that would tie up the CPU or the memory. With each of them,
+# the key derivation takes at most about one minute on a recent x86-64 laptop,
+# for the worst key length (32 bytes) and without SHA-NI.
+
+#: Maximum PBKDF1 iteration count (PBES1)
+_DEFAULT_MAX_PBKDF1 = 20_000_000
+
+#: Maximum PBKDF2 iteration count, for each hash (OID) of the HMAC.
+#: SHA-3 has no C implementation of the PBKDF2 loop.
+_DEFAULT_MAX_PBKDF2 = {
+    "1.3.14.3.2.26": 200_000_000,  # SHA-1
+    "2.16.840.1.101.3.4.2.4": 100_000_000,  # SHA-224
+    "2.16.840.1.101.3.4.2.1": 200_000_000,  # SHA-256
+    "2.16.840.1.101.3.4.2.2": 100_000_000,  # SHA-384
+    "2.16.840.1.101.3.4.2.3": 100_000_000,  # SHA-512
+    "2.16.840.1.101.3.4.2.5": 50_000_000,  # SHA-512/224
+    "2.16.840.1.101.3.4.2.6": 100_000_000,  # SHA-512/256
+    "2.16.840.1.101.3.4.2.7": 1_500_000,  # SHA3-224
+    "2.16.840.1.101.3.4.2.8": 1_500_000,  # SHA3-256
+    "2.16.840.1.101.3.4.2.9": 1_500_000,  # SHA3-384
+    "2.16.840.1.101.3.4.2.10": 1_500_000,  # SHA3-512
+}
+
+#: Maximum scrypt cost N*r*p/8 (that is, N for r=8 and p=1)
+_DEFAULT_MAX_SCRYPT_COST = 2**25
+
+#: Maximum memory of each scrypt flow (128*N*r bytes): 1 GiB
+_DEFAULT_MAX_SCRYPT_MEMORY = 2**30
 
 
 class PbesError(ValueError):
@@ -78,22 +103,47 @@ _DEFAULT_LIMIT = "{} (the default)"
 #: The ``what`` in the message, for each KDF
 _PBKDF1_COUNT = "PBKDF1 iteration count"
 _PBKDF2_COUNT = "PBKDF2 iteration count"
-_SCRYPT_COST = "scrypt cost parameter (N)"
+_SCRYPT_COST = "scrypt cost N*r*p/8"
+
+#: Message of :class:`PbesIterationCountError`, when scrypt needs too much
+#: memory (only checked when ``max_iteration_count`` is None)
+_SCRYPT_MEMORY_ERROR = (
+    "The encrypted key needs {memory} MiB of memory for scrypt, above the default "
+    "maximum of {limit} MiB. If you trust the key, set max_iteration_count to its "
+    "scrypt cost N*r*p/8 ({cost}) or more (or to 0 to disable the checks)."
+)
 
 
-def _check_iteration_count(what: str, count: int, max_iteration_count: Optional[int]) -> None:
+def _check_iteration_count(what: str, count: int, max_iteration_count: Optional[int], default: int) -> None:
     """Raise :class:`PbesIterationCountError` if ``count`` (``what``, like
     :data:`_PBKDF2_COUNT`) is above ``max_iteration_count``
-    (``None`` for the default limit, ``0`` for no limit)."""
+    (``None`` for the ``default`` limit, ``0`` for no limit)."""
 
     if max_iteration_count is None:
-        limit = _DEFAULT_LIMIT.format(_DEFAULT_MAX_ITERATION_COUNT)
-        max_iteration_count = _DEFAULT_MAX_ITERATION_COUNT
+        limit = _DEFAULT_LIMIT.format(default)
+        max_iteration_count = default
     else:
         limit = str(max_iteration_count)
 
     if max_iteration_count and count > max_iteration_count:
         raise PbesIterationCountError(_ITERATION_COUNT_ERROR.format(what=what, count=count, limit=limit))
+
+
+def _check_scrypt_cost(N: int, r: int, p: int, max_iteration_count: Optional[int]) -> None:
+    """Raise :class:`PbesIterationCountError` if scrypt with these parameters
+    is above the limits: its cost N*r*p/8 against ``max_iteration_count``
+    (or the default), and, with the default, also its memory."""
+
+    cost = (N * r * p + 7) // 8
+    _check_iteration_count(_SCRYPT_COST, cost, max_iteration_count, _DEFAULT_MAX_SCRYPT_COST)
+
+    memory = 128 * N * r
+    if max_iteration_count is None and memory > _DEFAULT_MAX_SCRYPT_MEMORY:
+        raise PbesIterationCountError(
+            _SCRYPT_MEMORY_ERROR.format(
+                memory=memory >> 20, limit=_DEFAULT_MAX_SCRYPT_MEMORY >> 20, cost=cost
+            )
+        )
 
 
 # These are the ASN.1 definitions used by the PBES1/2 logic:
@@ -170,10 +220,11 @@ class PBES1:
           passphrase : byte string
             The passphrase to use for decrypting the data.
           max_iteration_count : integer
-            The maximum value allowed for the PBKDF2 iteration count.
+            The maximum value allowed for the PBKDF1 iteration count.
             An attacker could craft a malicious key blob that requires an
             extremely high number of iterations, tying up the CPU for hours.
-            The default value is None (enforcing the default limit of 50,000,000).
+            The default value is None (enforcing the limit
+            :data:`_DEFAULT_MAX_PBKDF1`).
             Set it to ``0`` to disable the check.
         :Returns:
           The decrypted data, as a binary string.
@@ -224,7 +275,7 @@ class PBES1:
         salt = DerOctetString().decode(pbe_params[0]).payload
         iterations = pbe_params[1]
 
-        _check_iteration_count(_PBKDF1_COUNT, iterations, max_iteration_count)
+        _check_iteration_count(_PBKDF1_COUNT, iterations, max_iteration_count, _DEFAULT_MAX_PBKDF1)
 
         key_iv = PBKDF1(passphrase, salt, 16, iterations, hashmod)
         key, iv = key_iv[:8], key_iv[8:]
@@ -450,10 +501,12 @@ class PBES2:
             The passphrase to use for decrypting the data.
           max_iteration_count : integer
             The maximum value allowed for the PBKDF2 iteration count
-            or the scrypt cost parameter (*N*).
+            or for the scrypt cost N*r*p/8.
             An attacker could craft a malicious key blob that requires an
             extremely high number of iterations, tying up the CPU for hours.
-            The default value is None (enforcing the default limit of 50,000,000).
+            The default value is None (enforcing the limits
+            :data:`_DEFAULT_MAX_PBKDF2` for each hash, or
+            :data:`_DEFAULT_MAX_SCRYPT_COST` and :data:`_DEFAULT_MAX_SCRYPT_MEMORY`).
             Set it to ``0`` to disable the check.
           threads : integer
             The maximum number of threads used by scrypt
@@ -484,8 +537,6 @@ class PBES2:
             salt = DerOctetString().decode(pbkdf2_params[0]).payload
             iteration_count = pbkdf2_params[1]
 
-            _check_iteration_count(_PBKDF2_COUNT, iteration_count, max_iteration_count)
-
             left = len(pbkdf2_params) - 2
             idx = 2
 
@@ -505,12 +556,22 @@ class PBES2:
                 pbkdf2_prf_algo_id = DerSequence().decode(pbkdf2_params[idx])
                 pbkdf2_prf_oid = DerObjectId().decode(pbkdf2_prf_algo_id[0]).value
 
+            try:
+                hmac_hash_module_oid = Hash.HMAC._hmac2hash_oid[pbkdf2_prf_oid]
+            except KeyError:
+                raise PbesError("Unsupported HMAC %s" % pbkdf2_prf_oid)
+
+            # The default limit depends on the hash
+            _check_iteration_count(
+                _PBKDF2_COUNT, iteration_count, max_iteration_count, _DEFAULT_MAX_PBKDF2[hmac_hash_module_oid]
+            )
+
         elif kdf_oid == _OID_SCRYPT:
             scrypt_params = DerSequence().decode(kdf_info[1], nr_elements=(4, 5))
             salt = DerOctetString().decode(scrypt_params[0]).payload
             iteration_count, scrypt_r, scrypt_p = (scrypt_params[x] for x in (1, 2, 3))
 
-            _check_iteration_count(_SCRYPT_COST, iteration_count, max_iteration_count)
+            _check_scrypt_cost(iteration_count, scrypt_r, scrypt_p, max_iteration_count)
 
             if len(scrypt_params) > 4:
                 kdf_key_length = scrypt_params[4]
@@ -576,10 +637,6 @@ class PBES2:
 
         # Create cipher
         if kdf_oid == _OID_PBKDF2:
-            try:
-                hmac_hash_module_oid = Hash.HMAC._hmac2hash_oid[pbkdf2_prf_oid]
-            except KeyError:
-                raise PbesError("Unsupported HMAC %s" % pbkdf2_prf_oid)
             hmac_hash_module: Any = Hash.new(hmac_hash_module_oid)
 
             key = PBKDF2(passphrase, salt, key_size, iteration_count, hmac_hash_module=hmac_hash_module)

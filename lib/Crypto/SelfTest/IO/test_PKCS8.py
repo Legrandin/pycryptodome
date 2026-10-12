@@ -515,6 +515,8 @@ class TestKeyKdfParams:
         "protection": "scryptAndAES128-CBC",
         "prot_params": {"iteration_count": 1024, "block_size": 1, "parallelization": 3},
     }
+    # The scrypt cost N*r*p/8, rounded up, that max_iteration_count limits
+    cost = (1024 * 1 * 3 + 7) // 8
 
     def _export(self, name, key, fmt, threads):
         if name == "RSA":
@@ -571,12 +573,12 @@ class TestKeyKdfParams:
     @pytest.mark.parametrize("fmt", ["DER", "PEM"])
     def test_max_iteration_count(self, keys, name, fmt):
         module, key = keys[name]
-        encrypted = self._export(name, key, fmt, 1)  # scrypt with N=1024
-        for limit in (1024, 4096, 0):
+        encrypted = self._export(name, key, fmt, 1)
+        for limit in (self.cost, 4 * self.cost, 0, None):
             assert module.import_key(encrypted, "pw", max_iteration_count=limit) == key
         # The specific error is not hidden by the other key formats
         with pytest.raises(PKCS8.PbesIterationCountError, match="max_iteration_count"):
-            module.import_key(encrypted, "pw", max_iteration_count=1023)
+            module.import_key(encrypted, "pw", max_iteration_count=self.cost - 1)
 
     def test_max_iteration_count_pbkdf2(self, keys):
         module, key = keys["RSA"]
@@ -594,13 +596,15 @@ class TestKeyKdfParams:
     def test_max_iteration_count_unwrap(self, keys):
         _, key = keys["ECC"]
         encrypted = self._export("ECC", key, "DER", 1)
-        expected = _PBES._ITERATION_COUNT_ERROR.format(what=_PBES._SCRYPT_COST, count=1024, limit=1023)
+        expected = _PBES._ITERATION_COUNT_ERROR.format(
+            what=_PBES._SCRYPT_COST, count=self.cost, limit=self.cost - 1
+        )
         with pytest.raises(PKCS8.PbesIterationCountError) as ctx:
-            PKCS8.unwrap(encrypted, "pw", 1023)
+            PKCS8.unwrap(encrypted, "pw", self.cost - 1)
         assert str(ctx.value) == expected
         # It is a ValueError
         with pytest.raises(ValueError):
-            PKCS8.unwrap(encrypted, "pw", 1023)
+            PKCS8.unwrap(encrypted, "pw", self.cost - 1)
 
     @pytest.mark.parametrize("name", ["RSA", "DSA", "ECC"])
     def test_max_iteration_count_negative(self, keys, name):

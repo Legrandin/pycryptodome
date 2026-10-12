@@ -10,14 +10,27 @@ import pytest
 
 from Crypto.IO._PBES import (
     _DEFAULT_LIMIT,
-    _DEFAULT_MAX_ITERATION_COUNT,
+    _DEFAULT_MAX_PBKDF1,
+    _DEFAULT_MAX_PBKDF2,
+    _DEFAULT_MAX_SCRYPT_COST,
+    _DEFAULT_MAX_SCRYPT_MEMORY,
     _ITERATION_COUNT_ERROR,
+    _OID_PBE_WITH_SHA1_AND_DES_CBC,
+    _PBKDF1_COUNT,
     _PBKDF2_COUNT,
     _SCRYPT_COST,
+    _SCRYPT_MEMORY_ERROR,
+    PBES1,
     PBES2,
     PbesError,
+    PbesIterationCountError,
+    _check_scrypt_cost,
 )
-from Crypto.Util.asn1 import DerSequence
+from Crypto.Util.asn1 import DerInteger, DerObjectId, DerOctetString, DerSequence
+
+_OID_SHA1 = "1.3.14.3.2.26"
+_OID_SHA256 = "2.16.840.1.101.3.4.2.1"
+_OID_SHA3_256 = "2.16.840.1.101.3.4.2.8"
 
 
 class TestPBES2:
@@ -83,7 +96,7 @@ class TestPBES2_IterationLimit:
         self.ref = b"Test data"
         self.passphrase = b"Passphrase"
 
-    def _make_pbkdf2_blob(self, iteration_count):
+    def _make_pbkdf2_blob(self, iteration_count, hash_name="SHA1"):
         """Build a valid PBES2/PBKDF2 encrypted blob with the given
         iteration count by encrypting normally and then patching the
         DER-encoded iteration count field in place."""
@@ -92,7 +105,7 @@ class TestPBES2_IterationLimit:
         ct = PBES2.encrypt(
             self.ref,
             self.passphrase,
-            "PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC",
+            "PBKDF2WithHMAC-%sAndDES-EDE3-CBC" % hash_name,
             prot_params={"iteration_count": 1000},
         )
 
@@ -127,9 +140,9 @@ class TestPBES2_IterationLimit:
         outer[0] = enc_algo.encode()
         return outer.encode()
 
-    def _make_scrypt_blob(self, cost_param):
+    def _make_scrypt_blob(self, cost_param, r=8, p=1):
         """Build a valid PBES2/scrypt encrypted blob with the given
-        scrypt cost parameter (N) by encrypting normally then patching."""
+        scrypt cost parameter (N), r and p by encrypting normally then patching."""
 
         ct = PBES2.encrypt(
             self.ref, self.passphrase, "scryptAndAES128-CBC", prot_params={"iteration_count": 16384}
@@ -141,8 +154,10 @@ class TestPBES2_IterationLimit:
         kdf_info = DerSequence().decode(pbes2_params[0], nr_elements=2)
         scrypt_params = DerSequence().decode(kdf_info[1], nr_elements=(4, 5))
 
-        # Patch the cost parameter (index 1)
+        # Patch the cost parameter, r and p (indices 1, 2, 3)
         scrypt_params[1] = cost_param
+        scrypt_params[2] = r
+        scrypt_params[3] = p
 
         kdf_info[1] = scrypt_params.encode()
         pbes2_params[0] = kdf_info.encode()
@@ -152,12 +167,12 @@ class TestPBES2_IterationLimit:
 
     def test_pbkdf2_default_limit_rejects_high_count(self):
         """PBES2.decrypt rejects PBKDF2 iteration count above the default
-        limit (50M) without burning CPU."""
+        limit (for HMAC-SHA1) without burning CPU."""
         blob = self._make_pbkdf2_blob(2**31 - 1)
         with pytest.raises(PbesError) as ctx:
             PBES2.decrypt(blob, self.passphrase)
         assert str(ctx.value) == _ITERATION_COUNT_ERROR.format(
-            what=_PBKDF2_COUNT, count=2**31 - 1, limit=_DEFAULT_LIMIT.format(_DEFAULT_MAX_ITERATION_COUNT)
+            what=_PBKDF2_COUNT, count=2**31 - 1, limit=_DEFAULT_LIMIT.format(_DEFAULT_MAX_PBKDF2[_OID_SHA1])
         )
 
     def test_pbkdf2_custom_limit(self):
@@ -186,7 +201,7 @@ class TestPBES2_IterationLimit:
         with pytest.raises(PbesError) as ctx:
             PBES2.decrypt(blob, self.passphrase)
         assert str(ctx.value) == _ITERATION_COUNT_ERROR.format(
-            what=_SCRYPT_COST, count=2**31 - 1, limit=_DEFAULT_LIMIT.format(_DEFAULT_MAX_ITERATION_COUNT)
+            what=_SCRYPT_COST, count=2**31 - 1, limit=_DEFAULT_LIMIT.format(_DEFAULT_MAX_SCRYPT_COST)
         )
 
     def test_scrypt_custom_limit(self):
@@ -214,3 +229,82 @@ class TestPBES2_IterationLimit:
         # max_iteration_count == iteration_count → should pass
         pt = PBES2.decrypt(ct, self.passphrase, max_iteration_count=5000)
         assert self.ref == pt
+
+    def test_pbkdf2_default_limit_depends_on_hash(self):
+        """The default limit is lower for the hashes without a C loop (SHA-3)."""
+        count = _DEFAULT_MAX_PBKDF2[_OID_SHA3_256] + 1
+        assert count <= _DEFAULT_MAX_PBKDF2[_OID_SHA256]
+
+        with pytest.raises(PbesIterationCountError) as ctx:
+            PBES2.decrypt(self._make_pbkdf2_blob(count, "SHA3-256"), self.passphrase)
+        assert str(ctx.value) == _ITERATION_COUNT_ERROR.format(
+            what=_PBKDF2_COUNT, count=count, limit=_DEFAULT_LIMIT.format(_DEFAULT_MAX_PBKDF2[_OID_SHA3_256])
+        )
+
+        # The same count is fine with SHA-256
+        ct = PBES2.encrypt(
+            self.ref,
+            self.passphrase,
+            "PBKDF2WithHMAC-SHA256AndAES128-CBC",
+            prot_params={"iteration_count": count},
+        )
+        assert PBES2.decrypt(ct, self.passphrase) == self.ref
+
+    def test_scrypt_default_limit_rejects_high_r_p(self):
+        """Large r or p are not hidden behind a small N."""
+        blob = self._make_scrypt_blob(2**20, r=8, p=64)  # cost 2^26
+        with pytest.raises(PbesIterationCountError) as ctx:
+            PBES2.decrypt(blob, self.passphrase)
+        assert str(ctx.value) == _ITERATION_COUNT_ERROR.format(
+            what=_SCRYPT_COST, count=2**26, limit=_DEFAULT_LIMIT.format(_DEFAULT_MAX_SCRYPT_COST)
+        )
+
+        # With an explicit limit, as well
+        blob = self._make_scrypt_blob(1024, r=1000, p=1)  # cost 128000
+        with pytest.raises(PbesIterationCountError):
+            PBES2.decrypt(blob, self.passphrase, max_iteration_count=2**16)
+
+    def test_scrypt_default_limit_memory(self):
+        """By default, scrypt cannot use more than 1 GiB for each flow."""
+        blob = self._make_scrypt_blob(2**21, r=8, p=1)  # cost 2^21, 2 GiB
+        with pytest.raises(PbesIterationCountError) as ctx:
+            PBES2.decrypt(blob, self.passphrase)
+        assert str(ctx.value) == _SCRYPT_MEMORY_ERROR.format(
+            memory=2048, limit=_DEFAULT_MAX_SCRYPT_MEMORY >> 20, cost=2**21
+        )
+
+    def test_scrypt_check_accepts(self):
+        """Parameters within the limits (checked without running scrypt)."""
+        # The default: N=2^20 r=8 (exactly 1 GiB), and a large p with a small N
+        _check_scrypt_cost(2**20, 8, 1, None)
+        _check_scrypt_cost(2**14, 8, 2**10, None)
+        # An explicit limit is about the cost only (not the memory)
+        _check_scrypt_cost(2**21, 8, 1, 2**21)
+        # The cost is N for r=8 and p=1, as for the previous versions
+        _check_scrypt_cost(2**16, 8, 1, 2**16)
+        with pytest.raises(PbesIterationCountError):
+            _check_scrypt_cost(2**16, 8, 1, 2**16 - 1)
+        # 0 disables all checks
+        _check_scrypt_cost(2**40, 2**10, 2**10, 0)
+
+
+class TestPBES1_IterationLimit:
+    def test_pbkdf1_default_limit(self):
+        """PBES1.decrypt rejects a PBKDF1 iteration count above the default limit."""
+        count = _DEFAULT_MAX_PBKDF1 + 1
+        blob = DerSequence(
+            [
+                DerSequence(
+                    [
+                        DerObjectId(_OID_PBE_WITH_SHA1_AND_DES_CBC),
+                        DerSequence([DerOctetString(b"\x00" * 8), DerInteger(count)]),
+                    ]
+                ),
+                DerOctetString(b"\x00" * 16),
+            ]
+        ).encode()
+        with pytest.raises(PbesIterationCountError) as ctx:
+            PBES1.decrypt(blob, b"passphrase")
+        assert str(ctx.value) == _ITERATION_COUNT_ERROR.format(
+            what=_PBKDF1_COUNT, count=count, limit=_DEFAULT_LIMIT.format(_DEFAULT_MAX_PBKDF1)
+        )
