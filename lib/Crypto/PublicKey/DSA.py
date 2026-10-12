@@ -570,10 +570,10 @@ def _import_x509_cert(encoded, passphrase, params):
     return _import_subjectPublicKeyInfo(sp_info, None, params)
 
 
-def _import_pkcs8(encoded, passphrase, params):
+def _import_pkcs8(encoded, passphrase, params, max_iteration_count=None, threads=1):
     if params:
         raise ValueError("PKCS#8 already includes parameters")
-    k = PKCS8.unwrap(encoded, passphrase)
+    k = PKCS8.unwrap(encoded, passphrase, max_iteration_count, threads=threads)
     if k[0] != oid:
         raise ValueError("No PKCS#8 encoded DSA key")
     x = DerInteger().decode(k[1]).value
@@ -582,10 +582,10 @@ def _import_pkcs8(encoded, passphrase, params):
     return construct(tup)
 
 
-def _import_key_der(key_data, passphrase, params):
+def _import_key_der(key_data, passphrase, params, max_iteration_count=None, threads=1):
     """Import a DSA key (public or private half), encoded in DER form."""
 
-    decodings = (_import_openssl_private, _import_subjectPublicKeyInfo, _import_x509_cert, _import_pkcs8)
+    decodings = (_import_openssl_private, _import_subjectPublicKeyInfo, _import_x509_cert)
 
     for decoding in decodings:
         try:
@@ -593,10 +593,23 @@ def _import_key_der(key_data, passphrase, params):
         except ValueError:
             pass
 
+    try:
+        return _import_pkcs8(key_data, passphrase, params, max_iteration_count, threads)
+    except PKCS8.PbesIterationCountError:
+        raise
+    except ValueError:
+        pass
+
     raise ValueError("DSA key format is not supported")
 
 
-def import_key(extern_key: Union[str, bytes], passphrase: Optional[Union[str, bytes]] = None) -> DsaKey:
+def import_key(
+    extern_key: Union[str, bytes],
+    passphrase: Optional[Union[str, bytes]] = None,
+    *,
+    max_iteration_count: Optional[int] = None,
+    threads: int = 1,
+) -> DsaKey:
     """Import a DSA key.
 
     Args:
@@ -623,6 +636,20 @@ def import_key(extern_key: Union[str, bytes], passphrase: Optional[Union[str, by
 
         Encryption may be applied either at the `PKCS#8`_ or at the PEM level.
 
+      max_iteration_count (integer):
+        The maximum value allowed for the PBKDF2 iteration count or
+        the scrypt cost parameter (*N*) of a `PKCS#8`_ encrypted key.
+        A malicious key could require an extremely high number of
+        iterations, tying up the CPU for hours.
+        The default value is None (enforcing the default limit of 50,000,000).
+        Set it to ``0`` to disable the check.
+
+      threads (integer):
+        The maximum number of threads used to derive the decryption key
+        with scrypt (default: 1, no extra threads; 0 for all CPU cores).
+        Only a `PKCS#8`_ key protected with scrypt and a parallelization
+        parameter larger than 1 can use them.
+
     Returns:
       :class:`DsaKey` : a DSA key object
 
@@ -636,6 +663,7 @@ def import_key(extern_key: Union[str, bytes], passphrase: Optional[Union[str, by
     .. _PKCS#8: http://www.ietf.org/rfc/rfc5208.txt
     """
 
+    PKCS8._check_kdf_params(max_iteration_count, threads)
     extern_key = tobytes(extern_key)
     if passphrase is not None:
         passphrase = tobytes(passphrase)
@@ -645,7 +673,7 @@ def import_key(extern_key: Union[str, bytes], passphrase: Optional[Union[str, by
         (der, _marker, enc_flag) = PEM.decode(extern_key.decode("latin-1"), passphrase)
         if enc_flag:
             passphrase = None
-        return _import_key_der(der, passphrase, None)
+        return _import_key_der(der, passphrase, None, max_iteration_count, threads)
 
     if extern_key.startswith(b"ssh-dss "):
         # This is probably a public OpenSSH key
@@ -661,7 +689,7 @@ def import_key(extern_key: Union[str, bytes], passphrase: Optional[Union[str, by
 
     if len(extern_key) > 0 and extern_key[0] == 0x30:
         # This is probably a DER encoded key
-        return _import_key_der(extern_key, passphrase, None)
+        return _import_key_der(extern_key, passphrase, None, max_iteration_count, threads)
 
     raise ValueError("DSA key format is not supported")
 

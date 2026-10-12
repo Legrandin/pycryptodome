@@ -9,8 +9,9 @@ from __future__ import annotations
 
 from typing import Callable, Optional, Union
 
-from Crypto.IO._PBES import PBES1, PBES2, PbesError, ProtParams
+from Crypto.IO._PBES import PBES1, PBES2, PbesError, PbesIterationCountError, ProtParams
 from Crypto.Util._bytes import tobytes
+from Crypto.Util._threads import threads_param
 from Crypto.Util.asn1 import (
     DerNull,
     DerObject,
@@ -19,7 +20,23 @@ from Crypto.Util.asn1 import (
     DerSequence,
 )
 
-__all__ = ["wrap", "unwrap"]
+__all__ = ["wrap", "unwrap", "PbesIterationCountError"]
+
+
+def _check_kdf_params(max_iteration_count: Optional[int] = None, threads: int = 1) -> None:
+    """Check the parameters that control the key derivation in :func:`wrap`
+    and :func:`unwrap`.
+
+    The functions that export and import keys call it upfront,
+    so that an invalid value is reported even if the key is not encrypted.
+    """
+
+    if max_iteration_count is not None:
+        if not isinstance(max_iteration_count, int) or isinstance(max_iteration_count, bool):
+            raise TypeError("'max_iteration_count' must be an integer or None")
+        if max_iteration_count < 0:
+            raise ValueError("'max_iteration_count' must be a non-negative integer")
+    threads_param(threads)
 
 
 def wrap(
@@ -30,6 +47,8 @@ def wrap(
     prot_params: Optional[ProtParams] = None,
     key_params: Optional[DerObject] = DerNull(),  # noqa: B008
     randfunc: Optional[Callable[[int], bytes]] = None,
+    *,
+    threads: int = 1,
 ) -> bytes:
     """Wrap a private key into a PKCS#8 blob (clear or encrypted).
 
@@ -70,9 +89,17 @@ def wrap(
         If not specified, a new RNG will be instantiated
         from :mod:`Crypto.Random`.
 
+      threads (integer):
+        The maximum number of threads used to derive the wrapping key
+        with scrypt (default: 1, no extra threads; 0 for all CPU cores).
+        Only scrypt with a ``parallelization`` larger than 1 can use them.
+        See :func:`Crypto.Protocol.KDF.scrypt`.
+
     Returns:
       bytes: The PKCS#8-wrapped private key (possibly encrypted).
     """
+
+    _check_kdf_params(threads=threads)
 
     #
     #   PrivateKeyInfo ::= SEQUENCE {
@@ -100,13 +127,15 @@ def wrap(
     passphrase = tobytes(passphrase)
     if protection is None:
         protection = "PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC"
-    return PBES2.encrypt(pk_info_der, passphrase, protection, prot_params, randfunc)
+    return PBES2.encrypt(pk_info_der, passphrase, protection, prot_params, randfunc, threads=threads)
 
 
 def unwrap(
     p8_private_key: bytes,
     passphrase: Optional[Union[bytes, str]] = None,
     max_iteration_count: Optional[int] = None,
+    *,
+    threads: int = 1,
 ) -> tuple[str, bytes, Optional[bytes]]:
     """Unwrap a private key from a PKCS#8 blob (clear or encrypted).
 
@@ -123,6 +152,12 @@ def unwrap(
         extremely high number of iterations, tying up the CPU for hours.
         The default value is None (enforcing the default limit of 50,000,000).
         Set it to ``0`` to disable the check.
+      threads (integer):
+        The maximum number of threads used to derive the unwrapping key
+        with scrypt (default: 1, no extra threads; 0 for all CPU cores).
+        Only a blob protected with scrypt and a parallelization parameter
+        larger than 1 can use them.
+        See :func:`Crypto.Protocol.KDF.scrypt`.
 
     Return:
       A tuple containing
@@ -133,7 +168,11 @@ def unwrap(
 
     Raises:
       ValueError : if decoding fails
+      PbesIterationCountError : (a ``ValueError``) if the iteration count
+        is above :data:`max_iteration_count`
     """
+
+    _check_kdf_params(max_iteration_count, threads)
 
     if passphrase is not None:
         passphrase = tobytes(passphrase)
@@ -144,6 +183,9 @@ def unwrap(
                 p8_private_key, passphrase, max_iteration_count=max_iteration_count
             )
             found = True
+        except PbesIterationCountError:
+            # The key is well-formed, and this is the only reason to reject it
+            raise
         except PbesError as e:
             error_str = "PBES1[%s]" % str(e)
         except ValueError:
@@ -152,9 +194,11 @@ def unwrap(
         if not found:
             try:
                 p8_private_key = PBES2.decrypt(
-                    p8_private_key, passphrase, max_iteration_count=max_iteration_count
+                    p8_private_key, passphrase, max_iteration_count=max_iteration_count, threads=threads
                 )
                 found = True
+            except PbesIterationCountError:
+                raise
             except PbesError as e:
                 error_str += ",PBES2[%s]" % str(e)
             except ValueError:

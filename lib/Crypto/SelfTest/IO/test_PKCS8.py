@@ -8,8 +8,11 @@
 
 from binascii import unhexlify
 
-from Crypto.IO import PKCS8
-from Crypto.Util.asn1 import DerNull
+import pytest
+
+from Crypto.IO import _PBES, PKCS8
+from Crypto.Protocol.KDF import scrypt
+from Crypto.Util.asn1 import DerNull, DerObject
 
 oid_key = "1.2.840.113549.1.1.1"
 
@@ -427,3 +430,191 @@ class TestPKCS8_Decrypt:
         botan_pbkdf2_der = txt2bin(botan_pbkdf2)
         key2 = PKCS8.unwrap(botan_pbkdf2_der, b"your_password")
         assert key1 == key2
+
+
+@pytest.fixture
+def scrypt_threads(monkeypatch):
+    """Record the ``threads`` argument of each call to scrypt() made by PBES2."""
+    calls = []
+
+    def recorder(*args, **kwargs):
+        calls.append(kwargs.get("threads", 1))
+        return scrypt(*args, **kwargs)
+
+    monkeypatch.setattr(_PBES, "scrypt", recorder)
+    return calls
+
+
+class TestPKCS8Threads:
+    # Small scrypt parameters, with 4 independent flows
+    prot_params = {"iteration_count": 1024, "block_size": 1, "parallelization": 4}
+
+    def setup_method(self):
+        self.clear_key = txt2bin(clear_key)
+
+    def _wrap(self, threads, protection="scryptAndAES128-CBC"):
+        return PKCS8.wrap(
+            self.clear_key,
+            oid_key,
+            b"TestTest",
+            protection=protection,
+            prot_params=self.prot_params,
+            randfunc=Rng(b"\x01" * 8 + b"\x02" * 16),
+            threads=threads,
+        )
+
+    def test_wrap(self, scrypt_threads):
+        ref = self._wrap(1)
+        for threads in (0, 2, 4, 8):
+            assert self._wrap(threads) == ref
+        assert scrypt_threads == [1, 0, 2, 4, 8]
+
+    def test_unwrap(self, scrypt_threads):
+        wrapped = self._wrap(1)
+        for threads in (0, 1, 2, 4, 8):
+            res = PKCS8.unwrap(wrapped, b"TestTest", threads=threads)
+            assert res[:2] == (oid_key, self.clear_key)
+        assert scrypt_threads == [1, 0, 1, 2, 4, 8]
+
+    def test_pbkdf2_ignores_threads(self, scrypt_threads):
+        wrapped = self._wrap(4, protection="PBKDF2WithHMAC-SHA256AndAES128-CBC")
+        res = PKCS8.unwrap(wrapped, b"TestTest", threads=4)
+        assert res[:2] == (oid_key, self.clear_key)
+        assert scrypt_threads == []
+
+    def test_threads_negative(self):
+        wrapped_clear = PKCS8.wrap(self.clear_key, oid_key)
+        for threads in (1.0, "2", None, True):
+            with pytest.raises(TypeError):
+                PKCS8.wrap(self.clear_key, oid_key, threads=threads)
+            with pytest.raises(TypeError):
+                PKCS8.unwrap(wrapped_clear, threads=threads)
+        for threads in (-1, -8):
+            with pytest.raises(ValueError):
+                self._wrap(threads)
+            with pytest.raises(ValueError):
+                PKCS8.unwrap(wrapped_clear, threads=threads)
+
+
+@pytest.fixture(scope="module")
+def keys():
+    from Crypto.PublicKey import DSA, ECC, RSA
+
+    return {
+        "RSA": (RSA, RSA.generate(1024)),
+        "DSA": (DSA, DSA.generate(1024)),
+        "ECC": (ECC, ECC.generate(curve="p256")),
+    }
+
+
+class TestKeyKdfParams:
+    """The parameters ``threads`` and ``max_iteration_count`` of import_key()
+    and export_key() reach the key derivation (scrypt)."""
+
+    prot = {
+        "protection": "scryptAndAES128-CBC",
+        "prot_params": {"iteration_count": 1024, "block_size": 1, "parallelization": 3},
+    }
+
+    def _export(self, name, key, fmt, threads):
+        if name == "RSA":
+            return key.export_key(format=fmt, passphrase="pw", pkcs=8, threads=threads, **self.prot)
+        if name == "ECC":
+            return key.export_key(format=fmt, passphrase="pw", threads=threads, **self.prot)
+        # DSA has no prot_params: wrap again with PKCS#8 directly
+        clear = key.export_key(format="DER", pkcs8=True)
+        oid, private_key, params = PKCS8.unwrap(clear)
+        params = DerObject().decode(params) if params else None
+        der = PKCS8.wrap(private_key, oid, "pw", key_params=params, **self.prot)
+        if fmt == "PEM":
+            from Crypto.IO import PEM
+
+            return PEM.encode(der, "ENCRYPTED PRIVATE KEY")
+        return der
+
+    @pytest.mark.parametrize("name", ["RSA", "DSA", "ECC"])
+    @pytest.mark.parametrize("fmt", ["DER", "PEM"])
+    def test_import(self, keys, name, fmt, scrypt_threads):
+        module, key = keys[name]
+        encrypted = self._export(name, key, fmt, 1)
+        del scrypt_threads[:]
+        for threads in (0, 1, 3):
+            assert module.import_key(encrypted, "pw", threads=threads) == key
+        assert scrypt_threads == [0, 1, 3]
+
+    @pytest.mark.parametrize("name", ["RSA", "ECC"])
+    @pytest.mark.parametrize("fmt", ["DER", "PEM"])
+    def test_export(self, keys, name, fmt, scrypt_threads):
+        module, key = keys[name]
+        encrypted = self._export(name, key, fmt, 3)
+        assert scrypt_threads == [3]
+        assert module.import_key(encrypted, "pw") == key
+
+    @pytest.mark.parametrize("name", ["RSA", "DSA", "ECC"])
+    def test_threads_negative(self, keys, name):
+        module, key = keys[name]
+        clear = key.export_key(format="DER")
+        for threads, exc in ((1.0, TypeError), (None, TypeError), (-1, ValueError)):
+            with pytest.raises(exc):
+                module.import_key(clear, threads=threads)
+            if name != "DSA":
+                with pytest.raises(exc):
+                    self._export(name, key, "DER", threads)
+
+    def test_ecc_public_key(self, keys):
+        # Like the other private-key parameters, threads is rejected for a public key
+        _, key = keys["ECC"]
+        with pytest.raises(ValueError):
+            key.public_key().export_key(format="DER", threads=2)
+
+    @pytest.mark.parametrize("name", ["RSA", "DSA", "ECC"])
+    @pytest.mark.parametrize("fmt", ["DER", "PEM"])
+    def test_max_iteration_count(self, keys, name, fmt):
+        module, key = keys[name]
+        encrypted = self._export(name, key, fmt, 1)  # scrypt with N=1024
+        for limit in (1024, 4096, 0):
+            assert module.import_key(encrypted, "pw", max_iteration_count=limit) == key
+        # The specific error is not hidden by the other key formats
+        with pytest.raises(PKCS8.PbesIterationCountError, match="max_iteration_count"):
+            module.import_key(encrypted, "pw", max_iteration_count=1023)
+
+    def test_max_iteration_count_pbkdf2(self, keys):
+        module, key = keys["RSA"]
+        encrypted = key.export_key(
+            format="PEM",
+            passphrase="pw",
+            pkcs=8,
+            protection="PBKDF2WithHMAC-SHA256AndAES128-CBC",
+            prot_params={"iteration_count": 2000},
+        )
+        assert module.import_key(encrypted, "pw", max_iteration_count=2000) == key
+        with pytest.raises(PKCS8.PbesIterationCountError):
+            module.import_key(encrypted, "pw", max_iteration_count=1999)
+
+    def test_max_iteration_count_unwrap(self, keys):
+        _, key = keys["ECC"]
+        encrypted = self._export("ECC", key, "DER", 1)
+        expected = _PBES._ITERATION_COUNT_ERROR.format(what=_PBES._SCRYPT_COST, count=1024, limit=1023)
+        with pytest.raises(PKCS8.PbesIterationCountError) as ctx:
+            PKCS8.unwrap(encrypted, "pw", 1023)
+        assert str(ctx.value) == expected
+        # It is a ValueError
+        with pytest.raises(ValueError):
+            PKCS8.unwrap(encrypted, "pw", 1023)
+
+    @pytest.mark.parametrize("name", ["RSA", "DSA", "ECC"])
+    def test_max_iteration_count_negative(self, keys, name):
+        # Checked even when the key is not encrypted
+        module, key = keys[name]
+        clear = key.export_key(format="DER")
+        for limit, exc in (
+            (1.5, TypeError),
+            (1e6, TypeError),
+            ("10", TypeError),
+            (True, TypeError),
+            (-1, ValueError),
+        ):
+            with pytest.raises(exc):
+                module.import_key(clear, max_iteration_count=limit)
+            with pytest.raises(exc):
+                PKCS8.unwrap(clear, None, limit)

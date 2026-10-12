@@ -8,7 +8,15 @@
 
 import pytest
 
-from Crypto.IO._PBES import PBES2, PbesError
+from Crypto.IO._PBES import (
+    _DEFAULT_LIMIT,
+    _DEFAULT_MAX_ITERATION_COUNT,
+    _ITERATION_COUNT_ERROR,
+    _PBKDF2_COUNT,
+    _SCRYPT_COST,
+    PBES2,
+    PbesError,
+)
 from Crypto.Util.asn1 import DerSequence
 
 
@@ -148,7 +156,9 @@ class TestPBES2_IterationLimit:
         blob = self._make_pbkdf2_blob(2**31 - 1)
         with pytest.raises(PbesError) as ctx:
             PBES2.decrypt(blob, self.passphrase)
-        assert "too high" in str(ctx.value)
+        assert str(ctx.value) == _ITERATION_COUNT_ERROR.format(
+            what=_PBKDF2_COUNT, count=2**31 - 1, limit=_DEFAULT_LIMIT.format(_DEFAULT_MAX_ITERATION_COUNT)
+        )
 
     def test_pbkdf2_custom_limit(self):
         """PBES2.decrypt honours a caller-supplied max_iteration_count."""
@@ -175,7 +185,9 @@ class TestPBES2_IterationLimit:
         blob = self._make_scrypt_blob(2**31 - 1)
         with pytest.raises(PbesError) as ctx:
             PBES2.decrypt(blob, self.passphrase)
-        assert "too high" in str(ctx.value)
+        assert str(ctx.value) == _ITERATION_COUNT_ERROR.format(
+            what=_SCRYPT_COST, count=2**31 - 1, limit=_DEFAULT_LIMIT.format(_DEFAULT_MAX_ITERATION_COUNT)
+        )
 
     def test_scrypt_custom_limit(self):
         """PBES2.decrypt honours a caller-supplied max_iteration_count

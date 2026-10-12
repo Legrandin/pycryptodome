@@ -139,6 +139,19 @@ New features
   the ``p`` independent flows on several CPU cores (``threads=0`` for all of them).
   Each thread uses ``128 * r * N`` bytes of memory at the same time.
   The output does not depend on the number of threads.
+* New parameter ``threads`` for ``Crypto.IO.PKCS8.wrap()`` and ``unwrap()``,
+  for ``import_key()`` of RSA, DSA and ECC keys, and for ``export_key()`` of RSA and ECC keys:
+  a private key protected with scrypt (PBES2) and a parallelization parameter larger than 1
+  is encrypted or decrypted on several CPU cores (``threads=0`` for all of them).
+* New parameter ``max_iteration_count`` for ``import_key()`` of RSA, DSA and ECC keys,
+  like the one of ``Crypto.IO.PKCS8.unwrap()``: the maximum PBKDF2 iteration count
+  or scrypt cost (*N*) accepted for an encrypted PKCS#8 key (default: 50,000,000).
+  When a key is above the limit, ``import_key()`` and ``PKCS8.unwrap()`` now raise
+  ``Crypto.IO.PKCS8.PbesIterationCountError`` (a ``ValueError``), whose message
+  says which value is too high and how to accept it, instead of a generic error
+  about the key format.
+* ``Crypto.IO.PKCS8.unwrap()`` raises ``TypeError`` if ``max_iteration_count``
+  is not an integer (or ``None``), and ``ValueError`` if it is negative.
 
 3.24.0 (4 October 2026)
 ++++++++++++++++++++++++++

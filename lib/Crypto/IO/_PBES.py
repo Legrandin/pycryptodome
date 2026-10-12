@@ -61,6 +61,41 @@ class PbesError(ValueError):
     pass
 
 
+class PbesIterationCountError(PbesError):
+    """The iteration count (or the scrypt cost) of the KDF is
+    above the limit set with ``max_iteration_count``."""
+
+
+#: Message of :class:`PbesIterationCountError`
+_ITERATION_COUNT_ERROR = (
+    "The encrypted key has a {what} of {count}, above the maximum allowed by "
+    "max_iteration_count: {limit}. If you trust the key, increase "
+    "max_iteration_count (or set it to 0 to disable the check)."
+)
+#: The ``limit`` in the message, when the caller did not set ``max_iteration_count``
+_DEFAULT_LIMIT = "{} (the default)"
+
+#: The ``what`` in the message, for each KDF
+_PBKDF1_COUNT = "PBKDF1 iteration count"
+_PBKDF2_COUNT = "PBKDF2 iteration count"
+_SCRYPT_COST = "scrypt cost parameter (N)"
+
+
+def _check_iteration_count(what: str, count: int, max_iteration_count: Optional[int]) -> None:
+    """Raise :class:`PbesIterationCountError` if ``count`` (``what``, like
+    :data:`_PBKDF2_COUNT`) is above ``max_iteration_count``
+    (``None`` for the default limit, ``0`` for no limit)."""
+
+    if max_iteration_count is None:
+        limit = _DEFAULT_LIMIT.format(_DEFAULT_MAX_ITERATION_COUNT)
+        max_iteration_count = _DEFAULT_MAX_ITERATION_COUNT
+    else:
+        limit = str(max_iteration_count)
+
+    if max_iteration_count and count > max_iteration_count:
+        raise PbesIterationCountError(_ITERATION_COUNT_ERROR.format(what=what, count=count, limit=limit))
+
+
 # These are the ASN.1 definitions used by the PBES1/2 logic:
 #
 # EncryptedPrivateKeyInfo ::= SEQUENCE {
@@ -144,9 +179,6 @@ class PBES1:
           The decrypted data, as a binary string.
         """
 
-        if max_iteration_count is None:
-            max_iteration_count = _DEFAULT_MAX_ITERATION_COUNT
-
         enc_private_key_info = DerSequence().decode(data)
         encrypted_algorithm = DerSequence().decode(enc_private_key_info[0])
         encrypted_data = DerOctetString().decode(enc_private_key_info[1]).payload
@@ -192,12 +224,7 @@ class PBES1:
         salt = DerOctetString().decode(pbe_params[0]).payload
         iterations = pbe_params[1]
 
-        if max_iteration_count and iterations > max_iteration_count:
-            raise PbesError(
-                "Iteration count too high (%d > %d). "
-                "Use the max_iteration_count parameter to increase the limit."
-                % (iterations, max_iteration_count)
-            )
+        _check_iteration_count(_PBKDF1_COUNT, iterations, max_iteration_count)
 
         key_iv = PBKDF1(passphrase, salt, 16, iterations, hashmod)
         key, iv = key_iv[:8], key_iv[8:]
@@ -220,6 +247,7 @@ class PBES2:
         protection: str,
         prot_params: Optional[ProtParams] = None,
         randfunc: Optional[Callable[[int], bytes]] = None,
+        threads: int = 1,
     ) -> bytes:
         """Encrypt a piece of data using a passphrase and *PBES2*.
 
@@ -261,6 +289,9 @@ class PBES2:
             a single integer N and return a string of random data,
             N bytes long. If not specified, a new RNG will be
             instantiated from ``Crypto.Random``.
+          threads : integer
+            The maximum number of threads used by scrypt
+            (see :func:`Crypto.Protocol.KDF.scrypt`).
 
         :Returns:
           The encrypted data, as a binary string.
@@ -367,7 +398,7 @@ class PBES2:
             count = prot_params.get("iteration_count", 16384)
             scrypt_r = prot_params.get("block_size", 8)
             scrypt_p = prot_params.get("parallelization", 1)
-            key = scrypt(passphrase, salt, key_size, count, scrypt_r, scrypt_p)
+            key = scrypt(passphrase, salt, key_size, count, scrypt_r, scrypt_p, threads=threads)
             kdf_info = DerSequence(
                 [
                     DerObjectId(_OID_SCRYPT),  # scrypt
@@ -405,7 +436,9 @@ class PBES2:
         return enc_private_key_info.encode()
 
     @staticmethod
-    def decrypt(data: bytes, passphrase: bytes, max_iteration_count: Optional[int] = None) -> bytes:
+    def decrypt(
+        data: bytes, passphrase: bytes, max_iteration_count: Optional[int] = None, threads: int = 1
+    ) -> bytes:
         """Decrypt a piece of data using a passphrase and *PBES2*.
 
         The algorithm to use is automatically detected.
@@ -422,12 +455,12 @@ class PBES2:
             extremely high number of iterations, tying up the CPU for hours.
             The default value is None (enforcing the default limit of 50,000,000).
             Set it to ``0`` to disable the check.
+          threads : integer
+            The maximum number of threads used by scrypt
+            (see :func:`Crypto.Protocol.KDF.scrypt`).
         :Returns:
           The decrypted data, as a binary string.
         """
-
-        if max_iteration_count is None:
-            max_iteration_count = _DEFAULT_MAX_ITERATION_COUNT
 
         enc_private_key_info = DerSequence().decode(data, nr_elements=2)
         enc_algo = DerSequence().decode(enc_private_key_info[0])
@@ -451,12 +484,7 @@ class PBES2:
             salt = DerOctetString().decode(pbkdf2_params[0]).payload
             iteration_count = pbkdf2_params[1]
 
-            if max_iteration_count and iteration_count > max_iteration_count:
-                raise PbesError(
-                    "PBKDF2 iteration count too high (%d > %d). "
-                    "Use the max_iteration_count parameter to increase "
-                    "the limit." % (iteration_count, max_iteration_count)
-                )
+            _check_iteration_count(_PBKDF2_COUNT, iteration_count, max_iteration_count)
 
             left = len(pbkdf2_params) - 2
             idx = 2
@@ -482,12 +510,7 @@ class PBES2:
             salt = DerOctetString().decode(scrypt_params[0]).payload
             iteration_count, scrypt_r, scrypt_p = (scrypt_params[x] for x in (1, 2, 3))
 
-            if max_iteration_count and iteration_count > max_iteration_count:
-                raise PbesError(
-                    "scrypt cost parameter too high (%d > %d). "
-                    "Use the max_iteration_count parameter to increase "
-                    "the limit." % (iteration_count, max_iteration_count)
-                )
+            _check_iteration_count(_SCRYPT_COST, iteration_count, max_iteration_count)
 
             if len(scrypt_params) > 4:
                 kdf_key_length = scrypt_params[4]
@@ -561,7 +584,7 @@ class PBES2:
 
             key = PBKDF2(passphrase, salt, key_size, iteration_count, hmac_hash_module=hmac_hash_module)
         else:
-            key = scrypt(passphrase, salt, key_size, iteration_count, scrypt_r, scrypt_p)
+            key = scrypt(passphrase, salt, key_size, iteration_count, scrypt_r, scrypt_p, threads=threads)
         cipher = module.new(key, cipher_mode, **{cipher_param: iv_nonce})
 
         # Decrypt data
