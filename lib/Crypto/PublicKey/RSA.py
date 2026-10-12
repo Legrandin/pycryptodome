@@ -745,7 +745,7 @@ def construct(
             # See Carmichael theorem
             phi = (p - 1) * (q - 1)
             lcm = phi // (p - 1).gcd(q - 1)
-            if (e * d % int(lcm)) != 1:
+            if (e * d % lcm) != 1:
                 raise ValueError("Invalid RSA condition")
             if hasattr(key, "u"):
                 # CRT coefficient
