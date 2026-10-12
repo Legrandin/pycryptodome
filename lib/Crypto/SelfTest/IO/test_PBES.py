@@ -10,21 +10,23 @@ import pytest
 
 from Crypto.IO._PBES import (
     _DEFAULT_LIMIT,
+    _DEFAULT_MAX_MEMORY,
     _DEFAULT_MAX_PBKDF1,
     _DEFAULT_MAX_PBKDF2,
     _DEFAULT_MAX_SCRYPT_COST,
-    _DEFAULT_MAX_SCRYPT_MEMORY,
     _ITERATION_COUNT_ERROR,
+    _MEMORY_ERROR,
     _OID_PBE_WITH_SHA1_AND_DES_CBC,
     _PBKDF1_COUNT,
     _PBKDF2_COUNT,
     _SCRYPT_COST,
-    _SCRYPT_MEMORY_ERROR,
     PBES1,
     PBES2,
     PbesError,
     PbesIterationCountError,
+    PbesMemoryError,
     _check_scrypt_cost,
+    _scrypt_threads,
 )
 from Crypto.Util.asn1 import DerInteger, DerObjectId, DerOctetString, DerSequence
 
@@ -265,20 +267,44 @@ class TestPBES2_IterationLimit:
             PBES2.decrypt(blob, self.passphrase, max_iteration_count=2**16)
 
     def test_scrypt_default_limit_memory(self):
-        """By default, scrypt cannot use more than 1 GiB for each flow."""
-        blob = self._make_scrypt_blob(2**21, r=8, p=1)  # cost 2^21, 2 GiB
-        with pytest.raises(PbesIterationCountError) as ctx:
+        """By default, scrypt cannot use more than 256 MiB."""
+        blob = self._make_scrypt_blob(2**19, r=8, p=1)  # 512 MiB
+        with pytest.raises(PbesMemoryError) as ctx:
             PBES2.decrypt(blob, self.passphrase)
-        assert str(ctx.value) == _SCRYPT_MEMORY_ERROR.format(
-            memory=2048, limit=_DEFAULT_MAX_SCRYPT_MEMORY >> 20, cost=2**21
+        assert str(ctx.value) == _MEMORY_ERROR.format(
+            memory=2**29, limit=_DEFAULT_LIMIT.format(_DEFAULT_MAX_MEMORY)
         )
+
+        # An explicit limit
+        blob = self._make_scrypt_blob(2**10, r=8, p=1)  # 1 MiB
+        with pytest.raises(PbesMemoryError) as ctx:
+            PBES2.decrypt(blob, self.passphrase, max_memory=2**20 - 1)
+        assert str(ctx.value) == _MEMORY_ERROR.format(memory=2**20, limit=2**20 - 1)
+
+    def test_scrypt_threads_within_memory(self):
+        """Fewer threads are used, so that the memory stays within max_memory
+        (checked without running scrypt)."""
+        from Crypto.Util._cpu_features import available_cores
+
+        # 128 MiB for each thread: 2 fit in the default 256 MiB
+        assert _scrypt_threads(2**17, 8, 4, 4, None) == 2
+        assert _scrypt_threads(2**18, 8, 4, 4, None) == 1
+        assert _scrypt_threads(2**17, 8, 4, 4, 2**29) == 4
+        # No more than p, and 0 means all the cores
+        assert _scrypt_threads(2**17, 8, 2, 4, 0) == 2
+        assert _scrypt_threads(2**10, 8, 64, 0, None) == min(available_cores(), 64)
+        # Not even one thread fits
+        with pytest.raises(PbesMemoryError):
+            _scrypt_threads(2**19, 8, 1, 1, None)
+        assert _scrypt_threads(2**19, 8, 1, 1, 2**29) == 1
+        assert _scrypt_threads(2**19, 8, 1, 1, 0) == 1
 
     def test_scrypt_check_accepts(self):
         """Parameters within the limits (checked without running scrypt)."""
-        # The default: N=2^20 r=8 (exactly 1 GiB), and a large p with a small N
+        # The default, also with a large p and a small N
         _check_scrypt_cost(2**20, 8, 1, None)
         _check_scrypt_cost(2**14, 8, 2**10, None)
-        # An explicit limit is about the cost only (not the memory)
+        # The limit is about the cost only (max_memory is about the memory)
         _check_scrypt_cost(2**21, 8, 1, 2**21)
         # The cost is N for r=8 and p=1, as for the previous versions
         _check_scrypt_cost(2**16, 8, 1, 2**16)

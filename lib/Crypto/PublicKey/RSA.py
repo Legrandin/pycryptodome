@@ -788,18 +788,18 @@ def _import_x509_cert(encoded, *kwargs):
     return _import_subjectPublicKeyInfo(sp_info)
 
 
-def _import_pkcs8(encoded, passphrase, max_iteration_count=None, threads=1):
+def _import_pkcs8(encoded, passphrase, max_iteration_count=None, threads=1, max_memory=None):
     from Crypto.IO import PKCS8
 
     oids = (oid, "1.2.840.113549.1.1.10")
 
-    k = PKCS8.unwrap(encoded, passphrase, max_iteration_count, threads=threads)
+    k = PKCS8.unwrap(encoded, passphrase, max_iteration_count, threads=threads, max_memory=max_memory)
     if k[0] not in oids:
         raise ValueError("No PKCS#8 encoded RSA key")
     return _import_keyDER(k[1], passphrase)
 
 
-def _import_keyDER(extern_key, passphrase, max_iteration_count=None, threads=1):
+def _import_keyDER(extern_key, passphrase, max_iteration_count=None, threads=1, max_memory=None):
     """Import an RSA key (public or private half), encoded in DER form."""
 
     decodings = (
@@ -818,8 +818,8 @@ def _import_keyDER(extern_key, passphrase, max_iteration_count=None, threads=1):
     from Crypto.IO import PKCS8
 
     try:
-        return _import_pkcs8(extern_key, passphrase, max_iteration_count, threads)
-    except PKCS8.PbesIterationCountError:
+        return _import_pkcs8(extern_key, passphrase, max_iteration_count, threads, max_memory)
+    except PKCS8.PbesLimitError:
         raise
     except ValueError:
         pass
@@ -855,6 +855,7 @@ def import_key(
     *,
     max_iteration_count: Optional[int] = None,
     threads: int = 1,
+    max_memory: Optional[int] = None,
 ) -> RsaKey:
     """Import an RSA key (public or private).
 
@@ -899,6 +900,14 @@ def import_key(
         Only a `PKCS#8`_ key protected with scrypt and a parallelization
         parameter larger than 1 can use them.
 
+      max_memory (integer):
+        The maximum memory (in bytes) that the key derivation of a `PKCS#8`_
+        encrypted key can use, all threads included (fewer threads are used
+        if needed). Only scrypt uses a significant amount:
+        128 · *N* · *r* bytes for each thread.
+        The default value is None (enforcing the default limit of 256 MiB).
+        Set it to ``0`` to disable the check.
+
     Returns: An RSA key object (:class:`RsaKey`).
 
     Raises:
@@ -915,7 +924,7 @@ def import_key(
 
     from Crypto.IO import PEM, PKCS8
 
-    PKCS8._check_kdf_params(max_iteration_count, threads)
+    PKCS8._check_kdf_params(max_iteration_count, threads, max_memory)
     extern_key = tobytes(extern_key)
     if passphrase is not None:
         passphrase = tobytes(passphrase)
@@ -931,7 +940,7 @@ def import_key(
         (der, _marker, enc_flag) = PEM.decode(extern_key.decode("latin-1"), passphrase)
         if enc_flag:
             passphrase = None
-        return _import_keyDER(der, passphrase, max_iteration_count, threads)
+        return _import_keyDER(der, passphrase, max_iteration_count, threads, max_memory)
 
     if extern_key.startswith(b"ssh-rsa "):
         # This is probably an OpenSSH key
@@ -947,7 +956,7 @@ def import_key(
 
     if len(extern_key) > 0 and extern_key[0] == 0x30:
         # This is probably a DER encoded key
-        return _import_keyDER(extern_key, passphrase, max_iteration_count, threads)
+        return _import_keyDER(extern_key, passphrase, max_iteration_count, threads, max_memory)
 
     raise ValueError("RSA key format is not supported")
 

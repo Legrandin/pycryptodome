@@ -9,7 +9,15 @@ from __future__ import annotations
 
 from typing import Callable, Optional, Union
 
-from Crypto.IO._PBES import PBES1, PBES2, PbesError, PbesIterationCountError, ProtParams
+from Crypto.IO._PBES import (
+    PBES1,
+    PBES2,
+    PbesError,
+    PbesIterationCountError,
+    PbesLimitError,
+    PbesMemoryError,
+    ProtParams,
+)
 from Crypto.Util._bytes import tobytes
 from Crypto.Util._threads import threads_param
 from Crypto.Util.asn1 import (
@@ -20,10 +28,12 @@ from Crypto.Util.asn1 import (
     DerSequence,
 )
 
-__all__ = ["wrap", "unwrap", "PbesIterationCountError"]
+__all__ = ["wrap", "unwrap", "PbesLimitError", "PbesIterationCountError", "PbesMemoryError"]
 
 
-def _check_kdf_params(max_iteration_count: Optional[int] = None, threads: int = 1) -> None:
+def _check_kdf_params(
+    max_iteration_count: Optional[int] = None, threads: int = 1, max_memory: Optional[int] = None
+) -> None:
     """Check the parameters that control the key derivation in :func:`wrap`
     and :func:`unwrap`.
 
@@ -31,11 +41,12 @@ def _check_kdf_params(max_iteration_count: Optional[int] = None, threads: int = 
     so that an invalid value is reported even if the key is not encrypted.
     """
 
-    if max_iteration_count is not None:
-        if not isinstance(max_iteration_count, int) or isinstance(max_iteration_count, bool):
-            raise TypeError("'max_iteration_count' must be an integer or None")
-        if max_iteration_count < 0:
-            raise ValueError("'max_iteration_count' must be a non-negative integer")
+    for name, value in (("max_iteration_count", max_iteration_count), ("max_memory", max_memory)):
+        if value is not None:
+            if not isinstance(value, int) or isinstance(value, bool):
+                raise TypeError("'%s' must be an integer or None" % name)
+            if value < 0:
+                raise ValueError("'%s' must be a non-negative integer" % name)
     threads_param(threads)
 
 
@@ -136,6 +147,7 @@ def unwrap(
     max_iteration_count: Optional[int] = None,
     *,
     threads: int = 1,
+    max_memory: Optional[int] = None,
 ) -> tuple[str, bytes, Optional[bytes]]:
     """Unwrap a private key from a PKCS#8 blob (clear or encrypted).
 
@@ -161,6 +173,12 @@ def unwrap(
         Only a blob protected with scrypt and a parallelization parameter
         larger than 1 can use them.
         See :func:`Crypto.Protocol.KDF.scrypt`.
+      max_memory (integer):
+        The maximum memory (in bytes) that the key derivation can use,
+        all threads included (fewer threads are used if needed).
+        Only scrypt uses a significant amount: 128 · *N* · *r* bytes for each thread.
+        The default value is None (enforcing the default limit of 256 MiB).
+        Set it to ``0`` to disable the check.
 
     Return:
       A tuple containing
@@ -173,9 +191,11 @@ def unwrap(
       ValueError : if decoding fails
       PbesIterationCountError : (a ``ValueError``) if the iteration count
         is above :data:`max_iteration_count`
+      PbesMemoryError : (a ``ValueError``) if the key derivation needs
+        more memory than :data:`max_memory`
     """
 
-    _check_kdf_params(max_iteration_count, threads)
+    _check_kdf_params(max_iteration_count, threads, max_memory)
 
     if passphrase is not None:
         passphrase = tobytes(passphrase)
@@ -186,7 +206,7 @@ def unwrap(
                 p8_private_key, passphrase, max_iteration_count=max_iteration_count
             )
             found = True
-        except PbesIterationCountError:
+        except PbesLimitError:
             # The key is well-formed, and this is the only reason to reject it
             raise
         except PbesError as e:
@@ -197,10 +217,14 @@ def unwrap(
         if not found:
             try:
                 p8_private_key = PBES2.decrypt(
-                    p8_private_key, passphrase, max_iteration_count=max_iteration_count, threads=threads
+                    p8_private_key,
+                    passphrase,
+                    max_iteration_count=max_iteration_count,
+                    threads=threads,
+                    max_memory=max_memory,
                 )
                 found = True
-            except PbesIterationCountError:
+            except PbesLimitError:
                 raise
             except PbesError as e:
                 error_str += ",PBES2[%s]" % str(e)

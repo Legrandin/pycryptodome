@@ -159,8 +159,11 @@ New features
   and 1,500,000 with SHA-3. It was 50,000,000 iterations for all of them.
 * For scrypt, ``max_iteration_count`` now limits *N·r·p/8* (that is, *N* for the
   usual *r=8* and *p=1*), and not only *N*: before, a key with a large *r* or *p*
-  could require any amount of time and memory. By default, the limit is 2\ :sup:`25`,
-  with at most 1 GiB of memory.
+  could require any amount of time and memory. By default, the limit is 2\ :sup:`25`.
+* New parameter ``max_memory`` for ``Crypto.IO.PKCS8.unwrap()`` and for ``import_key()``
+  of RSA, DSA and ECC keys: the maximum memory for the key derivation of an encrypted
+  PKCS#8 key (scrypt), all threads included. The default is 256 MiB.
+  Above it, ``Crypto.IO.PKCS8.PbesMemoryError`` is raised.
 
 3.24.0 (4 October 2026)
 ++++++++++++++++++++++++++

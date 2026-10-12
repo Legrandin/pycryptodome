@@ -570,10 +570,10 @@ def _import_x509_cert(encoded, passphrase, params):
     return _import_subjectPublicKeyInfo(sp_info, None, params)
 
 
-def _import_pkcs8(encoded, passphrase, params, max_iteration_count=None, threads=1):
+def _import_pkcs8(encoded, passphrase, params, max_iteration_count=None, threads=1, max_memory=None):
     if params:
         raise ValueError("PKCS#8 already includes parameters")
-    k = PKCS8.unwrap(encoded, passphrase, max_iteration_count, threads=threads)
+    k = PKCS8.unwrap(encoded, passphrase, max_iteration_count, threads=threads, max_memory=max_memory)
     if k[0] != oid:
         raise ValueError("No PKCS#8 encoded DSA key")
     x = DerInteger().decode(k[1]).value
@@ -582,7 +582,7 @@ def _import_pkcs8(encoded, passphrase, params, max_iteration_count=None, threads
     return construct(tup)
 
 
-def _import_key_der(key_data, passphrase, params, max_iteration_count=None, threads=1):
+def _import_key_der(key_data, passphrase, params, max_iteration_count=None, threads=1, max_memory=None):
     """Import a DSA key (public or private half), encoded in DER form."""
 
     decodings = (_import_openssl_private, _import_subjectPublicKeyInfo, _import_x509_cert)
@@ -594,8 +594,8 @@ def _import_key_der(key_data, passphrase, params, max_iteration_count=None, thre
             pass
 
     try:
-        return _import_pkcs8(key_data, passphrase, params, max_iteration_count, threads)
-    except PKCS8.PbesIterationCountError:
+        return _import_pkcs8(key_data, passphrase, params, max_iteration_count, threads, max_memory)
+    except PKCS8.PbesLimitError:
         raise
     except ValueError:
         pass
@@ -609,6 +609,7 @@ def import_key(
     *,
     max_iteration_count: Optional[int] = None,
     threads: int = 1,
+    max_memory: Optional[int] = None,
 ) -> DsaKey:
     """Import a DSA key.
 
@@ -653,6 +654,14 @@ def import_key(
         Only a `PKCS#8`_ key protected with scrypt and a parallelization
         parameter larger than 1 can use them.
 
+      max_memory (integer):
+        The maximum memory (in bytes) that the key derivation of a `PKCS#8`_
+        encrypted key can use, all threads included (fewer threads are used
+        if needed). Only scrypt uses a significant amount:
+        128 · *N* · *r* bytes for each thread.
+        The default value is None (enforcing the default limit of 256 MiB).
+        Set it to ``0`` to disable the check.
+
     Returns:
       :class:`DsaKey` : a DSA key object
 
@@ -666,7 +675,7 @@ def import_key(
     .. _PKCS#8: http://www.ietf.org/rfc/rfc5208.txt
     """
 
-    PKCS8._check_kdf_params(max_iteration_count, threads)
+    PKCS8._check_kdf_params(max_iteration_count, threads, max_memory)
     extern_key = tobytes(extern_key)
     if passphrase is not None:
         passphrase = tobytes(passphrase)
@@ -676,7 +685,7 @@ def import_key(
         (der, _marker, enc_flag) = PEM.decode(extern_key.decode("latin-1"), passphrase)
         if enc_flag:
             passphrase = None
-        return _import_key_der(der, passphrase, None, max_iteration_count, threads)
+        return _import_key_der(der, passphrase, None, max_iteration_count, threads, max_memory)
 
     if extern_key.startswith(b"ssh-dss "):
         # This is probably a public OpenSSH key
@@ -692,7 +701,7 @@ def import_key(
 
     if len(extern_key) > 0 and extern_key[0] == 0x30:
         # This is probably a DER encoded key
-        return _import_key_der(extern_key, passphrase, None, max_iteration_count, threads)
+        return _import_key_der(extern_key, passphrase, None, max_iteration_count, threads, max_memory)
 
     raise ValueError("DSA key format is not supported")
 

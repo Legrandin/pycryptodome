@@ -925,10 +925,12 @@ def _import_rfc5915_der(
     return construct(curve=curve_name, d=d, point_x=point_x, point_y=point_y)
 
 
-def _import_pkcs8(encoded, passphrase, max_iteration_count=None, threads=1):
+def _import_pkcs8(encoded, passphrase, max_iteration_count=None, threads=1, max_memory=None):
     from Crypto.IO import PKCS8
 
-    algo_oid, private_key, params = PKCS8.unwrap(encoded, passphrase, max_iteration_count, threads=threads)
+    algo_oid, private_key, params = PKCS8.unwrap(
+        encoded, passphrase, max_iteration_count, threads=threads, max_memory=max_memory
+    )
 
     nist_p_oids = (
         "1.2.840.10045.2.1",  # id-ecPublicKey (unrestricted)
@@ -969,7 +971,7 @@ def _import_x509_cert(encoded, *kwargs):
     return _import_subjectPublicKeyInfo(sp_info)
 
 
-def _import_der(encoded, passphrase, max_iteration_count=None, threads=1):
+def _import_der(encoded, passphrase, max_iteration_count=None, threads=1, max_memory=None):
     try:
         return _import_subjectPublicKeyInfo(encoded, passphrase)
     except UnsupportedEccFeature as err:
@@ -994,8 +996,8 @@ def _import_der(encoded, passphrase, max_iteration_count=None, threads=1):
     from Crypto.IO import PKCS8
 
     try:
-        return _import_pkcs8(encoded, passphrase, max_iteration_count, threads)
-    except (UnsupportedEccFeature, PKCS8.PbesIterationCountError) as err:
+        return _import_pkcs8(encoded, passphrase, max_iteration_count, threads, max_memory)
+    except (UnsupportedEccFeature, PKCS8.PbesLimitError) as err:
         raise err
     except (ValueError, TypeError, IndexError):
         pass
@@ -1248,6 +1250,7 @@ def import_key(
     *,
     max_iteration_count: Optional[int] = None,
     threads: int = 1,
+    max_memory: Optional[int] = None,
 ) -> EccKey:
     """Import an ECC key (public or private).
 
@@ -1304,6 +1307,14 @@ def import_key(
         Only a `PKCS#8`_ key protected with scrypt and a parallelization
         parameter larger than 1 can use them.
 
+      max_memory (integer):
+        The maximum memory (in bytes) that the key derivation of a `PKCS#8`_
+        encrypted key can use, all threads included (fewer threads are used
+        if needed). Only scrypt uses a significant amount:
+        128 · *N* · *r* bytes for each thread.
+        The default value is None (enforcing the default limit of 256 MiB).
+        Set it to ``0`` to disable the check.
+
     .. note::
 
         To import EdDSA private and public keys, when encoded as raw ``bytes``, use:
@@ -1340,7 +1351,7 @@ def import_key(
 
     from Crypto.IO import PEM, PKCS8
 
-    PKCS8._check_kdf_params(max_iteration_count, threads)
+    PKCS8._check_kdf_params(max_iteration_count, threads, max_memory)
     encoded = tobytes(encoded)
     if passphrase is not None:
         passphrase = tobytes(passphrase)
@@ -1365,8 +1376,8 @@ def import_key(
         if enc_flag:
             passphrase = None
         try:
-            result = _import_der(der_encoded, passphrase, max_iteration_count, threads)
-        except (UnsupportedEccFeature, PKCS8.PbesIterationCountError) as uef:
+            result = _import_der(der_encoded, passphrase, max_iteration_count, threads, max_memory)
+        except (UnsupportedEccFeature, PKCS8.PbesLimitError) as uef:
             raise uef
         except ValueError:
             raise ValueError("Invalid DER encoding inside the PEM file")
@@ -1378,7 +1389,7 @@ def import_key(
 
     # DER
     if len(encoded) > 0 and encoded[0] == 0x30:
-        return _import_der(encoded, passphrase, max_iteration_count, threads)
+        return _import_der(encoded, passphrase, max_iteration_count, threads, max_memory)
 
     # SEC1
     if len(encoded) > 0 and encoded[0] in (0x02, 0x03, 0x04):

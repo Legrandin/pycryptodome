@@ -12,6 +12,7 @@ import pytest
 
 from Crypto.IO import _PBES, PKCS8
 from Crypto.Protocol.KDF import scrypt
+from Crypto.Util._cpu_features import available_cores
 from Crypto.Util.asn1 import DerNull, DerObject
 
 oid_key = "1.2.840.113549.1.1.1"
@@ -474,7 +475,9 @@ class TestPKCS8Threads:
         for threads in (0, 1, 2, 4, 8):
             res = PKCS8.unwrap(wrapped, b"TestTest", threads=threads)
             assert res[:2] == (oid_key, self.clear_key)
-        assert scrypt_threads == [1, 0, 1, 2, 4, 8]
+        # When decrypting, scrypt gets the threads it actually uses:
+        # all the cores for 0, and at most p (4)
+        assert scrypt_threads == [1, min(available_cores(), 4), 1, 2, 4, 4]
 
     def test_pbkdf2_ignores_threads(self, scrypt_threads):
         wrapped = self._wrap(4, protection="PBKDF2WithHMAC-SHA256AndAES128-CBC")
@@ -542,7 +545,38 @@ class TestKeyKdfParams:
         del scrypt_threads[:]
         for threads in (0, 1, 3):
             assert module.import_key(encrypted, "pw", threads=threads) == key
-        assert scrypt_threads == [0, 1, 3]
+        assert scrypt_threads == [min(available_cores(), 3), 1, 3]
+
+    # Each scrypt thread needs 128 * N * r bytes
+    memory = 128 * 1024 * 1
+
+    @pytest.mark.parametrize("name", ["RSA", "DSA", "ECC"])
+    @pytest.mark.parametrize("fmt", ["DER", "PEM"])
+    def test_max_memory(self, keys, name, fmt, scrypt_threads):
+        module, key = keys[name]
+        encrypted = self._export(name, key, fmt, 1)
+        del scrypt_threads[:]
+        # Fewer threads (2 instead of 3), so that the memory is within the limit
+        for limit in (2 * self.memory, 3 * self.memory - 1):
+            assert module.import_key(encrypted, "pw", threads=3, max_memory=limit) == key
+        assert module.import_key(encrypted, "pw", threads=3, max_memory=0) == key
+        assert scrypt_threads == [2, 2, 3]
+        # Not even one thread fits: the specific error is not hidden
+        expected = _PBES._MEMORY_ERROR.format(memory=self.memory, limit=self.memory - 1)
+        with pytest.raises(PKCS8.PbesMemoryError) as ctx:
+            module.import_key(encrypted, "pw", max_memory=self.memory - 1)
+        assert str(ctx.value) == expected
+        assert isinstance(ctx.value, PKCS8.PbesLimitError)
+
+    @pytest.mark.parametrize("name", ["RSA", "DSA", "ECC"])
+    def test_max_memory_negative(self, keys, name):
+        module, key = keys[name]
+        clear = key.export_key(format="DER")
+        for limit, exc in ((1.5, TypeError), ("10", TypeError), (True, TypeError), (-1, ValueError)):
+            with pytest.raises(exc):
+                module.import_key(clear, max_memory=limit)
+            with pytest.raises(exc):
+                PKCS8.unwrap(clear, None, max_memory=limit)
 
     @pytest.mark.parametrize("name", ["RSA", "ECC"])
     @pytest.mark.parametrize("fmt", ["DER", "PEM"])

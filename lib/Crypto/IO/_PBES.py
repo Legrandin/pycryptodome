@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, Callable, Optional, TypedDict
 from Crypto import Hash, Random
 from Crypto.Cipher import AES
 from Crypto.Protocol.KDF import PBKDF1, PBKDF2, scrypt
+from Crypto.Util._threads import threads_param
 from Crypto.Util.asn1 import (
     DerInteger,
     DerObjectId,
@@ -78,17 +79,27 @@ _DEFAULT_MAX_PBKDF2 = {
 #: Maximum scrypt cost N*r*p/8 (that is, N for r=8 and p=1)
 _DEFAULT_MAX_SCRYPT_COST = 2**25
 
-#: Maximum memory of each scrypt flow (128*N*r bytes): 1 GiB
-_DEFAULT_MAX_SCRYPT_MEMORY = 2**30
+#: Maximum memory for the key derivation (when max_memory is None): 256 MiB.
+#: Only scrypt needs a significant amount (128*N*r bytes for each thread).
+_DEFAULT_MAX_MEMORY = 256 * 2**20
 
 
 class PbesError(ValueError):
     pass
 
 
-class PbesIterationCountError(PbesError):
+class PbesLimitError(PbesError):
+    """The key derivation of the encrypted data is above a limit,
+    set to protect against malicious data."""
+
+
+class PbesIterationCountError(PbesLimitError):
     """The iteration count (or the scrypt cost) of the KDF is
     above the limit set with ``max_iteration_count``."""
+
+
+class PbesMemoryError(PbesLimitError):
+    """The KDF needs more memory than the limit set with ``max_memory``."""
 
 
 #: Message of :class:`PbesIterationCountError`
@@ -105,12 +116,11 @@ _PBKDF1_COUNT = "PBKDF1 iteration count"
 _PBKDF2_COUNT = "PBKDF2 iteration count"
 _SCRYPT_COST = "scrypt cost N*r*p/8"
 
-#: Message of :class:`PbesIterationCountError`, when scrypt needs too much
-#: memory (only checked when ``max_iteration_count`` is None)
-_SCRYPT_MEMORY_ERROR = (
-    "The encrypted key needs {memory} MiB of memory for scrypt, above the default "
-    "maximum of {limit} MiB. If you trust the key, set max_iteration_count to its "
-    "scrypt cost N*r*p/8 ({cost}) or more (or to 0 to disable the checks)."
+#: Message of :class:`PbesMemoryError`
+_MEMORY_ERROR = (
+    "The encrypted key needs {memory} bytes of memory for scrypt, above the maximum "
+    "allowed by max_memory: {limit}. If you trust the key, increase max_memory "
+    "(or set it to 0 to disable the check)."
 )
 
 
@@ -130,20 +140,34 @@ def _check_iteration_count(what: str, count: int, max_iteration_count: Optional[
 
 
 def _check_scrypt_cost(N: int, r: int, p: int, max_iteration_count: Optional[int]) -> None:
-    """Raise :class:`PbesIterationCountError` if scrypt with these parameters
-    is above the limits: its cost N*r*p/8 against ``max_iteration_count``
-    (or the default), and, with the default, also its memory."""
+    """Raise :class:`PbesIterationCountError` if the cost N*r*p/8 of scrypt
+    is above ``max_iteration_count`` (``None`` for the default limit)."""
 
     cost = (N * r * p + 7) // 8
     _check_iteration_count(_SCRYPT_COST, cost, max_iteration_count, _DEFAULT_MAX_SCRYPT_COST)
 
-    memory = 128 * N * r
-    if max_iteration_count is None and memory > _DEFAULT_MAX_SCRYPT_MEMORY:
-        raise PbesIterationCountError(
-            _SCRYPT_MEMORY_ERROR.format(
-                memory=memory >> 20, limit=_DEFAULT_MAX_SCRYPT_MEMORY >> 20, cost=cost
-            )
-        )
+
+def _scrypt_threads(N: int, r: int, p: int, threads: int, max_memory: Optional[int]) -> int:
+    """Return how many threads scrypt can use (at most ``threads``, with 0 for
+    all CPU cores, and at most ``p``), so that its memory stays within
+    ``max_memory`` (``None`` for the default limit, ``0`` for no limit).
+
+    Raise :class:`PbesMemoryError` if even one thread needs too much memory.
+    """
+
+    if max_memory is None:
+        max_memory = _DEFAULT_MAX_MEMORY
+        limit = _DEFAULT_LIMIT.format(max_memory)
+    else:
+        limit = str(max_memory)
+
+    threads = min(threads_param(threads), p)
+    memory = 128 * N * r  # For each thread
+    if max_memory:
+        if memory > max_memory:
+            raise PbesMemoryError(_MEMORY_ERROR.format(memory=memory, limit=limit))
+        threads = min(threads, max_memory // memory)
+    return max(threads, 1)
 
 
 # These are the ASN.1 definitions used by the PBES1/2 logic:
@@ -488,7 +512,11 @@ class PBES2:
 
     @staticmethod
     def decrypt(
-        data: bytes, passphrase: bytes, max_iteration_count: Optional[int] = None, threads: int = 1
+        data: bytes,
+        passphrase: bytes,
+        max_iteration_count: Optional[int] = None,
+        threads: int = 1,
+        max_memory: Optional[int] = None,
     ) -> bytes:
         """Decrypt a piece of data using a passphrase and *PBES2*.
 
@@ -506,11 +534,16 @@ class PBES2:
             extremely high number of iterations, tying up the CPU for hours.
             The default value is None (enforcing the limits
             :data:`_DEFAULT_MAX_PBKDF2` for each hash, or
-            :data:`_DEFAULT_MAX_SCRYPT_COST` and :data:`_DEFAULT_MAX_SCRYPT_MEMORY`).
+            :data:`_DEFAULT_MAX_SCRYPT_COST`).
             Set it to ``0`` to disable the check.
           threads : integer
             The maximum number of threads used by scrypt
             (see :func:`Crypto.Protocol.KDF.scrypt`).
+          max_memory : integer
+            The maximum memory (in bytes) for the key derivation, all threads included.
+            Fewer threads are used if needed.
+            The default value is None (enforcing the limit :data:`_DEFAULT_MAX_MEMORY`).
+            Set it to ``0`` to disable the check.
         :Returns:
           The decrypted data, as a binary string.
         """
@@ -572,6 +605,7 @@ class PBES2:
             iteration_count, scrypt_r, scrypt_p = (scrypt_params[x] for x in (1, 2, 3))
 
             _check_scrypt_cost(iteration_count, scrypt_r, scrypt_p, max_iteration_count)
+            threads = _scrypt_threads(iteration_count, scrypt_r, scrypt_p, threads, max_memory)
 
             if len(scrypt_params) > 4:
                 kdf_key_length = scrypt_params[4]
