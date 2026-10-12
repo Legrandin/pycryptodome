@@ -748,15 +748,6 @@ cleanup:
 /* Modular operations                                               */
 /* ---------------------------------------------------------------- */
 
-/** Copy nw words of x into out (out->nw words), with zero extension **/
-STATIC void words_to_nat(Nat *out, const uint64_t *x, size_t nw)
-{
-    size_t i;
-
-    for (i=0; i<out->nw; i++)
-        out->w[i] = i < nw ? x[i] : 0;
-}
-
 /** out = (x * y) mod m, for x and y with m->nw words; prod has 2*m->nw words **/
 STATIC int mulmod_words(uint64_t *out, const uint64_t *x, const uint64_t *y, const Nat *m, Nat *prod)
 {
@@ -793,7 +784,7 @@ EXPORT_SYM int nat_mulmod(Nat *out, const Nat *a, const Nat *b, const Nat *m)
 EXPORT_SYM int nat_submod(Nat *out, const Nat *a, const Nat *b, const Nat *m)
 {
     uint64_t *x, *y, *d;
-    size_t nw, i;
+    size_t nw;
     int res = ERR_MEMORY;
 
     if (NULL == out || NULL == a || NULL == b || NULL == m)
@@ -806,12 +797,10 @@ EXPORT_SYM int nat_submod(Nat *out, const Nat *a, const Nat *b, const Nat *m)
     if (NULL == x || NULL == y || NULL == d)
         goto cleanup;
 
-    for (i=0; i<nw; i++) {
-        x[i] = nat_word(a, i);
-        y[i] = nat_word(b, i);
-    }
+    words_copy_resized(x, nw, a->w, a->nw);
+    words_copy_resized(y, nw, b->w, b->nw);
     mod_sub(d, x, y, m->w, nw);
-    words_to_nat(out, d, nw);
+    words_copy_resized(out->w, out->nw, d, nw);
     res = 0;
 
 cleanup:
@@ -884,7 +873,7 @@ EXPORT_SYM int nat_powmod(Nat *out, const Nat *a, const Nat *e, size_t e_bits, c
         }
     }
 
-    words_to_nat(out, acc, nw);
+    words_copy_resized(out->w, out->nw, acc, nw);
     res = 0;
 
 cleanup:
@@ -1368,7 +1357,7 @@ EXPORT_SYM int nat_invmod(Nat *out, const Nat *a, const Nat *m)
             goto cleanup;
     }
 
-    words_to_nat(out, x, nw);
+    words_copy_resized(out->w, out->nw, x, nw);
     res = 0;
 
 cleanup:

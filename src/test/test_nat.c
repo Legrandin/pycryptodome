@@ -8,8 +8,6 @@
 void wipe(void *p, size_t len);
 void words_shr_public(uint64_t *out, const uint64_t *x, size_t s, size_t nw);
 void words_shl_public(uint64_t *out, const uint64_t *x, size_t s, size_t nw);
-void nat_to_words(uint64_t *out, const Nat *a, size_t nw);
-void words_to_nat(Nat *out, const uint64_t *x, size_t nw);
 int mulmod_words(uint64_t *out, const uint64_t *x, const uint64_t *y, const Nat *m, Nat *prod);
 uint64_t div128_ct(uint64_t hi, uint64_t lo, uint64_t d);
 uint64_t reciprocal_ct(uint64_t d);
@@ -470,14 +468,18 @@ void test_copy_and_conversions(void)
     assert(out[0] == 3 && out[16] == 1);
     assert(nat_to_bytes(out, 16, a, 0) == ERR_VALUE);
 
-    nat_to_words(words, a, 4);
+    /* Longer (zero extension), shorter (truncation), same size and in place */
+    words[3] = 9;
+    words_copy_resized(words, 4, a->w, a->nw);
     assert(words[0] == 1 && words[1] == 2 && words[2] == 3 && words[3] == 0);
-    nat_to_words(words, a, 2);
-    assert(words[0] == 1 && words[1] == 2);
+    words_copy_resized(words, 2, a->w, a->nw);
+    assert(words[0] == 1 && words[1] == 2 && words[2] == 3);
 
     words[0] = 5; words[1] = 6;
-    words_to_nat(b, words, 2);
+    words_copy_resized(b->w, b->nw, words, 2);
     assert(b->w[0] == 5 && b->w[1] == 6 && b->w[2] == 0 && b->w[3] == 0);
+    words_copy_resized(b->w, 2, b->w, 2);
+    assert(b->w[0] == 5 && b->w[1] == 6);
 
     nat_free(a);
     nat_free(b);

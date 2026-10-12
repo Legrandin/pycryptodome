@@ -87,18 +87,23 @@ EXPORT_SYM void nat_free(Nat *x)
 
 EXPORT_SYM int nat_copy(Nat *out, const Nat *a)
 {
-    size_t i;
-
     if (NULL == out || NULL == a)
         return ERR_NULL;
-    for (i=0; i<out->nw; i++)
-        out->w[i] = nat_word(a, i);
+    words_copy_resized(out->w, out->nw, a->w, a->nw);
     return 0;
 }
 
 /* ---------------------------------------------------------------- */
 /* Word arrays                                                      */
 /* ---------------------------------------------------------------- */
+
+void words_copy_resized(uint64_t *out, size_t out_nw, const uint64_t *in, size_t in_nw)
+{
+    size_t i;
+
+    for (i=0; i<out_nw; i++)
+        out[i] = i < in_nw ? in[i] : 0;
+}
 
 uint64_t words_is_zero(const uint64_t *x, size_t nw)
 {

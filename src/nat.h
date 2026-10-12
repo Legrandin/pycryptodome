@@ -101,6 +101,11 @@ static inline uint64_t nat_word(const Nat *a, size_t i)
     return i < a->nw ? a->w[i] : 0;
 }
 
+/**
+ * out (out_nw words) = in (in_nw words), zero-extended if out is longer,
+ * truncated if it is shorter. out may be in.
+ */
+void words_copy_resized(uint64_t *out, size_t out_nw, const uint64_t *in, size_t in_nw);
 /** 1 if the nw words of x are all zero **/
 uint64_t words_is_zero(const uint64_t *x, size_t nw);
 /** 1 if x == y (nw words each) **/
