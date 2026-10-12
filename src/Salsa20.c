@@ -92,8 +92,9 @@ typedef struct  {
  * Like store_4x4(), for 8 blocks: the low 128-bit lane of each register
  * holds blocks 0..3, the high lane blocks 4..7.
  */
-static inline void store_4x8(__m256i a, __m256i b, __m256i c, __m256i d, uint8_t *out)
+static inline void store_4x8(const __m256i v[4], uint8_t *out)
 {
+    __m256i a = v[0], b = v[1], c = v[2], d = v[3];
     __m256i t0, t1, t2, t3, r0, r1, r2, r3;
 
     t0 = _mm256_unpacklo_epi32(a, b);
@@ -146,18 +147,22 @@ static void salsa20_keystream(const uint32_t input[16], uint8_t out[KS_SIZE])
     }
     UNROLL(16)
     for (i=0; i<16; i+=4) {
-        store_4x8(x[i], x[i+1], x[i+2], x[i+3], out + 4*i);
+        store_4x8(&x[i], out + 4*i);
     }
 }
 
 #elif defined(USE_SSE2)
 
 /**
- * Transpose 4 registers, each with word w (a), w+1 (b), w+2 (c) and w+3 (d)
+ * Transpose 4 registers, each with word w (v[0]), w+1 (v[1]), w+2 (v[2]) and w+3 (v[3])
  * of 4 consecutive blocks, and store words w..w+3 of each block.
+ *
+ * The registers come through a pointer, not by value: on 32-bit x86, MSVC cannot
+ * pass more than three vectors by value (error C2719).
  */
-static inline void store_4x4(__m128i a, __m128i b, __m128i c, __m128i d, uint8_t *out)
+static inline void store_4x4(const __m128i v[4], uint8_t *out)
 {
+    __m128i a = v[0], b = v[1], c = v[2], d = v[3];
     __m128i t0, t1, t2, t3;
 
     t0 = _mm_unpacklo_epi32(a, b);
@@ -204,7 +209,7 @@ static void salsa20_keystream(const uint32_t input[16], uint8_t out[KS_SIZE])
     }
     UNROLL(16)
     for (i=0; i<16; i+=4) {
-        store_4x4(x[i], x[i+1], x[i+2], x[i+3], out + 4*i);
+        store_4x4(&x[i], out + 4*i);
     }
 }
 
