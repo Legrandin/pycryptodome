@@ -7,16 +7,12 @@ Changelog
 Breaking changes
 ----------------
 * Remove support for Python 2.7 and 3.8. The minimum supported version is now Python 3.9.
-* ``Crypto.Protocol.KDF.bcrypt_check()`` rejects (with ``ValueError``) a bcrypt hash whose cost
-  is above 20, which takes about one minute: use the new parameter ``max_cost``
-  to accept costs up to 31, as before.
 * The ``pycryptodomex`` package (``Cryptodome`` namespace) is no longer released
   (except for important security patches, but still on the 3.x branch).
   The library is only available as ``pycryptodome``, under the ``Crypto`` namespace.
 * The self-tests are now run by ``pytest``, which must be installed for
-  ``python -m Crypto.SelfTest`` to work.
-* Remove the ``test`` command of ``setup.py``. Install the package
-  (e.g. with ``pip install -e .``) and run ``python -m Crypto.SelfTest`` instead.
+  ``python -m Crypto.SelfTest`` to work. The ``test`` command of ``setup.py`` is removed:
+  install the package (e.g. with ``pip install -e .``) and run ``python -m Crypto.SelfTest`` instead.
 * In ``Crypto.Protocol.KDF.SP800_108_Counter()``, the ``label`` can no longer
   contain zero bytes, while the ``context`` now can (for instance, a binary nonce).
   The zero byte between them still separates the two unambiguously,
@@ -27,32 +23,41 @@ Breaking changes
   The ElGamal components can no longer be assigned.
 * The GMP library is no longer used, and the environment variable
   ``PYCRYPTODOME_DISABLE_GMP`` has no effect. Big integers are handled by the
-  new constant-time code (see below).
-* ``Crypto.Math.Numbers.Integer`` (an internal class) no longer supports
-  negative values.
-* Importing a NIST curve public key (SEC1, DER, PEM or OpenSSH) fails if a
-  coordinate of the point is equal to or larger than the modulus ``p``,
-  as required by SEC1. Such coordinates were reduced modulo ``p`` before.
-  ``EccPoint`` and ``ECC.construct()`` still reduce them.
-* Ed25519 and Ed448 points (public keys, and ``R`` in signatures) are decoded
-  strictly as in RFC 8032: an encoding with x = 0 and the sign bit of x set,
+  new constant-time code (see below). ``Crypto.Math.Numbers.Integer``
+  (an internal class) no longer supports negative values.
+* Elliptic curve points are decoded more strictly. Importing a NIST curve public key
+  (SEC1, DER, PEM or OpenSSH) fails if a coordinate of the point is equal to or
+  larger than the modulus ``p``, as required by SEC1 (such coordinates were reduced
+  modulo ``p`` before; ``EccPoint`` and ``ECC.construct()`` still reduce them).
+  Ed25519 and Ed448 points (public keys, and ``R`` in signatures) are decoded
+  as in RFC 8032: an encoding with x = 0 and the sign bit of x set,
   or (for Ed448) with any of the 7 low bits of the last byte set, is now rejected.
 * RSA keys are limited to a modulus of 16384 bits: ``RSA.generate()``,
   ``RSA.construct()`` and ``RSA.import_key()`` raise ``ValueError`` for
   larger ones. The constant-time arithmetic is slower than GMP, and a large
   public key from an untrusted source could take minutes to import or use.
+* ``Crypto.Protocol.KDF.bcrypt_check()`` rejects (with ``ValueError``) a bcrypt hash whose cost
+  is above 20, which takes about one minute: a hash from an untrusted source, which states
+  its own cost, could otherwise tie up the CPU for a day. Use the new parameter ``max_cost``
+  to accept costs up to 31, as before (0 for no limit).
 
 Resolved issues
 ---------------
-* The trial division by small primes in ``Crypto.Math.Primality.test_probable_prime()``
+* ``Crypto.Math.Primality``: the trial division by small primes in ``test_probable_prime()``
   never ran (only the Miller-Rabin and Lucas tests did), which made the generation
-  of RSA, DSA and ElGamal keys slower.
-* ElGamal key objects could not be compared for equality.
-* Two DSA keys always compared as equal, if both were public or both private.
+  of RSA, DSA and ElGamal keys slower; and the primality tests reported 1 as a probable prime.
+* Key comparison: ElGamal key objects could not be compared for equality, two DSA keys
+  always compared as equal if both were public or both private, and comparing an RSA,
+  DSA or ElGamal key with an object of a different type raised ``AttributeError``
+  instead of returning ``False``.
 * EdDSA signatures with ``S`` equal to the order of the curve are now rejected, as required by RFC 8032.
-* The primality tests in ``Crypto.Math.Primality`` reported 1 as a probable prime.
-* Comparing an RSA, DSA or ElGamal key with an object of a different type now
-  returns ``False`` instead of raising ``AttributeError``.
+* A few valid Ed25519 points (those where one side of the curve equation is very small,
+  for instance with y = 3) were rejected as not on the curve.
+* Ed25519 and X25519: the final reduction modulo the prime (when
+  converting a point to bytes, including the X25519 shared secret) could
+  branch on secret data, depending on the compiler and the target
+  (for instance, gcc -O3 on 32-bit x86, and the code without SSE2 built with clang).
+  It is now constant time, checked with Valgrind like the rest of the elliptic curves.
 * The legacy ``can_decrypt()`` method of PKCS#1 ciphers raised ``AttributeError``
   and not a boolean.
 * The ``update()`` method for SIV encryption objects now returns the cipher object,
@@ -66,31 +71,23 @@ Resolved issues
   (``BSD-2-Clause AND Unlicense``, PEP 639), which tools can process.
   The SipHash code, which was under the CC0 license, is gone, together with
   the old big integer code that used it.
-* GH#937: Importing a malformed PEM key could take quadratic time. Thanks to Brian Willows.
 * ``Crypto.Protocol.HPKE.new()`` raised ``TypeError`` with Python 3.9 to 3.11
   when ``aead_id`` was a plain integer, and not an ``HPKE.AEAD`` member.
+* GH#937: Importing a malformed PEM key could take quadratic time. Thanks to Brian Willows.
 * Importing an encrypted OpenSSH private key (with ``RSA.import_key()`` or
   ``ECC.import_key()``) had no limit on the number of rounds of bcrypt_pbkdf,
   which the key states: a malicious key could tie up the CPU for months.
   Now ``max_iteration_count`` limits it (by default, 16,384 rounds, about one minute),
   and a key with less than one round is rejected.
-* ``Crypto.PublicKey.RSA.import_key()`` accepted a PKCS#8 key whose private key was
-  not an ``RSAPrivateKey`` (PKCS#1), including another, possibly encrypted, PKCS#8 key:
-  now such a key is rejected.
-* An encrypted PKCS#8 key with an iteration count lower than 1, or with invalid scrypt
-  parameters (*N* not a power of 2 larger than 1, *r* or *p* not positive), raised
-  other exceptions than ``ValueError`` (like ``ZeroDivisionError``): now it is rejected
-  with ``ValueError``, before any key derivation.
+* PKCS#8 keys: ``Crypto.PublicKey.RSA.import_key()`` accepted a PKCS#8 key whose private key
+  was not an ``RSAPrivateKey`` (PKCS#1), including another, possibly encrypted, PKCS#8 key:
+  now such a key is rejected. An encrypted PKCS#8 key with an iteration count lower than 1,
+  or with invalid scrypt parameters (*N* not a power of 2 larger than 1, *r* or *p* not
+  positive), raised other exceptions than ``ValueError`` (like ``ZeroDivisionError``):
+  now it is rejected with ``ValueError``, before any key derivation.
 * Encrypted PKCS#8 keys protected with PBKDF2 (PBES2) were exported and imported
   with the slow Python implementation of PBKDF2-HMAC, and not with the C one:
   now they are about 50x-150x faster (SHA-1 and SHA-2).
-* Ed25519 and X25519: the final reduction modulo the prime (when
-  converting a point to bytes, including the X25519 shared secret) could
-  branch on secret data, depending on the compiler and the target
-  (for instance, gcc -O3 on 32-bit x86, and the code without SSE2 built with clang).
-  It is now constant time, checked with Valgrind like the rest of the elliptic curves.
-* A few valid Ed25519 points (those where one side of the curve equation is very small,
-  for instance with y = 3) were rejected as not on the curve.
 
 New features
 ------------
@@ -126,34 +123,38 @@ New features
 * Ed25519 scalar multiplications are blinded (by a random 32-bit multiple of
   the order of the whole group) and randomize the coordinates. Signing is about
   10% slower.
-* The verification of ECDSA and EdDSA signatures no longer applies the
+* Faster signature verification. ECDSA and EdDSA verification no longer applies the
   side-channel countermeasures, which are useless for its public values:
-  about 22-28% faster for P-256, P-384, P-521 and Ed448. For the NIST curves,
-  it also uses faster (not constant-time) formulas.
-* Ed25519 and Ed448 points are decoded in C (RFC 8032), and copying a point
-  no longer goes through its affine coordinates: EdDSA verification is about
-  2x faster for Ed25519 and 1.8x for Ed448, importing an Ed25519 public key
-  7x-11x faster (Ed448 2.5x-3x), and ECDSA verification on P-256 1.4x faster.
+  about 22-28% faster for P-256, P-384, P-521 and Ed448 (for the NIST curves,
+  it also uses faster, not constant-time, formulas). Ed25519 and Ed448 points are
+  decoded in C (RFC 8032), and copying a point no longer goes through its affine
+  coordinates: EdDSA verification is about 2x faster for Ed25519 and 1.8x for Ed448,
+  importing an Ed25519 public key 7x-11x faster (Ed448 2.5x-3x), and ECDSA
+  verification on P-256 1.4x faster.
 * The field arithmetic of the elliptic curves has unrolled code for each curve size:
   scalar multiplications are 1.4x-1.7x faster for P-192, P-224 and P-256, and
   1.1x-1.5x for the larger curves (more with clang than with gcc).
 * New function ``Crypto.Hash.KangarooTwelve.digest()``, to hash a whole message
   with a single call. For messages up to 8 KiB, it is 1.3x to 3x faster than
   ``new()`` followed by ``read()``.
-* On x86-64 CPUs with AVX2 and BMI2 (gcc and clang only), the Keccak-based hashes
-  use a build that takes advantage of those instructions:
+* Faster hashes on x86 CPUs. With AVX2 and BMI2 (x86-64, gcc and clang only),
+  the Keccak-based hashes use a build that takes advantage of those instructions:
   SHA-3, SHAKE, cSHAKE, KMAC, TupleHash and TurboSHAKE are about 1.25x-1.4x faster
   on long messages, and KangarooTwelve hashes 4 leaves in parallel
-  (2x to 2.3x faster for messages of 1 MiB or more).
-* New parameter ``threads`` for the CTR mode (all block ciphers) and for the GCM and OCB modes,
-  to encrypt and decrypt long data on several CPU cores (``threads=0`` for all of them).
-  The output does not depend on the number of threads.
+  (2x to 2.3x faster for messages of 1 MiB or more). With the SHA extensions (SHA-NI),
+  SHA-224 and SHA-256 hash long messages about 4x faster.
+* New parameter ``threads``, to run on several CPU cores (``threads=0`` for all of them);
+  the output does not depend on the number of threads. It is accepted by the CTR mode
+  (all block ciphers) and the GCM and OCB modes, to encrypt and decrypt long data;
+  by ``Crypto.Protocol.KDF.scrypt()``, to compute the ``p`` independent flows
+  (each thread uses its own ``128 * r * N`` bytes of memory at the same time);
+  and by ``Crypto.IO.PKCS8.wrap()`` and ``unwrap()``, ``import_key()`` of RSA, DSA and
+  ECC keys and ``export_key()`` of RSA and ECC keys, for a private key protected with
+  scrypt (PBES2) and a parallelization parameter larger than 1.
 * GCM mode is about 1.5x faster on long messages, as it does not copy the data
-  before authenticating it.
-* The portable GHASH (GCM mode, for CPUs without PCLMULQDQ) no longer uses
-  key-dependent tables: it is now constant-time, with the technique
-  described by Thomas Pornin for BearSSL. It is also faster: about 2.8x
-  on 64-bit and 3.2x on 32-bit systems.
+  before authenticating it. The portable GHASH (for CPUs without PCLMULQDQ) no longer
+  uses key-dependent tables: it is now constant-time, with the technique described
+  by Thomas Pornin for BearSSL, and about 2.8x faster on 64-bit and 3.2x on 32-bit systems.
 * On CPython, the ``encrypt()`` and ``decrypt()`` methods of most ciphers
   (block cipher modes ECB, CBC, CFB, OFB, CTR, GCM and OCB, plus ChaCha20, Salsa20
   and ARC4) write their result directly into the returned ``bytes`` object,
@@ -162,62 +163,45 @@ New features
   SHAKE256, cSHAKE, TurboSHAKE and KangarooTwelve, to
   ``Crypto.Hash.KangarooTwelve.digest()``, and to ``Crypto.Util.strxor.strxor()``
   and ``strxor_c()`` (up to 3.6x faster).
+* The Salsa20 stream cipher is faster on long messages: about 4.8x on x86-64 CPUs
+  with AVX2 and BMI2 (gcc and clang only; 8 blocks of key stream at a time),
+  2.6x with SSE2 (4 blocks at a time), and 1.3x otherwise.
 * GH#911: New method ``export()`` for HPKE contexts, to derive secrets
   (RFC 9180, Section 5.3). With the new ``HPKE.AEAD.EXPORT_ONLY``,
   a context can only export secrets. Thanks to sebastian.
 * GH#906: New module ``Crypto.Cipher.oaep`` for RSA-OAEP encryption.
   It replaces ``Crypto.Cipher.PKCS1_OAEP``. The hash function (``hashmod``)
   must always be specified, and all parameters after the key are keyword-only.
-* ``Crypto.Protocol.KDF.PBKDF2()`` is about 1.25x-1.35x faster with
-  HMAC based on SHA-1, SHA-224, SHA-256, SHA-384 and SHA-512.
-* ``Crypto.Protocol.KDF.PBKDF2()`` with HMAC based on SHA-3 runs its inner loop in C,
-  as for SHA-1 and SHA-2: it is about 25x-35x faster.
-* New parameter ``max_cost`` for ``Crypto.Protocol.KDF.bcrypt_check()``: the maximum cost
-  of the bcrypt hash, which states its own cost (default: 20, about one minute;
-  0 for no limit). A hash from an untrusted source could otherwise tie up the CPU for a day.
-* Encrypted OpenSSH private keys are imported about 1.9x faster: the two bcrypt
-  hashes of each round of bcrypt_pbkdf run interleaved, in C.
-* ``Crypto.Protocol.KDF.PBKDF1()`` with MD5 and SHA-1 (also used to import keys
-  protected with the legacy PBES1 algorithms) runs its inner loop in C:
-  it is about 15x faster.
-* On x86 CPUs with the SHA extensions (SHA-NI), SHA-224 and SHA-256 use them:
-  hashing long messages is about 4x faster, and ``PBKDF2()`` with HMAC-SHA256 about 3.5x.
-* Set the environment variable ``PYCRYPTODOME_NO_SELFTEST`` when building
-  from source to leave out the self-tests (``Crypto.SelfTest``), whose test keys
-  and certificates may be reported by security scanners.
-* ``Crypto.Protocol.KDF.scrypt()`` is about 1.15x-1.3x faster for ``p=1``,
-  and up to 1.7x faster for small ``N`` and large ``p``. On Linux, its memory is
-  backed by transparent huge pages where available.
-* The Salsa20 stream cipher is faster on long messages: about 4.8x on x86-64 CPUs
-  with AVX2 and BMI2 (gcc and clang only; 8 blocks of key stream at a time),
-  2.6x with SSE2 (4 blocks at a time), and 1.3x otherwise.
-* New parameter ``threads`` for ``Crypto.Protocol.KDF.scrypt()``, to compute
-  the ``p`` independent flows on several CPU cores (``threads=0`` for all of them).
-  Each thread uses its own ``128 * r * N`` bytes of memory at the same time.
-  The output does not depend on the number of threads.
-* New parameter ``threads`` for ``Crypto.IO.PKCS8.wrap()`` and ``unwrap()``,
-  for ``import_key()`` of RSA, DSA and ECC keys, and for ``export_key()`` of RSA and ECC keys:
-  a private key protected with scrypt (PBES2) and a parallelization parameter larger than 1
-  is encrypted or decrypted on several CPU cores (``threads=0`` for all of them).
-* New parameter ``max_iteration_count`` for ``import_key()`` of RSA, DSA and ECC keys,
-  like the one of ``Crypto.IO.PKCS8.unwrap()``: the maximum iteration count
-  accepted for an encrypted PKCS#8 key.
+* Faster key derivation functions. ``Crypto.Protocol.KDF.PBKDF2()`` is about 1.25x-1.35x
+  faster with HMAC based on SHA-1, SHA-224, SHA-256, SHA-384 and SHA-512 (about 3.5x with
+  HMAC-SHA256 on CPUs with SHA-NI), and about 25x-35x faster with HMAC based on SHA-3,
+  as it now runs its inner loop in C. ``PBKDF1()`` with MD5 and SHA-1 (also used to import
+  keys protected with the legacy PBES1 algorithms) runs its inner loop in C too:
+  it is about 15x faster. ``scrypt()`` is about 1.15x-1.3x faster for ``p=1``,
+  and up to 1.7x faster for small ``N`` and large ``p``; on Linux, its memory is
+  backed by transparent huge pages where available. Encrypted OpenSSH private keys
+  are imported about 1.9x faster: the two bcrypt hashes of each round of
+  bcrypt_pbkdf run interleaved, in C.
+* Limits when decrypting PKCS#8 private keys (see the new page "Limits when decrypting
+  private keys" in the documentation). New parameter ``max_iteration_count`` for
+  ``import_key()`` of RSA, DSA and ECC keys, like the one of ``Crypto.IO.PKCS8.unwrap()``:
+  the maximum iteration count accepted for an encrypted PKCS#8 key.
   When a key is above the limit, ``import_key()`` and ``PKCS8.unwrap()`` now raise
   ``Crypto.IO.PKCS8.PbesIterationCountError`` (a ``ValueError``), whose message
   says which value is too high and how to accept it, instead of a generic error
-  about the key format.
-  See the new page "Limits when decrypting private keys" in the documentation.
-* For scrypt, ``max_iteration_count`` now limits *N·r·p/8* (that is, *N* for the
-  usual *r=8* and *p=1*), and not only *N*: before, a key with a large *r* or *p*
-  could require any amount of time and memory. By default, the limit is 2\ :sup:`25`.
-  Since scrypt also does some work in proportion to *r·p* only, *N* counts as
-  at least 1024 in the cost.
-* New parameter ``max_memory`` for ``Crypto.IO.PKCS8.unwrap()`` and for ``import_key()``
-  of RSA, DSA and ECC keys: the maximum memory for the key derivation of an encrypted
-  PKCS#8 key (scrypt), as a total for all threads together, not for each thread
-  (and including the memory for the input and the output of all the flows).
+  about the key format. For scrypt, ``max_iteration_count`` now limits *N·r·p/8*
+  (that is, *N* for the usual *r=8* and *p=1*), and not only *N*: before, a key with
+  a large *r* or *p* could require any amount of time and memory. By default, the
+  limit is 2\ :sup:`25`. Since scrypt also does some work in proportion to *r·p* only,
+  *N* counts as at least 1024 in the cost. New parameter ``max_memory`` for
+  ``PKCS8.unwrap()`` and for ``import_key()`` of RSA, DSA and ECC keys: the maximum
+  memory for the scrypt key derivation, as a total for all threads together, not for
+  each thread (and including the memory for the input and the output of all the flows).
   The default is 256 MiB. Fewer threads are used if needed; if even one thread
   does not fit, ``Crypto.IO.PKCS8.PbesMemoryError`` is raised.
+* Set the environment variable ``PYCRYPTODOME_NO_SELFTEST`` when building
+  from source to leave out the self-tests (``Crypto.SelfTest``), whose test keys
+  and certificates may be reported by security scanners.
 
 3.24.0 (4 October 2026)
 ++++++++++++++++++++++++++
