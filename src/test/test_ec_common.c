@@ -10,6 +10,7 @@
 #include "common.h"
 #include "nat.h"
 #include "ec_common.h"
+#include "splitmix64.h"
 
 #define NW 4
 
@@ -237,6 +238,18 @@ static void test_random(const EcField *field)
     fe_random(&ws, b, 256, &state2);
     assert(memcmp(a, b, sizeof a) != 0);
     ec_ws_free(&ws);
+}
+
+/* The generator that expands the random seeds (splitmix64.h) */
+static void test_splitmix64(void)
+{
+    uint64_t state = 0, r1, r2;
+
+    r1 = splitmix64_next(&state);
+    r2 = splitmix64_next(&state);
+    assert(r1 == 0xE220A8397B1DCDAFULL);
+    assert(r2 == 0x6E789E6AA1B965F4ULL);
+    assert(state == 2*0x9E3779B97F4A7C15ULL);
 }
 
 static void test_sizes(void)
@@ -730,6 +743,7 @@ int main(void)
     test_special_fields();
     test_conversions(field);
     test_random(field);
+    test_splitmix64();
     test_sizes();
     test_table_select();
     test_batch_to_affine(field);

@@ -610,7 +610,6 @@ static void test_scalar(const TestCurve *tc, const EcCurve *c)
 int main(void)
 {
     EcCurve *c[NCURVES];
-    uint64_t state = 0, r1, r2;
     size_t i;
 
 #if defined(TEST_BMI2_ADX)
@@ -623,11 +622,6 @@ int main(void)
         return 0;
     }
 #endif
-
-    r1 = ec_next_random(&state);
-    r2 = ec_next_random(&state);
-    assert(r1 != r2);
-    assert(r1 == 0xE220A8397B1DCDAFULL);
 
     test_booth();
     for (i=0; i<NCURVES; i++) {

@@ -17,6 +17,7 @@
 #include "ec_common.h"
 #include "ec_field.h"
 #include "ec_special.h"
+#include "splitmix64.h"
 
 /* ---------------------------------------------------------------- */
 /* Field and workspace                                              */
@@ -334,7 +335,7 @@ void fe_random(EcWs *ws, uint64_t *out, size_t p_bits, uint64_t *state)
     size_t i;
 
     for (i=0; i<nw; i++)
-        out[i] = ec_next_random(state);
+        out[i] = splitmix64_next(state);
     /* Fewer bits than p, and not zero */
     for (i=(p_bits - 1)/64 + 1; i<nw; i++)
         out[i] = 0;
@@ -345,17 +346,6 @@ void fe_random(EcWs *ws, uint64_t *out, size_t p_bits, uint64_t *state)
 /* ---------------------------------------------------------------- */
 /* Scalars                                                          */
 /* ---------------------------------------------------------------- */
-
-uint64_t ec_next_random(uint64_t *state)
-{
-    uint64_t z;
-
-    *state += 0x9E3779B97F4A7C15ULL;
-    z = *state;
-    z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ULL;
-    z = (z ^ (z >> 27)) * 0x94D049BB133111EBULL;
-    return z ^ (z >> 31);
-}
 
 int ec_blind_scalar(uint64_t *kb, size_t k_words, const Nat *order, const uint8_t *k, size_t len, uint64_t r)
 {
@@ -989,7 +979,7 @@ int ec_point_scalar(EcPoint *p, const uint8_t *k, size_t len, uint64_t seed)
     }
 
     /* The random values: r for the scalar, lambda for the coordinates */
-    res = ec_blind_scalar(kb, g->k_words, g->order, k, len, ec_next_random(&state));
+    res = ec_blind_scalar(kb, g->k_words, g->order, k, len, splitmix64_next(&state));
     if (res)
         goto cleanup;
     fe_random(&ws, lambda, g->field->p_bits, &state);

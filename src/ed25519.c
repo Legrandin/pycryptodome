@@ -413,7 +413,7 @@ STATIC int ed25519_scalar_internal(Point *Pout,
         return ERR_MEMORY;
 
     /* kb = k + r*8L */
-    r = next_random_25519(&state) >> (64 - ED25519_BLIND_BITS);
+    r = splitmix64_next(&state) >> (64 - ED25519_BLIND_BITS);
     carry = 0;
     for (i=0; i<nw; i++) {
         kb[i] = ct_mac(i < 4 ? order8[i] : 0, r, kb[i], carry, &carry);

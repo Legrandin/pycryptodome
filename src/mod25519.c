@@ -4,6 +4,7 @@
 #include "common.h"
 #include "endianess.h"
 #include "nat_ct.h"
+#include "splitmix64.h"
 
 /*
  * Operations over the field of integers modulo 2²⁵⁵ - 19
@@ -406,25 +407,13 @@ STATIC void cswap(uint32_t a[10], uint32_t b[10], uint32_t c[10], uint32_t d[10]
 
 #define sqr_25519(a,b) mul_25519(a,b,b)
 
-/** The next value of a SplitMix64 generator, as ec_next_random() in ec_common.c **/
-STATIC uint64_t next_random_25519(uint64_t *state)
-{
-    uint64_t z;
-
-    *state += 0x9E3779B97F4A7C15ULL;
-    z = *state;
-    z = (z ^ (z >> 30)) * 0xBF58476D1CE4E5B9ULL;
-    z = (z ^ (z >> 27)) * 0x94D049BB133111EBULL;
-    return z ^ (z >> 31);
-}
-
-/** A random field element in [1, 2²⁵⁴), so never zero modulo 2²⁵⁵ - 19 **/
+/** A random field element in [1, 2²⁵⁴), so never zero modulo 2²⁵⁵ - 19 (splitmix64.h) **/
 STATIC void random_fe_25519(uint32_t out[10], uint64_t *state)
 {
     unsigned i;
 
     for (i=0; i<10; i++) {
-        out[i] = (uint32_t)(next_random_25519(state) & ((i & 1) ? MASK25 : MASK26));
+        out[i] = (uint32_t)(splitmix64_next(state) & ((i & 1) ? MASK25 : MASK26));
     }
     out[9] &= (1U << 24) - 1;
     out[0] |= 1;

@@ -130,11 +130,8 @@ int fe_from_bytes(uint64_t *out, EcWs *ws, const uint8_t *in, size_t len, int re
 /** The big-endian encoding of a (len bytes, at least the size of p) **/
 int fe_to_bytes(uint8_t *out, size_t len, EcWs *ws, const uint64_t *a);
 
-/** A random field element in [1, 2^(p_bits-1)) from the generator state **/
+/** A random field element in [1, 2^(p_bits-1)) from the generator state (splitmix64.h) **/
 void fe_random(EcWs *ws, uint64_t *out, size_t p_bits, uint64_t *state);
-
-/** A simple generator to expand a random seed (splitmix64) **/
-uint64_t ec_next_random(uint64_t *state);
 
 /**
  * kb (k_words words) = (k mod order) + r*order, for the big-endian
