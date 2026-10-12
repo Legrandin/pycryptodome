@@ -15,7 +15,7 @@ definition, and leak it on purpose: the result of comparisons,
 ``is_perfect_square()``, ``size_in_bits()``, ``size_in_bytes()``,
 the length of ``to_bytes()`` without a block size, and the fact that
 an exception is raised.
-``__int__``, ``__str__``, ``__repr__`` and ``_public_trim()``
+``__int__``, ``__str__`` and ``__repr__``
 are not constant time, and are only meant for public values.
 """
 
@@ -203,13 +203,6 @@ class IntegerNat(IntegerBase):
         result._public = self._public
         _lib.nat_copy(result._p.get(), self._p.get())
         return self._adopt(result)
-
-    def _public_trim(self) -> IntegerNat:
-        """Shrink the bound to the actual size of the value.
-
-        Not constant time: only for public values.
-        """
-        return self._resize(self.size_in_bits())
 
     def _sub_mod(self, term: IntLike, modulus: IntLike) -> IntegerNat:
         """Return (self - term) mod modulus, for self and term smaller than the modulus"""

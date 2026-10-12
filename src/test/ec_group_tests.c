@@ -19,6 +19,13 @@ int ec_mul_g(EcWs *ws, const EcGroup *g, uint64_t *rx, uint64_t *ry, uint64_t *r
 #define GT_MAX_WORDS 9
 #define GT_MAX_LEN 66
 
+/** dst = src (same group) **/
+static void gt_copy(EcPoint *dst, const EcPoint *src)
+{
+    assert(dst->g == src->g);
+    memcpy(dst->x, src->x, 3*src->nw*8);
+}
+
 static EcPoint *gt_clone(const EcPoint *p)
 {
     EcPoint *q;
@@ -64,16 +71,13 @@ static void test_group_errors(const EcPoint *gen)
     assert(ec_point_neg(NULL) == ERR_NULL);
     assert(ec_point_cmp(NULL, p) == ERR_NULL);
     assert(ec_point_cmp(p, NULL) == ERR_NULL);
-    assert(ec_point_copy(NULL, p) == ERR_NULL);
     assert(ec_point_clone(NULL, p) == ERR_NULL);
     assert(ec_point_get_xy(NULL, xy, gen->g->len, p) == ERR_NULL);
     assert(ec_point_get_xy(xy, xy + GT_MAX_LEN, gen->g->len - 1, p) == ERR_NOT_ENOUGH_DATA);
 
-    /* The copy is independent */
+    /* The clone is independent */
     assert(ec_point_double(q) == 0);
     assert(ec_point_cmp(p, q) == ERR_VALUE);
-    assert(ec_point_copy(q, p) == 0);
-    assert(ec_point_cmp(p, q) == 0);
 
     ec_point_free(p);
     ec_point_free(q);
@@ -86,7 +90,6 @@ static void test_group_other(EcPoint *a, EcPoint *b)
     assert(a->g != b->g);
     assert(ec_point_add(a, b) == ERR_EC_CURVE);
     assert(ec_point_cmp(a, b) == ERR_EC_CURVE);
-    assert(ec_point_copy(a, b) == ERR_EC_CURVE);
 }
 
 /* The tables: entry j of window i is (j+1)*32^i*G (checked with the variable base code) */
@@ -176,7 +179,7 @@ static void test_group_formulas(const EcPoint *gen, const EcPoint *base)
         assert(ec_point_cmp(r1, r2) == 0);
 
         /* In place */
-        assert(ec_point_copy(r2, p) == 0);
+        gt_copy(r2, p);
         g->add_affine(&ws, g, r2->x, r2->y, r2->z, r2->x, r2->y, r2->z, tx, ty);
         assert(ec_point_cmp(r1, r2) == 0);
 
@@ -196,7 +199,7 @@ static void test_group_formulas(const EcPoint *gen, const EcPoint *base)
 
         /* Doubling = addition to itself (in place) */
         g->dbl(&ws, g, r1->x, r1->y, r1->z, p->x, p->y, p->z);
-        assert(ec_point_copy(r2, p) == 0);
+        gt_copy(r2, p);
         g->add(&ws, g, r2->x, r2->y, r2->z, r2->x, r2->y, r2->z, r2->x, r2->y, r2->z);
         assert(ec_point_cmp(r1, r2) == 0);
         assert(g->on_curve(&ws, g, r1->x, r1->y, r1->z));

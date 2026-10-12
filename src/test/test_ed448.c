@@ -244,11 +244,11 @@ static void test_points(const Ed448Context *ctx)
     assert(ed448_cmp(g, pai) == ERR_VALUE);
     assert(ed448_clone(&t, g) == 0);
     check_equal(t, g);
-    assert(ed448_copy(t, pai) == 0);
+    gt_copy(t, pai);
     check_equal(t, pai);
 
     /* 2G = G + G (with different Z), 3G = 2G + G = G + 2G */
-    assert(ed448_copy(t, g) == 0);
+    gt_copy(t, g);
     assert(ed448_double(t) == 0);
     check_point(t, g2->rx, g2->ry);
     assert(ed448_clone(&u, g) == 0);
@@ -261,20 +261,20 @@ static void test_points(const Ed448Context *ctx)
     check_equal(t, v);
 
     /* a + a (the same object) */
-    assert(ed448_copy(t, g) == 0);
+    gt_copy(t, g);
     assert(ed448_add(t, t) == 0);
     check_point(t, g2->rx, g2->ry);
 
     /* -G = (n-1)G; G + (-G) = 0; 0 + G = G; 2*0 = 0 */
-    assert(ed448_copy(u, g) == 0);
+    gt_copy(u, g);
     assert(ed448_neg(u) == 0);
     check_point(u, gm->rx, gm->ry);
-    assert(ed448_copy(t, g) == 0);
+    gt_copy(t, g);
     assert(ed448_add(t, u) == 0);
     check_equal(t, pai);
     assert(ed448_add(t, g) == 0);
     check_equal(t, g);
-    assert(ed448_copy(t, pai) == 0);
+    gt_copy(t, pai);
     assert(ed448_double(t) == 0);
     check_equal(t, pai);
 

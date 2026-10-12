@@ -23,14 +23,14 @@ def use_bmi2_adx() -> bool:
     return bool(_cpu_features.have_bmi2() and _cpu_features.have_adx())
 
 
-def load_ec_lib(cdecl: str) -> tuple[Any, bool]:
+def load_ec_lib(cdecl: str) -> Any:
     """Load the module with the C declarations cdecl: the build for BMI2
     and ADX if it can be used (and was compiled in), the portable one
-    otherwise. Return the library, and True if it is the BMI2/ADX build."""
+    otherwise."""
 
     if use_bmi2_adx():
         try:
-            return load_pycryptodome_raw_lib("Crypto.PublicKey._ec_nat_bmi2_adx", cdecl), True
+            return load_pycryptodome_raw_lib("Crypto.PublicKey._ec_nat_bmi2_adx", cdecl)
         except OSError:
             pass
-    return load_pycryptodome_raw_lib("Crypto.PublicKey._ec_nat", cdecl), False
+    return load_pycryptodome_raw_lib("Crypto.PublicKey._ec_nat", cdecl)

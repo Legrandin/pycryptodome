@@ -1369,22 +1369,3 @@ def import_key(
         return _import_public_der(encoded, curve_name=curve_name)
 
     raise ValueError("ECC key format is not supported")
-
-
-if __name__ == "__main__":
-    import time
-
-    d = 0xC51E4753AFDEC1E6B6C6A5B992F43F8DD0C7A8933072708B6522468B2FFB06FD
-
-    point = _curves["p256"].G.copy()
-    count = 3000
-
-    start = time.time()
-    for _x in range(count):
-        pointX = point * d
-    print("(P-256 G)", (time.time() - start) / count * 1000, "ms")
-
-    start = time.time()
-    for _x in range(count):
-        pointX = pointX * d
-    print("(P-256 arbitrary point)", (time.time() - start) / count * 1000, "ms")

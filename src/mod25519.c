@@ -224,20 +224,6 @@ STATIC int convert_le25p5_to_behex(char **out, uint32_t in[10])
     return 0;
 }
 
-#if 0
-static void print_le25p5(char *str, const uint32_t n[10])
-{
-    uint8_t bin[32];
-
-    convert_le25p5_to_le8(bin, n);
-    printf("%s", str);
-    for (unsigned i=0; i<32; i++) {
-        printf("%02X", bin[i]);
-    }
-    printf("\n");
-}
-#endif
-
 /*
  * Reduce a 256-bit number (2⁶⁴ radix, litte-endian) modulo 2²⁵⁵ - 19.
  */

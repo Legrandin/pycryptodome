@@ -39,7 +39,6 @@ EXPORT_SYM int ed448_decode_point(PointEd448 **out, const uint8_t *encoded, size
                                   const Ed448Context *ctx);
 EXPORT_SYM void ed448_free_point(PointEd448 *p);
 EXPORT_SYM int ed448_clone(PointEd448 **out, const PointEd448 *p);
-EXPORT_SYM int ed448_copy(PointEd448 *dst, const PointEd448 *src);
 EXPORT_SYM int ed448_get_xy(uint8_t *x, uint8_t *y, size_t len, const PointEd448 *p);
 EXPORT_SYM int ed448_add(PointEd448 *a, const PointEd448 *b);
 EXPORT_SYM int ed448_double(PointEd448 *p);

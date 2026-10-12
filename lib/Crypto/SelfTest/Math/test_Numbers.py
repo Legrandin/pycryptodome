@@ -1006,11 +1006,6 @@ class NatIntegerTests:
         assert a == 5
         assert a._bits == 4096
 
-        b = self.Integer(2**100 + 1, _min_bits=4096)
-        b._public_trim()
-        assert b._bits == 101
-        assert b == 2**100 + 1
-
     def test_in_place_keeps_identity(self):
         v = self.Integer(3)
         w = v

@@ -428,11 +428,6 @@ EXPORT_SYM int ed448_clone(PointEd448 **out, const PointEd448 *p)
     return ec_point_clone(out, p);
 }
 
-EXPORT_SYM int ed448_copy(PointEd448 *dst, const PointEd448 *src)
-{
-    return ec_point_copy(dst, src);
-}
-
 /** 0 if the two points are equal, ERR_VALUE if they are not (only that fact leaks) **/
 EXPORT_SYM int ed448_cmp(const PointEd448 *a, const PointEd448 *b)
 {

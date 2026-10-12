@@ -8,21 +8,6 @@ void curve25519_scalar_internal(Point *Pout,
                                 const uint8_t *k, size_t len,
                                 const Point *Pin,
                                 uint64_t seed);
-int convert_le25p5_to_behex(char **out, uint32_t in[10]);
-
-void print_point(Point *p)
-{
-    char *out_x, *out_z;
-
-    convert_le25p5_to_behex(&out_x, p->X);
-    convert_le25p5_to_behex(&out_z, p->Z);
-
-    printf("X=%s\n", out_x);
-    printf("Z=%s\n", out_z);
-
-    free(out_x);
-    free(out_z);
-}
 
 void test_ladder_1(void)
 {

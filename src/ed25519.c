@@ -113,32 +113,6 @@ STATIC void ed25519_double_internal(Point *P3, const Point *P1)
     mul_25519(P3->Z, A, P3->Z);         /* Z3=F*G           < 2²⁶ */
 }
 
-#if 0
-static void print_point_le8(const Point *p)
-{
-    uint8_t bin[32];
-    unsigned i;
-    uint32_t tmp[32];
-    uint32_t invz[32];
-
-    invert_25519(invz, p->Z);
-    mul_25519(tmp, p->X, invz);
-    convert_le25p5_to_le8(bin, tmp);
-    printf("X=");
-    for (i=0; i<32; i++)
-        printf("%02X", bin[i]);
-    printf("\n");
-
-    invert_25519(invz, p->Z);
-    mul_25519(tmp, p->Y, invz);
-    convert_le25p5_to_le8(bin, tmp);
-    printf("Y=");
-    for (i=0; i<32; i++)
-        printf("%02X", bin[i]);
-    printf("\n");
-}
-#endif
-
 /*
  * Size of the random factor for the blinding of the scalar.
  * Each bit adds one step to the ladder: 32 bits cost about 13%
@@ -191,8 +165,6 @@ static void ed25519_ladder(Point *R0, Point *R1, const uint64_t *kw, size_t nbit
     unsigned swap;
 
     /* https://eprint.iacr.org/2020/956.pdf */
-
-    /* OPTIMIZE: with pre-computed tables in case of fixed-point multiplication */
 
     /* Scan all bits from MSB to LSB */
     swap = 0;

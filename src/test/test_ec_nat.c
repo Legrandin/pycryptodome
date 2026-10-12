@@ -406,7 +406,7 @@ static void test_points(const TestCurve *tc, const EcCurve *c)
     /* clone and copy */
     assert(ec_nat_clone(&t, q) == 0);
     check_equal(t, q);
-    assert(ec_nat_copy(t, g) == 0);
+    gt_copy(t, g);
     check_equal(t, g);
 
     /* 2G = G + G, with different Z */
@@ -418,8 +418,8 @@ static void test_points(const TestCurve *tc, const EcCurve *c)
     assert(ec_nat_cmp(t, g) == ERR_VALUE);
 
     /* G + (-G) = 0; -0 = 0; 0 + 0 = 0; 2*0 = 0; 0 + G = G */
-    assert(ec_nat_copy(t, g) == 0);
-    assert(ec_nat_copy(u, g) == 0);
+    gt_copy(t, g);
+    gt_copy(u, g);
     assert(ec_nat_neg(u) == 0);
     check_point(u, tc->cases[8].rx, tc->cases[8].ry);   /* (n-1)G */
     assert(ec_nat_add(t, u) == 0);
@@ -434,10 +434,10 @@ static void test_points(const TestCurve *tc, const EcCurve *c)
     check_equal(t, g);
 
     /* (2G + G) = 3G = G + 2G */
-    assert(ec_nat_copy(t, g) == 0);
+    gt_copy(t, g);
     assert(ec_nat_double(t) == 0);
     assert(ec_nat_add(t, g) == 0);
-    assert(ec_nat_copy(u, g) == 0);
+    gt_copy(u, g);
     {
         EcPointN *v;
 

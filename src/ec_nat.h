@@ -32,7 +32,6 @@ EXPORT_SYM int ec_nat_new_point(EcPointN **out, const uint8_t *x, const uint8_t 
 EXPORT_SYM void ec_nat_free_point(EcPointN *p);
 EXPORT_SYM int ec_nat_get_xy(uint8_t *x, uint8_t *y, size_t len, const EcPointN *p);
 EXPORT_SYM int ec_nat_clone(EcPointN **out, const EcPointN *p);
-EXPORT_SYM int ec_nat_copy(EcPointN *dst, const EcPointN *src);
 EXPORT_SYM int ec_nat_cmp(const EcPointN *a, const EcPointN *b);
 EXPORT_SYM int ec_nat_neg(EcPointN *p);
 EXPORT_SYM int ec_nat_double(EcPointN *p);

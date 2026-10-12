@@ -586,11 +586,6 @@ EXPORT_SYM int ec_nat_clone(EcPointN **out, const EcPointN *p)
     return ec_point_clone(out, p);
 }
 
-EXPORT_SYM int ec_nat_copy(EcPointN *dst, const EcPointN *src)
-{
-    return ec_point_copy(dst, src);
-}
-
 /** 0 if the two points are equal, ERR_VALUE if they are not (only that fact leaks) **/
 EXPORT_SYM int ec_nat_cmp(const EcPointN *a, const EcPointN *b)
 {

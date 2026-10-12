@@ -264,7 +264,6 @@ void ec_point_set_neutral(const EcGroup *g, uint64_t *x, uint64_t *y, uint64_t *
 EcPoint *ec_point_alloc(const EcGroup *g);
 void ec_point_free(EcPoint *p);
 int ec_point_clone(EcPoint **out, const EcPoint *p);
-int ec_point_copy(EcPoint *dst, const EcPoint *src);
 /** The affine coordinates (big-endian, len bytes each, at least g->len) **/
 int ec_point_get_xy(uint8_t *x, uint8_t *y, size_t len, const EcPoint *p);
 /** 0 if the two points are equal, ERR_VALUE if they are not (only that fact leaks) **/

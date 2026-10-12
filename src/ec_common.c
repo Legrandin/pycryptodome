@@ -839,16 +839,6 @@ int ec_point_clone(EcPoint **out, const EcPoint *p)
     return 0;
 }
 
-int ec_point_copy(EcPoint *dst, const EcPoint *src)
-{
-    if (!dst || !src)
-        return ERR_NULL;
-    if (dst->g != src->g)
-        return ERR_EC_CURVE;
-    memcpy(dst->x, src->x, 3*src->nw*sizeof(uint64_t));
-    return 0;
-}
-
 int ec_point_get_xy(uint8_t *x, uint8_t *y, size_t len, const EcPoint *p)
 {
     uint64_t *zinv;

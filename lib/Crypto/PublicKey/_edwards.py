@@ -76,12 +76,11 @@ def ed448_curve():
     Gx = 0x4F1970C66BED0DED221D15A622BF36DA9E146570470F1767EA6DE324A3D3A46412AE1AF72AB66511433B80E18B00938E2626A82BC70CC05E
     Gy = 0x693F46716EB6BC248876203756C9C7624BEA73736CA3984087789C1E05A0C2D73AD3FF1CE67C39C4FDBD132C4ED7C8AD9808795BF230FA14
 
-    _ed448_lib, _ = load_ec_lib(
+    _ed448_lib = load_ec_lib(
         """
 typedef void EcContext;
 typedef void PointEd448;
 int ed448_new_context(EcContext **pec_ctx);
-void ed448_context(EcContext *ec_ctx);
 void ed448_free_context(EcContext *ec_ctx);
 int ed448_new_point(PointEd448 **out,
                     const uint8_t x[56],
