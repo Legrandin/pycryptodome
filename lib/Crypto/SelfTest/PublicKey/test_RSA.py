@@ -170,6 +170,18 @@ class TestRSA:
         with pytest.raises(ValueError):
             self.rsa.construct(tup)
 
+    def test_max_modulus(self):
+        # A modulus of 16384 bits is accepted, one bit more is not
+        n = (1 << 16383) + 1
+        pub = self.rsa.construct((n, 65537), consistency_check=False)
+        assert pub.size_in_bits() == 16384
+        assert pub._encrypt(2) == pow(2, 65537, n)
+        for check in (True, False):
+            with pytest.raises(ValueError):
+                self.rsa.construct(((1 << 16384) + 1, 65537), consistency_check=check)
+        with pytest.raises(ValueError):
+            self.rsa.generate(16385)
+
     def test_construct_bad_key3(self):
         tup = (self.n, self.e, self.d + 1)
         with pytest.raises(ValueError):

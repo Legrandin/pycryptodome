@@ -190,7 +190,6 @@ cleanup:
 EXPORT_SYM int nat_divmod(Nat *q, Nat *r, const Nat *a, const Nat *b)
 {
     uint64_t *rem;
-    size_t i;
     int res;
 
     if (NULL == a || NULL == b || (NULL == q && NULL == r))
@@ -207,10 +206,8 @@ EXPORT_SYM int nat_divmod(Nat *q, Nat *r, const Nat *a, const Nat *b)
         return ERR_MEMORY;
 
     res = nat_divmod_words(q ? q->w : NULL, q ? q->nw : 0, rem, a, b);
-    if (res == 0 && r) {
-        for (i=0; i<r->nw; i++)
-            r->w[i] = i < b->nw ? rem[i] : 0;
-    }
+    if (res == 0 && r)
+        words_copy_resized(r->w, r->nw, rem, b->nw);
 
     nat_words_free(rem, b->nw);
     return res;

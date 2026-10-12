@@ -15,7 +15,7 @@ definition, and leak it on purpose: the result of comparisons,
 ``is_perfect_square()``, ``size_in_bits()``, ``size_in_bytes()``,
 the length of ``to_bytes()`` without a block size, and the fact that
 an exception is raised.
-``__int__``, ``__str__``, ``__repr__`` and ``_public_trim()``
+``__int__``, ``__str__`` and ``__repr__``
 are not constant time, and are only meant for public values.
 """
 
@@ -131,7 +131,9 @@ class IntegerNat(IntegerBase):
     _p: SmartPointer
     _bits: int
 
-    def __init__(self, value: Union[IntegerBase, int], _min_bits: int = 0) -> None:
+    def __init__(self, value: Union[IntegerBase, int], _min_bits: int = 0, *, public: bool = False) -> None:
+        # A copy keeps the value public
+        self._public = public or (isinstance(value, IntegerBase) and value._public)
         if isinstance(value, IntegerNat):
             self._alloc(max(value._bits, _min_bits))
             _lib.nat_copy(self._p.get(), value._p.get())
@@ -164,9 +166,10 @@ class IntegerNat(IntegerBase):
         return obj
 
     def _adopt(self, other: IntegerNat) -> IntegerNat:
-        """Take the value and the bound of another (temporary) number"""
+        """Take the value, the bound and the public flag of another (temporary) number"""
         self._p = other._p
         self._bits = other._bits
+        self._public = other._public
         return self
 
     @staticmethod
@@ -197,15 +200,9 @@ class IntegerNat(IntegerBase):
         if not (self >> bits)._is_zero():
             raise ValueError("Value does not fit into %d bits" % bits)
         result = IntegerNat._make(bits)
+        result._public = self._public
         _lib.nat_copy(result._p.get(), self._p.get())
         return self._adopt(result)
-
-    def _public_trim(self) -> IntegerNat:
-        """Shrink the bound to the actual size of the value.
-
-        Not constant time: only for public values.
-        """
-        return self._resize(self.size_in_bits())
 
     def _sub_mod(self, term: IntLike, modulus: IntLike) -> IntegerNat:
         """Return (self - term) mod modulus, for self and term smaller than the modulus"""
@@ -246,12 +243,18 @@ class IntegerNat(IntegerBase):
 
     @classmethod
     def from_bytes(
-        cls, byte_string: Union[bytes, bytearray, memoryview], byteorder: str = "big", _min_bits: int = 0
+        cls,
+        byte_string: Union[bytes, bytearray, memoryview],
+        byteorder: str = "big",
+        _min_bits: int = 0,
+        *,
+        public: bool = False,
     ) -> IntegerNat:
         if byteorder not in ("big", "little"):
             raise ValueError("Incorrect byteorder")
         length = len(byte_string)
         result = cls._make(max(8 * length, _min_bits))
+        result._public = public
         _check(
             _lib.nat_from_bytes(
                 result._p.get(), c_uint8_ptr(byte_string), c_size_t(length), int(byteorder == "little")
@@ -304,17 +307,20 @@ class IntegerNat(IntegerBase):
     # Arithmetic operations
 
     def __add__(self, term: IntLike) -> IntegerNat:
+        public = self._is_public_with(term)
         try:
             term = self._conv(term)
         except TypeError:
             return NotImplemented
         result = IntegerNat._make(max(self._bits, term._bits) + 1)
         _check(_lib.nat_add(result._p.get(), self._p.get(), term._p.get()), "nat_add")
+        result._public = public
         return result
 
     __radd__ = __add__
 
     def __sub__(self, term: IntLike) -> IntegerNat:
+        public = self._is_public_with(term)
         try:
             term = self._conv(term)
         except TypeError:
@@ -324,6 +330,7 @@ class IntegerNat(IntegerBase):
         if error == _ERR_VALUE:
             raise ValueError("The result of the subtraction would be negative")
         _check(error, "nat_sub")
+        result._public = public
         return result
 
     def __rsub__(self, term: int) -> IntegerNat:
@@ -331,43 +338,54 @@ class IntegerNat(IntegerBase):
             term_nat = self._conv(term)
         except TypeError:
             return NotImplemented
-        return term_nat - self
+        result = term_nat - self
+        result._public = self._is_public_with(term)
+        return result
 
     def __mul__(self, factor: IntLike) -> IntegerNat:
+        public = self._is_public_with(factor)
         try:
             factor = self._conv(factor)
         except TypeError:
             return NotImplemented
         result = IntegerNat._make(self._bits + factor._bits)
         _check(_lib.nat_mul(result._p.get(), self._p.get(), factor._p.get()), "nat_mul")
+        result._public = public
         return result
 
     __rmul__ = __mul__
 
     def __floordiv__(self, divisor: IntLike) -> IntegerNat:
+        public = self._is_public_with(divisor)
         divisor = self._conv(divisor)
         if divisor._is_zero():
             raise ZeroDivisionError("Division by zero")
         result = IntegerNat._make(self._bits)
         _check(_lib.nat_divmod(result._p.get(), null_pointer, self._p.get(), divisor._p.get()), "nat_divmod")
+        result._public = public
         return result
 
     def __mod__(self, divisor: IntLike) -> IntegerNat:
-        if isinstance(divisor, int) and divisor < 0:
-            raise ValueError("Modulus must be positive")
-        divisor = self._conv(divisor)
-        if divisor._is_zero():
-            raise ZeroDivisionError("Modulus cannot be zero")
+        public = self._is_public_with(divisor)
+        divisor = self._check_modulus(divisor)
         result = IntegerNat._make(divisor._bits)
         _check(_lib.nat_divmod(null_pointer, result._p.get(), self._p.get(), divisor._p.get()), "nat_divmod")
+        result._public = public
         return result
 
-    def _check_modulus(self, modulus: Any) -> IntegerNat:
+    @staticmethod
+    def _check_modulus(
+        modulus: IntLike, name: str = "Modulus", zero_error: type[Exception] = ZeroDivisionError
+    ) -> IntegerNat:
+        """Convert a modulus into an IntegerNat.
+
+        ValueError if it is negative, zero_error if it is zero (only that fact leaks).
+        """
         if isinstance(modulus, int) and modulus < 0:
-            raise ValueError("Modulus must be positive")
-        modulus = self._conv(modulus)
+            raise ValueError("%s must be positive" % name)
+        modulus = IntegerNat._conv(modulus)
         if modulus._is_zero():
-            raise ZeroDivisionError("Modulus cannot be zero")
+            raise zero_error("%s cannot be zero" % name)
         return modulus
 
     def inplace_pow(self, exponent: IntLike, modulus: Optional[IntLike] = None) -> IntegerNat:
@@ -408,11 +426,7 @@ class IntegerNat(IntegerBase):
             _check(_lib.nat_isqrt(result._p.get(), self._p.get()), "nat_isqrt")
             return result
 
-        if isinstance(modulus, int) and modulus <= 0:
-            raise ValueError("Modulus must be positive")
-        modulus = self._conv(modulus)
-        if modulus._is_zero():
-            raise ValueError("Modulus must be positive")
+        modulus = self._check_modulus(modulus, zero_error=ValueError)
         return IntegerNat(self._tonelli_shanks(self % modulus, modulus))
 
     def __iadd__(self, term: IntLike) -> IntegerNat:
@@ -519,12 +533,14 @@ class IntegerNat(IntegerBase):
         return self._adopt(IntegerNat(source))
 
     def inplace_inverse(self, modulus: IntLike) -> IntegerNat:
+        public = self._is_public_with(modulus)
         modulus = self._check_modulus(modulus)
         result = IntegerNat._make(modulus._bits)
         error = _lib.nat_invmod(result._p.get(), self._p.get(), modulus._p.get())
         if error == _ERR_VALUE:
             raise ValueError("No inverse value can be computed")
         _check(error, "nat_invmod")
+        result._public = public
         return self._adopt(result)
 
     def inverse(self, modulus: IntLike) -> IntegerNat:
@@ -547,11 +563,7 @@ class IntegerNat(IntegerBase):
 
     @staticmethod
     def jacobi_symbol(a: IntLike, n: IntLike) -> int:
-        if isinstance(n, int) and n <= 0:
-            raise ValueError("n must be a positive integer")
-        n = IntegerNat._conv(n)
-        if n._is_zero():
-            raise ValueError("n must be a positive integer")
+        n = IntegerNat._check_modulus(n, "n", zero_error=ValueError)
         if not n.is_odd():
             raise ValueError("n must be odd for the Jacobi symbol")
 
@@ -567,15 +579,11 @@ class IntegerNat(IntegerBase):
 
     @staticmethod
     def _mult_modulo_bytes(term1: IntLike, term2: IntLike, modulus: IntLike) -> bytes:
-        if isinstance(modulus, int) and modulus < 0:
-            raise ValueError("Modulus must be positive")
-        modulus = IntegerNat._conv(modulus)
-        if modulus._is_zero():
-            raise ZeroDivisionError("Modulus cannot be zero")
+        modulus = IntegerNat._check_modulus(modulus)
         if not modulus.is_odd():
             raise ValueError("Odd modulus is required")
 
-        # Python ints are public and may be negative
+        # Python ints may be negative
         if isinstance(term1, int):
             term1 = term1 % int(modulus)
         if isinstance(term2, int):

@@ -26,7 +26,20 @@ RandFunc = Callable[[int], bytes]
 class IntegerBase(ABC):
     if TYPE_CHECKING:
 
-        def __init__(self, value: Union[IntegerBase, int]) -> None: ...
+        def __init__(self, value: Union[IntegerBase, int], *, public: bool = False) -> None: ...
+
+    # A number is potentially secret, unless it is created as public
+    # (for instance, a value in a signature to verify): then operations
+    # on it can be faster, with no countermeasures against side channels.
+    # The result of +, -, *, // and %, and of a modular inverse, is public
+    # if both operands are public Integers (a Python int may hold a secret,
+    # so it is not public); any other operation gives a potentially secret result.
+    _public: bool = False
+
+    def _is_public_with(self, term: Any) -> bool:
+        """Whether the result of an operation between this number and term is public"""
+
+        return self._public and isinstance(term, IntegerBase) and term._public
 
     # Conversions
     @abstractmethod
@@ -47,7 +60,9 @@ class IntegerBase(ABC):
 
     @staticmethod
     @abstractmethod
-    def from_bytes(byte_string: Union[bytes, bytearray, memoryview], byteorder: str = "big") -> IntegerBase:
+    def from_bytes(
+        byte_string: Union[bytes, bytearray, memoryview], byteorder: str = "big", *, public: bool = False
+    ) -> IntegerBase:
         pass
 
     # Relations

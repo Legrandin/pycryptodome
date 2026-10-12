@@ -7,8 +7,17 @@ from typing import Optional, Protocol, Union
 
 from Crypto.Hash import SHA512, SHAKE256
 from Crypto.Math.Numbers import Integer
-from Crypto.PublicKey.ECC import EccKey, _import_ed448_public_key, _import_ed25519_public_key, construct
+from Crypto.PublicKey.ECC import (
+    EccKey,
+    EccPoint,
+    _import_ed448_public_key,
+    _import_ed25519_public_key,
+    construct,
+)
 from Crypto.Util._raw_api import is_buffer
+
+# A public constant (a Python int is not), for scalar multiplications with no blinding
+_EIGHT = Integer(8, public=True)
 
 
 class Hash(Protocol):
@@ -244,20 +253,19 @@ class EdDSASigScheme:
 
         # Step 1
         try:
-            R = import_public_key(signature[:32]).pointQ
+            R = EccPoint._decode_eddsa(signature[:32], "Ed25519")
         except ValueError:
             raise ValueError("The signature is not authentic (R)")
-        s = Integer.from_bytes(signature[32:], "little")
-        if s > self._order:
+        s = Integer.from_bytes(signature[32:], "little", public=True)
+        if s >= self._order:
             raise ValueError("The signature is not authentic (S)")
         # Step 2
         k_hash = SHA512.new(dom2 + signature[:32] + self._A + PHM).digest()
-        k = Integer.from_bytes(k_hash, "little") % self._order
-        # Step 3
-        point1 = s * 8 * self._key._curve.G
-        # OPTIMIZE: with double-scalar multiplication, with no SCA
-        # countermeasures because it is public values
-        point2 = 8 * R + k * 8 * self._key.pointQ
+        k = Integer.from_bytes(k_hash, "little", public=True) % self._order
+        # Step 3 (no blinding: s and k are public)
+        point1 = s * _EIGHT * self._key._curve.G
+        # OPTIMIZE: with double-scalar multiplication
+        point2 = _EIGHT * R + k * _EIGHT * self._key.pointQ
         if point1 != point2:
             raise ValueError("The signature is not authentic")
 
@@ -275,20 +283,19 @@ class EdDSASigScheme:
 
         # Step 1
         try:
-            R = import_public_key(signature[:57]).pointQ
+            R = EccPoint._decode_eddsa(signature[:57], "Ed448")
         except ValueError:
             raise ValueError("The signature is not authentic (R)")
-        s = Integer.from_bytes(signature[57:], "little")
-        if s > self._order:
+        s = Integer.from_bytes(signature[57:], "little", public=True)
+        if s >= self._order:
             raise ValueError("The signature is not authentic (S)")
         # Step 2
         k_hash = SHAKE256.new(dom4 + signature[:57] + self._A + PHM).read(114)
-        k = Integer.from_bytes(k_hash, "little") % self._order
-        # Step 3
-        point1 = s * 8 * self._key._curve.G
-        # OPTIMIZE: with double-scalar multiplication, with no SCA
-        # countermeasures because it is public values
-        point2 = 8 * R + k * 8 * self._key.pointQ
+        k = Integer.from_bytes(k_hash, "little", public=True) % self._order
+        # Step 3 (no blinding: s and k are public)
+        point1 = s * _EIGHT * self._key._curve.G
+        # OPTIMIZE: with double-scalar multiplication
+        point2 = _EIGHT * R + k * _EIGHT * self._key.pointQ
         if point1 != point2:
             raise ValueError("The signature is not authentic")
 

@@ -101,14 +101,21 @@ class TestEccPoint_Curve448:
         point1 = EccXPoint(self.v1, "curve448")
         point2 = point1.copy()
         assert point1.x == point2.x
+        point2 *= 2
+        assert point1.x == self.v1
+
+        pai = point1.point_at_infinity().copy()
+        assert pai.is_point_at_infinity()
 
     def test_pai(self):
         point1 = EccXPoint(self.v1, "curve448")
+        assert not point1.is_point_at_infinity()
         pai = point1.point_at_infinity()
-        assert pai.point_at_infinity()
+        assert pai.is_point_at_infinity()
 
         point2 = EccXPoint(None, "curve448")
-        assert point2.point_at_infinity()
+        assert point2.is_point_at_infinity()
+        assert (point1 * 0).is_point_at_infinity()
 
     def test_scalar_multiply(self):
         base = EccXPoint(5, "curve448")

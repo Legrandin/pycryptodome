@@ -1402,3 +1402,82 @@ class TestEccModule_P521:
             ECC.construct(curve="P-521", **coord)
         with pytest.raises(ValueError):
             ECC.construct(curve="P-521", d=2, **coordG)
+
+
+def _spy_scalar(monkeypatch, rawlib):
+    """Record the names of the scalar multiplications called on rawlib"""
+
+    calls = []
+    for name in ("scalar", "scalar_public"):
+        func = getattr(rawlib, name)
+        monkeypatch.setattr(rawlib, name, lambda *args, _f=func, _n=name: calls.append(_n) or _f(*args))
+    return calls
+
+
+@pytest.mark.parametrize("curve", ["P-192", "P-224", "P-256", "P-384", "P-521"])
+def test_scalar_multiply_public(curve, monkeypatch):
+    key = ECC.generate(curve=curve)
+    order = int(key._curve.order)
+    scalars = [0, 1, 2, 255, order - 1, order, order + 1, 8 * order + 5, 2**600 + 3]
+    scalars += [int(Integer.random_range(min_inclusive=1, max_exclusive=order)) for _ in range(5)]
+    calls = _spy_scalar(monkeypatch, key._curve.rawlib)
+
+    for point in (key._curve.G, key.pointQ):
+        for k in scalars:
+            del calls[:]
+            expected = point * k
+            assert calls == ["scalar"]
+            del calls[:]
+            assert point * Integer(k, public=True) == expected
+            assert calls == ["scalar_public"]
+
+    # The verification of an ECDSA signature only uses public scalars,
+    # the signature only secret ones
+    from Crypto.Hash import SHA256
+    from Crypto.Signature import DSS
+
+    h = SHA256.new(b"message")
+    del calls[:]
+    signature = DSS.new(key, "fips-186-3").sign(h)
+    assert set(calls) == {"scalar"}
+    del calls[:]
+    DSS.new(key.public_key(), "fips-186-3").verify(h, signature)
+    assert set(calls) == {"scalar_public"}
+    with pytest.raises(ValueError):
+        DSS.new(key.public_key(), "fips-186-3").verify(SHA256.new(b"other"), signature)
+
+
+@pytest.mark.parametrize(
+    "curve, seed_len", [("Ed25519", 32), ("Ed448", 57), ("Curve25519", 32), ("Curve448", 56), ("P-256", None)]
+)
+def test_d_or_seed(curve, seed_len):
+    """The NIST curves take d, the others a seed of a fixed length"""
+
+    if seed_len is None:
+        with pytest.raises(ValueError, match="'seed' cannot be used"):
+            ECC.construct(curve=curve, seed=b"H" * 32)
+        return
+    with pytest.raises(ValueError, match="can only be used with NIST"):
+        ECC.construct(curve=curve, d=1)
+    for length in (seed_len - 1, seed_len + 1):
+        with pytest.raises(ValueError, match="must be %d bytes long for %s" % (seed_len, curve)):
+            ECC.construct(curve=curve, seed=b"H" * length)
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        ECC.construct(curve=curve, d=1, seed=b"H" * seed_len)
+    assert ECC.construct(curve=curve, seed=b"H" * seed_len).has_private()
+
+
+def test_curve_names():
+    """All the names of a curve give the same object, with the right ID"""
+
+    for names, curve_id, _, _ in _curves.definitions:
+        curve = _curves[names[0]]
+        assert curve.id == curve_id
+        for name in names:
+            assert name in _curves
+            assert _curves[name] is curve
+    assert "P-999" not in _curves
+    with pytest.raises(ValueError, match="Unsupported curve"):
+        _curves.load("P-999")
+    with pytest.raises(ValueError, match="Unsupported curve"):
+        ECC.generate(curve="P-999")

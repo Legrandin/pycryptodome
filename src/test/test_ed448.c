@@ -28,15 +28,7 @@ static int have_bmi2_adx(void)
 #endif
 
 /* Private functions (they are not static when STATIC is defined as empty) */
-uint64_t ed448_on_curve(EcWs *ws, const Ed448Context *ctx, const uint64_t *x, const uint64_t *y, const uint64_t *z);
-void ed448_point_double(EcWs *ws, uint64_t *x3, uint64_t *y3, uint64_t *z3,
-                        const uint64_t *x1, const uint64_t *y1, const uint64_t *z1);
-void ed448_point_add(EcWs *ws, const Ed448Context *ctx,
-                     uint64_t *x3, uint64_t *y3, uint64_t *z3,
-                     const uint64_t *x1, const uint64_t *y1, const uint64_t *z1,
-                     const uint64_t *x2, const uint64_t *y2, const uint64_t *z2);
-int ed448_mul_var(EcWs *ws, const Ed448Context *ctx, PointEd448 *p, const uint64_t *kb, const uint64_t *lambda);
-int ed448_mul_g(EcWs *ws, const Ed448Context *ctx, PointEd448 *p, const uint64_t *kb, const uint64_t *lambda);
+uint64_t ed448_on_curve(EcWs *ws, const EcGroup *g, const uint64_t *x, const uint64_t *y, const uint64_t *z);
 
 typedef struct {
     int base;                       /* 0: G, 1: Q, 2: Q + T (T of order 4) */
@@ -130,6 +122,8 @@ static uint64_t rnd(void)
     return rnd_state;
 }
 
+#include "ec_group_tests.c"
+
 /** Hex string to big-endian bytes, right-aligned in len bytes **/
 static void from_hex(uint8_t *out, size_t len, const char *hex)
 {
@@ -195,9 +189,10 @@ static void test_context(void)
 
     assert(ed448_new_context(NULL) == ERR_NULL);
     assert(ed448_new_context(&ctx) == 0);
-    assert(ctx->k_words*64 >= 448 + EC_BLINDING_BITS);
-    assert(ctx->windows*EC_WINDOW > 448 + EC_BLINDING_BITS);
-    assert(nat_bit_length(ctx->group_order) == 448);
+    assert(ctx->g.k_words*64 >= 448 + EC_BLINDING_BITS);
+    assert(ctx->g.windows*EC_WINDOW > 448 + EC_BLINDING_BITS);
+    assert(nat_bit_length(ctx->g.order) == 448);
+    assert(ctx->g.edwards && ctx->g.len == LEN && ctx->g.nw == ED448_WORDS);
     ed448_free_context(ctx);
     ed448_free_context(NULL);
 }
@@ -249,11 +244,11 @@ static void test_points(const Ed448Context *ctx)
     assert(ed448_cmp(g, pai) == ERR_VALUE);
     assert(ed448_clone(&t, g) == 0);
     check_equal(t, g);
-    assert(ed448_copy(t, pai) == 0);
+    gt_copy(t, pai);
     check_equal(t, pai);
 
     /* 2G = G + G (with different Z), 3G = 2G + G = G + 2G */
-    assert(ed448_copy(t, g) == 0);
+    gt_copy(t, g);
     assert(ed448_double(t) == 0);
     check_point(t, g2->rx, g2->ry);
     assert(ed448_clone(&u, g) == 0);
@@ -266,20 +261,20 @@ static void test_points(const Ed448Context *ctx)
     check_equal(t, v);
 
     /* a + a (the same object) */
-    assert(ed448_copy(t, g) == 0);
+    gt_copy(t, g);
     assert(ed448_add(t, t) == 0);
     check_point(t, g2->rx, g2->ry);
 
     /* -G = (n-1)G; G + (-G) = 0; 0 + G = G; 2*0 = 0 */
-    assert(ed448_copy(u, g) == 0);
+    gt_copy(u, g);
     assert(ed448_neg(u) == 0);
     check_point(u, gm->rx, gm->ry);
-    assert(ed448_copy(t, g) == 0);
+    gt_copy(t, g);
     assert(ed448_add(t, u) == 0);
     check_equal(t, pai);
     assert(ed448_add(t, g) == 0);
     check_equal(t, g);
-    assert(ed448_copy(t, pai) == 0);
+    gt_copy(t, pai);
     assert(ed448_double(t) == 0);
     check_equal(t, pai);
 
@@ -301,15 +296,15 @@ static void test_on_curve(const Ed448Context *ctx)
     PointEd448 *g;
     EcWs ws;
 
-    assert(ec_ws_new(&ws, ctx->field) == 0);
+    assert(ec_ws_new(&ws, ctx->g.field) == 0);
     g = load_point(ctx, gx, gy);
-    assert(ed448_on_curve(&ws, ctx, g->x, g->y, g->z) == 1);
+    assert(ed448_on_curve(&ws, &ctx->g, g->x, g->y, g->z) == 1);
     assert(ed448_double(g) == 0);               /* Z != 1 */
-    assert(ed448_on_curve(&ws, ctx, g->x, g->y, g->z) == 1);
+    assert(ed448_on_curve(&ws, &ctx->g, g->x, g->y, g->z) == 1);
     g->y[0] ^= 1;
-    assert(ed448_on_curve(&ws, ctx, g->x, g->y, g->z) == 0);
+    assert(ed448_on_curve(&ws, &ctx->g, g->x, g->y, g->z) == 0);
     memset(g->x, 0, 3*ED448_WORDS*8);            /* (0:0:0) */
-    assert(ed448_on_curve(&ws, ctx, g->x, g->y, g->z) == 0);
+    assert(ed448_on_curve(&ws, &ctx->g, g->x, g->y, g->z) == 0);
     ed448_free_point(g);
     ec_ws_free(&ws);
 }
@@ -346,168 +341,91 @@ static void test_scalar(const Ed448Context *ctx)
             ed448_free_point(p);
         }
     }
-
-    {
-        PointEd448 *p = load_point(ctx, gx, gy);
-
-        assert(ed448_scalar(NULL, k, 1, 0) == ERR_NULL);
-        assert(ed448_scalar(p, NULL, 1, 0) == ERR_NULL);
-        assert(ed448_scalar(p, k, 0, 0) == ERR_NOT_ENOUGH_DATA);
-        ed448_free_point(p);
-    }
 }
 
-/* The tables: entry j of window i is (j+1)*32^i*G (checked with the variable base code) */
-static void test_g_table(const Ed448Context *ctx)
+/* The encoding of RFC 8032 (5.2.2) of a point */
+static void encode_point(uint8_t enc[LEN + 1], const PointEd448 *p)
 {
-    uint8_t k[100];
-    unsigned n;
-
-    for (n=0; n<40; n++) {
-        PointEd448 *p, *q, *m;
-        size_t i, j, bit;
-
-        i = n < 2 ? n*(ctx->windows - 1) : rnd() % ctx->windows;
-        j = n < 2 ? 15 : rnd() % EC_DIGITS;
-
-        /* (j+1) << (5*i) */
-        memset(k, 0, sizeof k);
-        bit = 5*i;
-        k[sizeof k - 1 - bit/8] = (uint8_t)((j + 1) << (bit % 8));
-        k[sizeof k - 2 - bit/8] = (uint8_t)((j + 1) >> (8 - bit % 8));
-
-        /* A point equal to G, but not detected as G (Z != 1) */
-        p = load_point(ctx, gx, gy);
-        assert(ed448_double(p) == 0);
-        m = load_point(ctx, gx, gy);
-        assert(ed448_neg(m) == 0);
-        assert(ed448_add(p, m) == 0);
-        assert(ed448_scalar(p, k, sizeof k, rnd()) == 0);
-        ed448_free_point(m);
-
-        q = load_point(ctx, "0", "1");
-        memcpy(q->x, ctx->g_table + (i*EC_DIGITS + j)*2*ED448_WORDS, ED448_WORDS*8);
-        memcpy(q->y, ctx->g_table + (i*EC_DIGITS + j)*2*ED448_WORDS + ED448_WORDS, ED448_WORDS*8);
-        assert(ed448_cmp(p, q) == 0);
-
-        /* The same with G itself (fixed base) */
-        ed448_free_point(p);
-        p = load_point(ctx, gx, gy);
-        assert(ed448_scalar(p, k, sizeof k, rnd()) == 0);
-        assert(ed448_cmp(p, q) == 0);
-
-        ed448_free_point(p);
-        ed448_free_point(q);
-    }
-}
-
-/*
- * The formulas directly: the mixed addition (z2 = NULL) against the full
- * one, the doubling against an addition, and the two scalar
- * multiplications against each other (same blinded scalar).
- */
-static void test_formulas(const Ed448Context *ctx)
-{
-    const size_t nw = ED448_WORDS;
-    PointEd448 *p, *q, *r1, *r2;
-    uint8_t k[LEN];
-    uint64_t kb[8], lambda[ED448_WORDS];
-    EcWs ws;
-    unsigned t;
+    uint8_t xb[LEN], yb[LEN];
     size_t i;
 
-    assert(ec_ws_new(&ws, ctx->field) == 0);
-    p = load_point(ctx, qtx, qty);
-    q = load_point(ctx, gx, gy);
-    r1 = load_point(ctx, "0", "1");
-    r2 = load_point(ctx, "0", "1");
+    assert(ed448_get_xy(xb, yb, LEN, p) == 0);
+    for (i=0; i<LEN; i++)
+        enc[i] = yb[LEN - 1 - i];
+    enc[LEN] = (uint8_t)((xb[LEN - 1] & 1) << 7);
+}
 
-    for (t=0; t<20; t++) {
-        const uint64_t *tx = ctx->g_table + (rnd() % (ctx->windows*EC_DIGITS))*2*nw;
+/* Decode an encoding of p (or fail with error), and check that it gives p back */
+static void check_decode(const Ed448Context *ctx, const uint8_t enc[LEN + 1], const PointEd448 *p, int error)
+{
+    PointEd448 *q = NULL;
 
-        /* p: projective (Z != 1); q: affine, from the tables */
-        assert(ed448_double(p) == 0);
-        memcpy(q->x, tx, 2*nw*8);
-        memcpy(q->z, ctx->field->one, nw*8);
-
-        ed448_point_add(&ws, ctx, r1->x, r1->y, r1->z, p->x, p->y, p->z, q->x, q->y, NULL);
-        ed448_point_add(&ws, ctx, r2->x, r2->y, r2->z, p->x, p->y, p->z, q->x, q->y, q->z);
-        assert(ed448_cmp(r1, r2) == 0);
-
-        /* Doubling = addition to itself (in place) */
-        ed448_point_double(&ws, r1->x, r1->y, r1->z, p->x, p->y, p->z);
-        assert(ed448_copy(r2, p) == 0);
-        ed448_point_add(&ws, ctx, r2->x, r2->y, r2->z, r2->x, r2->y, r2->z, r2->x, r2->y, r2->z);
-        assert(ed448_cmp(r1, r2) == 0);
-        assert(ed448_on_curve(&ws, ctx, r1->x, r1->y, r1->z));
-
-        /* Variable and fixed base, with the same blinded scalar and lambda */
-        for (i=0; i<LEN; i++)
-            k[i] = (uint8_t)rnd();
-        assert(ec_blind_scalar(kb, ctx->k_words, ctx->group_order, k, LEN, rnd()) == 0);
-        for (i=0; i<nw; i++)
-            lambda[i] = i == 0 ? rnd() | 1 : 0;
-        assert(ed448_copy(r1, q) == 0);
-        memcpy(r1->x, ctx->gx, nw*8);
-        memcpy(r1->y, ctx->gy, nw*8);
-        assert(ed448_mul_var(&ws, ctx, r1, kb, lambda) == 0);
-        assert(ed448_mul_g(&ws, ctx, r2, kb, lambda) == 0);
-        assert(ed448_cmp(r1, r2) == 0);
-        assert(ed448_on_curve(&ws, ctx, r1->x, r1->y, r1->z));
+    assert(ed448_decode_point(&q, enc, LEN + 1, ctx) == error);
+    if (error) {
+        assert(q == NULL);
+        return;
     }
-
-    ed448_free_point(p);
+    check_equal(q, p);
     ed448_free_point(q);
-    ed448_free_point(r1);
-    ed448_free_point(r2);
-    ec_ws_free(&ws);
 }
 
-/* k1*(k2*P) = k2*(k1*P), and (k1 + k2)*P = k1*P + k2*P, for random scalars */
-static void test_random(const Ed448Context *ctx)
+static void test_decode_point(const Ed448Context *ctx)
 {
-    uint8_t k1[LEN], k2[LEN], ks[LEN + 1];
-    unsigned t;
-    size_t i;
+    uint8_t enc[LEN + 1], k = 0;
+    PointEd448 *p, *q;
+    unsigned i;
 
-    for (t=0; t<10; t++) {
-        PointEd448 *a, *b, *s;
-        int carry = 0;
-        const char *bx = t % 2 ? qtx : gx, *by = t % 2 ? qty : gy;
+    /* Round trip of G, Q, Q + T (T of order 4), and multiples */
+    for (i=0; i<12; i++) {
+        const char *bx = i % 3 == 0 ? gx : (i % 3 == 1 ? qx : qtx);
+        const char *by = i % 3 == 0 ? gy : (i % 3 == 1 ? qy : qty);
 
-        for (i=0; i<LEN; i++) {
-            k1[i] = (uint8_t)rnd();
-            k2[i] = (uint8_t)rnd();
-        }
-        a = load_point(ctx, bx, by);
-        b = load_point(ctx, bx, by);
-        assert(ed448_scalar(a, k2, LEN, rnd()) == 0);
-        assert(ed448_scalar(a, k1, LEN, rnd()) == 0);
-        assert(ed448_scalar(b, k1, LEN, rnd()) == 0);
-        assert(ed448_scalar(b, k2, LEN, rnd()) == 0);
-        check_equal(a, b);
-        ed448_free_point(a);
-        ed448_free_point(b);
-
-        for (i=LEN; i-- > 0;) {
-            int v = k1[i] + k2[i] + carry;
-
-            ks[i + 1] = (uint8_t)v;
-            carry = v >> 8;
-        }
-        ks[0] = (uint8_t)carry;
-        a = load_point(ctx, bx, by);
-        b = load_point(ctx, bx, by);
-        s = load_point(ctx, bx, by);
-        assert(ed448_scalar(a, k1, LEN, rnd()) == 0);
-        assert(ed448_scalar(b, k2, LEN, rnd()) == 0);
-        assert(ed448_add(a, b) == 0);
-        assert(ed448_scalar(s, ks, LEN + 1, rnd()) == 0);
-        check_equal(a, s);
-        ed448_free_point(a);
-        ed448_free_point(b);
-        ed448_free_point(s);
+        p = load_point(ctx, bx, by);
+        k = (uint8_t)(i + 1);
+        assert(ed448_scalar(p, &k, 1, rnd()) == 0);
+        encode_point(enc, p);
+        check_decode(ctx, enc, p, 0);
+        /* The other bits of the last byte must be zero */
+        enc[LEN] |= 1;
+        check_decode(ctx, enc, p, ERR_EC_POINT);
+        ed448_free_point(p);
     }
+
+    /* The neutral point (0, 1): x = 0 cannot have its bit set */
+    p = load_point(ctx, "00", "01");
+    memset(enc, 0, LEN + 1);
+    enc[0] = 1;
+    check_decode(ctx, enc, p, 0);
+    enc[LEN] = 0x80;
+    check_decode(ctx, enc, p, ERR_EC_POINT);
+    ed448_free_point(p);
+
+    /* y = p and 2^448 - 1 are not reduced */
+    for (i=0; i<2; i++) {
+        memset(enc, 0xFF, LEN + 1);
+        enc[28] = i == 0 ? 0xFE : 0xFF;
+        enc[LEN] = 0;
+        check_decode(ctx, enc, NULL, ERR_EC_POINT);
+    }
+
+    /* y = 2 has no x; y = 3 has one, on the curve */
+    memset(enc, 0, LEN + 1);
+    enc[0] = 2;
+    check_decode(ctx, enc, NULL, ERR_EC_POINT);
+    enc[0] = 3;
+    assert(ed448_decode_point(&q, enc, LEN + 1, ctx) == 0);
+    {
+        uint8_t xb[LEN], yb[LEN];
+
+        assert(ed448_get_xy(xb, yb, LEN, q) == 0);
+        assert(ed448_new_point(&p, xb, yb, LEN, ctx) == 0);
+        check_equal(p, q);
+        ed448_free_point(p);
+    }
+    ed448_free_point(q);
+
+    /* Wrong length */
+    assert(ed448_decode_point(&q, enc, LEN, ctx) == ERR_MODULUS);
 }
 
 static void test_other_context(const Ed448Context *ctx)
@@ -518,6 +436,7 @@ static void test_other_context(const Ed448Context *ctx)
     assert(ed448_new_context(&ctx2) == 0);
     a = load_point(ctx, "0", "1");
     b = load_point(ctx2, "0", "1");
+    test_group_other(a, b);
     assert(ed448_add(a, b) == ERR_EC_CURVE);
     assert(ed448_cmp(a, b) == ERR_EC_CURVE);
     ed448_free_point(a);
@@ -546,9 +465,19 @@ int main(void)
     test_points(ctx);
     test_on_curve(ctx);
     test_scalar(ctx);
-    test_g_table(ctx);
-    test_formulas(ctx);
-    test_random(ctx);
+    {
+        /* G, Q, and Q + T (T of order 4) */
+        PointEd448 *bases[3];
+
+        bases[0] = load_point(ctx, gx, gy);
+        bases[1] = load_point(ctx, qx, qy);
+        bases[2] = load_point(ctx, qtx, qty);
+        test_group(bases, 3);
+        ed448_free_point(bases[0]);
+        ed448_free_point(bases[1]);
+        ed448_free_point(bases[2]);
+    }
+    test_decode_point(ctx);
     test_other_context(ctx);
     ed448_free_context(ctx);
     return 0;

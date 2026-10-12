@@ -29,21 +29,7 @@ static int have_bmi2_adx(void)
 #endif
 
 /* Private functions (they are not static when STATIC is defined as empty) */
-uint64_t point_on_curve(EcWs *ws, const EcCurve *c, const uint64_t *x, const uint64_t *y, const uint64_t *z);
-void point_double(EcWs *ws, const EcCurve *c, uint64_t *x3, uint64_t *y3, uint64_t *z3,
-                  const uint64_t *x1, const uint64_t *y1, const uint64_t *z1);
-void point_add(EcWs *ws, const EcCurve *c, uint64_t *x3, uint64_t *y3, uint64_t *z3,
-               const uint64_t *x1, const uint64_t *y1, const uint64_t *z1,
-               const uint64_t *x2, const uint64_t *y2, const uint64_t *z2);
-void point_add_mixed(EcWs *ws, const EcCurve *c, uint64_t *x3, uint64_t *y3, uint64_t *z3,
-                     const uint64_t *x1, const uint64_t *y1, const uint64_t *z1,
-                     const uint64_t *x2, const uint64_t *y2);
-void point_set_infinity(const EcCurve *c, uint64_t *x, uint64_t *y, uint64_t *z);
-int scalar_mul_var(EcWs *ws, const EcCurve *c, uint64_t *rx, uint64_t *ry, uint64_t *rz,
-                   const uint64_t *px, const uint64_t *py, const uint64_t *pz,
-                   const uint64_t *kb, const uint64_t *lambda);
-int scalar_mul_g(EcWs *ws, const EcCurve *c, uint64_t *rx, uint64_t *ry, uint64_t *rz,
-                 const uint64_t *kb, const uint64_t *lambda);
+uint64_t point_on_curve(EcWs *ws, const EcGroup *g, const uint64_t *x, const uint64_t *y, const uint64_t *z);
 
 typedef struct {
     int base_is_g;
@@ -266,6 +252,8 @@ static uint64_t rnd(void)
     return rnd_state;
 }
 
+#include "ec_group_tests.c"
+
 /** Hex string to big-endian bytes, right-aligned in len bytes (returns len) **/
 static size_t from_hex(uint8_t *out, size_t len, const char *hex)
 {
@@ -311,7 +299,7 @@ static EcPointN *load_point(const EcCurve *c, const char *x, const char *y)
 static void check_point(const EcPointN *p, const char *x, const char *y)
 {
     uint8_t xb[MAX_LEN], yb[MAX_LEN], xe[MAX_LEN], ye[MAX_LEN];
-    size_t len = p->curve->len;
+    size_t len = p->g->len;
 
     from_hex(xe, len, x);
     from_hex(ye, len, y);
@@ -323,7 +311,7 @@ static void check_point(const EcPointN *p, const char *x, const char *y)
 static void check_equal(const EcPointN *a, const EcPointN *b)
 {
     uint8_t xa[MAX_LEN], ya[MAX_LEN], xb[MAX_LEN], yb[MAX_LEN];
-    size_t len = a->curve->len;
+    size_t len = a->g->len;
 
     assert(ec_nat_get_xy(xa, ya, len, a) == 0);
     assert(ec_nat_get_xy(xb, yb, len, b) == 0);
@@ -418,7 +406,7 @@ static void test_points(const TestCurve *tc, const EcCurve *c)
     /* clone and copy */
     assert(ec_nat_clone(&t, q) == 0);
     check_equal(t, q);
-    assert(ec_nat_copy(t, g) == 0);
+    gt_copy(t, g);
     check_equal(t, g);
 
     /* 2G = G + G, with different Z */
@@ -430,8 +418,8 @@ static void test_points(const TestCurve *tc, const EcCurve *c)
     assert(ec_nat_cmp(t, g) == ERR_VALUE);
 
     /* G + (-G) = 0; -0 = 0; 0 + 0 = 0; 2*0 = 0; 0 + G = G */
-    assert(ec_nat_copy(t, g) == 0);
-    assert(ec_nat_copy(u, g) == 0);
+    gt_copy(t, g);
+    gt_copy(u, g);
     assert(ec_nat_neg(u) == 0);
     check_point(u, tc->cases[8].rx, tc->cases[8].ry);   /* (n-1)G */
     assert(ec_nat_add(t, u) == 0);
@@ -446,10 +434,10 @@ static void test_points(const TestCurve *tc, const EcCurve *c)
     check_equal(t, g);
 
     /* (2G + G) = 3G = G + 2G */
-    assert(ec_nat_copy(t, g) == 0);
+    gt_copy(t, g);
     assert(ec_nat_double(t) == 0);
     assert(ec_nat_add(t, g) == 0);
-    assert(ec_nat_copy(u, g) == 0);
+    gt_copy(u, g);
     {
         EcPointN *v;
 
@@ -479,9 +467,9 @@ static void test_other_curve(const EcCurve *c1, const EcCurve *c2)
     assert(ec_nat_new_point(&a, (const uint8_t*)"", (const uint8_t*)"", 0, c1) == ERR_NOT_ENOUGH_DATA);
     a = load_point(c1, "0", "0");
     b = load_point(c2, "0", "0");
+    test_group_other(a, b);
     assert(ec_nat_add(a, b) == ERR_EC_CURVE);
     assert(ec_nat_cmp(a, b) == ERR_EC_CURVE);
-    assert(ec_nat_copy(a, b) == ERR_EC_CURVE);
     ec_nat_free_point(a);
     ec_nat_free_point(b);
 }
@@ -617,201 +605,11 @@ static void test_scalar(const TestCurve *tc, const EcCurve *c)
             ec_nat_free_point(p);
         }
     }
-
-    {
-        EcPointN *p = load_point(c, tc->gx, tc->gy);
-
-        assert(ec_nat_scalar(NULL, k, 1, 0) == ERR_NULL);
-        assert(ec_nat_scalar(p, NULL, 1, 0) == ERR_NULL);
-        assert(ec_nat_scalar(p, k, 0, 0) == ERR_NOT_ENOUGH_DATA);
-        ec_nat_free_point(p);
-    }
-}
-
-/* The tables: entry j of window i is (j+1)*32^i*G (checked with the variable base code) */
-static void test_g_table(const TestCurve *tc, const EcCurve *c)
-{
-    uint8_t k[MAX_LEN];
-    size_t i, j, n;
-
-    for (n=0; n<40; n++) {
-        EcPointN *p, *q;
-        size_t bit;
-
-        i = n < 2 ? n*(c->windows - 1) : rnd() % c->windows;
-        j = n < 2 ? 15 : rnd() % EC_DIGITS;
-
-        /* (j+1) << (5*i) */
-        memset(k, 0, sizeof k);
-        bit = 5*i;
-        assert(bit/8 + 2 <= sizeof k);
-        k[sizeof k - 1 - bit/8] = (uint8_t)((j + 1) << (bit % 8));
-        k[sizeof k - 2 - bit/8] = (uint8_t)((j + 1) >> (8 - bit % 8));
-
-        /* A point equal to G, but not detected as G (Z != 1) */
-        p = load_point(c, tc->gx, tc->gy);
-        assert(ec_nat_double(p) == 0);
-        q = load_point(c, tc->cases[8].rx, tc->cases[8].ry);    /* -G */
-        assert(ec_nat_add(p, q) == 0);
-        assert(ec_nat_scalar(p, k, sizeof k, rnd()) == 0);
-        ec_nat_free_point(q);
-
-        q = load_point(c, "0", "0");
-        memcpy(q->x, c->g_table + (i*EC_DIGITS + j)*2*c->nw, c->nw*8);
-        memcpy(q->y, c->g_table + (i*EC_DIGITS + j)*2*c->nw + c->nw, c->nw*8);
-        memcpy(q->z, c->field->one, c->nw*8);
-        assert(ec_nat_cmp(p, q) == 0);
-
-        /* The same with G itself (fixed base) */
-        ec_nat_free_point(p);
-        p = load_point(c, tc->gx, tc->gy);
-        assert(ec_nat_scalar(p, k, sizeof k, rnd()) == 0);
-        assert(ec_nat_cmp(p, q) == 0);
-
-        ec_nat_free_point(p);
-        ec_nat_free_point(q);
-    }
-}
-
-/*
- * The formulas directly: the mixed addition against the full addition
- * (also from the point at infinity, and for equal points), the point at
- * infinity in the full formulas, and the two scalar multiplications
- * against each other (same blinded scalar).
- */
-static void test_formulas(const TestCurve *tc, const EcCurve *c)
-{
-    const size_t nw = c->nw;
-    EcPointN *p, *q, *r1, *r2;
-    uint8_t k[MAX_LEN];
-    uint64_t kb[16], lambda[16];
-    EcWs ws;
-    unsigned t;
-    size_t i;
-
-    assert(ec_ws_new(&ws, c->field) == 0);
-    p = load_point(c, tc->qx, tc->qy);
-    q = load_point(c, tc->gx, tc->gy);
-    r1 = load_point(c, "0", "0");
-    r2 = load_point(c, "0", "0");
-
-    for (t=0; t<20; t++) {
-        const uint64_t *qx = c->g_table + (rnd() % (c->windows*EC_DIGITS))*2*nw;
-        const uint64_t *qy = qx + nw;
-
-        /* p: projective (Z != 1); q: affine, from the tables */
-        assert(ec_nat_double(p) == 0);
-        memcpy(q->x, qx, nw*8);
-        memcpy(q->y, qy, nw*8);
-        memcpy(q->z, c->field->one, nw*8);
-
-        point_add_mixed(&ws, c, r1->x, r1->y, r1->z, p->x, p->y, p->z, qx, qy);
-        point_add(&ws, c, r2->x, r2->y, r2->z, p->x, p->y, p->z, q->x, q->y, q->z);
-        assert(ec_nat_cmp(r1, r2) == 0);
-
-        /* In place */
-        assert(ec_nat_copy(r2, p) == 0);
-        point_add_mixed(&ws, c, r2->x, r2->y, r2->z, r2->x, r2->y, r2->z, qx, qy);
-        assert(ec_nat_cmp(r1, r2) == 0);
-
-        /* From the point at infinity (randomized) */
-        point_set_infinity(c, r1->x, r1->y, r1->z);
-        fe_mul(&ws, r1->y, r1->y, p->z);
-        point_add_mixed(&ws, c, r1->x, r1->y, r1->z, r1->x, r1->y, r1->z, qx, qy);
-        assert(ec_nat_cmp(r1, q) == 0);
-
-        /* Equal points: a doubling */
-        memcpy(r1->x, q->x, 3*nw*8);
-        fe_mul(&ws, r1->x, r1->x, p->z);
-        fe_mul(&ws, r1->y, r1->y, p->z);
-        fe_mul(&ws, r1->z, r1->z, p->z);
-        point_add_mixed(&ws, c, r1->x, r1->y, r1->z, r1->x, r1->y, r1->z, qx, qy);
-        point_double(&ws, c, r2->x, r2->y, r2->z, q->x, q->y, q->z);
-        assert(ec_nat_cmp(r1, r2) == 0);
-
-        /* The full formulas with the point at infinity */
-        point_set_infinity(c, r1->x, r1->y, r1->z);
-        point_add(&ws, c, r2->x, r2->y, r2->z, r1->x, r1->y, r1->z, p->x, p->y, p->z);
-        assert(ec_nat_cmp(r2, p) == 0);
-        point_add(&ws, c, r2->x, r2->y, r2->z, p->x, p->y, p->z, r1->x, r1->y, r1->z);
-        assert(ec_nat_cmp(r2, p) == 0);
-        point_double(&ws, c, r2->x, r2->y, r2->z, r1->x, r1->y, r1->z);
-        assert(ec_nat_cmp(r2, r1) == 0);
-        assert(point_on_curve(&ws, c, r2->x, r2->y, r2->z));
-
-        /* Variable and fixed base, with the same blinded scalar and lambda */
-        for (i=0; i<c->len; i++)
-            k[i] = (uint8_t)rnd();
-        assert(ec_blind_scalar(kb, c->k_words, c->order, k, c->len, rnd()) == 0);
-        for (i=0; i<nw; i++)
-            lambda[i] = i == 0 ? rnd() | 1 : 0;
-        memcpy(r1->x, c->gx, nw*8);
-        memcpy(r1->y, c->gy, nw*8);
-        memcpy(r1->z, c->field->one, nw*8);
-        assert(scalar_mul_var(&ws, c, r1->x, r1->y, r1->z, r1->x, r1->y, r1->z, kb, lambda) == 0);
-        assert(scalar_mul_g(&ws, c, r2->x, r2->y, r2->z, kb, lambda) == 0);
-        assert(ec_nat_cmp(r1, r2) == 0);
-        assert(point_on_curve(&ws, c, r1->x, r1->y, r1->z));
-    }
-
-    ec_nat_free_point(p);
-    ec_nat_free_point(q);
-    ec_nat_free_point(r1);
-    ec_nat_free_point(r2);
-    ec_ws_free(&ws);
-}
-
-/* k1*(k2*P) = k2*(k1*P), and (k1 + k2)*P = k1*P + k2*P, for random scalars */
-static void test_random(const TestCurve *tc, const EcCurve *c)
-{
-    uint8_t k1[MAX_LEN], k2[MAX_LEN];
-    unsigned t;
-    size_t i;
-
-    for (t=0; t<10; t++) {
-        EcPointN *a, *b, *s;
-        int carry = 0;
-        uint8_t ks[MAX_LEN + 1];
-
-        for (i=0; i<c->len; i++) {
-            k1[i] = (uint8_t)rnd();
-            k2[i] = (uint8_t)rnd();
-        }
-        a = load_point(c, tc->qx, tc->qy);
-        b = load_point(c, tc->qx, tc->qy);
-        assert(ec_nat_scalar(a, k2, c->len, rnd()) == 0);
-        assert(ec_nat_scalar(a, k1, c->len, rnd()) == 0);
-        assert(ec_nat_scalar(b, k1, c->len, rnd()) == 0);
-        assert(ec_nat_scalar(b, k2, c->len, rnd()) == 0);
-        check_equal(a, b);
-        ec_nat_free_point(a);
-        ec_nat_free_point(b);
-
-        for (i=c->len; i-- > 0;) {
-            int v = k1[i] + k2[i] + carry;
-
-            ks[i + 1] = (uint8_t)v;
-            carry = v >> 8;
-        }
-        ks[0] = (uint8_t)carry;
-        a = load_point(c, tc->gx, tc->gy);
-        b = load_point(c, tc->gx, tc->gy);
-        s = load_point(c, tc->gx, tc->gy);
-        assert(ec_nat_scalar(a, k1, c->len, rnd()) == 0);
-        assert(ec_nat_scalar(b, k2, c->len, rnd()) == 0);
-        assert(ec_nat_add(a, b) == 0);
-        assert(ec_nat_scalar(s, ks, c->len + 1, rnd()) == 0);
-        check_equal(a, s);
-        ec_nat_free_point(a);
-        ec_nat_free_point(b);
-        ec_nat_free_point(s);
-    }
 }
 
 int main(void)
 {
     EcCurve *c[NCURVES];
-    uint64_t state = 0, r1, r2;
     size_t i;
 
 #if defined(TEST_BMI2_ADX)
@@ -825,11 +623,6 @@ int main(void)
     }
 #endif
 
-    r1 = ec_next_random(&state);
-    r2 = ec_next_random(&state);
-    assert(r1 != r2);
-    assert(r1 == 0xE220A8397B1DCDAFULL);
-
     test_booth();
     for (i=0; i<NCURVES; i++) {
         test_new_curve(&curves[i]);
@@ -838,9 +631,15 @@ int main(void)
         test_point_on_curve(&curves[i], c[i]);
         test_blind_scalar(c[i]);
         test_scalar(&curves[i], c[i]);
-        test_g_table(&curves[i], c[i]);
-        test_formulas(&curves[i], c[i]);
-        test_random(&curves[i], c[i]);
+        {
+            EcPointN *bases[2];
+
+            bases[0] = load_point(c[i], curves[i].gx, curves[i].gy);
+            bases[1] = load_point(c[i], curves[i].qx, curves[i].qy);
+            test_group(bases, 2);
+            ec_nat_free_point(bases[0]);
+            ec_nat_free_point(bases[1]);
+        }
     }
     test_other_curve(c[0], c[1]);
     for (i=0; i<NCURVES; i++)

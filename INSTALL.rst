@@ -106,6 +106,34 @@ but ``python -m Crypto.SelfTest`` is no longer available.
     setuptools copies all files in it into the wheel, including the old self-tests.
     ``python -m build`` is not affected, as it builds the wheel from a fresh sdist.
 
+.. _no_ec_tables:
+
+Installing without the precomputed tables of the elliptic curves
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To multiply the generator of a curve faster, the library uses precomputed
+tables: for Ed25519, 36 KB in the binary module; for Ed448 and the NIST curves,
+from 39 KB (P-192) to 266 KB (P-521) of memory for each curve in use, computed
+when the curve is first loaded.
+
+To save that space, set the environment variable ``PYCRYPTODOME_NO_EC_TABLES``
+when compiling from source::
+
+        $ PYCRYPTODOME_NO_EC_TABLES=1 pip install pycryptodome --no-binary pycryptodome
+
+or, to build a wheel from a source checkout::
+
+        $ PYCRYPTODOME_NO_EC_TABLES=1 python -m build
+
+The generator is then multiplied like any other point, about 4x to 6x slower:
+this affects key generation and signing (ECDSA and EdDSA), and in part the
+verification of signatures. ECDH is not affected.
+
+.. note::
+    The variable only changes the compiled code. If you build with
+    ``pip install .`` or ``pip wheel .`` instead, first remove any ``build/``
+    directory left by previous builds, so that its object files are not reused.
+
 Documentation
 ~~~~~~~~~~~~~
 

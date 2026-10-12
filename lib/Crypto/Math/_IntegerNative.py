@@ -9,9 +9,11 @@ from ._IntegerBase import IntegerBase
 class IntegerNative(IntegerBase):
     """A class to model a natural integer (including zero)"""
 
-    def __init__(self, value):
+    def __init__(self, value, *, public=False):
         if isinstance(value, float):
             raise ValueError("A floating point type is not a natural number")
+        # A copy keeps the value public
+        self._public = public or (isinstance(value, IntegerBase) and value._public)
         try:
             self._value = value._value
         except AttributeError:
@@ -47,7 +49,7 @@ class IntegerNative(IntegerBase):
         return result
 
     @classmethod
-    def from_bytes(cls, byte_string, byteorder="big"):
+    def from_bytes(cls, byte_string, byteorder="big", *, public=False):
         if byteorder == "big":
             pass
         elif byteorder == "little":
@@ -55,7 +57,7 @@ class IntegerNative(IntegerBase):
             byte_string.reverse()
         else:
             raise ValueError("Incorrect byteorder")
-        return cls(bytes_to_long(byte_string))
+        return cls(bytes_to_long(byte_string), public=public)
 
     # Relations
     def __eq__(self, term):
@@ -87,30 +89,30 @@ class IntegerNative(IntegerBase):
     # Arithmetic operations
     def __add__(self, term):
         try:
-            return self.__class__(self._value + int(term))
+            return self.__class__(self._value + int(term), public=self._is_public_with(term))
         except (ValueError, AttributeError, TypeError):
             return NotImplemented
 
     def __sub__(self, term):
         try:
-            return self.__class__(self._value - int(term))
+            return self.__class__(self._value - int(term), public=self._is_public_with(term))
         except (ValueError, AttributeError, TypeError):
             return NotImplemented
 
     def __mul__(self, factor):
         try:
-            return self.__class__(self._value * int(factor))
+            return self.__class__(self._value * int(factor), public=self._is_public_with(factor))
         except (ValueError, AttributeError, TypeError):
             return NotImplemented
 
     def __floordiv__(self, divisor):
-        return self.__class__(self._value // int(divisor))
+        return self.__class__(self._value // int(divisor), public=self._is_public_with(divisor))
 
     def __mod__(self, divisor):
         divisor_value = int(divisor)
         if divisor_value < 0:
             raise ValueError("Modulus must be positive")
-        return self.__class__(self._value % divisor_value)
+        return self.__class__(self._value % divisor_value, public=self._is_public_with(divisor))
 
     def inplace_pow(self, exponent, modulus=None):
         exp_value = int(exponent)
@@ -125,6 +127,7 @@ class IntegerNative(IntegerBase):
                 raise ZeroDivisionError("Modulus cannot be zero")
         else:
             mod_value = None
+        self._public = False
         self._value = pow(self._value, exp_value, mod_value)
         return self
 
@@ -156,14 +159,17 @@ class IntegerNative(IntegerBase):
         return self.__class__(result)
 
     def __iadd__(self, term):
+        self._public = self._is_public_with(term)
         self._value += int(term)
         return self
 
     def __isub__(self, term):
+        self._public = self._is_public_with(term)
         self._value -= int(term)
         return self
 
     def __imul__(self, term):
+        self._public = self._is_public_with(term)
         self._value *= int(term)
         return self
 
@@ -173,6 +179,7 @@ class IntegerNative(IntegerBase):
             raise ZeroDivisionError("Division by zero")
         if modulus < 0:
             raise ValueError("Modulus must be positive")
+        self._public = self._is_public_with(term)
         self._value %= modulus
         return self
 
@@ -193,6 +200,7 @@ class IntegerNative(IntegerBase):
                 return -1
 
     def __irshift__(self, pos):
+        self._public = False
         try:
             self._value >>= int(pos)
         except OverflowError:
@@ -209,6 +217,7 @@ class IntegerNative(IntegerBase):
             raise ValueError("Incorrect shift count")
 
     def __ilshift__(self, pos):
+        self._public = False
         try:
             self._value <<= int(pos)
         except OverflowError:
@@ -270,13 +279,16 @@ class IntegerNative(IntegerBase):
             raise ValueError("Value is composite")
 
     def multiply_accumulate(self, a, b):
+        self._public = False
         self._value += int(a) * int(b)
         return self
 
     def set(self, source):
+        self._public = isinstance(source, IntegerBase) and source._public
         self._value = int(source)
 
     def inplace_inverse(self, modulus):
+        self._public = self._is_public_with(modulus)
         self._value = inverse(self._value, int(modulus))
         return self
 

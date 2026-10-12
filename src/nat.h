@@ -101,6 +101,11 @@ static inline uint64_t nat_word(const Nat *a, size_t i)
     return i < a->nw ? a->w[i] : 0;
 }
 
+/**
+ * out (out_nw words) = in (in_nw words), zero-extended if out is longer,
+ * truncated if it is shorter. out may be in.
+ */
+void words_copy_resized(uint64_t *out, size_t out_nw, const uint64_t *in, size_t in_nw);
 /** 1 if the nw words of x are all zero **/
 uint64_t words_is_zero(const uint64_t *x, size_t nw);
 /** 1 if x == y (nw words each) **/
@@ -182,6 +187,8 @@ void mont_sqr(uint64_t *out, const uint64_t *a, MontCtx *ctx);
 void mont_to(uint64_t *out, const uint64_t *x, MontCtx *ctx);
 /** out = x/R mod n **/
 void mont_from(uint64_t *out, const uint64_t *x, MontCtx *ctx);
+/** -n0^{-1} mod 2^64, for an odd n0 (the constant of the Montgomery reduction) **/
+uint64_t neg_inv64(uint64_t n0);
 /** out = (a + b) mod n, a, b < n; out may alias **/
 void mod_add(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, size_t nw);
 /** out = (a - b) mod n, a, b < n; out may alias **/

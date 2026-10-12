@@ -166,13 +166,8 @@ class DsaKey:
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, DsaKey):
             return False
-        if bool(self.has_private()) != bool(other.has_private()):
-            return False
-
-        result = True
-        for comp in self._keydata:
-            result = result and (getattr(self._key, comp, None) == getattr(other._key, comp, None))
-        return result
+        # Same components (x is only in private keys)
+        return self._key == other._key
 
     def __getstate__(self) -> None:
         # DSA key is not pickable
@@ -515,18 +510,21 @@ def construct(
 
     fmt_error = False
     if consistency_check:
+        # The components as Integers, as x is secret
+        y, g, p, q = (key_dict[comp] for comp in ("y", "g", "p", "q"))
         # P and Q must be prime
-        fmt_error = test_probable_prime(key.p) == COMPOSITE
-        fmt_error |= test_probable_prime(key.q) == COMPOSITE
+        fmt_error = test_probable_prime(p) == COMPOSITE
+        fmt_error |= test_probable_prime(q) == COMPOSITE
         # Verify Lagrange's theorem for sub-group
-        fmt_error |= ((key.p - 1) % key.q) != 0
-        fmt_error |= key.g <= 1 or key.g >= key.p
-        fmt_error |= pow(key.g, key.q, key.p) != 1
+        fmt_error |= ((p - 1) % q) != 0
+        fmt_error |= g <= 1 or g >= p
+        fmt_error |= pow(g, q, p) != 1
         # Public key
-        fmt_error |= key.y <= 0 or key.y >= key.p
-        if hasattr(key, "x"):
-            fmt_error |= key.x <= 0 or key.x >= key.q
-            fmt_error |= pow(key.g, key.x, key.p) != key.y
+        fmt_error |= y <= 0 or y >= p
+        if "x" in key_dict:
+            x = key_dict["x"]
+            fmt_error |= x <= 0 or x >= q
+            fmt_error |= pow(g, x, p) != y
 
     if fmt_error:
         raise ValueError("Invalid DSA key components")

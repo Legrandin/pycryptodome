@@ -40,13 +40,16 @@ int ec_nat_scalar(EcPoint *p,
                   const uint8_t *k,
                   size_t len,
                   uint64_t seed);
+int ec_nat_scalar_public(EcPoint *p,
+                         const uint8_t *k,
+                         size_t len);
 int ec_nat_clone(EcPoint **out, const EcPoint *p);
 int ec_nat_cmp(const EcPoint *a, const EcPoint *b);
 int ec_nat_neg(EcPoint *p);
 """
 
 
-_ec_lib, _bmi2_adx = load_ec_lib(_ec_cdecl)
+_ec_lib = load_ec_lib(_ec_cdecl)
 
 
 class EcLib:
@@ -56,6 +59,7 @@ class EcLib:
     double = _ec_lib.ec_nat_double
     add = _ec_lib.ec_nat_add
     scalar = _ec_lib.ec_nat_scalar
+    scalar_public = _ec_lib.ec_nat_scalar_public
     clone = _ec_lib.ec_nat_clone
     cmp = _ec_lib.ec_nat_cmp
     neg = _ec_lib.ec_nat_neg
@@ -79,12 +83,13 @@ def _new_curve(p, b, order, Gx, Gy, bits, oid, desc, openssh):
         raise ImportError("Error %d initializing %s context" % (result, desc))
 
     context = SmartPointer(curve.get(), _ec_lib.ec_nat_free_curve)
+    # The parameters of the curve are public
     return _Curve(
-        Integer(p),
-        Integer(b),
-        Integer(order),
-        Integer(Gx),
-        Integer(Gy),
+        Integer(p, public=True),
+        Integer(b, public=True),
+        Integer(order, public=True),
+        Integer(Gx, public=True),
+        Integer(Gy, public=True),
         None,
         bits,
         oid,

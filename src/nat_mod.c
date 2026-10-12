@@ -16,6 +16,7 @@
 #include "common.h"
 #include "nat.h"
 #include "nat_ct.h"
+#include "nat_rows.c"
 
 /*
  * On 32-bit x86, SSE2 (when the compiler can build it) gives two
@@ -31,10 +32,22 @@
 /* Modular helpers on word arrays                                   */
 /* ---------------------------------------------------------------- */
 
+uint64_t neg_inv64(uint64_t n0)
+{
+    uint64_t inv = n0;          /* correct to 3 bits, as n0*n0 = 1 mod 8 */
+    unsigned i;
+
+    /* Newton iteration: each step doubles the number of correct bits */
+    for (i=0; i<5; i++)
+        inv *= 2 - n0*inv;
+    return 0 - inv;
+}
+
 void mod_add(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, size_t nw)
 {
     uint64_t carry, lt;
 
+    /* No scratchpad (unlike rows_mod_add()): subtract n after a comparison */
     carry = words_add(out, a, b, nw);
     lt = words_lt(out, n, nw);
     words_cond_sub(ct_mask(carry | (1 ^ lt)), out, n, nw);
@@ -42,10 +55,7 @@ void mod_add(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t
 
 void mod_sub(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, size_t nw)
 {
-    uint64_t borrow;
-
-    borrow = words_sub(out, a, b, nw);
-    words_cond_add(ct_mask(borrow), out, n, nw);
+    rows_mod_sub(out, a, b, n, nw);
 }
 
 void mod_half(uint64_t *x, const uint64_t *n, size_t nw)
@@ -350,9 +360,7 @@ int mont_ctx_new(MontCtx **out, const Nat *n)
 {
     MontCtx *ctx;
     Nat *big = NULL;
-    uint64_t inv;
     size_t nw;
-    unsigned i;
     int res = ERR_MEMORY;
 
     if (ct_declassify(n->w[0] & 1) == 0)
@@ -375,11 +383,7 @@ int mont_ctx_new(MontCtx **out, const Nat *n)
     memcpy(ctx->n, n->w, nw*sizeof(uint64_t));
     ctx->unit[0] = 1;
 
-    /* Newton iteration: each step doubles the number of correct bits (3 at start) */
-    inv = n->w[0];
-    for (i=0; i<5; i++)
-        inv *= 2 - n->w[0]*inv;
-    ctx->m0 = 0 - inv;
+    ctx->m0 = neg_inv64(n->w[0]);
 
 #if defined(NAT_32BIT)
     /*
@@ -503,12 +507,7 @@ STATIC uint64_t addmul_row(uint64_t *t, const uint64_t *a, uint64_t b, size_t nw
 /* (32-bit targets use mont_mul32 and mont_sqr32 instead, except in the tests) */
 STATIC uint64_t addmul_row(uint64_t *t, const uint64_t *a, uint64_t b, size_t nw)
 {
-    uint64_t c = 0;
-    size_t j;
-
-    for (j=0; j<nw; j++)
-        t[j] = ct_mac(a[j], b, t[j], c, &c);
-    return c;
+    return rows_addmul(t, a, b, nw);
 }
 
 #endif
@@ -518,42 +517,13 @@ STATIC uint64_t addmul_row(uint64_t *t, const uint64_t *a, uint64_t b, size_t nw
 /** t (2*nw words) = a*b (nw words each), the full product **/
 STATIC void mul_rows(uint64_t *t, const uint64_t *a, const uint64_t *b, size_t nw)
 {
-    size_t i;
-
-    memset(t, 0, 2*nw*sizeof(uint64_t));
-    for (i=0; i<nw; i++)
-        t[i + nw] = addmul_row(t + i, a, b[i], nw);
+    rows_mul(t, a, b, nw, addmul_row);
 }
 
 /** t (2*nw words) = a*a (nw words), the full square **/
 STATIC void sqr_rows(uint64_t *t, const uint64_t *a, size_t nw)
 {
-    size_t i;
-    uint64_t c, top;
-
-    memset(t, 0, 2*nw*sizeof(uint64_t));
-
-    /* t = sum of a[i]*a[j]*2^(64*(i+j)), for i < j; t[i+nw] is still zero */
-    for (i=0; i+1<nw; i++)
-        t[i + nw] = addmul_row(t + 2*i + 1, a + i + 1, a[i], nw - i - 1);
-
-    /* t = 2*t */
-    top = 0;
-    for (i=0; i<2*nw; i++) {
-        uint64_t next = t[i] >> 63;
-        t[i] = (t[i] << 1) | top;
-        top = next;
-    }
-
-    /* t += a[i]^2 * 2^(128*i) */
-    c = 0;
-    for (i=0; i<nw; i++) {
-        uint64_t lo, hi;
-
-        lo = ct_mac(a[i], a[i], 0, 0, &hi);
-        t[2*i] = ct_add(t[2*i], lo, c, &c);
-        t[2*i + 1] = ct_add(t[2*i + 1], hi, c, &c);
-    }
+    rows_sqr(t, a, nw, addmul_row);
 }
 
 #endif
@@ -561,10 +531,7 @@ STATIC void sqr_rows(uint64_t *t, const uint64_t *a, size_t nw)
 /*
  * Montgomery multiplication: out = a*b/R mod n.
  * a and b must be smaller than n. out may alias a or b.
- *
- * Separated operand scanning: for each word of b, add a*b[i] and then
- * mq*n at offset i (mq makes word i zero). The result is in the upper
- * half of t, and it is smaller than 2n.
+ * See rows_mont_mul() in nat_rows.c.
  */
 void mont_mul(uint64_t *out, const uint64_t *a, const uint64_t *b, MontCtx *ctx)
 {
@@ -574,42 +541,13 @@ void mont_mul(uint64_t *out, const uint64_t *a, const uint64_t *b, MontCtx *ctx)
     mont_mul32(ctx->x32, ctx->x32, ctx->y32, ctx);
     from_words32(out, ctx->x32, ctx->nw);
 #else
-    uint64_t *t = ctx->tmp;
-    const uint64_t *n = ctx->n;
-    size_t nw = ctx->nw;
-    size_t i;
-    uint64_t borrow;
-
-    memset(t, 0, (2*nw + 2)*sizeof(uint64_t));
-
-    for (i=0; i<nw; i++) {
-        uint64_t h, c, mq;
-
-        /* t[i+nw+1] is still zero here */
-        h = addmul_row(t + i, a, b[i], nw);
-        t[i + nw] = ct_add(t[i + nw], h, 0, &c);
-        t[i + nw + 1] = c;
-
-        mq = t[i] * ctx->m0;
-        h = addmul_row(t + i, n, mq, nw);
-        t[i + nw] = ct_add(t[i + nw], h, 0, &c);
-        t[i + nw + 1] += c;
-    }
-
-    /* t[nw..2nw] < 2n: subtract n if needed */
-    borrow = words_sub(out, t + nw, n, nw);
-    words_select(out, ct_mask(t[2*nw] | (1 ^ borrow)), out, t + nw, nw);
+    rows_mont_mul(out, a, b, ctx->n, ctx->m0, ctx->nw, ctx->tmp, addmul_row);
 #endif
 }
 
 /*
  * Montgomery squaring: out = a*a/R mod n. a must be smaller than n.
- * out may alias a.
- *
- * The square is computed first (each cross product a[i]*a[j], i < j,
- * once, then doubled, then the squares a[i]^2 added), then reduced
- * one word at a time.
- * This takes about 1.5*nw^2 word multiplications instead of 2*nw^2.
+ * out may alias a. See rows_mont_sqr() in nat_rows.c.
  */
 void mont_sqr(uint64_t *out, const uint64_t *a, MontCtx *ctx)
 {
@@ -618,26 +556,7 @@ void mont_sqr(uint64_t *out, const uint64_t *a, MontCtx *ctx)
     mont_sqr32(ctx->x32, ctx->x32, ctx);
     from_words32(out, ctx->x32, ctx->nw);
 #else
-    uint64_t *t = ctx->tmp;
-    const uint64_t *n = ctx->n;
-    size_t nw = ctx->nw;
-    size_t i;
-    uint64_t top, borrow;
-
-    sqr_rows(t, a, nw);
-
-    /* Montgomery reduction: t = t / R mod n, with t < n^2 */
-    top = 0;
-    for (i=0; i<nw; i++) {
-        uint64_t h, mq = t[i] * ctx->m0;
-
-        h = addmul_row(t + i, n, mq, nw);
-        t[i + nw] = ct_add(t[i + nw], h, top, &top);
-    }
-
-    /* The result (t[nw..2nw-1] and top) is smaller than 2n: subtract n if needed */
-    borrow = words_sub(out, t + nw, n, nw);
-    words_select(out, ct_mask(top | (1 ^ borrow)), out, t + nw, nw);
+    rows_mont_sqr(out, a, ctx->n, ctx->m0, ctx->nw, ctx->tmp, addmul_row);
 #endif
 }
 
@@ -743,15 +662,6 @@ cleanup:
 /* Modular operations                                               */
 /* ---------------------------------------------------------------- */
 
-/** Copy nw words of x into out (out->nw words), with zero extension **/
-STATIC void words_to_nat(Nat *out, const uint64_t *x, size_t nw)
-{
-    size_t i;
-
-    for (i=0; i<out->nw; i++)
-        out->w[i] = i < nw ? x[i] : 0;
-}
-
 /** out = (x * y) mod m, for x and y with m->nw words; prod has 2*m->nw words **/
 STATIC int mulmod_words(uint64_t *out, const uint64_t *x, const uint64_t *y, const Nat *m, Nat *prod)
 {
@@ -788,7 +698,7 @@ EXPORT_SYM int nat_mulmod(Nat *out, const Nat *a, const Nat *b, const Nat *m)
 EXPORT_SYM int nat_submod(Nat *out, const Nat *a, const Nat *b, const Nat *m)
 {
     uint64_t *x, *y, *d;
-    size_t nw, i;
+    size_t nw;
     int res = ERR_MEMORY;
 
     if (NULL == out || NULL == a || NULL == b || NULL == m)
@@ -801,12 +711,10 @@ EXPORT_SYM int nat_submod(Nat *out, const Nat *a, const Nat *b, const Nat *m)
     if (NULL == x || NULL == y || NULL == d)
         goto cleanup;
 
-    for (i=0; i<nw; i++) {
-        x[i] = nat_word(a, i);
-        y[i] = nat_word(b, i);
-    }
+    words_copy_resized(x, nw, a->w, a->nw);
+    words_copy_resized(y, nw, b->w, b->nw);
     mod_sub(d, x, y, m->w, nw);
-    words_to_nat(out, d, nw);
+    words_copy_resized(out->w, out->nw, d, nw);
     res = 0;
 
 cleanup:
@@ -818,8 +726,10 @@ cleanup:
 
 /**
  * out = a^e mod m.
- * e_bits is a public bound on the size of e (e < 2^e_bits): only that
- * many bits of e are processed, whatever its value.
+ * e_bits is a public bound on the size of e, and e must be smaller than
+ * 2^e_bits (otherwise the result is wrong): the running time only depends
+ * on e_bits, not on the value of e. For an odd m, the bits are processed
+ * in windows of 4, so up to 3 bits above e_bits are read.
  */
 EXPORT_SYM int nat_powmod(Nat *out, const Nat *a, const Nat *e, size_t e_bits, const Nat *m)
 {
@@ -879,7 +789,7 @@ EXPORT_SYM int nat_powmod(Nat *out, const Nat *a, const Nat *e, size_t e_bits, c
         }
     }
 
-    words_to_nat(out, acc, nw);
+    words_copy_resized(out->w, out->nw, acc, nw);
     res = 0;
 
 cleanup:
@@ -1182,7 +1092,7 @@ int inv_odd(uint64_t *out, const uint64_t *a, const uint64_t *n, size_t nw)
 {
     uint64_t *ac, *bc, *u, *v, *un, *vn, *t1, *t2, *kn, *unit;
     uint64_t n0inv;
-    size_t round, rounds, i;
+    size_t round, rounds;
     int res = ERR_MEMORY;
 
     ac = nat_words_alloc(nw);
@@ -1204,11 +1114,7 @@ int inv_odd(uint64_t *out, const uint64_t *a, const uint64_t *n, size_t nw)
     /* u = 1 mod n (which is 0 if n == 1) */
     u[0] = 1 ^ words_eq(n, unit, nw);
 
-    /* -n^{-1} mod 2^64 (Newton iteration) */
-    n0inv = n[0];
-    for (i=0; i<5; i++)
-        n0inv *= 2 - n[0]*n0inv;
-    n0inv = 0 - n0inv;
+    n0inv = neg_inv64(n[0]);
 
     rounds = (2*64*nw - 1 + BGCD_STEPS - 1) / BGCD_STEPS;
     for (round=0; round<rounds; round++) {
@@ -1367,7 +1273,7 @@ EXPORT_SYM int nat_invmod(Nat *out, const Nat *a, const Nat *m)
             goto cleanup;
     }
 
-    words_to_nat(out, x, nw);
+    words_copy_resized(out->w, out->nw, x, nw);
     res = 0;
 
 cleanup:

@@ -3,8 +3,9 @@
 
 from __future__ import annotations
 
+import importlib
 import threading
-from typing import Any, Optional, Union
+from typing import Any, Optional, TypeVar, Union
 
 from Crypto.Math._IntegerBase import IntegerBase
 from Crypto.Math.Numbers import Integer
@@ -20,6 +21,11 @@ from Crypto.Util._raw_api import (
     null_pointer,
 )
 from Crypto.Util.number import bytes_to_long, long_to_bytes
+
+from ._curve import _Curve
+
+# EccPoint or EccXPoint (defined below)
+_PointT = TypeVar("_PointT", "EccPoint", "EccXPoint")
 
 
 def _encode_coordinate(value: Union[int, IntegerBase], length: int) -> bytes:
@@ -39,13 +45,45 @@ def _encode_coordinate(value: Union[int, IntegerBase], length: int) -> bytes:
 def _encode_scalar(scalar: Union[int, IntegerBase], min_length: int) -> bytes:
     """Encode a scalar (big endian).
 
-    An Integer (possibly secret) is encoded with at least ``min_length``
-    bytes, so that its actual length does not leak.
+    An Integer (possibly secret) is encoded with ``min_length`` bytes,
+    so that its actual length does not leak. Only a longer one needs more.
     """
 
     if isinstance(scalar, IntegerBase):
-        return scalar.to_bytes(max(min_length, scalar.size_in_bytes()))
+        try:
+            return scalar.to_bytes(min_length)
+        except ValueError:
+            return scalar.to_bytes()
     return long_to_bytes(scalar)
+
+
+def _curve_context(curve: _Curve) -> Any:
+    """The context of the C code of a curve (a null pointer if it has none).
+
+    The type of the pointer depends on the FFI backend (cffi or ctypes).
+    """
+
+    return null_pointer if curve.context is None else curve.context.get()
+
+
+def _clone_raw_point(curve: _Curve, point: Union[EccPoint, EccXPoint]) -> SmartPointer:
+    """A copy of the C point of an EccPoint or EccXPoint (on curve)"""
+
+    raw_point = VoidPointer()
+    result = curve.rawlib.clone(raw_point.address_of(), point._point.get())
+    if result:
+        raise ValueError("Error %d while cloning an EC point" % result)
+    return SmartPointer(raw_point.get(), curve.rawlib.free_point)
+
+
+def _copy_point(point: _PointT) -> _PointT:
+    """A copy of an EccPoint or EccXPoint, of the same class"""
+
+    copy = point.__class__.__new__(point.__class__)
+    copy._curve = point._curve
+    copy.curve = point.curve
+    copy._point = _clone_raw_point(point._curve, point)
+    return copy
 
 
 class CurveID:
@@ -77,17 +115,20 @@ class _Curves:
     curve25519_names = ["curve25519", "Curve25519", "X25519"]
     curve448_names = ["curve448", "Curve448", "X448"]
 
-    all_names = (
-        p192_names
-        + p224_names
-        + p256_names
-        + p384_names
-        + p521_names
-        + ed25519_names
-        + ed448_names
-        + curve25519_names
-        + curve448_names
+    # For each curve: its names, its ID, and the module and function that create it
+    definitions = (
+        (p192_names, CurveID.P192, "_nist_ecc", "p192_curve"),
+        (p224_names, CurveID.P224, "_nist_ecc", "p224_curve"),
+        (p256_names, CurveID.P256, "_nist_ecc", "p256_curve"),
+        (p384_names, CurveID.P384, "_nist_ecc", "p384_curve"),
+        (p521_names, CurveID.P521, "_nist_ecc", "p521_curve"),
+        (ed25519_names, CurveID.ED25519, "_edwards", "ed25519_curve"),
+        (ed448_names, CurveID.ED448, "_edwards", "ed448_curve"),
+        (curve25519_names, CurveID.CURVE25519, "_montgomery", "curve25519_curve"),
+        (curve448_names, CurveID.CURVE448, "_montgomery", "curve448_curve"),
     )
+
+    all_names = [name for definition in definitions for name in definition[0]]
 
     def __contains__(self, item):
         return item in self.all_names
@@ -96,63 +137,15 @@ class _Curves:
         return self.all_names
 
     def load(self, name):
-        if name in self.p192_names:
-            from . import _nist_ecc
-
-            p192 = _nist_ecc.p192_curve()
-            p192.id = CurveID.P192
-            self.curves.update(dict.fromkeys(self.p192_names, p192))
-        elif name in self.p224_names:
-            from . import _nist_ecc
-
-            p224 = _nist_ecc.p224_curve()
-            p224.id = CurveID.P224
-            self.curves.update(dict.fromkeys(self.p224_names, p224))
-        elif name in self.p256_names:
-            from . import _nist_ecc
-
-            p256 = _nist_ecc.p256_curve()
-            p256.id = CurveID.P256
-            self.curves.update(dict.fromkeys(self.p256_names, p256))
-        elif name in self.p384_names:
-            from . import _nist_ecc
-
-            p384 = _nist_ecc.p384_curve()
-            p384.id = CurveID.P384
-            self.curves.update(dict.fromkeys(self.p384_names, p384))
-        elif name in self.p521_names:
-            from . import _nist_ecc
-
-            p521 = _nist_ecc.p521_curve()
-            p521.id = CurveID.P521
-            self.curves.update(dict.fromkeys(self.p521_names, p521))
-        elif name in self.ed25519_names:
-            from . import _edwards
-
-            ed25519 = _edwards.ed25519_curve()
-            ed25519.id = CurveID.ED25519
-            self.curves.update(dict.fromkeys(self.ed25519_names, ed25519))
-        elif name in self.ed448_names:
-            from . import _edwards
-
-            ed448 = _edwards.ed448_curve()
-            ed448.id = CurveID.ED448
-            self.curves.update(dict.fromkeys(self.ed448_names, ed448))
-        elif name in self.curve25519_names:
-            from . import _montgomery
-
-            curve25519 = _montgomery.curve25519_curve()
-            curve25519.id = CurveID.CURVE25519
-            self.curves.update(dict.fromkeys(self.curve25519_names, curve25519))
-        elif name in self.curve448_names:
-            from . import _montgomery
-
-            curve448 = _montgomery.curve448_curve()
-            curve448.id = CurveID.CURVE448
-            self.curves.update(dict.fromkeys(self.curve448_names, curve448))
-        else:
+        definition = next((d for d in self.definitions if name in d[0]), None)
+        if definition is None:
             raise ValueError("Unsupported curve '%s'" % name)
-        return self.curves[name]
+        names, curve_id, module_name, function = definition
+        module = importlib.import_module("." + module_name, __package__)
+        curve = getattr(module, function)()
+        curve.id = curve_id
+        self.curves.update(dict.fromkeys(names, curve))
+        return curve
 
     def __getitem__(self, name):
         with self.curves_lock:
@@ -230,10 +223,7 @@ class EccPoint:
         free_func = self._curve.rawlib.free_point
 
         raw_point = VoidPointer()
-        try:
-            context = self._curve.context.get()
-        except AttributeError:
-            context = null_pointer
+        context = _curve_context(self._curve)
         result = new_point(
             raw_point.address_of(), c_uint8_ptr(xb), c_uint8_ptr(yb), c_size_t(modulus_bytes), context
         )
@@ -247,17 +237,29 @@ class EccPoint:
         # free the memory allocated by the raw library for the EC point
         self._point = SmartPointer(raw_point.get(), free_func)
 
-    def set(self, point: EccPoint) -> EccPoint:
-        clone = self._curve.rawlib.clone
-        free_func = self._curve.rawlib.free_point
+    @classmethod
+    def _decode_eddsa(cls, encoded: bytes, curve: str) -> EccPoint:
+        """A point of Ed25519 or Ed448, from its encoding in RFC 8032.
+
+        Raises ValueError if the encoding is not valid.
+        """
+
+        point = cls.__new__(cls)
+        point._curve = _curves[curve]
+        point.curve = point._curve.canonical
 
         raw_point = VoidPointer()
-        result = clone(raw_point.address_of(), point._point.get())
-
+        context = _curve_context(point._curve)
+        result = point._curve.rawlib.decode_point(
+            raw_point.address_of(), c_uint8_ptr(encoded), c_size_t(len(encoded)), context
+        )
         if result:
-            raise ValueError("Error %d while cloning an EC point" % result)
+            raise ValueError("Invalid %s point encoding" % point.curve)
+        point._point = SmartPointer(raw_point.get(), point._curve.rawlib.free_point)
+        return point
 
-        self._point = SmartPointer(raw_point.get(), free_func)
+    def set(self, point: EccPoint) -> EccPoint:
+        self._point = _clone_raw_point(self._curve, point)
         return self
 
     def __eq__(self, point: object) -> bool:
@@ -277,17 +279,14 @@ class EccPoint:
 
     def copy(self) -> EccPoint:
         """Return a copy of this point."""
-        x, y = self.xy
-        np = EccPoint(x, y, self.curve)
-        return np
+
+        return _copy_point(self)
 
     def is_point_at_infinity(self) -> bool:
         """``True`` if this is the *point-at-infinity*."""
 
-        if self._curve.is_edwards:
-            return self.x == 0
-        else:
-            return self.xy == (0, 0)
+        # Compared in C, as the point may be secret (ECDH): only the result leaks
+        return self == self.point_at_infinity()
 
     def point_at_infinity(self) -> EccPoint:
         """Return the *point-at-infinity* for the curve."""
@@ -380,14 +379,26 @@ class EccPoint:
         return np
 
     def __imul__(self, scalar: int) -> EccPoint:
-        """Multiply this point by a scalar"""
+        """Multiply this point by a scalar.
 
-        scalar_func = self._curve.rawlib.scalar
+        The scalar is treated as secret, unless it is an Integer created as public.
+        """
+
         if scalar < 0:
             raise ValueError("Scalar multiplication is only defined for non-negative integers")
-        sb = _encode_scalar(scalar, self.size_in_bytes())
-        sb_ptr, sb_len = c_uint8_ptr_len(sb)
-        result = scalar_func(self._point.get(), sb_ptr, c_size_t(sb_len), c_ulonglong(getrandbits(64)))
+
+        # A public scalar: no blinding, and only as many bits as needed
+        public_func = getattr(self._curve.rawlib, "scalar_public", None)
+        if public_func is not None and isinstance(scalar, IntegerBase) and scalar._public:
+            sb = scalar.to_bytes()
+            sb_ptr, sb_len = c_uint8_ptr_len(sb)
+            result = public_func(self._point.get(), sb_ptr, c_size_t(sb_len))
+        else:
+            sb = _encode_scalar(scalar, self.size_in_bytes())
+            sb_ptr, sb_len = c_uint8_ptr_len(sb)
+            result = self._curve.rawlib.scalar(
+                self._point.get(), sb_ptr, c_size_t(sb_len), c_ulonglong(getrandbits(64))
+            )
         if result:
             raise ValueError("Error %d during scalar multiplication" % result)
         return self
@@ -436,10 +447,7 @@ class EccXPoint:
         new_point = self._curve.rawlib.new_point
         free_func = self._curve.rawlib.free_point
 
-        try:
-            context = self._curve.context.get()
-        except AttributeError:
-            context = null_pointer
+        context = _curve_context(self._curve)
 
         modulus_bytes = self.size_in_bytes()
 
@@ -461,15 +469,7 @@ class EccXPoint:
         self._point = SmartPointer(raw_point.get(), free_func)
 
     def set(self, point: EccXPoint) -> EccXPoint:
-        clone = self._curve.rawlib.clone
-        free_func = self._curve.rawlib.free_point
-
-        raw_point = VoidPointer()
-        result = clone(raw_point.address_of(), point._point.get())
-        if result:
-            raise ValueError("Error %d while cloning an EC point" % result)
-
-        self._point = SmartPointer(raw_point.get(), free_func)
+        self._point = _clone_raw_point(self._curve, point)
         return self
 
     def __eq__(self, point: object) -> bool:
@@ -485,17 +485,15 @@ class EccXPoint:
     def copy(self) -> EccXPoint:
         """Return a copy of this point."""
 
-        try:
-            x = self.x
-        except ValueError:
-            return self.point_at_infinity()
-        return EccXPoint(x, self.curve)
+        return _copy_point(self)
 
     def is_point_at_infinity(self) -> bool:
         """``True`` if this is the *point-at-infinity*."""
 
+        # The x coordinate stays in bytes, as the point may be secret (ECDH):
+        # only the result leaks
         try:
-            _ = self.x
+            self._get_x_bytes()
         except ValueError:
             return True
         return False

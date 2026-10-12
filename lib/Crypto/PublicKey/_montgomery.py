@@ -38,25 +38,12 @@ int curve25519_cmp(const Point *ecp1, const Point *ecp2);
         cmp = _curve25519_lib.curve25519_cmp
 
     def _validate_x25519_point(point):
-        p2 = p * 2
         x1 = 325606250916557431795983626356110631294008115727848805560023387167927233504
         x2 = 39382357235489614581723060781553021112529911719440698176882885853963445705823
 
         # http://cr.yp.to/ecdh.html#validate
-        deny_list = (
-            0,
-            1,
-            x1,
-            x2,
-            p - 1,
-            p,
-            p + 1,
-            p + x1,
-            p + x2,
-            p2 - 1,
-            p2,
-            p2 + 1,
-        )
+        # point.x is reduced modulo p, so it also covers p, p + 1, p + x1, etc.
+        deny_list = (0, 1, x1, x2, p - 1)
 
         try:
             valid = point.x not in deny_list
@@ -89,7 +76,7 @@ def curve448_curve():
     p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF  # 2**448 - 2**224 - 1
     order = 0x3FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFF7CCA23E9C44EDB49AED63690216CC2728DC58F552378C292AB5844F3
 
-    _curve448_lib, _ = load_ec_lib(
+    _curve448_lib = load_ec_lib(
         """
 typedef void Curve448Context;
 typedef void Curve448Point;
@@ -124,13 +111,8 @@ int curve448_cmp(const Curve448Point *ecp1, const Curve448Point *ecp2);
         raise ImportError("Error %d initializing Curve448 context" % result)
 
     def _validate_x448_point(point):
-        deny_list = (
-            0,
-            1,
-            p - 1,
-            p,
-            p + 1,
-        )
+        # point.x is reduced modulo p, so it also covers p and p + 1
+        deny_list = (0, 1, p - 1)
 
         try:
             valid = point.x not in deny_list

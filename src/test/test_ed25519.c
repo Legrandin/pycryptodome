@@ -8,6 +8,8 @@ int convert_behex_to_le25p5(uint32_t out[10], const char *in);
 int convert_le25p5_to_behex(char **out, uint32_t in[10]);
 void convert_le25p5_to_le8(uint8_t out[32], const uint32_t in[10]);
 void convert_le8_to_le25p5(uint32_t out[10], const uint8_t in[32]);
+void sub_25519(uint32_t out[10], const uint32_t a[10], const uint32_t b[10]);
+void ed25519_add_internal(Point *P3, const Point *P1, const Point *P2);
 
 /* Add G to PAI */
 void test_point_add_1(void)
@@ -390,6 +392,227 @@ void test_neg_1(void)
     free(c);
 }
 
+/* k*P by double-and-add, without blinding (k big-endian, public) */
+static void ref_scalar(Point *out, const uint8_t *k, size_t len, const Point *P)
+{
+    size_t i;
+    int j;
+
+    memset(out, 0, sizeof *out);
+    out->Y[0] = out->Z[0] = 1;
+    for (i=0; i<len; i++) {
+        for (j=7; j>=0; j--) {
+            ed25519_double(out);
+            if ((k[i] >> j) & 1)
+                ed25519_add(out, P);
+        }
+    }
+}
+
+/*
+ * The blinded scalar multiplication gives the same result for any seed,
+ * also for a point with a component of order 8 (G + T8), and for scalars
+ * shorter or longer than the blinded one.
+ * The multiplication for public scalars gives the same result too.
+ */
+void test_scalar_blinding(void)
+{
+    char Gx_hex[] = "216936d3cd6e53fec0a4e231fdd6dc5c692cc7609525a7b2c9562d608f25d51a";
+    char Gy_hex[] = "6666666666666666666666666666666666666666666666666666666666666658";
+    char T8x_hex[] = "1fd5b9a006394a28e933993238de4abb5c193c7013e5e238dea14646c545d14a";
+    char T8y_hex[] = "7a03ac9277fdc74ec6cc392cfa53202a0f67100d760b3cba4fd84d3d706a17c7";
+    static const size_t lens[] = { 1, 32, 64 };
+    uint8_t k[64];
+    Point P[2], Q, R;
+    unsigned i, l, n;
+    uint64_t seed;
+
+    memset(P, 0, sizeof P);
+    convert_behex_to_le25p5(P[0].X, Gx_hex);
+    convert_behex_to_le25p5(P[0].Y, Gy_hex);
+    P[0].Z[0] = 1;
+    mul_25519(P[0].T, P[0].X, P[0].Y);
+
+    /* P[1] = G + T8 */
+    convert_behex_to_le25p5(P[1].X, T8x_hex);
+    convert_behex_to_le25p5(P[1].Y, T8y_hex);
+    P[1].Z[0] = 1;
+    mul_25519(P[1].T, P[1].X, P[1].Y);
+    assert(ed25519_add(&P[1], &P[0]) == 0);
+
+    for (i=0; i<sizeof k; i++)
+        k[i] = (uint8_t)(i*37 + 11);
+
+    for (n=0; n<2; n++) {
+        for (l=0; l<sizeof lens / sizeof lens[0]; l++) {
+            ref_scalar(&R, k, lens[l], &P[n]);
+            Q = P[n];
+            assert(ed25519_scalar_public(&Q, k, lens[l]) == 0);
+            assert(ed25519_cmp(&Q, &R) == 0);
+            for (seed=0; seed<16; seed++) {
+                Q = P[n];
+                assert(ed25519_scalar(&Q, k, lens[l], seed * 0x9E3779B97F4A7C15ULL) == 0);
+                assert(ed25519_cmp(&Q, &R) == 0);
+            }
+        }
+    }
+}
+
+/* The encoding of RFC 8032 (5.1.2) of P */
+static void encode_point(uint8_t enc[32], const Point *P)
+{
+    uint8_t x[32];
+
+    to_affine(x, enc, P);
+    enc[31] |= (uint8_t)((x[0] & 1) << 7);
+}
+
+/* Decode an encoding of P (or fail with error), and check that it gives P back */
+static void check_decode(const uint8_t enc[32], const Point *P, int error)
+{
+    Point *Q = NULL;
+
+    assert(ed25519_decode_point(&Q, enc, 32, NULL) == error);
+    if (error) {
+        assert(Q == NULL);
+        return;
+    }
+    assert(ed25519_cmp(Q, P) == 0);
+    ed25519_free_point(Q);
+}
+
+void test_decode_point(void)
+{
+    char Gx_hex[] = "216936d3cd6e53fec0a4e231fdd6dc5c692cc7609525a7b2c9562d608f25d51a";
+    char Gy_hex[] = "6666666666666666666666666666666666666666666666666666666666666658";
+    uint8_t enc[32];
+    Point G, P, *Q;
+    unsigned i;
+
+    memset(&G, 0, sizeof G);
+    convert_behex_to_le25p5(G.X, Gx_hex);
+    convert_behex_to_le25p5(G.Y, Gy_hex);
+    G.Z[0] = 1;
+    mul_25519(G.T, G.X, G.Y);
+
+    /* Round trip of G, 2G, ..., 16G (both parities of x, both roots) */
+    P = G;
+    for (i=1; i<=16; i++) {
+        encode_point(enc, &P);
+        check_decode(enc, &P, 0);
+        ed25519_add_internal(&P, &P, &G);
+    }
+
+    /* The neutral point (0, 1): x = 0 cannot have its bit set */
+    memset(&P, 0, sizeof P);
+    P.Y[0] = P.Z[0] = 1;
+    memset(enc, 0, 32);
+    enc[0] = 1;
+    check_decode(enc, &P, 0);
+    enc[31] = 0x80;
+    check_decode(enc, &P, ERR_EC_POINT);
+
+    /* The point of order 2 (0, -1) */
+    sub_25519(P.Y, P.T, P.Y);
+    memset(enc, 0xFF, 32);
+    enc[0] = 0xEC;
+    enc[31] = 0x7F;
+    check_decode(enc, &P, 0);
+    enc[31] = 0xFF;
+    check_decode(enc, &P, ERR_EC_POINT);
+
+    /* y = p, p + 1 and 2^255 - 1 are not reduced (with both values of the bit) */
+    for (i=0; i<3; i++) {
+        memset(enc, 0xFF, 32);
+        enc[0] = i == 0 ? 0xED : (i == 1 ? 0xEE : 0xFF);
+        enc[31] = 0x7F;
+        check_decode(enc, NULL, ERR_EC_POINT);
+        enc[31] = 0xFF;
+        check_decode(enc, NULL, ERR_EC_POINT);
+    }
+
+    /* y = 2 has no x; y = 3 has one, on the curve */
+    memset(enc, 0, 32);
+    enc[0] = 2;
+    check_decode(enc, NULL, ERR_EC_POINT);
+    enc[0] = 3;
+    assert(ed25519_decode_point(&Q, enc, 32, NULL) == 0);
+    {
+        uint8_t xb[32], yb[32];
+        Point *R;
+
+        assert(ed25519_get_xy(xb, yb, 32, Q) == 0);
+        assert(ed25519_new_point(&R, xb, yb, 32, NULL) == 0);
+        assert(ed25519_cmp(Q, R) == 0);
+        ed25519_free_point(R);
+    }
+    ed25519_free_point(Q);
+
+    /* Wrong length */
+    assert(ed25519_decode_point(&Q, enc, 31, NULL) == ERR_MODULUS);
+}
+
+/*
+ * The fixed-base multiplication (table, for B with Z = 1) gives the same
+ * result as the ladder (B with Z = 2, not recognized as the base point),
+ * blinded and public, for scalars of all the lengths up to the limit of
+ * the table (36 bytes) and beyond, and for edge values.
+ */
+void test_scalar_base(void)
+{
+    char Gx_hex[] = "216936d3cd6e53fec0a4e231fdd6dc5c692cc7609525a7b2c9562d608f25d51a";
+    char Gy_hex[] = "6666666666666666666666666666666666666666666666666666666666666658";
+    /* L, big-endian */
+    static const uint8_t order[32] = {
+        0x10, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0x14, 0xde, 0xf9, 0xde, 0xa2, 0xf7, 0x9c, 0xd6, 0x58, 0x12, 0x63, 0x1a, 0x5c, 0xf5, 0xd3, 0xed };
+    uint32_t two[10] = { 2 };
+    uint64_t state = 1;
+    uint8_t k[40];
+    Point G, G2, P, Q;
+    unsigned t, len, i;
+
+    memset(&G, 0, sizeof G);
+    convert_behex_to_le25p5(G.X, Gx_hex);
+    convert_behex_to_le25p5(G.Y, Gy_hex);
+    G.Z[0] = 1;
+    mul_25519(G.T, G.X, G.Y);
+
+    /* The same point, with Z = 2 */
+    mul_25519(G2.X, G.X, two);
+    mul_25519(G2.Y, G.Y, two);
+    mul_25519(G2.Z, G.Z, two);
+    mul_25519(G2.T, G.T, two);
+
+    for (t=0; t<600 + 6; t++) {
+        len = t < 600 ? 1 + t % 37 : 32;
+        for (i=0; i<len; i++) {
+            state = state * 6364136223846793005ULL + 1442695040888963407ULL;
+            k[i] = (uint8_t)(state >> 56);
+        }
+        if (t >= 600) {
+            switch (t - 600) {
+            case 0: memset(k, 0, 32); break;                    /* 0 */
+            case 1: memset(k, 0xFF, 32); break;                 /* 2^256 - 1 */
+            case 2: memcpy(k, order, 32); break;                /* L */
+            case 3: memcpy(k, order, 32); k[31]--; break;       /* L - 1 */
+            case 4: memcpy(k, order, 32); k[31]++; break;       /* L + 1 */
+            case 5: memset(k, 0x88, 32); break;                 /* all digits 8 */
+            }
+        }
+
+        P = G;
+        Q = G2;
+        assert(ed25519_scalar(&P, k, len, state) == 0);
+        assert(ed25519_scalar(&Q, k, len, state ^ 1) == 0);
+        assert(ed25519_cmp(&P, &Q) == 0);
+
+        P = G;
+        assert(ed25519_scalar_public(&P, k, len) == 0);
+        assert(ed25519_cmp(&P, &Q) == 0);
+    }
+}
+
 int main(void)
 {
     test_point_add_1();
@@ -398,7 +621,10 @@ int main(void)
     test_point_double_1();
     test_point_double_2();
     test_scalar_mult();
+    test_scalar_blinding();
+    test_scalar_base();
     test_cmp_1();
     test_neg_1();
+    test_decode_point();
     return 0;
 }

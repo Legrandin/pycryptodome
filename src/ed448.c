@@ -17,12 +17,9 @@
  *   the neutral point is (0:1:1). The addition and doubling formulas
  *   of RFC 8032 (5.2.4) are complete, as d is not a square: they have
  *   no special cases.
- * - Scalar multiplications use signed windows of 5 bits (Booth
- *   recoding), always over all the windows of a blinded scalar
- *   k + r*4n (r of 64 random bits; 4n is the order of the whole group,
- *   so that the blinding also works for points with a small-order
- *   component), with tables that are scanned in full for each digit.
- *   The coordinates are randomized.
+ * - Scalar multiplications are those of ec_common.c, with the scalars
+ *   taken modulo 4n, the order of the whole group (so that the blinding
+ *   also works for points with a small-order component).
  *
  * Nothing branches on, or accesses memory at an address that depends on,
  * secret values. Intended leaks go through ct_declassify(). Checked with
@@ -105,12 +102,14 @@ static const uint8_t ed448_gy[56] = {
  * (x3:y3:z3) = 2*(x1:y1:z1) (RFC 8032, 5.2.4).
  * The output may be the input.
  */
-STATIC void ed448_point_double(EcWs *ws,
+STATIC void ed448_point_double(EcWs *ws, const EcGroup *g,
                                uint64_t *x3, uint64_t *y3, uint64_t *z3,
                                const uint64_t *x1, const uint64_t *y1, const uint64_t *z1)
 {
     uint64_t *b = ws->t[0], *c = ws->t[1], *d = ws->t[2];
     uint64_t *e = ws->t[3], *h = ws->t[4], *j = ws->t[5];
+
+    (void)g;
 
     ADD(b, x1, y1);
     SQR(b, b);          /* B = (X1+Y1)^2 */
@@ -132,13 +131,13 @@ STATIC void ed448_point_double(EcWs *ws,
  * If z2 is NULL, the second point is affine (Z2 = 1).
  * The output may be any of the inputs.
  */
-STATIC void ed448_point_add(EcWs *ws, const Ed448Context *ctx,
+STATIC void ed448_point_add(EcWs *ws, const EcGroup *g,
                             uint64_t *x3, uint64_t *y3, uint64_t *z3,
                             const uint64_t *x1, const uint64_t *y1, const uint64_t *z1,
                             const uint64_t *x2, const uint64_t *y2, const uint64_t *z2)
 {
     uint64_t *a = ws->t[0], *b = ws->t[1], *c = ws->t[2], *d = ws->t[3];
-    uint64_t *e = ws->t[4], *f = ws->t[5], *g = ws->t[6], *h = ws->t[7];
+    uint64_t *e = ws->t[4], *f = ws->t[5], *gg = ws->t[6], *h = ws->t[7];
 
     if (z2)
         MUL(a, z1, z2); /* A = Z1*Z2 */
@@ -148,9 +147,9 @@ STATIC void ed448_point_add(EcWs *ws, const Ed448Context *ctx,
     MUL(c, x1, x2);     /* C = X1*X2 */
     MUL(d, y1, y2);     /* D = Y1*Y2 */
     MUL(e, c, d);
-    MUL(e, e, ctx->d);  /* E = d*C*D */
+    MUL(e, e, g->param);    /* E = d*C*D */
     SUB(f, b, e);       /* F = B-E */
-    ADD(g, b, e);       /* G = B+E */
+    ADD(gg, b, e);      /* G = B+E */
     ADD(h, x1, y1);
     ADD(e, x2, y2);
     MUL(h, h, e);       /* H = (X1+Y1)*(X2+Y2) */
@@ -159,13 +158,13 @@ STATIC void ed448_point_add(EcWs *ws, const Ed448Context *ctx,
     MUL(x3, x3, f);
     MUL(x3, x3, a);     /* X3 = A*F*(H-C-D) */
     SUB(y3, d, c);
-    MUL(y3, y3, g);
+    MUL(y3, y3, gg);
     MUL(y3, y3, a);     /* Y3 = A*G*(D-C) */
-    MUL(z3, f, g);      /* Z3 = F*G */
+    MUL(z3, f, gg);     /* Z3 = F*G */
 }
 
 /** 1 if (x:y:z) is on the curve: (X^2 + Y^2) Z^2 = Z^4 + d X^2 Y^2 **/
-STATIC uint64_t ed448_on_curve(EcWs *ws, const Ed448Context *ctx,
+STATIC uint64_t ed448_on_curve(EcWs *ws, const EcGroup *g,
                                const uint64_t *x, const uint64_t *y, const uint64_t *z)
 {
     uint64_t *x2 = ws->t[0], *y2 = ws->t[1], *z2 = ws->t[2];
@@ -177,7 +176,7 @@ STATIC uint64_t ed448_on_curve(EcWs *ws, const Ed448Context *ctx,
     ADD(lhs, x2, y2);
     MUL(lhs, lhs, z2);
     MUL(rhs, x2, y2);
-    MUL(rhs, rhs, ctx->d);
+    MUL(rhs, rhs, g->param);
     SQR(z2, z2);
     ADD(rhs, rhs, z2);
     return words_eq(lhs, rhs, ED448_WORDS) & (1 ^ words_is_zero(z, ED448_WORDS));
@@ -188,174 +187,16 @@ STATIC uint64_t ed448_on_curve(EcWs *ws, const Ed448Context *ctx,
 #undef ADD
 #undef SUB
 
-/* ---------------------------------------------------------------- */
-/* Scalar multiplications                                           */
-/* ---------------------------------------------------------------- */
+/* The addition with an affine second point (Z2 = 1) */
+STATIC void ed448_point_add_affine(EcWs *ws, const EcGroup *g,
+                                   uint64_t *x3, uint64_t *y3, uint64_t *z3,
+                                   const uint64_t *x1, const uint64_t *y1, const uint64_t *z1,
+                                   const uint64_t *x2, const uint64_t *y2)
+{
+    ed448_point_add(ws, g, x3, y3, z3, x1, y1, z1, x2, y2, NULL);
+}
 
 #define NW ED448_WORDS
-
-/*
- * p = k*p, for any point (variable base), with the blinded scalar kb.
- *
- * A table of the multiples 0P ... 16P (projective) is built, from a
- * randomized copy of P (coordinates multiplied by lambda); then, for each
- * window from the top: 5 doublings, a full scan of the table for the
- * digit, a conditional negation, and an addition.
- */
-STATIC int ed448_mul_var(EcWs *ws, const Ed448Context *ctx, PointEd448 *p,
-                         const uint64_t *kb, const uint64_t *lambda)
-{
-    const size_t entries = EC_DIGITS + 1;
-    uint64_t *table, *acc, *sel, *nx;
-    size_t i, j, w;
-    int res = ERR_MEMORY;
-
-    table = nat_words_alloc(3*entries*NW);
-    acc = nat_words_alloc(3*NW);
-    sel = nat_words_alloc(3*NW);
-    nx = nat_words_alloc(NW);
-    if (!table || !acc || !sel || !nx)
-        goto cleanup;
-
-#define TX(j) (table + (3*(j) + 0)*NW)
-#define TY(j) (table + (3*(j) + 1)*NW)
-#define TZ(j) (table + (3*(j) + 2)*NW)
-
-    /* T[0] = (0:1:1), T[1] = P (randomized), T[j] = T[j-1] + P */
-    fe_copy(ws, TY(0), ctx->field->one);
-    fe_copy(ws, TZ(0), ctx->field->one);
-    fe_mul(ws, TX(1), p->x, lambda);
-    fe_mul(ws, TY(1), p->y, lambda);
-    fe_mul(ws, TZ(1), p->z, lambda);
-    for (j=2; j<entries; j++)
-        ed448_point_add(ws, ctx, TX(j), TY(j), TZ(j), TX(j-1), TY(j-1), TZ(j-1), TX(1), TY(1), TZ(1));
-
-#undef TX
-#undef TY
-#undef TZ
-
-    fe_copy(ws, acc + NW, ctx->field->one);
-    fe_copy(ws, acc + 2*NW, ctx->field->one);
-
-    for (w=ctx->windows; w-- > 0;) {
-        uint64_t sign, digit;
-
-        for (i=0; i<EC_WINDOW; i++)
-            ed448_point_double(ws, acc, acc + NW, acc + 2*NW, acc, acc + NW, acc + 2*NW);
-
-        ec_booth_digit(kb, ctx->k_words, w, &sign, &digit);
-        ec_table_select(sel, table, entries, 3*NW, digit);
-
-        /* Negative digit: -(x:y:z) = (-x:y:z) */
-        fe_neg(ws, nx, sel);
-        words_select(sel, ct_mask(sign), nx, sel, NW);
-
-        ed448_point_add(ws, ctx, acc, acc + NW, acc + 2*NW, acc, acc + NW, acc + 2*NW,
-                        sel, sel + NW, sel + 2*NW);
-    }
-
-    memcpy(p->x, acc, 3*NW*sizeof(uint64_t));
-    res = 0;
-
-cleanup:
-    nat_words_free(table, 3*entries*NW);
-    nat_words_free(acc, 3*NW);
-    nat_words_free(sel, 3*NW);
-    nat_words_free(nx, NW);
-    return res;
-}
-
-/*
- * p = k*G, with the precomputed tables (fixed base) and the blinded
- * scalar kb.
- *
- * For each window i: a full scan of its table for the digit, a
- * conditional negation, and a mixed addition. There are no doublings.
- * A zero digit selects the neutral point (0, 1). The accumulator starts as
- * (0:lambda:lambda), the neutral point with randomized coordinates.
- */
-STATIC int ed448_mul_g(EcWs *ws, const Ed448Context *ctx, PointEd448 *p,
-                       const uint64_t *kb, const uint64_t *lambda)
-{
-    uint64_t *sel = ws->t[8], *sel_y = ws->t[9], *nx = ws->t[10];
-    uint64_t *sel_xy;
-    size_t w;
-
-    sel_xy = nat_words_alloc(2*NW);
-    if (NULL == sel_xy)
-        return ERR_MEMORY;
-
-    memset(p->x, 0, NW*sizeof(uint64_t));
-    fe_copy(ws, p->y, lambda);
-    fe_copy(ws, p->z, lambda);
-
-    for (w=0; w<ctx->windows; w++) {
-        const uint64_t *window = ctx->g_table + w*EC_DIGITS*2*NW;
-        uint64_t sign, digit;
-
-        ec_booth_digit(kb, ctx->k_words, w, &sign, &digit);
-
-        /* Entry d of the window is (d+1)*32^w*G; digit 0 selects (0, 1) */
-        ec_table_select(sel_xy, window, EC_DIGITS, 2*NW, digit - 1);
-        fe_copy(ws, sel, sel_xy);
-        words_select(sel_y, ct_mask(ct_z(digit)), ctx->field->one, sel_xy + NW, NW);
-
-        fe_neg(ws, nx, sel);
-        words_select(sel, ct_mask(sign), nx, sel, NW);
-
-        ed448_point_add(ws, ctx, p->x, p->y, p->z, p->x, p->y, p->z, sel, sel_y, NULL);
-    }
-
-    nat_words_free(sel_xy, 2*NW);
-    return 0;
-}
-
-/*
- * The tables of the generator: for each window i, the affine points
- * j * 32^i * G for j = 1..16. The data is public.
- */
-STATIC int ed448_build_g_table(EcWs *ws, Ed448Context *ctx)
-{
-    const size_t count = ctx->windows*EC_DIGITS;
-    uint64_t *proj, base[3*NW];
-    size_t i, j, k;
-    int res = ERR_MEMORY;
-
-    ctx->g_table = nat_words_alloc(2*count*NW);
-    proj = nat_words_alloc(3*count*NW);
-    if (!ctx->g_table || !proj)
-        goto cleanup;
-
-#define PX(k) (proj + (3*(k) + 0)*NW)
-#define PY(k) (proj + (3*(k) + 1)*NW)
-#define PZ(k) (proj + (3*(k) + 2)*NW)
-
-    /* base = 32^i * G */
-    fe_copy(ws, base, ctx->gx);
-    fe_copy(ws, base + NW, ctx->gy);
-    fe_copy(ws, base + 2*NW, ctx->field->one);
-
-    for (i=0; i<ctx->windows; i++) {
-        k = i*EC_DIGITS;
-        memcpy(PX(k), base, 3*NW*sizeof(uint64_t));
-        for (j=1; j<EC_DIGITS; j++)
-            ed448_point_add(ws, ctx, PX(k+j), PY(k+j), PZ(k+j), PX(k+j-1), PY(k+j-1), PZ(k+j-1),
-                            base, base + NW, base + 2*NW);
-        /* 32 * base = 2 * (16 * base) */
-        ed448_point_double(ws, base, base + NW, base + 2*NW, PX(k+15), PY(k+15), PZ(k+15));
-    }
-
-#undef PX
-#undef PY
-#undef PZ
-
-    /* Z is never zero (complete formulas) */
-    res = ec_batch_to_affine(ws, ctx->g_table, proj, count, ctx->p_minus_2);
-
-cleanup:
-    nat_words_free(proj, 3*count*NW);
-    return res;
-}
 
 /* ---------------------------------------------------------------- */
 /* Context                                                          */
@@ -365,13 +206,8 @@ EXPORT_SYM void ed448_free_context(Ed448Context *ctx)
 {
     if (NULL == ctx)
         return;
-    ec_field_free(ctx->field);
-    nat_free(ctx->p_minus_2);
-    nat_free(ctx->group_order);
-    nat_words_free(ctx->d, NW);
-    nat_words_free(ctx->gx, NW);
-    nat_words_free(ctx->gy, NW);
-    nat_words_free(ctx->g_table, 2*ctx->windows*EC_DIGITS*NW);
+    ec_group_clear(&ctx->g);
+    nat_free(ctx->sqrt_exp);
     free(ctx);
 }
 
@@ -381,9 +217,7 @@ EXPORT_SYM void ed448_free_context(Ed448Context *ctx)
 EXPORT_SYM int ed448_new_context(Ed448Context **out)
 {
     Ed448Context *ctx;
-    Nat *p = NULL, *n = NULL, *two = NULL;
-    EcWs ws;
-    int ws_ready = 0;
+    EcGroup *g;
     int res;
 
     if (NULL == out)
@@ -392,57 +226,23 @@ EXPORT_SYM int ed448_new_context(Ed448Context **out)
     *out = ctx = (Ed448Context*)calloc(1, sizeof(Ed448Context));
     if (NULL == ctx)
         return ERR_MEMORY;
+    g = &ctx->g;
+    g->edwards = 1;
+    g->add = ed448_point_add;
+    g->add_affine = ed448_point_add_affine;
+    g->dbl = ed448_point_double;
+    g->on_curve = ed448_on_curve;
+    g->mul_public = NULL;
 
-    res = ERR_MEMORY;
-    p = nat_alloc(NW);
-    n = nat_alloc(NW);
-    two = nat_alloc(1);
-    ctx->p_minus_2 = nat_alloc(NW);
-    ctx->group_order = nat_alloc(NW);
-    ctx->d = nat_words_alloc(NW);
-    ctx->gx = nat_words_alloc(NW);
-    ctx->gy = nat_words_alloc(NW);
-    if (!p || !n || !two || !ctx->p_minus_2 || !ctx->group_order || !ctx->d || !ctx->gx || !ctx->gy)
-        goto cleanup;
+    /* The scalars are taken modulo 4n, the order of the whole group (448 bits) */
+    res = ec_group_init(g, ed448_p, ed448_d, ed448_order, 2, ed448_gx, ed448_gy, ED448_BYTES);
 
-    res = nat_from_bytes(p, ed448_p, ED448_BYTES, 0);
-    if (res == 0)
-        res = ec_field_new(&ctx->field, p);
-    two->w[0] = 2;
-    if (res == 0)
-        res = nat_sub(ctx->p_minus_2, p, two);
-    if (res)
-        goto cleanup;
-    ctx->p_bits = (size_t)nat_bit_length(p);
+    /* (p-3)/4 = (p-2) >> 2, as p = 3 mod 4 */
+    if (res == 0) {
+        ctx->sqrt_exp = nat_alloc(NW);
+        res = ctx->sqrt_exp ? nat_shr(ctx->sqrt_exp, g->field->p_minus_2, 2) : ERR_MEMORY;
+    }
 
-    /* The order of the group is 4n (448 bits) */
-    res = nat_from_bytes(n, ed448_order, ED448_BYTES, 0);
-    if (res == 0)
-        res = nat_shl(ctx->group_order, n, 2);
-    if (res)
-        goto cleanup;
-    ctx->k_words = ec_k_words((size_t)nat_bit_length(ctx->group_order));
-    ctx->windows = ec_windows((size_t)nat_bit_length(ctx->group_order));
-
-    res = ec_ws_new(&ws, ctx->field);
-    if (res)
-        goto cleanup;
-    ws_ready = 1;
-
-    res = fe_from_bytes(ctx->d, &ws, ed448_d, ED448_BYTES, 0);
-    if (res == 0)
-        res = fe_from_bytes(ctx->gx, &ws, ed448_gx, ED448_BYTES, 0);
-    if (res == 0)
-        res = fe_from_bytes(ctx->gy, &ws, ed448_gy, ED448_BYTES, 0);
-    if (res == 0)
-        res = ed448_build_g_table(&ws, ctx);
-
-cleanup:
-    if (ws_ready)
-        ec_ws_free(&ws);
-    nat_free(p);
-    nat_free(n);
-    nat_free(two);
     if (res) {
         ed448_free_context(ctx);
         *out = NULL;
@@ -454,30 +254,9 @@ cleanup:
 /* Points                                                           */
 /* ---------------------------------------------------------------- */
 
-STATIC PointEd448 *ed448_point_alloc(const Ed448Context *ctx)
-{
-    PointEd448 *p;
-
-    p = (PointEd448*)calloc(1, sizeof(PointEd448));
-    if (NULL == p)
-        return NULL;
-    p->ctx = ctx;
-    p->x = nat_words_alloc(3*NW);
-    if (NULL == p->x) {
-        free(p);
-        return NULL;
-    }
-    p->y = p->x + NW;
-    p->z = p->y + NW;
-    return p;
-}
-
 EXPORT_SYM void ed448_free_point(PointEd448 *p)
 {
-    if (NULL == p)
-        return;
-    nat_words_free(p->x, 3*NW);
-    free(p);
+    ec_point_free(p);
 }
 
 /**
@@ -499,12 +278,12 @@ EXPORT_SYM int ed448_new_point(PointEd448 **out, const uint8_t *x, const uint8_t
     if (len > ED448_BYTES)
         return ERR_VALUE;
 
-    *out = p = ed448_point_alloc(ctx);
+    *out = p = ec_point_alloc(&ctx->g);
     if (NULL == p)
         return ERR_MEMORY;
-    res = ec_ws_new(&ws, ctx->field);
+    res = ec_ws_new(&ws, ctx->g.field);
     if (res) {
-        ed448_free_point(p);
+        ec_point_free(p);
         *out = NULL;
         return res;
     }
@@ -515,15 +294,121 @@ EXPORT_SYM int ed448_new_point(PointEd448 **out, const uint8_t *x, const uint8_t
         res = fe_from_bytes(p->y, &ws, y, len, 1);
     if (res)
         goto cleanup;
-    fe_copy(&ws, p->z, ctx->field->one);
+    fe_copy(&ws, p->z, ctx->g.field->one);
 
-    if (!ct_declassify(ed448_on_curve(&ws, ctx, p->x, p->y, p->z)))
+    if (!ct_declassify(ed448_on_curve(&ws, &ctx->g, p->x, p->y, p->z)))
         res = ERR_EC_POINT;
 
 cleanup:
     ec_ws_free(&ws);
     if (res) {
-        ed448_free_point(p);
+        ec_point_free(p);
+        *out = NULL;
+    }
+    return res;
+}
+
+/**
+ * Decode a point encoded as in RFC 8032 (5.2.3): 57 bytes, the y-coordinate
+ * in little-endian order, then a byte with the least significant bit of x
+ * in its top bit (the other bits must be zero).
+ *
+ * Return ERR_EC_POINT if the encoding is not valid: y not smaller than p,
+ * no x for that y, or x = 0 with its bit set.
+ * The encoding is public: the function is not constant time.
+ */
+EXPORT_SYM int ed448_decode_point(PointEd448 **out, const uint8_t *encoded, size_t len,
+                                  const Ed448Context *ctx)
+{
+    PointEd448 *p;
+    uint8_t yb[ED448_BYTES];
+    uint64_t *y, *x, *u = NULL, *v = NULL, *t = NULL, *w = NULL;
+    unsigned x_0;
+    size_t i;
+    EcWs ws;
+    int res;
+
+    if (!out || !encoded || !ctx)
+        return ERR_NULL;
+    if (len != ED448_BYTES + 1)
+        return ERR_MODULUS;
+    if (encoded[ED448_BYTES] & 0x7F)
+        return ERR_EC_POINT;
+    x_0 = encoded[ED448_BYTES] >> 7;
+
+    *out = p = ec_point_alloc(&ctx->g);
+    if (NULL == p)
+        return ERR_MEMORY;
+    res = ec_ws_new(&ws, ctx->g.field);
+    if (res) {
+        ec_point_free(p);
+        *out = NULL;
+        return res;
+    }
+    x = p->x;
+    y = p->y;
+
+    res = ERR_MEMORY;
+    u = nat_words_alloc(NW);
+    v = nat_words_alloc(NW);
+    t = nat_words_alloc(NW);
+    w = nat_words_alloc(NW);
+    if (!u || !v || !t || !w)
+        goto cleanup;
+
+    /* y must be smaller than p */
+    for (i=0; i<ED448_BYTES; i++)
+        yb[i] = encoded[ED448_BYTES - 1 - i];
+    res = fe_from_bytes(y, &ws, yb, ED448_BYTES, 0);
+    if (res) {
+        res = ERR_EC_POINT;
+        goto cleanup;
+    }
+
+    /* u = y^2 - 1, v = d y^2 - 1 */
+    fe_sqr(&ws, t, y);
+    fe_sub(&ws, u, t, ctx->g.field->one);
+    fe_mul(&ws, v, t, ctx->g.param);
+    fe_sub(&ws, v, v, ctx->g.field->one);
+
+    /* x = u^3 v (u^5 v^3)^((p-3)/4) */
+    fe_sqr(&ws, t, u);          /* u^2 */
+    fe_mul(&ws, w, t, u);       /* u^3 */
+    fe_mul(&ws, x, w, v);       /* u^3 v */
+    fe_mul(&ws, t, w, t);       /* u^5 */
+    fe_sqr(&ws, w, v);          /* v^2 */
+    fe_mul(&ws, w, w, v);       /* v^3 */
+    fe_mul(&ws, t, t, w);       /* u^5 v^3 */
+    fe_pow_public(&ws, t, t, ctx->sqrt_exp);
+    fe_mul(&ws, x, x, t);
+
+    /* x is a root if v x^2 = u; otherwise there is none */
+    fe_sqr(&ws, t, x);
+    fe_mul(&ws, t, t, v);
+    if (!words_eq(t, u, NW)) {
+        res = ERR_EC_POINT;
+        goto cleanup;
+    }
+
+    /* Select the root with the right parity */
+    fe_to_words(&ws, t, x);
+    if (words_is_zero(t, NW) && x_0) {
+        res = ERR_EC_POINT;
+        goto cleanup;
+    }
+    if ((t[0] & 1) != x_0)
+        fe_neg(&ws, x, x);
+    fe_copy(&ws, p->z, ctx->g.field->one);
+    res = 0;
+
+cleanup:
+    nat_words_free(u, NW);
+    nat_words_free(v, NW);
+    nat_words_free(t, NW);
+    nat_words_free(w, NW);
+    ec_ws_free(&ws);
+    if (res) {
+        ec_point_free(p);
         *out = NULL;
     }
     return res;
@@ -535,175 +420,50 @@ cleanup:
  */
 EXPORT_SYM int ed448_get_xy(uint8_t *x, uint8_t *y, size_t len, const PointEd448 *p)
 {
-    EcWs ws;
-    int res;
-
-    if (!x || !y || !p)
-        return ERR_NULL;
-    if (len < ED448_BYTES)
-        return ERR_NOT_ENOUGH_DATA;
-
-    res = ec_ws_new(&ws, p->ctx->field);
-    if (res)
-        return res;
-    res = fe_inv(&ws, ws.t[0], p->z, p->ctx->p_minus_2);
-    if (res == 0) {
-        fe_mul(&ws, ws.t[1], p->x, ws.t[0]);
-        fe_mul(&ws, ws.t[2], p->y, ws.t[0]);
-        res = fe_to_bytes(x, len, &ws, ws.t[1]);
-    }
-    if (res == 0)
-        res = fe_to_bytes(y, len, &ws, ws.t[2]);
-    ec_ws_free(&ws);
-    return res;
+    return ec_point_get_xy(x, y, len, p);
 }
 
 EXPORT_SYM int ed448_clone(PointEd448 **out, const PointEd448 *p)
 {
-    if (!out || !p)
-        return ERR_NULL;
-    *out = ed448_point_alloc(p->ctx);
-    if (NULL == *out)
-        return ERR_MEMORY;
-    memcpy((*out)->x, p->x, 3*NW*sizeof(uint64_t));
-    return 0;
+    return ec_point_clone(out, p);
 }
 
-EXPORT_SYM int ed448_copy(PointEd448 *dst, const PointEd448 *src)
-{
-    if (!dst || !src)
-        return ERR_NULL;
-    dst->ctx = src->ctx;
-    memcpy(dst->x, src->x, 3*NW*sizeof(uint64_t));
-    return 0;
-}
-
-/**
- * Return 0 if the two points are equal (X1*Z2 = X2*Z1 and Y1*Z2 = Y2*Z1),
- * ERR_VALUE if they are not. Only that fact leaks.
- */
+/** 0 if the two points are equal, ERR_VALUE if they are not (only that fact leaks) **/
 EXPORT_SYM int ed448_cmp(const PointEd448 *a, const PointEd448 *b)
 {
-    uint64_t equal;
-    EcWs ws;
-
-    if (!a || !b)
-        return ERR_NULL;
-    if (a->ctx != b->ctx)
-        return ERR_EC_CURVE;
-    if (ec_ws_new(&ws, a->ctx->field))
-        return ERR_MEMORY;
-
-    fe_mul(&ws, ws.t[0], a->x, b->z);
-    fe_mul(&ws, ws.t[1], b->x, a->z);
-    fe_mul(&ws, ws.t[2], a->y, b->z);
-    fe_mul(&ws, ws.t[3], b->y, a->z);
-    equal = words_eq(ws.t[0], ws.t[1], NW) & words_eq(ws.t[2], ws.t[3], NW);
-
-    ec_ws_free(&ws);
-    return ct_declassify(equal) ? 0 : ERR_VALUE;
+    return ec_point_cmp(a, b);
 }
 
 /** -(x, y) = (-x, y) **/
 EXPORT_SYM int ed448_neg(PointEd448 *p)
 {
-    EcWs ws;
-
-    if (!p)
-        return ERR_NULL;
-    if (ec_ws_new(&ws, p->ctx->field))
-        return ERR_MEMORY;
-    fe_neg(&ws, p->x, p->x);
-    ec_ws_free(&ws);
-    return 0;
+    return ec_point_neg(p);
 }
 
 EXPORT_SYM int ed448_double(PointEd448 *p)
 {
-    EcWs ws;
-
-    if (!p)
-        return ERR_NULL;
-    if (ec_ws_new(&ws, p->ctx->field))
-        return ERR_MEMORY;
-    ed448_point_double(&ws, p->x, p->y, p->z, p->x, p->y, p->z);
-    ec_ws_free(&ws);
-    return 0;
+    return ec_point_double(p);
 }
 
 /** a = a + b **/
 EXPORT_SYM int ed448_add(PointEd448 *a, const PointEd448 *b)
 {
-    EcWs ws;
+    return ec_point_add(a, b);
+}
 
-    if (!a || !b)
-        return ERR_NULL;
-    if (a->ctx != b->ctx)
-        return ERR_EC_CURVE;
-    if (ec_ws_new(&ws, a->ctx->field))
-        return ERR_MEMORY;
-    ed448_point_add(&ws, a->ctx, a->x, a->y, a->z, a->x, a->y, a->z, b->x, b->y, b->z);
-    ec_ws_free(&ws);
-    return 0;
+/** p = k*p, for a scalar k that can be secret (see ec_point_scalar()) **/
+EXPORT_SYM int ed448_scalar(PointEd448 *p, const uint8_t *k, size_t len, uint64_t seed)
+{
+    return ec_point_scalar(p, k, len, seed);
 }
 
 /**
- * p = k*p, for the big-endian scalar k (len bytes, any length), which can
- * be secret. seed is a random value, for the blinding of the scalar and
- * the randomization of the coordinates.
- *
- * If p is the generator, the precomputed tables are used. The result is
- * checked to be on the curve (ERR_EC_POINT otherwise).
+ * p = k*p, for a PUBLIC scalar k (see ec_point_scalar_public()), modulo
+ * the order of the whole group, also for points with a small-order component
  */
-EXPORT_SYM int ed448_scalar(PointEd448 *p, const uint8_t *k, size_t len, uint64_t seed)
+EXPORT_SYM int ed448_scalar_public(PointEd448 *p, const uint8_t *k, size_t len)
 {
-    const Ed448Context *ctx;
-    uint64_t *kb, *lambda;
-    uint64_t state = seed, is_g;
-    EcWs ws;
-    int res;
-
-    if (!p || !k)
-        return ERR_NULL;
-    if (len == 0)
-        return ERR_NOT_ENOUGH_DATA;
-    ctx = p->ctx;
-
-    res = ec_ws_new(&ws, ctx->field);
-    if (res)
-        return res;
-    kb = nat_words_alloc(ctx->k_words);
-    lambda = nat_words_alloc(NW);
-    if (NULL == kb || NULL == lambda) {
-        res = ERR_MEMORY;
-        goto cleanup;
-    }
-
-    /* The random values: r for the scalar, lambda for the coordinates */
-    res = ec_blind_scalar(kb, ctx->k_words, ctx->group_order, k, len, ec_next_random(&state));
-    if (res)
-        goto cleanup;
-    fe_random(&ws, lambda, ctx->p_bits, &state);
-
-    /* Is it the generator (with Z = 1)? Only that fact leaks */
-    is_g = words_eq(p->x, ctx->gx, NW) & words_eq(p->y, ctx->gy, NW) &
-           words_eq(p->z, ctx->field->one, NW);
-
-    if (ct_declassify(is_g))
-        res = ed448_mul_g(&ws, ctx, p, kb, lambda);
-    else
-        res = ed448_mul_var(&ws, ctx, p, kb, lambda);
-    if (res)
-        goto cleanup;
-
-    if (!ct_declassify(ed448_on_curve(&ws, ctx, p->x, p->y, p->z)))
-        res = ERR_EC_POINT;
-
-cleanup:
-    nat_words_free(kb, ctx->k_words);
-    nat_words_free(lambda, NW);
-    ec_ws_free(&ws);
-    return res;
+    return ec_point_scalar_public(p, k, len);
 }
 
 #undef NW

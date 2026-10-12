@@ -13,15 +13,6 @@
 #include "nat.h"
 #include "nat_ct.h"
 
-/** Copy a into nw words (zero extension or truncation) **/
-STATIC void nat_to_words(uint64_t *out, const Nat *a, size_t nw)
-{
-    size_t i;
-
-    for (i=0; i<nw; i++)
-        out[i] = nat_word(a, i);
-}
-
 /**
  * out = gcd(a, b), with gcd(0, 0) = 0.
  *
@@ -45,8 +36,8 @@ EXPORT_SYM int nat_gcd(Nat *out, const Nat *a, const Nat *b)
     if (NULL == u || NULL == v || NULL == tmp)
         goto cleanup;
 
-    nat_to_words(u, a, nw);
-    nat_to_words(v, b, nw);
+    words_copy_resized(u, nw, a->w, a->nw);
+    words_copy_resized(v, nw, b->w, b->nw);
 
     /* k = number of trailing zeros of (u | v): the common power of two */
     for (i=0; i<nw; i++)
@@ -69,8 +60,7 @@ EXPORT_SYM int nat_gcd(Nat *out, const Nat *a, const Nat *b)
     }
 
     words_shl_secret(v, k, tmp, nw);
-    for (i=0; i<out->nw; i++)
-        out->w[i] = i < nw ? v[i] : 0;
+    words_copy_resized(out->w, out->nw, v, nw);
     res = 0;
 
 cleanup:
@@ -180,8 +170,7 @@ EXPORT_SYM int nat_isqrt(Nat *out, const Nat *a)
         words_cond_add(ct_mask(ge), root, bit, nw);
     }
 
-    for (i=0; i<out->nw; i++)
-        out->w[i] = i < nw ? root[i] : 0;
+    words_copy_resized(out->w, out->nw, root, nw);
     res = 0;
 
 cleanup:

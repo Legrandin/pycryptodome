@@ -254,6 +254,8 @@ class IntegerTests:
         assert v1 % 2**10 == 23
         with pytest.raises(ZeroDivisionError):
             v1 % 0
+        with pytest.raises(ZeroDivisionError):
+            v1 % self.Integer(0)
         with pytest.raises(ValueError):
             v1 % -6
 
@@ -315,6 +317,8 @@ class IntegerTests:
         # Invalid modulus (non positive)
         with pytest.raises(ValueError):
             self.Integer(5).sqrt(0)
+        with pytest.raises(ValueError):
+            self.Integer(5).sqrt(self.Integer(0))
         with pytest.raises(ValueError):
             self.Integer(5).sqrt(-1)
 
@@ -622,6 +626,8 @@ class IntegerTests:
         with pytest.raises(ValueError):
             js(6, 0)
         with pytest.raises(ValueError):
+            js(6, self.Integer(0))
+        with pytest.raises(ValueError):
             js(0, 0)
         with pytest.raises(ValueError):
             js(6, 2)
@@ -704,6 +710,79 @@ class IntegerTests:
             modmult(4, 5, -1)
         with pytest.raises(ValueError):
             modmult(4, 5, 4)
+
+    def test_public_flag(self):
+        Integer = self.Integer
+        pub = Integer(10, public=True)
+        sec = Integer(10)
+
+        # By default, a number is potentially secret
+        assert not sec._public
+        assert not Integer.from_bytes(b"\x0a")._public
+        assert Integer.from_bytes(b"\x0a", public=True)._public
+        assert Integer.from_bytes(b"\x0a", "little", public=True) == 10
+
+        # A copy keeps the flag
+        assert Integer(pub)._public
+        assert not Integer(sec)._public
+
+        # +, -, *, // and %: public if both operands are public Integers
+        for result in (pub + pub, pub - pub, pub * pub, pub // pub, pub % pub):
+            assert result._public
+        for result in (
+            pub + 1,
+            pub - 1,
+            pub * 8,
+            pub // 3,
+            pub % 7,
+            pub + sec,
+            sec + pub,
+            sec + 1,
+            pub - sec,
+            pub * sec,
+            sec * pub,
+            sec * 8,
+            pub // sec,
+            pub % sec,
+        ):
+            assert not result._public
+
+        # Modular inverse: public if both operands are public Integers
+        assert pub.inverse(Integer(7, public=True))._public
+        assert not pub.inverse(7)._public
+        assert not pub.inverse(Integer(7))._public and not sec.inverse(7)._public
+
+        # Any other operation gives a potentially secret result
+        for result in (pub**2, pow(pub, 2, 7), pub >> 1, pub << 1, pub & 3, pub | 3):
+            assert not result._public
+
+        # In place
+        x = Integer(3, public=True)
+        one, two, five = (Integer(v, public=True) for v in (1, 2, 5))
+        x += one
+        x *= two
+        x %= five
+        x -= one
+        assert x._public and x == 2
+        x += 1
+        assert not x._public
+        x *= sec
+        assert not x._public
+        for op in (
+            lambda v: v.inplace_pow(2),
+            lambda v: v.inplace_inverse(Integer(5)),
+            lambda v: v.multiply_accumulate(2, 3),
+            lambda v: v.__irshift__(1),
+            lambda v: v.__ilshift__(1),
+        ):
+            y = Integer(3, public=True)
+            op(y)
+            assert not y._public
+        y = Integer(3, public=True)
+        y.set(sec)
+        assert not y._public
+        y.set(pub)
+        assert y._public
 
 
 class SignedIntegerTests:
@@ -832,6 +911,15 @@ class SignedIntegerTests:
 class NatIntegerTests:
     """Tests for the implementations without negative values"""
 
+    def test_public_flag_reflected(self):
+        Integer = self.Integer
+        pub = Integer(10, public=True)
+        sec = self.Integer(10)
+        # A Python int is not public
+        assert not (1 + pub)._public and not (8 * pub)._public and not (20 - pub)._public
+        assert (Integer(1, public=True) + pub)._public
+        assert not (1 + sec)._public and not (8 * sec)._public and not (20 - sec)._public
+
     def test_no_negative_values(self):
         Integer = self.Integer
 
@@ -917,11 +1005,6 @@ class NatIntegerTests:
         a._resize(4096)
         assert a == 5
         assert a._bits == 4096
-
-        b = self.Integer(2**100 + 1, _min_bits=4096)
-        b._public_trim()
-        assert b._bits == 101
-        assert b == 2**100 + 1
 
     def test_in_place_keeps_identity(self):
         v = self.Integer(3)

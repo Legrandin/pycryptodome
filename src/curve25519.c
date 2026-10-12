@@ -13,7 +13,8 @@
  *  A point is represented by coordinates (X, Z) so that x = X/Z for a
  *  non-zero Z, with two possible y-coordinates.
  *
- *  In this implementation, Z is always 1.
+ *  In this implementation, Z is always 1 (or 0 for the PAI), except inside
+ *  a scalar multiplication, where the coordinates are randomized.
  *
  *  The PAI (or neutral point) is (X, 0).
  */
@@ -95,20 +96,25 @@ STATIC void curve25519_ladder_step(uint32_t x2[10], uint32_t z2[10], uint32_t x3
  * @param[in]   k       The scalar encoded in big-endian mode.
  * @param[in]   len     Length of the scalar in bytes.
  * @param[in]   Pin     The input point B.
+ * @param[in]   seed    A random value, for the randomization of the coordinates.
  */
 STATIC void curve25519_scalar_internal(Point *Pout,
                                        const uint8_t *k, size_t len,
-                                       const Point *Pin)
+                                       const Point *Pin,
+                                       uint64_t seed)
 {
     Point P2, P3;
+    uint32_t mu[10];
+    uint64_t state = seed;
     unsigned bit_idx, swap;
     size_t scan;
 
-    /* P2 = PAI */
+    /* P2 = PAI = (lambda : 0), P3 = (mu*X : mu*Z): randomized coordinates */
     memset(&P2, 0, sizeof P2);
-    P2.X[0] = 1;
-
-    P3 = *Pin;
+    random_fe_25519(P2.X, &state);
+    random_fe_25519(mu, &state);
+    mul_25519(P3.X, Pin->X, mu);
+    mul_25519(P3.Z, Pin->Z, mu);
 
     /*
      * https://eprint.iacr.org/2020/956.pdf
@@ -137,9 +143,9 @@ STATIC void curve25519_scalar_internal(Point *Pout,
     }
     cswap(P2.X, P2.Z, P3.X, P3.Z, swap);
 
-    /* P2 is the result */
+    /* P2 is the result. Only the fact that it is the point at infinity leaks */
     memset(Pout, 0, sizeof *Pout);
-    if (is_le25p5_zero(P2.Z)) {
+    if (ct_declassify(is_le25p5_zero(P2.Z))) {
         Pout->X[0] = 1;
     } else {
         uint32_t invz[10];
@@ -210,7 +216,8 @@ EXPORT_SYM int curve25519_get_x(uint8_t *xb, size_t modsize, const Point *p)
     if (modsize != 32)
         return ERR_MODULUS;
 
-    if (is_le25p5_zero(p->Z))
+    /* Only the fact that it is the point at infinity leaks */
+    if (ct_declassify(is_le25p5_zero(p->Z)))
         return ERR_EC_PAI;
 
     convert_le25p5_to_be8(xb, p->X);
@@ -223,7 +230,7 @@ EXPORT_SYM int curve25519_scalar(Point *P, const uint8_t *scalar, size_t scalar_
     if ((NULL == P) || (NULL == scalar))
         return ERR_NULL;
 
-    curve25519_scalar_internal(P, scalar, scalar_len, P);
+    curve25519_scalar_internal(P, scalar, scalar_len, P, seed);
     return 0;
 }
 
@@ -232,17 +239,18 @@ EXPORT_SYM int curve25519_cmp(const Point *p1, const Point *p2)
     uint32_t tmp[10];
     uint8_t bin1[32], bin2[32];
     unsigned int i;
-    int res = 0;
+    uint8_t diff = 0;
 
     mul_25519(tmp, p1->X, p2->Z);
     convert_le25p5_to_le8(bin1, tmp);
     mul_25519(tmp, p2->X, p1->Z);
     convert_le25p5_to_le8(bin2, tmp);
     for (i=0; i<sizeof bin1; i++) {
-        res |= bin1[i] != bin2[i];
+        diff |= bin1[i] ^ bin2[i];
     }
 
-    return res;
+    /* The points may be secret (ECDH): only the result leaks */
+    return (int)ct_declassify(ct_nz(diff));
 }
 
 #ifdef PROFILE
@@ -267,7 +275,7 @@ int main(void)
     }
 
     for (i=0; i<10000 && res == 0; i++) {
-        curve25519_scalar_internal(&Pout, secret, sizeof secret, Pin);
+        curve25519_scalar_internal(&Pout, secret, sizeof secret, Pin, i);
     }
 
     curve25519_free_point(Pin);

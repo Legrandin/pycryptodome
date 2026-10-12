@@ -372,3 +372,101 @@ class TestEccModule_Ed448:
             ECC.construct(curve="Ed448", d=2, **coordG)
         with pytest.raises(ValueError):
             ECC.construct(curve="Ed448", seed=b"H" * 58)
+
+
+def _spy_scalar(monkeypatch, rawlib):
+    """Record the names of the scalar multiplications called on rawlib"""
+
+    calls = []
+    for name in ("scalar", "scalar_public"):
+        func = getattr(rawlib, name)
+        monkeypatch.setattr(rawlib, name, lambda *args, _f=func, _n=name: calls.append(_n) or _f(*args))
+    return calls
+
+
+@pytest.mark.parametrize("curve", ["Ed25519", "Ed448"])
+def test_scalar_multiply_public(curve, monkeypatch):
+    from Crypto.Math.Numbers import Integer
+    from Crypto.Signature import eddsa
+
+    key = ECC.generate(curve=curve)
+    order = int(key._curve.order)
+    scalars = [0, 1, 2, 8, 255, order - 1, order, 4 * order + 1, 8 * order + 5, 2**900 + 3]
+    scalars += [int(Integer.random_range(min_inclusive=1, max_exclusive=order)) for _ in range(5)]
+    calls = _spy_scalar(monkeypatch, key._curve.rawlib)
+
+    for point in (key._curve.G, key.pointQ):
+        for k in scalars:
+            del calls[:]
+            expected = point * k
+            assert calls == ["scalar"]
+            del calls[:]
+            assert point * Integer(k, public=True) == expected
+            assert calls == ["scalar_public"]
+
+    # The verification of an EdDSA signature only uses public scalars,
+    # the signature only secret ones
+    del calls[:]
+    signature = eddsa.new(key, "rfc8032").sign(b"message")
+    assert set(calls) == {"scalar"}
+    del calls[:]
+    eddsa.new(key.public_key(), "rfc8032").verify(b"message", signature)
+    assert set(calls) == {"scalar_public"}
+    with pytest.raises(ValueError):
+        eddsa.new(key.public_key(), "rfc8032").verify(b"other", signature)
+
+
+def test_decode_eddsa_point():
+    from Crypto.PublicKey._point import EccPoint
+    from Crypto.Signature import eddsa
+
+    for curve, size in (("Ed25519", 32), ("Ed448", 57)):
+        key = ECC.generate(curve=curve)
+        encoded = key.public_key().export_key(format="raw")
+        point = EccPoint._decode_eddsa(encoded, curve)
+        assert point == key.pointQ
+        assert eddsa.import_public_key(encoded).pointQ == key.pointQ
+
+        # The neutral point (0, 1), but not with the bit of x set (RFC 8032)
+        neutral = b"\x01" + b"\x00" * (size - 1)
+        assert EccPoint._decode_eddsa(neutral, curve).is_point_at_infinity()
+        with pytest.raises(ValueError):
+            EccPoint._decode_eddsa(neutral[:-1] + b"\x80", curve)
+
+        # y = 2 has no x; y = 3 has one
+        with pytest.raises(ValueError):
+            EccPoint._decode_eddsa(b"\x02" + b"\x00" * (size - 1), curve)
+        point = EccPoint._decode_eddsa(b"\x03" + b"\x00" * (size - 1), curve)
+        assert point.y == 3
+        assert EccPoint(point.x, point.y, curve=curve) == point
+
+        # Wrong length
+        with pytest.raises(ValueError):
+            EccPoint._decode_eddsa(encoded[:-1], curve)
+
+    # y not smaller than p
+    p25519 = 2**255 - 19
+    with pytest.raises(ValueError):
+        EccPoint._decode_eddsa(p25519.to_bytes(32, "little"), "Ed25519")
+    p448 = 2**448 - 2**224 - 1
+    with pytest.raises(ValueError):
+        EccPoint._decode_eddsa(p448.to_bytes(57, "little"), "Ed448")
+
+    # Ed448: the 7 low bits of the last byte must be zero
+    encoded = ECC.generate(curve="Ed448").public_key().export_key(format="raw")
+    with pytest.raises(ValueError):
+        EccPoint._decode_eddsa(encoded[:-1] + bytes([encoded[-1] | 1]), "Ed448")
+
+
+@pytest.mark.parametrize("curve", ["P-256", "Ed25519", "Ed448"])
+def test_copy_point(curve):
+    key = ECC.generate(curve=curve)
+    point = key.pointQ
+    copy = point.copy()
+    assert copy == point and copy is not point
+    assert copy.curve == point.curve
+    copy.double()
+    assert copy != point
+    assert point == key.pointQ
+    assert point.copy().is_point_at_infinity() is False
+    assert point.point_at_infinity().copy().is_point_at_infinity()

@@ -87,18 +87,23 @@ EXPORT_SYM void nat_free(Nat *x)
 
 EXPORT_SYM int nat_copy(Nat *out, const Nat *a)
 {
-    size_t i;
-
     if (NULL == out || NULL == a)
         return ERR_NULL;
-    for (i=0; i<out->nw; i++)
-        out->w[i] = nat_word(a, i);
+    words_copy_resized(out->w, out->nw, a->w, a->nw);
     return 0;
 }
 
 /* ---------------------------------------------------------------- */
 /* Word arrays                                                      */
 /* ---------------------------------------------------------------- */
+
+void words_copy_resized(uint64_t *out, size_t out_nw, const uint64_t *in, size_t in_nw)
+{
+    size_t i;
+
+    for (i=0; i<out_nw; i++)
+        out[i] = i < in_nw ? in[i] : 0;
+}
 
 uint64_t words_is_zero(const uint64_t *x, size_t nw)
 {
@@ -198,34 +203,41 @@ void words_shr1(uint64_t *x, uint64_t top, size_t nw)
     x[nw-1] = (x[nw-1] >> 1) | (top << 63);
 }
 
-/** out = x >> s, for a public s **/
-STATIC void words_shr_public(uint64_t *out, const uint64_t *x, size_t s, size_t nw)
+/**
+ * out (out_nw words) = x (x_nw words) >> s, for a public s
+ * (truncated to out_nw words). out must not be x.
+ */
+STATIC void words_shr_public(uint64_t *out, size_t out_nw, const uint64_t *x, size_t x_nw, size_t s)
 {
     size_t ws = s / 64;
     unsigned bs = (unsigned)(s % 64);
     size_t i;
 
-    for (i=0; i<nw; i++) {
+    for (i=0; i<out_nw; i++) {
         uint64_t lo, hi;
 
-        lo = (i + ws < nw) ? x[i + ws] : 0;
-        hi = (i + ws + 1 < nw) ? x[i + ws + 1] : 0;
+        /* Written so that i + ws cannot overflow, for any s */
+        lo = (ws < x_nw && i < x_nw - ws) ? x[i + ws] : 0;
+        hi = (ws + 1 < x_nw && i < x_nw - ws - 1) ? x[i + ws + 1] : 0;
         out[i] = bs ? (lo >> bs) | (hi << (64 - bs)) : lo;
     }
 }
 
-/** out = x << s, for a public s **/
-STATIC void words_shl_public(uint64_t *out, const uint64_t *x, size_t s, size_t nw)
+/**
+ * out (out_nw words) = x (x_nw words) << s, for a public s
+ * (truncated to out_nw words). out must not be x.
+ */
+STATIC void words_shl_public(uint64_t *out, size_t out_nw, const uint64_t *x, size_t x_nw, size_t s)
 {
     size_t ws = s / 64;
     unsigned bs = (unsigned)(s % 64);
     size_t i;
 
-    for (i=0; i<nw; i++) {
+    for (i=0; i<out_nw; i++) {
         uint64_t lo, hi;
 
-        hi = (i >= ws) ? x[i - ws] : 0;
-        lo = (i >= ws + 1) ? x[i - ws - 1] : 0;
+        hi = (i >= ws && i - ws < x_nw) ? x[i - ws] : 0;
+        lo = (i >= ws + 1 && i - ws - 1 < x_nw) ? x[i - ws - 1] : 0;
         out[i] = bs ? (hi << bs) | (lo >> (64 - bs)) : hi;
     }
 }
@@ -236,7 +248,7 @@ void words_shr_secret(uint64_t *x, uint64_t k, uint64_t *tmp, size_t nw)
     unsigned j;
 
     for (j=0, s=1; s<=64*nw; j++, s<<=1) {
-        words_shr_public(tmp, x, s, nw);
+        words_shr_public(tmp, nw, x, nw, s);
         words_select(x, ct_mask((k >> j) & 1), tmp, x, nw);
     }
 }
@@ -247,7 +259,7 @@ void words_shl_secret(uint64_t *x, uint64_t k, uint64_t *tmp, size_t nw)
     unsigned j;
 
     for (j=0, s=1; s<=64*nw; j++, s<<=1) {
-        words_shl_public(tmp, x, s, nw);
+        words_shl_public(tmp, nw, x, nw, s);
         words_select(x, ct_mask((k >> j) & 1), tmp, x, nw);
     }
 }
@@ -486,43 +498,21 @@ EXPORT_SYM int nat_or(Nat *out, const Nat *a, const Nat *b)
 /** out = a << k, k is public **/
 EXPORT_SYM int nat_shl(Nat *out, const Nat *a, size_t k)
 {
-    size_t ws = k / 64;
-    unsigned bs = (unsigned)(k % 64);
-    size_t i;
-
     if (NULL == out || NULL == a)
         return ERR_NULL;
     if (out == a)
         return ERR_VALUE;
-
-    for (i=0; i<out->nw; i++) {
-        uint64_t hi, lo;
-
-        hi = (i >= ws) ? nat_word(a, i - ws) : 0;
-        lo = (i >= ws + 1) ? nat_word(a, i - ws - 1) : 0;
-        out->w[i] = bs ? (hi << bs) | (lo >> (64 - bs)) : hi;
-    }
+    words_shl_public(out->w, out->nw, a->w, a->nw, k);
     return 0;
 }
 
 /** out = a >> k, k is public **/
 EXPORT_SYM int nat_shr(Nat *out, const Nat *a, size_t k)
 {
-    size_t ws = k / 64;
-    unsigned bs = (unsigned)(k % 64);
-    size_t i;
-
     if (NULL == out || NULL == a)
         return ERR_NULL;
     if (out == a)
         return ERR_VALUE;
-
-    for (i=0; i<out->nw; i++) {
-        uint64_t lo, hi;
-
-        lo = (ws < a->nw && i < a->nw - ws) ? a->w[i + ws] : 0;
-        hi = (ws + 1 < a->nw && i < a->nw - ws - 1) ? a->w[i + ws + 1] : 0;
-        out->w[i] = bs ? (lo >> bs) | (hi << (64 - bs)) : lo;
-    }
+    words_shr_public(out->w, out->nw, a->w, a->nw, k);
     return 0;
 }

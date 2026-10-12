@@ -21,8 +21,6 @@
 
 typedef struct {
     EcField *field;         /* the field: arithmetic modulo p (constants only) */
-    Nat *p_minus_2;         /* the exponent of the inversion (Fermat) */
-    size_t p_bits;
     uint64_t *a24;          /* (A+2)/4 = 39082, as a field element */
 } Curve448Context;
 

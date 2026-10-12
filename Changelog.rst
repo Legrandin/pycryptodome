@@ -34,6 +34,13 @@ Breaking changes
   coordinate of the point is equal to or larger than the modulus ``p``,
   as required by SEC1. Such coordinates were reduced modulo ``p`` before.
   ``EccPoint`` and ``ECC.construct()`` still reduce them.
+* Ed25519 and Ed448 points (public keys, and ``R`` in signatures) are decoded
+  strictly as in RFC 8032: an encoding with x = 0 and the sign bit of x set,
+  or (for Ed448) with any of the 7 low bits of the last byte set, is now rejected.
+* RSA keys are limited to a modulus of 16384 bits: ``RSA.generate()``,
+  ``RSA.construct()`` and ``RSA.import_key()`` raise ``ValueError`` for
+  larger ones. The constant-time arithmetic is slower than GMP, and a large
+  public key from an untrusted source could take minutes to import or use.
 
 Resolved issues
 ---------------
@@ -41,6 +48,9 @@ Resolved issues
   never ran (only the Miller-Rabin and Lucas tests did), which made the generation
   of RSA, DSA and ElGamal keys slower.
 * ElGamal key objects could not be compared for equality.
+* Two DSA keys always compared as equal, if both were public or both private.
+* EdDSA signatures with ``S`` equal to the order of the curve are now rejected, as required by RFC 8032.
+* The primality tests in ``Crypto.Math.Primality`` reported 1 as a probable prime.
 * Comparing an RSA, DSA or ElGamal key with an object of a different type now
   returns ``False`` instead of raising ``AttributeError``.
 * The legacy ``can_decrypt()`` method of PKCS#1 ciphers raised ``AttributeError``
@@ -74,6 +84,13 @@ Resolved issues
 * Encrypted PKCS#8 keys protected with PBKDF2 (PBES2) were exported and imported
   with the slow Python implementation of PBKDF2-HMAC, and not with the C one:
   now they are about 50x-150x faster (SHA-1 and SHA-2).
+* Ed25519 and X25519: the final reduction modulo the prime (when
+  converting a point to bytes, including the X25519 shared secret) could
+  branch on secret data, depending on the compiler and the target
+  (for instance, gcc -O3 on 32-bit x86, and the code without SSE2 built with clang).
+  It is now constant time, checked with Valgrind like the rest of the elliptic curves.
+* A few valid Ed25519 points (those where one side of the curve equation is very small,
+  for instance with y = 3) were rejected as not on the curve.
 
 New features
 ------------
@@ -106,6 +123,17 @@ New features
   result; for X448, the Montgomery ladder with randomized coordinates.
   Ed448 key generation and signing are about 10x faster (precomputed tables),
   verification about 2.5x, and X448 about 1.3x.
+* Ed25519 scalar multiplications are blinded (by a random 32-bit multiple of
+  the order of the whole group) and randomize the coordinates. Signing is about
+  10% slower.
+* The verification of ECDSA and EdDSA signatures no longer applies the
+  side-channel countermeasures, which are useless for its public values:
+  about 22-28% faster for P-256, P-384, P-521 and Ed448. For the NIST curves,
+  it also uses faster (not constant-time) formulas.
+* Ed25519 and Ed448 points are decoded in C (RFC 8032), and copying a point
+  no longer goes through its affine coordinates: EdDSA verification is about
+  2x faster for Ed25519 and 1.8x for Ed448, importing an Ed25519 public key
+  7x-11x faster (Ed448 2.5x-3x), and ECDSA verification on P-256 1.4x faster.
 * The field arithmetic of the elliptic curves has unrolled code for each curve size:
   scalar multiplications are 1.4x-1.7x faster for P-192, P-224 and P-256, and
   1.1x-1.5x for the larger curves (more with clang than with gcc).

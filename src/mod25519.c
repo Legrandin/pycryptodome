@@ -3,7 +3,8 @@
 
 #include "common.h"
 #include "endianess.h"
-#include "bignum.c"
+#include "nat_ct.h"
+#include "splitmix64.h"
 
 /*
  * Operations over the field of integers modulo 2²⁵⁵ - 19
@@ -50,17 +51,10 @@ STATIC void convert_le64_to_le25p5(uint32_t out[10], const uint64_t in[4])
  */
 STATIC void convert_le25p5_to_le64(uint64_t out[4], const uint32_t in[10])
 {
-    /** We assume that the 6 or 7 upper bits of in[] words is set to 0 */
-    assert(in[0] >> 26 == 0);
-    assert(in[1] >> 25 == 0);
-    assert(in[2] >> 26 == 0);
-    assert(in[3] >> 25 == 0);
-    assert(in[4] >> 26 == 0);
-    assert(in[5] >> 25 == 0);
-    assert(in[6] >> 26 == 0);
-    assert(in[7] >> 25 == 0);
-    assert(in[8] >> 26 == 0);
-    assert(in[9] >> 26 == 0);
+    /*
+     * We assume that the 6 or 7 upper bits of in[] words is set to 0.
+     * The limbs may be secret: no assert() on them, as that is a branch.
+     */
 
     out[0] = in[0] | (uint64_t)in[1] << 26 | ((uint64_t)in[2] & MASK13) << 51;  /* 64 = 26 + 25 + 13: 13 bits left in in[2] */
     out[1] = in[2] >> 13 | (uint64_t)in[3] << 13 | (uint64_t)in[4] << 38;       /* 64 = 13 + 25 + 26: no bits left in[4] */
@@ -150,7 +144,7 @@ STATIC int is_le25p5_zero(const uint32_t in[10])
     convert_le25p5_to_le64(out64, in);
     reduce_25519_le64(out64);
 
-    return (out64[0] | out64[1] | out64[2] | out64[3]) == 0;
+    return (int)ct_z(out64[0] | out64[1] | out64[2] | out64[3]);
 }
 
 static int hex2bin(char in)
@@ -230,34 +224,26 @@ STATIC int convert_le25p5_to_behex(char **out, uint32_t in[10])
     return 0;
 }
 
-#if 0
-static void print_le25p5(char *str, const uint32_t n[10])
-{
-    uint8_t bin[32];
-
-    convert_le25p5_to_le8(bin, n);
-    printf("%s", str);
-    for (unsigned i=0; i<32; i++) {
-        printf("%02X", bin[i]);
-    }
-    printf("\n");
-}
-#endif
-
 /*
  * Reduce a 256-bit number (2⁶⁴ radix, litte-endian) modulo 2²⁵⁵ - 19.
  */
 STATIC void reduce_25519_le64(uint64_t x[4])
 {
-    unsigned borrow;
-    uint64_t tmp1[4], tmp2[4];
     static const uint64_t modulus[4] = { 0xffffffffffffffedULL, 0xffffffffffffffffULL, 0xffffffffffffffffULL, 0x7fffffffffffffffULL };
+    uint64_t tmp[4], borrow, mask;
+    unsigned round, i;
 
-    borrow = sub(tmp1, x, modulus, 4);
-    mod_select(tmp2, x, tmp1, borrow, 4);
-
-    borrow = sub(tmp1, tmp2, modulus, 4);
-    mod_select(x, tmp2, tmp1, borrow, 4);
+    /* x < 2²⁵⁶ < 3p: subtract p twice, keeping x when it goes negative (constant time) */
+    for (round=0; round<2; round++) {
+        borrow = 0;
+        for (i=0; i<4; i++) {
+            tmp[i] = ct_sub(x[i], modulus[i], borrow, &borrow);
+        }
+        mask = ct_mask(borrow);
+        for (i=0; i<4; i++) {
+            x[i] = ct_select(mask, x[i], tmp[i]);
+        }
+    }
 }
 
 /*
@@ -394,7 +380,7 @@ STATIC void cswap(uint32_t a[10], uint32_t b[10], uint32_t c[10], uint32_t d[10]
 {
     uint32_t mask, i, e, f;
 
-    mask = (uint32_t)(0 - (swap!=0));   /* 0 if swap is 0, all 1s if swap is !=0 */
+    mask = (uint32_t)ct_mask(ct_nz(swap));  /* 0 if swap is 0, all 1s if swap is !=0 */
     for (i=0; i<10; i++) {
         e = mask & (a[i] ^ c[i]);
         a[i] ^= e;
@@ -405,30 +391,38 @@ STATIC void cswap(uint32_t a[10], uint32_t b[10], uint32_t c[10], uint32_t d[10]
     }
 }
 
-/*
- * Compute x⁻¹ in prime field 2²⁵⁵ - 19
- *
- * The input x[] is encoded in mixed radix 2²⁶/2²⁵ with limbs < 2²⁷.
- *
- * The result out[] is encoded in also mixed radix 2²⁶/2²⁵ such that:
- *      out[i] < 2²⁶      for even i
- *      out[j] < 2²⁵      for odd j<9
- *      out[9] < 2²⁶
- */
-STATIC void invert_25519(uint32_t out[10], const uint32_t x[10])
+#define sqr_25519(a,b) mul_25519(a,b,b)
+
+/** A random field element in [1, 2²⁵⁴), so never zero modulo 2²⁵⁵ - 19 (splitmix64.h) **/
+STATIC void random_fe_25519(uint32_t out[10], uint64_t *state)
 {
-    uint32_t a[10], x1[10], x3p0[10], x3p1p0[10], x5m0[10];
-    uint32_t x10m0[10], x20m0[10], x50m0[10], x100m0[10];
     unsigned i;
 
-    #define sqr_25519(a,b) mul_25519(a,b,b)
+    for (i=0; i<10; i++) {
+        out[i] = (uint32_t)(splitmix64_next(state) & ((i & 1) ? MASK25 : MASK26));
+    }
+    out[9] &= (1U << 24) - 1;
+    out[0] |= 1;
+}
+
+/*
+ * out = x^(2²⁵⁰ - 1) and x11 = x^11 in prime field 2²⁵⁵ - 19:
+ * the common part of invert_25519() and pow22523_25519().
+ *
+ * The input x[] is encoded in mixed radix 2²⁶/2²⁵ with limbs < 2²⁷.
+ */
+static void pow2250m1_25519(uint32_t out[10], uint32_t x11[10], const uint32_t x[10])
+{
+    uint32_t a[10], x1[10], x3p0[10], x5m0[10];
+    uint32_t x10m0[10], x20m0[10], x50m0[10], x100m0[10];
+    unsigned i;
 
     sqr_25519(x1, x);           /* 2¹ */
     sqr_25519(a, x1);           /* 2² */
     sqr_25519(a, a);            /* 2³ */
     mul_25519(x3p0, a, x);      /* 2³ + 2⁰ */
-    mul_25519(x3p1p0, x3p0, x1);/* 2³ + 2¹ + 2⁰ = 11 */
-    sqr_25519(a, x3p1p0);       /* 2⁴ + 2² + 2¹  */
+    mul_25519(x11, x3p0, x1);   /* 2³ + 2¹ + 2⁰ = 11 */
+    sqr_25519(a, x11);          /* 2⁴ + 2² + 2¹  */
     mul_25519(x5m0, a, x3p0);   /* 2⁴ + 2³ + 2² + 2¹ + 2⁰ = 2⁵ - 2⁰ */
     sqr_25519(a, x5m0);         /* 2⁶ - 2¹ */
     sqr_25519(a, a);            /* 2⁷ - 2² */
@@ -463,13 +457,46 @@ STATIC void invert_25519(uint32_t out[10], const uint32_t x[10])
     for (i=0; i<50; i++) {
         sqr_25519(a, a);
     }                           /* 2²⁵⁰ - 2⁵⁰ */
-    mul_25519(a, a, x50m0);     /* 2²⁵⁰ - 2⁰ */
+    mul_25519(out, a, x50m0);   /* 2²⁵⁰ - 2⁰ */
+}
+
+/*
+ * Compute x⁻¹ in prime field 2²⁵⁵ - 19
+ *
+ * The input x[] is encoded in mixed radix 2²⁶/2²⁵ with limbs < 2²⁷.
+ *
+ * The result out[] is encoded in also mixed radix 2²⁶/2²⁵ such that:
+ *      out[i] < 2²⁶      for even i
+ *      out[j] < 2²⁵      for odd j<9
+ *      out[9] < 2²⁶
+ */
+STATIC void invert_25519(uint32_t out[10], const uint32_t x[10])
+{
+    uint32_t a[10], x11[10];
+
+    pow2250m1_25519(a, x11, x); /* 2²⁵⁰ - 2⁰ */
     sqr_25519(a, a);            /* 2²⁵¹ - 2¹ */
     sqr_25519(a, a);            /* 2²⁵² - 2² */
     sqr_25519(a, a);            /* 2²⁵³ - 2³ */
     sqr_25519(a, a);            /* 2²⁵⁴ - 2⁴ */
     sqr_25519(a, a);            /* 2²⁵⁵ - 2⁵  = 2²⁵⁵ - 32 */
-    mul_25519(out, a, x3p1p0);  /* 2²⁵⁵ - 21 */
+    mul_25519(out, a, x11);     /* 2²⁵⁵ - 21 */
+}
+
+/*
+ * Compute x^((p-5)/8) = x^(2²⁵² - 3) in prime field p = 2²⁵⁵ - 19,
+ * for the square roots (RFC 8032, 5.1.3).
+ *
+ * Same encodings as invert_25519().
+ */
+STATIC void pow22523_25519(uint32_t out[10], const uint32_t x[10])
+{
+    uint32_t a[10], x11[10];
+
+    pow2250m1_25519(a, x11, x); /* 2²⁵⁰ - 2⁰ */
+    sqr_25519(a, a);            /* 2²⁵¹ - 2¹ */
+    sqr_25519(a, a);            /* 2²⁵² - 2² */
+    mul_25519(out, a, x);       /* 2²⁵² - 3 */
 }
 
 /*
@@ -582,23 +609,6 @@ STATIC void sub_25519(uint32_t out[10], const uint32_t a[10], const uint32_t b[1
 
     /** Reduce the output, because each limb is now < 2²⁸ **/
     add_25519(out, out, zero);
-}
-
-/*
- * Reduce a 256-bit number (mixed radix 2²⁶/²⁵, litte-endian) modulo 2²⁵⁵ - 19.
- *
- * Each limb of x[] in input is < 2²⁸
- *
- * The result x[] in output is such that:
- *      x[i] < 2²⁶      for even i
- *      x[j] < 2²⁵      for odd j<9
- *      x[9] < 2²⁶
- */
-STATIC void reduce_25519_le25p5(uint32_t x[10])
-{
-    uint32_t zero[10] = { 0 };
-    add_25519(x, x, zero);
-    assert((x[0] >> 26) == 0);
 }
 
 #endif  /* __MOD25519_C */

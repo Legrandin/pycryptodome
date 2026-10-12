@@ -6,6 +6,7 @@ from binascii import unhexlify
 import pytest
 
 from Crypto.Hash import SHAKE128
+from Crypto.Math.Numbers import Integer
 from Crypto.PublicKey import ECC
 from Crypto.PublicKey.ECC import EccKey, EccPoint, _curves
 
@@ -178,6 +179,40 @@ class TestEccPoint_Ed25519:
         pointH = d * self.pointG
         assert pointH.x == 42740085206947573681423002599456489563927820004573071834350074001818321593686
         assert pointH.y == 6935684722522267618220753829624209639984359598320562595061366101608187623111
+
+    def test_scalar_multiply_public(self, monkeypatch):
+        order = int(_curves["ed25519"].order)
+        rawlib = _curves["ed25519"].rawlib
+
+        expected = {}
+        for d in (0, 1, 2, 8, 255, 256, 2**200 + 1, order - 1, order, 8 * order + 5, 2**600 + 3):
+            expected[d] = d * self.pointG
+
+        # A public Integer goes through the multiplication with no blinding,
+        # a secret Integer or an int through the blinded one
+        calls = []
+
+        def spy(name):
+            func = getattr(rawlib, name)
+            monkeypatch.setattr(rawlib, name, lambda *args: calls.append(name) or func(*args))
+
+        spy("scalar")
+        spy("scalar_public")
+
+        for d, point in expected.items():
+            assert self.pointG * Integer(d, public=True) == point
+            assert Integer.from_bytes(Integer(d).to_bytes(), public=True) * self.pointG == point
+        assert set(calls) == {"scalar_public"}
+
+        calls.clear()
+        assert self.pointG * Integer(255) == expected[255]
+        assert self.pointG * 255 == expected[255]
+        assert set(calls) == {"scalar"}
+
+        # The input point is not modified
+        pointH = self.pointG.copy()
+        _ = pointH * Integer(5, public=True)
+        assert pointH == self.pointG
 
     def test_sizes(self):
         assert self.pointG.size_in_bits() == 255

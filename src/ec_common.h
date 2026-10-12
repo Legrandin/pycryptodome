@@ -29,6 +29,17 @@
 /* Random bits added to the scalar (k + r*order) */
 #define EC_BLINDING_BITS 64
 
+/*
+ * The precomputed tables of the generator (NIST curves, Ed448) can be left
+ * out with EC_NO_TABLES, to save memory: the generator is then multiplied
+ * like any other point (about 4-5x slower).
+ */
+#if defined(EC_NO_TABLES)
+#define EC_USE_TABLES 0
+#else
+#define EC_USE_TABLES 1
+#endif
+
 /* Temporary field elements in a workspace */
 #define EC_WS_TEMPS 11
 
@@ -54,12 +65,13 @@ typedef struct {
     EcFieldKind kind;
     size_t nw;              /* 64-bit words of a field element */
     uint64_t *one;          /* 1, in the representation of the field (nw words) */
+    Nat *p_minus_2;         /* the exponent of the inversion (Fermat) */
+    size_t p_bits;          /* the size of p */
 } EcField;
 
+/** The field of the odd prime p (at least 3) **/
 int ec_field_new(EcField **out, const Nat *p);
 void ec_field_free(EcField *f);
-/** out = x in the representation of the field, for x < p (setup only: not thread safe) **/
-void ec_field_from_words(EcField *f, uint64_t *out, const uint64_t *x);
 
 /*
  * The workspace of one operation: a private copy of the Montgomery
@@ -98,8 +110,11 @@ static inline void fe_copy(EcWs *ws, uint64_t *out, const uint64_t *a)
     memcpy(out, a, ws->nw*sizeof(uint64_t));
 }
 
+/** out = a^e, for a PUBLIC exponent e (not constant time in e) **/
+void fe_pow_public(EcWs *ws, uint64_t *out, const uint64_t *a, const Nat *e);
+
 /** out = 1/a (Fermat: a^(p-2)), and 0 for a = 0 **/
-int fe_inv(EcWs *ws, uint64_t *out, const uint64_t *a, const Nat *p_minus_2);
+int fe_inv(EcWs *ws, uint64_t *out, const uint64_t *a);
 
 /** out = the number x (x < p), in the representation of the field **/
 void fe_from_words(EcWs *ws, uint64_t *out, const uint64_t *x);
@@ -115,11 +130,8 @@ int fe_from_bytes(uint64_t *out, EcWs *ws, const uint8_t *in, size_t len, int re
 /** The big-endian encoding of a (len bytes, at least the size of p) **/
 int fe_to_bytes(uint8_t *out, size_t len, EcWs *ws, const uint64_t *a);
 
-/** A random field element in [1, 2^(p_bits-1)) from the generator state **/
+/** A random field element in [1, 2^(p_bits-1)) from the generator state (splitmix64.h) **/
 void fe_random(EcWs *ws, uint64_t *out, size_t p_bits, uint64_t *state);
-
-/** A simple generator to expand a random seed (splitmix64) **/
-uint64_t ec_next_random(uint64_t *state);
 
 /**
  * kb (k_words words) = (k mod order) + r*order, for the big-endian
@@ -127,6 +139,13 @@ uint64_t ec_next_random(uint64_t *state);
  * bits(order) + EC_BLINDING_BITS bits.
  */
 int ec_blind_scalar(uint64_t *kb, size_t k_words, const Nat *order, const uint8_t *k, size_t len, uint64_t r);
+
+/**
+ * kw (k_words words) = k mod order, for the big-endian scalar k (len bytes,
+ * any length), which is PUBLIC; the number of windows that it needs
+ * goes into *windows (at most the one of a blinded scalar).
+ */
+int ec_public_scalar(uint64_t *kw, size_t k_words, size_t *windows, const Nat *order, const uint8_t *k, size_t len);
 
 /** The number of windows for a blinded scalar, for an order of order_bits bits **/
 size_t ec_windows(size_t order_bits);
@@ -155,6 +174,112 @@ void ec_table_select(uint64_t *out, const uint64_t *table, size_t entries, size_
  * to affine points (x, y: 2*nw words each), with a single inversion
  * (Montgomery's trick). For public points only (the tables).
  */
-int ec_batch_to_affine(EcWs *ws, uint64_t *affine, const uint64_t *proj, size_t count, const Nat *p_minus_2);
+int ec_batch_to_affine(EcWs *ws, uint64_t *affine, const uint64_t *proj, size_t count);
+
+/* ---------------------------------------------------------------- */
+/* Curves with points in projective coordinates (X:Y:Z):            */
+/* the NIST curves (ec_nat.c) and Ed448 (ed448.c)                   */
+/* ---------------------------------------------------------------- */
+
+typedef struct EcGroup EcGroup;
+
+/** (x3:y3:z3) = (x1:y1:z1) + (x2:y2:z2) (complete formulas); the output may be an input **/
+typedef void (*EcPointAddFunc)(EcWs *ws, const EcGroup *g,
+                               uint64_t *x3, uint64_t *y3, uint64_t *z3,
+                               const uint64_t *x1, const uint64_t *y1, const uint64_t *z1,
+                               const uint64_t *x2, const uint64_t *y2, const uint64_t *z2);
+/**
+ * (x3:y3:z3) = (x1:y1:z1) + (x2, y2), with the second point affine (not
+ * the neutral point, but its result may be discarded); the output may be
+ * the first input
+ */
+typedef void (*EcPointAddAffineFunc)(EcWs *ws, const EcGroup *g,
+                                     uint64_t *x3, uint64_t *y3, uint64_t *z3,
+                                     const uint64_t *x1, const uint64_t *y1, const uint64_t *z1,
+                                     const uint64_t *x2, const uint64_t *y2);
+/** (x3:y3:z3) = 2*(x1:y1:z1); the output may be the input **/
+typedef void (*EcPointDoubleFunc)(EcWs *ws, const EcGroup *g,
+                                  uint64_t *x3, uint64_t *y3, uint64_t *z3,
+                                  const uint64_t *x1, const uint64_t *y1, const uint64_t *z1);
+/** 1 if (x:y:z) is a point of the curve, 0 otherwise **/
+typedef uint64_t (*EcPointOnCurveFunc)(EcWs *ws, const EcGroup *g,
+                                       const uint64_t *x, const uint64_t *y, const uint64_t *z);
+/** (x:y:z) = k*(x:y:z), for a PUBLIC scalar kw over its lowest windows (variable base) **/
+typedef int (*EcPointMulPublicFunc)(EcWs *ws, const EcGroup *g, uint64_t *x, uint64_t *y, uint64_t *z,
+                                    const uint64_t *kw, size_t windows);
+
+/*
+ * A curve, and the group of its points (constants only, so that it can be
+ * used by several threads at the same time).
+ */
+struct EcGroup {
+    size_t nw;              /* 64-bit words of a field element */
+    size_t len;             /* bytes of an encoded coordinate */
+    EcField *field;         /* the field: arithmetic modulo p */
+    uint64_t *param;        /* the constant of the formulas: b (NIST curves), d (Ed448) */
+    uint64_t *gx, *gy;      /* the generator G (affine, field elements) */
+    Nat *order;             /* the scalars are reduced and blinded modulo it: the order
+                               of the whole group (n for the NIST curves, 4n for Ed448) */
+    size_t k_words;         /* 64-bit words of a blinded scalar */
+    size_t windows;         /* windows of a blinded scalar */
+    uint64_t *g_table;      /* windows*EC_DIGITS affine points, x then y:
+                               entry j of window i is (j+1) * 32^i * G */
+    /*
+     * Edwards curve: the neutral point is (0:1:1), and -(X:Y:Z) = (-X:Y:Z).
+     * Otherwise: the point at infinity is (0:1:0), and -(X:Y:Z) = (X:-Y:Z).
+     */
+    int edwards;
+    EcPointAddFunc add;
+    EcPointAddAffineFunc add_affine;
+    EcPointDoubleFunc dbl;
+    EcPointOnCurveFunc on_curve;
+    EcPointMulPublicFunc mul_public;    /* faster code for public scalars, or NULL */
+};
+
+/*
+ * A point in projective coordinates (X:Y:Z), as field elements.
+ * It can be freed after its group (nw is a copy).
+ */
+typedef struct {
+    const EcGroup *g;
+    size_t nw;
+    uint64_t *x, *y, *z;
+} EcPoint;
+
+/**
+ * Set up g, whose functions (and the flag edwards) are already set: the
+ * field p, the constant param of the formulas, the generator (gx, gy) of
+ * prime order n, all big-endian and len bytes long. The scalars are taken
+ * modulo n * 2^cofactor_bits. Also compute the tables of the generator.
+ * ERR_EC_POINT if the generator is not on the curve.
+ */
+int ec_group_init(EcGroup *g, const uint8_t *p, const uint8_t *param, const uint8_t *n,
+                  unsigned cofactor_bits, const uint8_t *gx, const uint8_t *gy, size_t len);
+/** Free what ec_group_init() allocated (not g itself) **/
+void ec_group_clear(EcGroup *g);
+
+/** (x:y:z) = the neutral point: (0:1:1) for an Edwards curve, (0:1:0) otherwise **/
+void ec_point_set_neutral(const EcGroup *g, uint64_t *x, uint64_t *y, uint64_t *z);
+/** A new point (X, Y, Z all zero), or NULL **/
+EcPoint *ec_point_alloc(const EcGroup *g);
+void ec_point_free(EcPoint *p);
+int ec_point_clone(EcPoint **out, const EcPoint *p);
+/** The affine coordinates (big-endian, len bytes each, at least g->len) **/
+int ec_point_get_xy(uint8_t *x, uint8_t *y, size_t len, const EcPoint *p);
+/** 0 if the two points are equal, ERR_VALUE if they are not (only that fact leaks) **/
+int ec_point_cmp(const EcPoint *a, const EcPoint *b);
+int ec_point_neg(EcPoint *p);
+int ec_point_double(EcPoint *p);
+/** a = a + b **/
+int ec_point_add(EcPoint *a, const EcPoint *b);
+/**
+ * p = k*p, for the big-endian scalar k (len bytes, any length), which can
+ * be secret: it is blinded with the random seed, and so are the coordinates.
+ * With the generator, the tables are used. The result is checked to be on
+ * the curve (ERR_EC_POINT otherwise).
+ */
+int ec_point_scalar(EcPoint *p, const uint8_t *k, size_t len, uint64_t seed);
+/** p = k*p, for a PUBLIC scalar k: no blinding, and the running time depends on k **/
+int ec_point_scalar_public(EcPoint *p, const uint8_t *k, size_t len);
 
 #endif

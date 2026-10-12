@@ -96,6 +96,8 @@ static void run(size_t nw)
     /* Conversions */
     nat_to_bytes(buf, 8*nw, a, 0);
     nat_from_bytes(out, buf, 8*nw, 1);
+    nat_to_bytes(buf, 8*nw, a, 1);
+    nat_from_bytes(out, buf, 8*nw, 0);
     nat_copy(out, a);
     (void)nat_bit_length(a);
     (void)nat_is_zero(a);
@@ -115,10 +117,13 @@ static void run(size_t nw)
 
     /* Division */
     nat_divmod(q, out, a, b);
+    nat_divmod(q, NULL, a, b);
+    nat_divmod(NULL, out, a, b);
     nat_mod_small(small, a, 1000003);
 
     /* Modular arithmetic */
     nat_mulmod(out, a, b, m_odd);
+    nat_submod(out, b, c, m_odd);   /* as in the CRT step of RSA */
     nat_powmod(out, a, e, 64*nw, m_odd);
     nat_powmod(out, a, e, 64*nw, m_even);
     res = nat_invmod(out, a, m_odd);
@@ -133,6 +138,7 @@ static void run(size_t nw)
     nat_isqrt(out, a);
     nat_miller_rabin(small, n, base);
     nat_lucas(small, n, 17, 0);
+    nat_lucas(small, n, 7, 1);
 
     nat_free(a);
     nat_free(b);

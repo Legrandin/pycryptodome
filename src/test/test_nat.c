@@ -1,4 +1,5 @@
 #include <assert.h>
+#include <stdlib.h>
 #include <string.h>
 #include "common.h"
 #include "nat.h"
@@ -6,10 +7,8 @@
 
 /* Private functions (they are not static when STATIC is defined as empty) */
 void wipe(void *p, size_t len);
-void words_shr_public(uint64_t *out, const uint64_t *x, size_t s, size_t nw);
-void words_shl_public(uint64_t *out, const uint64_t *x, size_t s, size_t nw);
-void nat_to_words(uint64_t *out, const Nat *a, size_t nw);
-void words_to_nat(Nat *out, const uint64_t *x, size_t nw);
+void words_shr_public(uint64_t *out, size_t out_nw, const uint64_t *x, size_t x_nw, size_t s);
+void words_shl_public(uint64_t *out, size_t out_nw, const uint64_t *x, size_t x_nw, size_t s);
 int mulmod_words(uint64_t *out, const uint64_t *x, const uint64_t *y, const Nat *m, Nat *prod);
 uint64_t div128_ct(uint64_t hi, uint64_t lo, uint64_t d);
 uint64_t reciprocal_ct(uint64_t d);
@@ -470,14 +469,18 @@ void test_copy_and_conversions(void)
     assert(out[0] == 3 && out[16] == 1);
     assert(nat_to_bytes(out, 16, a, 0) == ERR_VALUE);
 
-    nat_to_words(words, a, 4);
+    /* Longer (zero extension), shorter (truncation), same size and in place */
+    words[3] = 9;
+    words_copy_resized(words, 4, a->w, a->nw);
     assert(words[0] == 1 && words[1] == 2 && words[2] == 3 && words[3] == 0);
-    nat_to_words(words, a, 2);
-    assert(words[0] == 1 && words[1] == 2);
+    words_copy_resized(words, 2, a->w, a->nw);
+    assert(words[0] == 1 && words[1] == 2 && words[2] == 3);
 
     words[0] = 5; words[1] = 6;
-    words_to_nat(b, words, 2);
+    words_copy_resized(b->w, b->nw, words, 2);
     assert(b->w[0] == 5 && b->w[1] == 6 && b->w[2] == 0 && b->w[3] == 0);
+    words_copy_resized(b->w, 2, b->w, 2);
+    assert(b->w[0] == 5 && b->w[1] == 6);
 
     nat_free(a);
     nat_free(b);
@@ -544,7 +547,7 @@ void test_words_add_sub(void)
 void test_words_shifts(void)
 {
     uint64_t x[3] = { 0x8000000000000001ULL, 0x0123456789ABCDEFULL, 0xF000000000000000ULL };
-    uint64_t a[3], b[3], tmp[3];
+    uint64_t a[3], b[3], c[4], tmp[3];
     size_t k;
 
     memcpy(a, x, sizeof x);
@@ -556,37 +559,51 @@ void test_words_shifts(void)
     words_shr1(a, 1, 3);
     assert(a[2] == 0xF800000000000000ULL);
 
-    words_shr_public(a, x, 0, 3);
+    words_shr_public(a, 3, x, 3, 0);
     assert(memcmp(a, x, sizeof x) == 0);
-    words_shr_public(a, x, 64, 3);
+    words_shr_public(a, 3, x, 3, 64);
     assert(a[0] == x[1] && a[1] == x[2] && a[2] == 0);
-    words_shr_public(a, x, 68, 3);
+    words_shr_public(a, 3, x, 3, 68);
     assert(a[0] == 0x00123456789ABCDEULL);
     assert(a[1] == 0x0F00000000000000ULL && a[2] == 0);
-    words_shr_public(a, x, 192, 3);
+    words_shr_public(a, 3, x, 3, 192);
     assert(a[0] == 0 && a[1] == 0 && a[2] == 0);
 
-    words_shl_public(a, x, 0, 3);
+    words_shl_public(a, 3, x, 3, 0);
     assert(memcmp(a, x, sizeof x) == 0);
-    words_shl_public(a, x, 64, 3);
+    words_shl_public(a, 3, x, 3, 64);
     assert(a[0] == 0 && a[1] == x[0] && a[2] == x[1]);
-    words_shl_public(a, x, 4, 3);
+    words_shl_public(a, 3, x, 3, 4);
     assert(a[0] == 0x0000000000000010ULL);
     assert(a[1] == 0x123456789ABCDEF8ULL);
     assert(a[2] == 0x0000000000000000ULL);
-    words_shl_public(a, x, 192, 3);
+    words_shl_public(a, 3, x, 3, 192);
     assert(a[0] == 0 && a[1] == 0 && a[2] == 0);
+
+    /* Output shorter and longer than the input, and huge shifts */
+    words_shr_public(a, 2, x, 3, 4);
+    assert(a[0] == 0xF800000000000000ULL && a[1] == 0x00123456789ABCDEULL);
+    words_shr_public(c, 4, x, 3, 4);
+    assert(c[0] == a[0] && c[1] == a[1] && c[2] == 0x0F00000000000000ULL && c[3] == 0);
+    words_shl_public(c, 4, x, 3, 68);
+    assert(c[0] == 0 && c[1] == 0x10 && c[2] == 0x123456789ABCDEF8ULL && c[3] == 0);
+    words_shl_public(a, 1, x, 3, 4);
+    assert(a[0] == 0x0000000000000010ULL);
+    words_shr_public(c, 4, x, 3, SIZE_MAX);
+    assert(c[0] == 0 && c[1] == 0 && c[2] == 0 && c[3] == 0);
+    words_shl_public(c, 4, x, 3, SIZE_MAX);
+    assert(c[0] == 0 && c[1] == 0 && c[2] == 0 && c[3] == 0);
 
     /* The secret shifts give the same result as the public ones */
     for (k=0; k<=192; k++) {
         memcpy(a, x, sizeof x);
         words_shr_secret(a, k, tmp, 3);
-        words_shr_public(b, x, k, 3);
+        words_shr_public(b, 3, x, 3, k);
         assert(memcmp(a, b, sizeof a) == 0);
 
         memcpy(a, x, sizeof x);
         words_shl_secret(a, k, tmp, 3);
-        words_shl_public(b, x, k, 3);
+        words_shl_public(b, 3, x, 3, k);
         assert(memcmp(a, b, sizeof a) == 0);
     }
 
@@ -667,6 +684,22 @@ void test_divmod_words(void)
 
     nat_free(a);
     nat_free(b);
+}
+
+/* -n^{-1} mod 2^64, for odd numbers (the edge cases, and random ones) */
+void test_neg_inv64(void)
+{
+    const uint64_t edge[] = { 1, 3, MAX64, MAX64 - 2, 0x8000000000000001ULL, 0x206E7802877E6595ULL };
+    unsigned i;
+
+    assert(neg_inv64(1) == MAX64);
+    for (i=0; i<sizeof edge / sizeof edge[0]; i++)
+        assert(edge[i]*neg_inv64(edge[i]) == MAX64);
+    for (i=0; i<1000; i++) {
+        uint64_t n0 = rnd() | 1;
+
+        assert(n0*neg_inv64(n0) == MAX64);
+    }
 }
 
 void test_mod_helpers(void)
@@ -905,6 +938,23 @@ void test_argument_checks(void)
     assert(nat_divmod(q, q, a, b) == ERR_VALUE);
     assert(nat_divmod(a, q, a, b) == ERR_VALUE);
     assert(nat_divmod(q, b, a, b) == ERR_VALUE);
+
+    /* NULL arguments of the modular functions */
+    assert(nat_mulmod(NULL, a, b, b) == ERR_NULL);
+    assert(nat_mulmod(out, NULL, b, b) == ERR_NULL);
+    assert(nat_mulmod(out, a, NULL, b) == ERR_NULL);
+    assert(nat_mulmod(out, a, b, NULL) == ERR_NULL);
+    assert(nat_submod(NULL, a, b, b) == ERR_NULL);
+    assert(nat_submod(out, NULL, b, b) == ERR_NULL);
+    assert(nat_submod(out, a, NULL, b) == ERR_NULL);
+    assert(nat_submod(out, a, b, NULL) == ERR_NULL);
+    assert(nat_powmod(NULL, a, b, 64, b) == ERR_NULL);
+    assert(nat_powmod(out, NULL, b, 64, b) == ERR_NULL);
+    assert(nat_powmod(out, a, NULL, 64, b) == ERR_NULL);
+    assert(nat_powmod(out, a, b, 64, NULL) == ERR_NULL);
+    assert(nat_invmod(NULL, a, b) == ERR_NULL);
+    assert(nat_invmod(out, NULL, b) == ERR_NULL);
+    assert(nat_invmod(out, a, NULL) == ERR_NULL);
 
     /* Zero modulus */
     assert(nat_mulmod(out, a, b, z) == ERR_VALUE);
@@ -1159,12 +1209,9 @@ void test_bgcd_helpers(void)
     /* (u*f + v*g) / 2^31 mod n */
     {
         uint64_t n[1] = { 1000003 }, u[1] = { 123 }, v[1] = { 456 }, r[1], t[3], kn[2];
-        uint64_t n0inv = n[0], i;
+        uint64_t n0inv = neg_inv64(n[0]), i;
         uint64_t inv2_31 = 1;
 
-        for (i=0; i<5; i++)
-            n0inv *= 2 - n[0]*n0inv;
-        n0inv = 0 - n0inv;
         /* 2^-31 mod n, computed by halving */
         for (i=0; i<31; i++)
             inv2_31 = (inv2_31 & 1) ? (inv2_31 + n[0]) / 2 : inv2_31 / 2;
@@ -1340,6 +1387,296 @@ void test_mont32(void)
 
 #endif /* NAT_32BIT */
 
+/*
+ * Random tests of the modular functions against independent references,
+ * for sizes up to 64 words (RSA-4096), odd and even moduli, and inputs
+ * longer than the modulus.
+ */
+
+static const size_t random_sizes[] = { 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 16, 32, 64 };
+#define N_RANDOM_SIZES (sizeof random_sizes / sizeof random_sizes[0])
+
+/** A random number of nw words; sometimes with its top word at the maximum, or zero **/
+static Nat *random_nat(size_t nw)
+{
+    Nat *x;
+    size_t i;
+
+    assert(nat_new(&x, nw) == 0);
+    for (i=0; i<nw; i++)
+        x->w[i] = rnd();
+    switch (rnd() % 8) {
+    case 0:
+        x->w[nw - 1] = MAX64;
+        break;
+    case 1:
+        x->w[nw - 1] = 0;
+        break;
+    }
+    return x;
+}
+
+/** A random modulus of nw words (not zero), odd or even **/
+static Nat *random_modulus(size_t nw, int odd)
+{
+    Nat *m = random_nat(nw);
+
+    if (odd)
+        m->w[0] |= 1;
+    else
+        m->w[0] &= ~(uint64_t)1;
+    if (nat_is_zero(m))
+        m->w[0] = 2;
+    return m;
+}
+
+/** a mod m, with m->nw words **/
+static Nat *reduce(const Nat *a, const Nat *m)
+{
+    Nat *r;
+
+    assert(nat_new(&r, m->nw) == 0);
+    assert(nat_divmod(NULL, r, a, m) == 0);
+    return r;
+}
+
+/* mul_wide() and sqr_wide() (the full products of the curves) against nat_mul() */
+void test_wide_products(void)
+{
+    size_t s;
+    unsigned t;
+
+    for (s=0; s<N_RANDOM_SIZES; s++) {
+        size_t nw = random_sizes[s];
+
+        for (t=0; t<10; t++) {
+            Nat *n = random_modulus(nw, 1), *a = random_nat(nw), *b = random_nat(nw), *ref;
+            uint64_t *out = (uint64_t*)calloc(2*nw, sizeof(uint64_t));
+            MontCtx *ctx;
+
+            assert(out != NULL);
+            assert(nat_new(&ref, 2*nw) == 0);
+            assert(mont_ctx_new(&ctx, n) == 0);
+
+            mul_wide(out, a->w, b->w, ctx);
+            assert(nat_mul(ref, a, b) == 0);
+            assert(memcmp(out, ref->w, 2*nw*8) == 0);
+
+            sqr_wide(out, a->w, ctx);
+            assert(nat_mul(ref, a, a) == 0);
+            assert(memcmp(out, ref->w, 2*nw*8) == 0);
+
+            mont_ctx_free(ctx);
+            free(out);
+            nat_free(n);
+            nat_free(a);
+            nat_free(b);
+            nat_free(ref);
+        }
+    }
+}
+
+/*
+ * nat_mulmod(): the result r is smaller than m, and m divides a*b - r;
+ * for an odd m, it is also the Montgomery product.
+ * nat_submod(): against additions and subtractions.
+ */
+void test_mulmod_submod_random(void)
+{
+    size_t s;
+    unsigned t;
+
+    for (s=0; s<N_RANDOM_SIZES; s++) {
+        size_t nw = random_sizes[s];
+
+        for (t=0; t<10; t++) {
+            int odd = t % 2;
+            size_t na = nw + rnd() % 3, nb = 1 + rnd() % (nw + 2);
+            Nat *m = random_modulus(nw, odd), *a = random_nat(na), *b = random_nat(nb);
+            Nat *r, *prod, *diff, *rem, *ar, *br, *sub, *ref, *tmp;
+
+            assert(nat_new(&r, nw) == 0);
+            assert(nat_new(&prod, na + nb) == 0);
+            assert(nat_new(&diff, na + nb) == 0);
+            assert(nat_new(&rem, nw) == 0);
+
+            /* r = a*b mod m: r < m, and m divides a*b - r */
+            assert(nat_mulmod(r, a, b, m) == 0);
+            assert(nat_cmp(r, m) < 0);
+            assert(nat_mul(prod, a, b) == 0);
+            assert(nat_sub(diff, prod, r) == 0);
+            assert(nat_divmod(NULL, rem, diff, m) == 0);
+            assert(nat_is_zero(rem));
+
+            ar = reduce(a, m);
+            br = reduce(b, m);
+
+            /* The Montgomery product, for an odd m */
+            if (odd) {
+                MontCtx *ctx;
+                uint64_t *x = (uint64_t*)calloc(nw, 8), *y = (uint64_t*)calloc(nw, 8);
+
+                assert(x != NULL && y != NULL);
+                assert(mont_ctx_new(&ctx, m) == 0);
+                mont_to(x, ar->w, ctx);
+                mont_to(y, br->w, ctx);
+                mont_mul(x, x, y, ctx);
+                mont_from(x, x, ctx);
+                assert(memcmp(x, r->w, nw*8) == 0);
+                mont_ctx_free(ctx);
+                free(x);
+                free(y);
+            }
+
+            /* (a - b) mod m, for a, b < m: a - b, or a + m - b */
+            assert(nat_new(&sub, nw) == 0);
+            assert(nat_new(&ref, nw) == 0);
+            assert(nat_new(&tmp, nw + 1) == 0);
+            assert(nat_submod(sub, ar, br, m) == 0);
+            if (nat_cmp(ar, br) >= 0) {
+                assert(nat_sub(ref, ar, br) == 0);
+            } else {
+                assert(nat_add(tmp, ar, m) == 0);
+                assert(nat_sub(ref, tmp, br) == 0);
+            }
+            assert(nat_cmp(sub, ref) == 0);
+            /* a - a = 0 */
+            assert(nat_submod(sub, ar, ar, m) == 0);
+            assert(nat_is_zero(sub));
+
+            nat_free(m);
+            nat_free(a);
+            nat_free(b);
+            nat_free(r);
+            nat_free(prod);
+            nat_free(diff);
+            nat_free(rem);
+            nat_free(ar);
+            nat_free(br);
+            nat_free(sub);
+            nat_free(ref);
+            nat_free(tmp);
+        }
+    }
+}
+
+/*
+ * nat_powmod() against square-and-multiply with nat_mulmod(), for odd
+ * moduli (Montgomery) and even ones, over the low e_bits bits of e
+ */
+void test_powmod_random(void)
+{
+    size_t s;
+    unsigned t;
+
+    for (s=0; s<N_RANDOM_SIZES; s++) {
+        size_t nw = random_sizes[s];
+        /* Full-size exponents for the small moduli, 128 bits for the large ones */
+        size_t e_bits = nw <= 8 ? 64*nw : 128;
+
+        for (t=0; t<4; t++) {
+            Nat *m = random_modulus(nw, t % 2), *a = random_nat(nw + rnd() % 2), *e;
+            Nat *out, *ref;
+            size_t i, bits = e_bits - rnd() % 8;     /* not always whole words */
+
+            /* e < 2^bits, as required; sometimes with its top bit set */
+            e = random_nat((e_bits + 63) / 64);
+            for (i=bits; i<64*e->nw; i++)
+                e->w[i / 64] &= ~((uint64_t)1 << (i % 64));
+            if (t >= 2)
+                e->w[(bits - 1) / 64] |= (uint64_t)1 << ((bits - 1) % 64);
+            assert(nat_new(&out, nw) == 0);
+            assert(nat_new(&ref, nw) == 0);
+
+            assert(nat_powmod(out, a, e, bits, m) == 0);
+
+            /* 1 mod m, then over the bits of e from the top */
+            {
+                Nat *one = make1(1, 1);
+
+                assert(nat_divmod(NULL, ref, one, m) == 0);
+                nat_free(one);
+            }
+            for (i=bits; i-- > 0;) {
+                assert(nat_mulmod(ref, ref, ref, m) == 0);
+                if (nat_get_bit(e, i))
+                    assert(nat_mulmod(ref, ref, a, m) == 0);
+            }
+            assert(nat_cmp(out, ref) == 0);
+
+            nat_free(m);
+            nat_free(a);
+            nat_free(e);
+            nat_free(out);
+            nat_free(ref);
+        }
+    }
+}
+
+/*
+ * nat_invmod(): it fails exactly when gcd(a, m) is not 1, and otherwise
+ * a*x = 1 (mod m), for odd and even moduli
+ */
+void test_invmod_random(void)
+{
+    size_t s;
+    unsigned t, inverses = 0, failures = 0;
+
+    for (s=0; s<N_RANDOM_SIZES; s++) {
+        size_t nw = random_sizes[s];
+
+        for (t=0; t<8; t++) {
+            Nat *m = random_modulus(nw, t % 2), *a = random_nat(nw + rnd() % 2);
+            Nat *x, *g, *chk, *one;
+            int res;
+
+            /* Sometimes a common factor (2, 3 or 5) for sure */
+            if (t % 4 == 3) {
+                uint64_t f = 2 + rnd() % 3;
+                Nat *fn = make1(1, f), *tmp;
+
+                assert(nat_new(&tmp, m->nw + 1) == 0);
+                assert(nat_mul(tmp, m, fn) == 0);
+                nat_free(m);
+                m = tmp;
+                assert(nat_new(&tmp, a->nw + 1) == 0);
+                assert(nat_mul(tmp, a, fn) == 0);
+                nat_free(a);
+                a = tmp;
+                nat_free(fn);
+            }
+
+            assert(nat_new(&x, m->nw) == 0);
+            assert(nat_new(&g, MAX(a->nw, m->nw)) == 0);
+            assert(nat_new(&chk, m->nw) == 0);
+            one = make1(1, 1);
+
+            res = nat_invmod(x, a, m);
+            assert(nat_gcd(g, a, m) == 0);
+            if (nat_cmp(g, one) != 0) {
+                assert(res == ERR_VALUE);
+                failures++;
+            } else {
+                assert(res == 0);
+                assert(nat_cmp(x, m) < 0);
+                assert(nat_mulmod(chk, a, x, m) == 0);
+                /* 1 mod m: 0 for m = 1 */
+                assert(nat_cmp(chk, one) == 0 || (nat_cmp(m, one) == 0 && nat_is_zero(chk)));
+                inverses++;
+            }
+
+            nat_free(m);
+            nat_free(a);
+            nat_free(x);
+            nat_free(g);
+            nat_free(chk);
+            nat_free(one);
+        }
+    }
+    /* Both outcomes were tested */
+    assert(inverses > 0 && failures > 0);
+}
+
 int main(void)
 {
 #if defined(TEST_BMI2_ADX)
@@ -1373,6 +1710,7 @@ int main(void)
     test_words_shifts();
     test_muladd_and_or();
     test_divmod_words();
+    test_neg_inv64();
     test_mod_helpers();
     test_montgomery();
     test_mont_ctx_private();
@@ -1380,6 +1718,10 @@ int main(void)
     test_inv_odd();
     test_mulmod_words();
     test_argument_checks();
+    test_wide_products();
+    test_mulmod_submod_random();
+    test_powmod_random();
+    test_invmod_random();
     test_lucas_negative_d();
     test_div128();
     test_divmod_random();

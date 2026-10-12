@@ -422,6 +422,17 @@ class TestX448:
                 DH.import_x448_public_key(unhexlify(x))
 
 
+@pytest.mark.parametrize("curve", ["P-256", "P-521", "Curve25519", "Curve448"])
+def test_shared_point_at_infinity(curve):
+    """The shared point is the point at infinity: no secret is derived"""
+
+    priv = ECC.generate(curve=curve)
+    # The point at infinity, as a public key (not validated)
+    pai = ECC.EccKey(curve=curve, point=priv.pointQ.point_at_infinity())
+    with pytest.raises(ValueError, match="Invalid ECDH point"):
+        key_agreement(static_priv=priv, static_pub=pai, kdf=lambda x: x)
+
+
 def load_wycheproof_vectors_x25519():
     vectors = []
 
@@ -612,3 +623,25 @@ class TestVectorsX448Wycheproof:
     @pytest.mark.parametrize("tv", load_wycheproof_vectors_x448(), ids=wycheproof_id)
     def test(self, tv):
         self.check_verify(tv)
+
+
+def _low_order_x():
+    """The u-coordinates of the points of small order, and their non-canonical
+    forms (not reduced modulo p): construct() must reject all of them"""
+
+    p = 2**255 - 19
+    x1 = 325606250916557431795983626356110631294008115727848805560023387167927233504
+    x2 = 39382357235489614581723060781553021112529911719440698176882885853963445705823
+    x25519 = [0, 1, x1, x2, p - 1, p, p + 1, p + x1, p + x2, 2 * p - 1, 2 * p, 2 * p + 1]
+    p = 2**448 - 2**224 - 1
+    x448 = [0, 1, p - 1, p, p + 1]
+    return [("Curve25519", x) for x in x25519] + [("Curve448", x) for x in x448]
+
+
+@pytest.mark.parametrize("curve, x", _low_order_x())
+def test_low_order_non_canonical(curve, x):
+    # The validation compares point.x, which is always reduced modulo p
+    point = ECC.EccXPoint(x, curve)
+    assert point.x < int(ECC._curves[curve].p)
+    with pytest.raises(ValueError, match="Invalid"):
+        ECC.construct(curve=curve, point_x=x)

@@ -23,6 +23,10 @@ int ed25519_new_point(Point **out,
                       const uint8_t y[32],
                       size_t modsize,
                       const void *context);
+int ed25519_decode_point(Point **out,
+                         const uint8_t *encoded,
+                         size_t len,
+                         const void *context);
 int ed25519_clone(Point **P, const Point *Q);
 void ed25519_free_point(Point *p);
 int ed25519_cmp(const Point *p1, const Point *p2);
@@ -31,11 +35,13 @@ int ed25519_get_xy(uint8_t *xb, uint8_t *yb, size_t modsize, Point *p);
 int ed25519_double(Point *p);
 int ed25519_add(Point *P1, const Point *P2);
 int ed25519_scalar(Point *P, const uint8_t *scalar, size_t scalar_len, uint64_t seed);
+int ed25519_scalar_public(Point *P, const uint8_t *scalar, size_t scalar_len);
 """,
     )
 
     class EcLib:
         new_point = _ed25519_lib.ed25519_new_point
+        decode_point = _ed25519_lib.ed25519_decode_point
         clone = _ed25519_lib.ed25519_clone
         free_point = _ed25519_lib.ed25519_free_point
         cmp = _ed25519_lib.ed25519_cmp
@@ -44,13 +50,15 @@ int ed25519_scalar(Point *P, const uint8_t *scalar, size_t scalar_len, uint64_t 
         double = _ed25519_lib.ed25519_double
         add = _ed25519_lib.ed25519_add
         scalar = _ed25519_lib.ed25519_scalar
+        scalar_public = _ed25519_lib.ed25519_scalar_public
 
+    # The parameters of the curve are public
     ed25519 = _Curve(
-        Integer(p),
+        Integer(p, public=True),
         None,
-        Integer(order),
-        Integer(Gx),
-        Integer(Gy),
+        Integer(order, public=True),
+        Integer(Gx, public=True),
+        Integer(Gy, public=True),
         None,
         255,
         "1.3.101.112",  # RFC8410
@@ -68,18 +76,21 @@ def ed448_curve():
     Gx = 0x4F1970C66BED0DED221D15A622BF36DA9E146570470F1767EA6DE324A3D3A46412AE1AF72AB66511433B80E18B00938E2626A82BC70CC05E
     Gy = 0x693F46716EB6BC248876203756C9C7624BEA73736CA3984087789C1E05A0C2D73AD3FF1CE67C39C4FDBD132C4ED7C8AD9808795BF230FA14
 
-    _ed448_lib, _ = load_ec_lib(
+    _ed448_lib = load_ec_lib(
         """
 typedef void EcContext;
 typedef void PointEd448;
 int ed448_new_context(EcContext **pec_ctx);
-void ed448_context(EcContext *ec_ctx);
 void ed448_free_context(EcContext *ec_ctx);
 int ed448_new_point(PointEd448 **out,
                     const uint8_t x[56],
                     const uint8_t y[56],
                     size_t len,
                     const EcContext *context);
+int ed448_decode_point(PointEd448 **out,
+                       const uint8_t *encoded,
+                       size_t len,
+                       const EcContext *context);
 int ed448_clone(PointEd448 **P, const PointEd448 *Q);
 void ed448_free_point(PointEd448 *p);
 int ed448_cmp(const PointEd448 *p1, const PointEd448 *p2);
@@ -88,11 +99,13 @@ int ed448_get_xy(uint8_t *xb, uint8_t *yb, size_t len, const PointEd448 *p);
 int ed448_double(PointEd448 *p);
 int ed448_add(PointEd448 *P1, const PointEd448 *P2);
 int ed448_scalar(PointEd448 *P, const uint8_t *scalar, size_t scalar_len, uint64_t seed);
+int ed448_scalar_public(PointEd448 *P, const uint8_t *scalar, size_t scalar_len);
 """,
     )
 
     class EcLib:
         new_point = _ed448_lib.ed448_new_point
+        decode_point = _ed448_lib.ed448_decode_point
         clone = _ed448_lib.ed448_clone
         free_point = _ed448_lib.ed448_free_point
         cmp = _ed448_lib.ed448_cmp
@@ -101,6 +114,7 @@ int ed448_scalar(PointEd448 *P, const uint8_t *scalar, size_t scalar_len, uint64
         double = _ed448_lib.ed448_double
         add = _ed448_lib.ed448_add
         scalar = _ed448_lib.ed448_scalar
+        scalar_public = _ed448_lib.ed448_scalar_public
 
     ed448_context = VoidPointer()
     result = _ed448_lib.ed448_new_context(ed448_context.address_of())
@@ -109,12 +123,13 @@ int ed448_scalar(PointEd448 *P, const uint8_t *scalar, size_t scalar_len, uint64
 
     context = SmartPointer(ed448_context.get(), _ed448_lib.ed448_free_context)
 
+    # The parameters of the curve are public
     ed448 = _Curve(
-        Integer(p),
+        Integer(p, public=True),
         None,
-        Integer(order),
-        Integer(Gx),
-        Integer(Gy),
+        Integer(order, public=True),
+        Integer(Gx, public=True),
+        Integer(Gy, public=True),
         None,
         448,
         "1.3.101.113",  # RFC8410
