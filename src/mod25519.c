@@ -611,21 +611,4 @@ STATIC void sub_25519(uint32_t out[10], const uint32_t a[10], const uint32_t b[1
     add_25519(out, out, zero);
 }
 
-/*
- * Reduce a 256-bit number (mixed radix 2²⁶/²⁵, litte-endian) modulo 2²⁵⁵ - 19.
- *
- * Each limb of x[] in input is < 2²⁸
- *
- * The result x[] in output is such that:
- *      x[i] < 2²⁶      for even i
- *      x[j] < 2²⁵      for odd j<9
- *      x[9] < 2²⁶
- */
-STATIC void reduce_25519_le25p5(uint32_t x[10])
-{
-    uint32_t zero[10] = { 0 };
-    add_25519(x, x, zero);
-    assert((x[0] >> 26) == 0);
-}
-
 #endif  /* __MOD25519_C */
