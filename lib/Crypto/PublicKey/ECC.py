@@ -89,6 +89,44 @@ class ConstructParams(_CurveRequired, total=False):
     point_y: Optional[Union[int, Integer]]
 
 
+# The curves whose private key is a seed, and its length
+_SEED_LENGTHS = {
+    _CurveID.ED25519: 32,
+    _CurveID.ED448: 57,
+    _CurveID.CURVE25519: 32,
+    _CurveID.CURVE448: 56,
+}
+
+
+def _seed_to_scalar(curve_id: int, seed: bytes) -> tuple[Optional[bytes], Integer]:
+    """The prefix (EdDSA only) and the secret scalar of a seed.
+
+    RFC 8032 (5.1.5 and 5.2.5) for Ed25519 and Ed448: the scalar comes from
+    the hash of the seed. RFC 7748 (5) for X25519 and X448: the seed is the
+    scalar. In both cases, the scalar is clamped (little endian).
+    """
+
+    prefix = None
+    if curve_id == _CurveID.ED25519:
+        seed_hash = SHA512.new(seed).digest()
+        prefix, scalar = seed_hash[32:], bytearray(seed_hash[:32])
+    elif curve_id == _CurveID.ED448:
+        seed_hash = SHAKE256.new(seed).read(114)
+        prefix, scalar = seed_hash[57:], bytearray(seed_hash[:57])
+    else:
+        scalar = bytearray(seed)
+
+    if curve_id in (_CurveID.ED25519, _CurveID.CURVE25519):
+        scalar[0] &= 0xF8
+        scalar[31] = (scalar[31] & 0x7F) | 0x40
+    else:
+        scalar[0] &= 0xFC
+        scalar[55] |= 0x80
+        if curve_id == _CurveID.ED448:
+            scalar[56] = 0
+    return prefix, Integer.from_bytes(scalar, byteorder="little")
+
+
 class UnsupportedEccFeature(ValueError):
     pass
 
@@ -164,59 +202,23 @@ class EccKey:
         if count == 2:
             raise ValueError("Parameters d and seed are mutually exclusive")
 
-        # NIST P curves work with d, EdDSA works with seed
-
-        # RFC 8032, 5.1.5
-        if self._curve.id == _CurveID.ED25519:
-            if self._d is not None:
-                raise ValueError("Parameter d can only be used with NIST P curves")
-            if len(self._seed) != 32:
-                raise ValueError("Parameter seed must be 32 bytes long for Ed25519")
-            seed_hash = SHA512.new(self._seed).digest()  # h
-            self._prefix = seed_hash[32:]
-            tmp = bytearray(seed_hash[:32])
-            tmp[0] &= 0xF8
-            tmp[31] = (tmp[31] & 0x7F) | 0x40
-            self._d = Integer.from_bytes(tmp, byteorder="little")
-        # RFC 8032, 5.2.5
-        elif self._curve.id == _CurveID.ED448:
-            if self._d is not None:
-                raise ValueError("Parameter d can only be used with NIST P curves")
-            if len(self._seed) != 57:
-                raise ValueError("Parameter seed must be 57 bytes long for Ed448")
-            seed_hash = SHAKE256.new(self._seed).read(114)  # h
-            self._prefix = seed_hash[57:]
-            tmp = bytearray(seed_hash[:57])
-            tmp[0] &= 0xFC
-            tmp[55] |= 0x80
-            tmp[56] = 0
-            self._d = Integer.from_bytes(tmp, byteorder="little")
-        # RFC 7748, 5
-        elif self._curve.id == _CurveID.CURVE25519:
-            if self._d is not None:
-                raise ValueError("Parameter d can only be used with NIST P curves")
-            if len(self._seed) != 32:
-                raise ValueError("Parameter seed must be 32 bytes long for Curve25519")
-            tmp = bytearray(self._seed)
-            tmp[0] &= 0xF8
-            tmp[31] = (tmp[31] & 0x7F) | 0x40
-            self._d = Integer.from_bytes(tmp, byteorder="little")
-        elif self._curve.id == _CurveID.CURVE448:
-            if self._d is not None:
-                raise ValueError("Parameter d can only be used with NIST P curves")
-            if len(self._seed) != 56:
-                raise ValueError("Parameter seed must be 56 bytes long for Curve448")
-            tmp = bytearray(self._seed)
-            tmp[0] &= 0xFC
-            tmp[55] |= 0x80
-            self._d = Integer.from_bytes(tmp, byteorder="little")
-
-        else:
+        # NIST P curves work with d, the other curves with a seed
+        seed_len = _SEED_LENGTHS.get(self._curve.id)
+        if seed_len is None:
             if self._seed is not None:
                 raise ValueError("Parameter 'seed' cannot be used with NIST P-curves")
             self._d = Integer(self._d)
             if not 1 <= self._d < self._curve.order:
                 raise ValueError("Parameter d must be an integer smaller than the curve order")
+            return
+
+        if self._d is not None:
+            raise ValueError("Parameter d can only be used with NIST P curves")
+        if len(self._seed) != seed_len:
+            raise ValueError(
+                "Parameter seed must be %d bytes long for %s" % (seed_len, self._curve.canonical)
+            )
+        self._prefix, self._d = _seed_to_scalar(self._curve.id, self._seed)
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, EccKey):

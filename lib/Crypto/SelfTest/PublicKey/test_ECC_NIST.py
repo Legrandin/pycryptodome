@@ -1445,3 +1445,23 @@ def test_scalar_multiply_public(curve, monkeypatch):
     assert set(calls) == {"scalar_public"}
     with pytest.raises(ValueError):
         DSS.new(key.public_key(), "fips-186-3").verify(SHA256.new(b"other"), signature)
+
+
+@pytest.mark.parametrize(
+    "curve, seed_len", [("Ed25519", 32), ("Ed448", 57), ("Curve25519", 32), ("Curve448", 56), ("P-256", None)]
+)
+def test_d_or_seed(curve, seed_len):
+    """The NIST curves take d, the others a seed of a fixed length"""
+
+    if seed_len is None:
+        with pytest.raises(ValueError, match="'seed' cannot be used"):
+            ECC.construct(curve=curve, seed=b"H" * 32)
+        return
+    with pytest.raises(ValueError, match="can only be used with NIST"):
+        ECC.construct(curve=curve, d=1)
+    for length in (seed_len - 1, seed_len + 1):
+        with pytest.raises(ValueError, match="must be %d bytes long for %s" % (seed_len, curve)):
+            ECC.construct(curve=curve, seed=b"H" * length)
+    with pytest.raises(ValueError, match="mutually exclusive"):
+        ECC.construct(curve=curve, d=1, seed=b"H" * seed_len)
+    assert ECC.construct(curve=curve, seed=b"H" * seed_len).has_private()
