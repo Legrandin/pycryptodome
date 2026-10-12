@@ -33,6 +33,15 @@ class MockLib:
         return True
 
     have_clmul = have_aes_ni
+
+    # The modules that need these instructions are not loaded
+    def have_avx2(self):
+        return False
+
+    have_bmi1 = have_avx2
+    have_bmi2 = have_avx2
+    have_sha_ni = have_avx2
+    have_adx = have_avx2
     ec_nat_new_curve = lambda *x: 0
     ec_nat_free_curve = lambda *x: None
     ec_nat_new_point = lambda *x: 0

@@ -53,6 +53,10 @@ _raw_sha1_lib = load_pycryptodome_raw_lib(
                                             const uint8_t first_digest[SHA1_DIGEST_SIZE],
                                             uint8_t final_digest[SHA1_DIGEST_SIZE],
                                             size_t iterations);
+
+                        int SHA1_pbkdf1_assist(const uint8_t first_digest[SHA1_DIGEST_SIZE],
+                                            uint8_t final_digest[SHA1_DIGEST_SIZE],
+                                            size_t iterations);
                         """,
 )
 
@@ -172,8 +176,11 @@ block_size: int = SHA1Hash.block_size
 def _pbkdf2_hmac_assist(inner, outer, first_digest, iterations):
     """Compute the expensive inner loop in PBKDF-HMAC."""
 
-    assert len(first_digest) == digest_size
-    assert iterations > 0
+    if len(first_digest) != digest_size:
+        raise ValueError("The first digest must be %d bytes long" % digest_size)
+    # Not an assert: a negative number would become a huge one in C
+    if iterations < 1:
+        raise ValueError("The number of iterations must be positive")
 
     bfr = create_string_buffer(digest_size)
     result = _raw_sha1_lib.SHA1_pbkdf2_hmac_assist(
@@ -182,5 +189,24 @@ def _pbkdf2_hmac_assist(inner, outer, first_digest, iterations):
 
     if result:
         raise ValueError("Error %d with PBKDF2-HMAC assis for SHA1" % result)
+
+    return get_raw_buffer(bfr)
+
+
+def _pbkdf1_assist(first_digest, iterations):
+    """Compute the expensive inner loop in PBKDF1:
+    hash the digest again and again, up to the total number of iterations."""
+
+    if len(first_digest) != digest_size:
+        raise ValueError("The first digest must be %d bytes long" % digest_size)
+    # Not an assert: a negative number would become a huge one in C
+    if iterations < 1:
+        raise ValueError("The number of iterations must be positive")
+
+    bfr = create_string_buffer(digest_size)
+    result = _raw_sha1_lib.SHA1_pbkdf1_assist(first_digest, bfr, c_size_t(iterations))
+
+    if result:
+        raise ValueError("Error %d with PBKDF1 assist for SHA1" % result)
 
     return get_raw_buffer(bfr)

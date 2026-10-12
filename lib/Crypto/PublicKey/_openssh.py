@@ -4,10 +4,12 @@
 from __future__ import annotations
 
 import struct
+from typing import Optional
 
 from Crypto.Cipher import AES
 from Crypto.Hash import SHA512
-from Crypto.Protocol.KDF import _bcrypt_hash
+from Crypto.IO._PBES import _BCRYPT_ROUNDS, _DEFAULT_MAX_BCRYPT_ROUNDS, PbesError, _check_iteration_count
+from Crypto.Protocol.KDF import _bcrypt_hash2
 from Crypto.Util.strxor import strxor
 
 
@@ -36,7 +38,35 @@ def check_padding(pad: bytes) -> None:
             raise ValueError("Incorrect padding")
 
 
-def import_openssh_private_generic(data: bytes, password: bytes) -> tuple[str, bytes]:
+def _bcrypt_pbkdf(password: bytes, salt: bytes, rounds: int) -> bytes:
+    """bcrypt_pbkdf of OpenSSH, for the 48 bytes of the AES-256 key and IV.
+
+    The output comes from two independent stripes of 32 bytes each,
+    computed together at each round (see :func:`_bcrypt_hash2`).
+    """
+
+    constant = b"OxychromaticBlowfishSwatDynamite"
+    pwd_sha512 = SHA512.new(password).digest()
+
+    def swap(out_le):
+        return struct.pack("<IIIIIIII", *struct.unpack(">IIIIIIII", out_le))
+
+    salts = [SHA512.new(salt + struct.pack(">I", count)).digest() for count in (1, 2)]
+    outs = [swap(o) for o in _bcrypt_hash2(pwd_sha512, 6, salts[0], salts[1], constant, False)]
+    accs = [bytearray(o) for o in outs]
+    for _ in range(1, rounds):
+        salts = [SHA512.new(o).digest() for o in outs]
+        outs = [swap(o) for o in _bcrypt_hash2(pwd_sha512, 6, salts[0], salts[1], constant, False)]
+        for acc, out in zip(accs, outs):
+            strxor(acc, out, output=acc)
+
+    stripes = [acc[:24] for acc in accs]
+    return b"".join([bytes([a]) + bytes([b]) for (a, b) in zip(*stripes)])
+
+
+def import_openssh_private_generic(
+    data: bytes, password: bytes, max_iteration_count: Optional[int] = None
+) -> tuple[str, bytes]:
     # https://cvsweb.openbsd.org/cgi-bin/cvsweb/src/usr.bin/ssh/PROTOCOL.key?annotate=HEAD
     # https://github.com/openssh/openssh-portable/blob/master/sshkey.c
     # https://coolaj86.com/articles/the-openssh-private-key-format/
@@ -77,22 +107,13 @@ def import_openssh_private_generic(data: bytes, password: bytes) -> tuple[str, b
         if kdfoptions:
             raise ValueError("Too much data in kdfoptions")
 
-        pwd_sha512 = SHA512.new(password).digest()
-        # We need 32+16 = 48 bytes, therefore 2 bcrypt outputs are sufficient
-        stripes = []
-        constant = b"OxychromaticBlowfishSwatDynamite"
-        for count in range(1, 3):
-            salt_sha512 = SHA512.new(salt + struct.pack(">I", count)).digest()
-            out_le = _bcrypt_hash(pwd_sha512, 6, salt_sha512, constant, False)
-            out = struct.pack("<IIIIIIII", *struct.unpack(">IIIIIIII", out_le))
-            acc = bytearray(out)
-            for _ in range(1, iterations):
-                out_le = _bcrypt_hash(pwd_sha512, 6, SHA512.new(out).digest(), constant, False)
-                out = struct.pack("<IIIIIIII", *struct.unpack(">IIIIIIII", out_le))
-                strxor(acc, out, output=acc)
-            stripes.append(acc[:24])
+        # Before any key derivation: the number of rounds comes from the key
+        if iterations < 1:
+            raise PbesError("Invalid bcrypt_pbkdf rounds count")
+        _check_iteration_count(_BCRYPT_ROUNDS, iterations, max_iteration_count, _DEFAULT_MAX_BCRYPT_ROUNDS)
 
-        result = b"".join([bytes([a]) + bytes([b]) for (a, b) in zip(*stripes)])
+        # We need 32+16 = 48 bytes (AES-256 key and IV)
+        result = _bcrypt_pbkdf(password, salt, iterations)
 
         cipher = AES.new(result[:32], AES.MODE_CTR, nonce=b"", initial_value=result[32 : 32 + 16])
         decrypted = cipher.decrypt(encrypted)

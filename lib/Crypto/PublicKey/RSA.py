@@ -309,6 +309,8 @@ class RsaKey:
         protection: Optional[str] = None,
         randfunc: Optional[RNG] = None,
         prot_params: Optional[ProtParams] = None,
+        *,
+        threads: int = 1,
     ) -> bytes:
         """Export this RSA key.
 
@@ -377,6 +379,14 @@ class RsaKey:
             A function that provides random bytes. Only used for PEM encoding.
             The default is :func:`Crypto.Random.get_random_bytes`.
 
+          threads (integer):
+            (*For private keys only*)
+            The maximum number of threads used to derive the encryption key
+            with scrypt (default: 1, no extra threads; 0 for all CPU cores).
+            Only useful with ``pkcs=8``, a scrypt ``protection`` and a
+            ``parallelization`` larger than 1 in ``prot_params``.
+            The output does not depend on the number of threads.
+
         Returns:
           bytes: the encoded key
 
@@ -394,6 +404,9 @@ class RsaKey:
         .. _`PKCS#8`:   http://www.ietf.org/rfc/rfc5208.txt
         """
 
+        from Crypto.IO import PKCS8
+
+        PKCS8._check_kdf_params(threads=threads)
         if passphrase is not None:
             passphrase = tobytes(passphrase)
 
@@ -431,8 +444,6 @@ class RsaKey:
                 if format == "DER" and passphrase:
                     raise ValueError("PKCS#1 private key cannot be encrypted")
             else:  # PKCS#8
-                from Crypto.IO import PKCS8
-
                 if format == "PEM" and protection is None:
                     key_type = "PRIVATE KEY"
                     binary_key = PKCS8.wrap(binary_key, oid, None, key_params=DerNull())
@@ -443,7 +454,13 @@ class RsaKey:
                             raise ValueError("'protection' parameter must be set")
                         protection = "PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC"
                     binary_key = PKCS8.wrap(
-                        binary_key, oid, passphrase, protection, prot_params=prot_params, key_params=DerNull()
+                        binary_key,
+                        oid,
+                        passphrase,
+                        protection,
+                        prot_params=prot_params,
+                        key_params=DerNull(),
+                        threads=threads,
                     )
                     passphrase = None
         else:
@@ -771,18 +788,20 @@ def _import_x509_cert(encoded, *kwargs):
     return _import_subjectPublicKeyInfo(sp_info)
 
 
-def _import_pkcs8(encoded, passphrase):
+def _import_pkcs8(encoded, passphrase, max_iteration_count=None, threads=1, max_memory=None):
     from Crypto.IO import PKCS8
 
     oids = (oid, "1.2.840.113549.1.1.10")
 
-    k = PKCS8.unwrap(encoded, passphrase)
+    k = PKCS8.unwrap(encoded, passphrase, max_iteration_count, threads=threads, max_memory=max_memory)
     if k[0] not in oids:
         raise ValueError("No PKCS#8 encoded RSA key")
-    return _import_keyDER(k[1], passphrase)
+    # The private key inside PKCS#8 is an RSAPrivateKey (RFC 8017),
+    # and never another (possibly encrypted) container
+    return _import_pkcs1_private(k[1])
 
 
-def _import_keyDER(extern_key, passphrase):
+def _import_keyDER(extern_key, passphrase, max_iteration_count=None, threads=1, max_memory=None):
     """Import an RSA key (public or private half), encoded in DER form."""
 
     decodings = (
@@ -790,7 +809,6 @@ def _import_keyDER(extern_key, passphrase):
         _import_pkcs1_public,
         _import_subjectPublicKeyInfo,
         _import_x509_cert,
-        _import_pkcs8,
     )
 
     for decoding in decodings:
@@ -799,13 +817,22 @@ def _import_keyDER(extern_key, passphrase):
         except ValueError:
             pass
 
+    from Crypto.IO import PKCS8
+
+    try:
+        return _import_pkcs8(extern_key, passphrase, max_iteration_count, threads, max_memory)
+    except PKCS8.PbesLimitError:
+        raise
+    except ValueError:
+        pass
+
     raise ValueError("RSA key format is not supported")
 
 
-def _import_openssh_private_rsa(data, password):
+def _import_openssh_private_rsa(data, password, max_iteration_count=None):
     from ._openssh import check_padding, import_openssh_private_generic, read_bytes, read_string
 
-    ssh_name, decrypted = import_openssh_private_generic(data, password)
+    ssh_name, decrypted = import_openssh_private_generic(data, password, max_iteration_count)
 
     if ssh_name != "ssh-rsa":
         raise ValueError("This SSH key is not RSA")
@@ -824,7 +851,14 @@ def _import_openssh_private_rsa(data, password):
     return construct(build)
 
 
-def import_key(extern_key: Union[str, bytes], passphrase: Optional[Union[str, bytes]] = None) -> RsaKey:
+def import_key(
+    extern_key: Union[str, bytes],
+    passphrase: Optional[Union[str, bytes]] = None,
+    *,
+    max_iteration_count: Optional[int] = None,
+    threads: int = 1,
+    max_memory: Optional[int] = None,
+) -> RsaKey:
     """Import an RSA key (public or private).
 
     Args:
@@ -851,6 +885,35 @@ def import_key(extern_key: Union[str, bytes], passphrase: Optional[Union[str, by
       passphrase (string or byte string):
         For private keys only, the pass phrase that encrypts the key.
 
+      max_iteration_count (integer):
+        The maximum value allowed for the PBKDF2 iteration count or
+        the scrypt cost *N·r·p/8* (that is, *N* for the usual *r=8* and *p=1*)
+        of a `PKCS#8`_ encrypted key, or for the number of rounds of
+        bcrypt_pbkdf of an encrypted OpenSSH key.
+        A malicious key could require an extremely high number of
+        iterations, tying up the CPU for hours.
+        The default value is None: a limit for each KDF, which keeps
+        the key derivation to about one minute at most
+        (see :ref:`the limits for decryption<pkcs8_limits>`).
+        Set it to ``0`` to disable the check.
+
+      threads (integer):
+        The maximum number of threads used to derive the decryption key
+        with scrypt (default: 1, no extra threads; 0 for all CPU cores).
+        Only a `PKCS#8`_ key protected with scrypt and a parallelization
+        parameter larger than 1 can use them.
+
+      max_memory (integer):
+        The maximum memory (in bytes) for the key derivation of a `PKCS#8`_
+        encrypted key, as a limit on the **total** of all threads together
+        (not on each thread).
+        Only scrypt uses a significant amount: 128 · (*N* + 2) · *r* bytes for
+        **each** thread, plus 256 · *r* · *p* bytes for all the flows together.
+        If the requested threads do not fit, fewer are used (down to one);
+        if a single thread does not fit, the key is rejected.
+        The default value is None (a limit of 256 MiB).
+        Set it to ``0`` to disable the check.
+
     Returns: An RSA key object (:class:`RsaKey`).
 
     Raises:
@@ -865,8 +928,9 @@ def import_key(extern_key: Union[str, bytes], passphrase: Optional[Union[str, by
     .. _`OpenSSH 6.5`: https://flak.tedunangst.com/post/new-openssh-key-format-and-bcrypt-pbkdf
     """
 
-    from Crypto.IO import PEM
+    from Crypto.IO import PEM, PKCS8
 
+    PKCS8._check_kdf_params(max_iteration_count, threads, max_memory)
     extern_key = tobytes(extern_key)
     if passphrase is not None:
         passphrase = tobytes(passphrase)
@@ -874,7 +938,7 @@ def import_key(extern_key: Union[str, bytes], passphrase: Optional[Union[str, by
     if extern_key.startswith(b"-----BEGIN OPENSSH PRIVATE KEY"):
         text_encoded = extern_key.decode("latin-1")
         openssh_encoded, _marker, enc_flag = PEM.decode(text_encoded, passphrase)
-        result = _import_openssh_private_rsa(openssh_encoded, passphrase)
+        result = _import_openssh_private_rsa(openssh_encoded, passphrase, max_iteration_count)
         return result
 
     if extern_key.startswith(b"-----"):
@@ -882,7 +946,7 @@ def import_key(extern_key: Union[str, bytes], passphrase: Optional[Union[str, by
         (der, _marker, enc_flag) = PEM.decode(extern_key.decode("latin-1"), passphrase)
         if enc_flag:
             passphrase = None
-        return _import_keyDER(der, passphrase)
+        return _import_keyDER(der, passphrase, max_iteration_count, threads, max_memory)
 
     if extern_key.startswith(b"ssh-rsa "):
         # This is probably an OpenSSH key
@@ -898,7 +962,7 @@ def import_key(extern_key: Union[str, bytes], passphrase: Optional[Union[str, by
 
     if len(extern_key) > 0 and extern_key[0] == 0x30:
         # This is probably a DER encoded key
-        return _import_keyDER(extern_key, passphrase)
+        return _import_keyDER(extern_key, passphrase, max_iteration_count, threads, max_memory)
 
     raise ValueError("RSA key format is not supported")
 

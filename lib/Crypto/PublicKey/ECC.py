@@ -75,6 +75,7 @@ class ExportParams(TypedDict, total=False):
     protection: str
     compress: bool
     prot_params: ProtParams
+    threads: int
 
 
 class _CurveRequired(TypedDict):
@@ -534,6 +535,14 @@ class EccKey:
             The recommendation is to use ``{'iteration_count':21000}`` for PBKDF2,
             and ``{'iteration_count':131072}`` for scrypt.
 
+          threads (integer):
+            (*Private keys only*)
+            The maximum number of threads used to derive the encryption key
+            with scrypt (default: 1, no extra threads; 0 for all CPU cores).
+            Only useful with PKCS#8, a scrypt ``protection`` and a
+            ``parallelization`` larger than 1 in ``prot_params``.
+            The output does not depend on the number of threads.
+
         .. warning::
             If you don't provide a passphrase, the private key will be
             exported in the clear!
@@ -563,6 +572,10 @@ class EccKey:
         compress = args.pop("compress", False)
 
         if self.has_private():
+            from Crypto.IO import PKCS8
+
+            threads = args.pop("threads", 1)
+            PKCS8._check_kdf_params(threads=threads)
             passphrase = args.pop("passphrase", None)
             if isinstance(passphrase, str):
                 passphrase = tobytes(passphrase)
@@ -581,7 +594,9 @@ class EccKey:
             if ext_format == "PEM":
                 if use_pkcs8:
                     if passphrase:
-                        return self._export_private_encrypted_pkcs8_in_clear_pem(passphrase, **args)
+                        return self._export_private_encrypted_pkcs8_in_clear_pem(
+                            passphrase, threads=threads, **args
+                        )
                     else:
                         return self._export_private_clear_pkcs8_in_clear_pem()
                 else:
@@ -591,7 +606,7 @@ class EccKey:
                 if passphrase and not use_pkcs8:
                     raise ValueError("Private keys can only be encrpyted with DER using PKCS#8")
                 if use_pkcs8:
-                    return self._export_pkcs8(passphrase=passphrase, **args)
+                    return self._export_pkcs8(passphrase=passphrase, threads=threads, **args)
                 else:
                     return self._export_rfc5915_private_der()
             else:
@@ -910,10 +925,12 @@ def _import_rfc5915_der(
     return construct(curve=curve_name, d=d, point_x=point_x, point_y=point_y)
 
 
-def _import_pkcs8(encoded, passphrase):
+def _import_pkcs8(encoded, passphrase, max_iteration_count=None, threads=1, max_memory=None):
     from Crypto.IO import PKCS8
 
-    algo_oid, private_key, params = PKCS8.unwrap(encoded, passphrase)
+    algo_oid, private_key, params = PKCS8.unwrap(
+        encoded, passphrase, max_iteration_count, threads=threads, max_memory=max_memory
+    )
 
     nist_p_oids = (
         "1.2.840.10045.2.1",  # id-ecPublicKey (unrestricted)
@@ -954,7 +971,7 @@ def _import_x509_cert(encoded, *kwargs):
     return _import_subjectPublicKeyInfo(sp_info)
 
 
-def _import_der(encoded, passphrase):
+def _import_der(encoded, passphrase, max_iteration_count=None, threads=1, max_memory=None):
     try:
         return _import_subjectPublicKeyInfo(encoded, passphrase)
     except UnsupportedEccFeature as err:
@@ -976,9 +993,11 @@ def _import_der(encoded, passphrase):
     except (ValueError, TypeError, IndexError):
         pass
 
+    from Crypto.IO import PKCS8
+
     try:
-        return _import_pkcs8(encoded, passphrase)
-    except UnsupportedEccFeature as err:
+        return _import_pkcs8(encoded, passphrase, max_iteration_count, threads, max_memory)
+    except (UnsupportedEccFeature, PKCS8.PbesLimitError) as err:
         raise err
     except (ValueError, TypeError, IndexError):
         pass
@@ -1031,10 +1050,10 @@ def _import_openssh_public(encoded):
     return ecc_key
 
 
-def _import_openssh_private_ecc(data, password):
+def _import_openssh_private_ecc(data, password, max_iteration_count=None):
     from ._openssh import check_padding, import_openssh_private_generic, read_bytes, read_string
 
-    key_type, decrypted = import_openssh_private_generic(data, password)
+    key_type, decrypted = import_openssh_private_generic(data, password, max_iteration_count)
 
     eddsa_keys = {
         "ssh-ed25519": ("Ed25519", _import_ed25519_public_key, 32),
@@ -1228,6 +1247,10 @@ def import_key(
     encoded: Union[bytes, str],
     passphrase: Optional[Union[str, bytes]] = None,
     curve_name: Optional[str] = None,
+    *,
+    max_iteration_count: Optional[int] = None,
+    threads: int = 1,
+    max_memory: Optional[int] = None,
 ) -> EccKey:
     """Import an ECC key (public or private).
 
@@ -1267,6 +1290,35 @@ def import_key(
         For a SEC1 encoding only. This is the name of the curve,
         as defined in the `ECC table`_.
 
+      max_iteration_count (integer):
+        The maximum value allowed for the PBKDF2 iteration count or
+        the scrypt cost *N·r·p/8* (that is, *N* for the usual *r=8* and *p=1*)
+        of a `PKCS#8`_ encrypted key, or for the number of rounds of
+        bcrypt_pbkdf of an encrypted OpenSSH key.
+        A malicious key could require an extremely high number of
+        iterations, tying up the CPU for hours.
+        The default value is None: a limit for each KDF, which keeps
+        the key derivation to about one minute at most
+        (see :ref:`the limits for decryption<pkcs8_limits>`).
+        Set it to ``0`` to disable the check.
+
+      threads (integer):
+        The maximum number of threads used to derive the decryption key
+        with scrypt (default: 1, no extra threads; 0 for all CPU cores).
+        Only a `PKCS#8`_ key protected with scrypt and a parallelization
+        parameter larger than 1 can use them.
+
+      max_memory (integer):
+        The maximum memory (in bytes) for the key derivation of a `PKCS#8`_
+        encrypted key, as a limit on the **total** of all threads together
+        (not on each thread).
+        Only scrypt uses a significant amount: 128 · (*N* + 2) · *r* bytes for
+        **each** thread, plus 256 · *r* · *p* bytes for all the flows together.
+        If the requested threads do not fit, fewer are used (down to one);
+        if a single thread does not fit, the key is rejected.
+        The default value is None (a limit of 256 MiB).
+        Set it to ``0`` to disable the check.
+
     .. note::
 
         To import EdDSA private and public keys, when encoded as raw ``bytes``, use:
@@ -1301,8 +1353,9 @@ def import_key(
     .. _SEC1: https://www.secg.org/sec1-v2.pdf
     """
 
-    from Crypto.IO import PEM
+    from Crypto.IO import PEM, PKCS8
 
+    PKCS8._check_kdf_params(max_iteration_count, threads, max_memory)
     encoded = tobytes(encoded)
     if passphrase is not None:
         passphrase = tobytes(passphrase)
@@ -1311,7 +1364,7 @@ def import_key(
     if encoded.startswith(b"-----BEGIN OPENSSH PRIVATE KEY"):
         text_encoded = encoded.decode("latin-1")
         openssh_encoded, _marker, enc_flag = PEM.decode(text_encoded, passphrase)
-        result = _import_openssh_private_ecc(openssh_encoded, passphrase)
+        result = _import_openssh_private_ecc(openssh_encoded, passphrase, max_iteration_count)
         return result
 
     elif encoded.startswith(b"-----"):
@@ -1327,8 +1380,8 @@ def import_key(
         if enc_flag:
             passphrase = None
         try:
-            result = _import_der(der_encoded, passphrase)
-        except UnsupportedEccFeature as uef:
+            result = _import_der(der_encoded, passphrase, max_iteration_count, threads, max_memory)
+        except (UnsupportedEccFeature, PKCS8.PbesLimitError) as uef:
             raise uef
         except ValueError:
             raise ValueError("Invalid DER encoding inside the PEM file")
@@ -1340,7 +1393,7 @@ def import_key(
 
     # DER
     if len(encoded) > 0 and encoded[0] == 0x30:
-        return _import_der(encoded, passphrase)
+        return _import_der(encoded, passphrase, max_iteration_count, threads, max_memory)
 
     # SEC1
     if len(encoded) > 0 and encoded[0] in (0x02, 0x03, 0x04):

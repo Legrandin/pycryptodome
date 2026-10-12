@@ -26,6 +26,7 @@ from __future__ import annotations
 from typing import Optional, Union, overload
 
 from Crypto.Random import get_random_bytes
+from Crypto.Util._cpu_features import load_avx2_bmi2_lib
 from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
@@ -40,9 +41,7 @@ from Crypto.Util._raw_api import (
 
 Buffer = Union[bytes, bytearray, memoryview]
 
-_raw_salsa20_lib = load_pycryptodome_raw_lib(
-    "Crypto.Cipher._Salsa20",
-    """
+_salsa20_cdecl = """
                     int Salsa20_stream_init(uint8_t *key, size_t keylen,
                                             uint8_t *nonce, size_t nonce_len,
                                             void **pSalsaState);
@@ -50,8 +49,17 @@ _raw_salsa20_lib = load_pycryptodome_raw_lib(
                     int Salsa20_stream_encrypt(void *salsaState,
                                                const uint8_t in[],
                                                uint8_t out[], size_t len);
-                    """,
-)
+                    """
+
+_raw_salsa20_portable_lib = load_pycryptodome_raw_lib("Crypto.Cipher._Salsa20", _salsa20_cdecl)
+
+# The same code, with the key stream computed 8 blocks at a time (AVX2)
+_raw_salsa20_avx2_bmi2_lib = load_avx2_bmi2_lib("Crypto.Cipher._Salsa20_avx2_bmi2", _salsa20_cdecl)
+
+if _raw_salsa20_avx2_bmi2_lib is not None:
+    _raw_salsa20_lib = _raw_salsa20_avx2_bmi2_lib
+else:
+    _raw_salsa20_lib = _raw_salsa20_portable_lib
 
 
 class Salsa20Cipher:

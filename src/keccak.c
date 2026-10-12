@@ -305,6 +305,102 @@ KECCAK_API int keccak_copy(const keccak_state *src, keccak_state *dst)
     return 0;
 }
 
+/**
+ * Compute the expensive inner loop of PBKDF2-HMAC, for a hash like SHA-3
+ * (whose digest is half the capacity), for one block of output.
+ *
+ * @inner:      the inner hash of HMAC, after the padded key (one full block)
+ * @outer:      the outer hash of HMAC, after the padded key (one full block)
+ * @first_hmac: the HMAC of the salt and of the block index (U_1)
+ * @result:     the output, U_1 xor U_2 xor ... xor U_iterations
+ * @iterations: the iteration count of PBKDF2
+ * @digest_size: the size of the digest and of @first_hmac and @result
+ * @padding:    the padding byte of the hash (0x06 for SHA-3)
+ *
+ * Each HMAC takes two permutations, one for the inner hash and one for the
+ * outer, as the digest fits in a single block with the padding.
+ */
+KECCAK_API int keccak_pbkdf2_hmac_assist(const keccak_state *inner, const keccak_state *outer,
+                                         const uint8_t *first_hmac,
+                                         uint8_t *result,
+                                         size_t iterations,
+                                         size_t digest_size,
+                                         uint8_t padding)
+{
+    uint64_t s[25], acc[8];
+    uint8_t block[KECCAK_F1600_STATE];
+    unsigned i, nw, last;
+    size_t it;
+
+    if (NULL == inner || NULL == outer || NULL == first_hmac || NULL == result) {
+        return ERR_NULL;
+    }
+
+    if (iterations == 0) {
+        return ERR_NR_ROUNDS;
+    }
+
+    if (digest_size == 0 || digest_size > 64 ||
+        2*digest_size != inner->capacity || inner->capacity != outer->capacity ||
+        inner->rounds != outer->rounds) {
+        return ERR_DIGEST_SIZE;
+    }
+
+    /** Both hashes must have absorbed exactly one block (the padded HMAC key) **/
+    if (inner->valid_bytes != 0 || outer->valid_bytes != 0 ||
+        inner->squeezing != 0 || outer->squeezing != 0) {
+        return ERR_STATE;
+    }
+
+    nw = (unsigned)(digest_size + 1 + 7) / 8;  /* Lanes with the digest and the padding byte */
+    last = inner->rate / 8 - 1;                 /* Lane with the final bit of the padding */
+
+    /** block[] holds the last digest, then the padding byte, then zeroes **/
+    memset(block, 0, sizeof block);
+    memcpy(block, first_hmac, digest_size);
+    for (i=0; i<8; i++) {
+        acc[i] = LOAD_U64_LITTLE(block + 8*i);
+    }
+
+    for (it=1; it<iterations; it++) {
+        /* Inner hash */
+        block[digest_size] = padding;
+        memcpy(s, inner->state, sizeof s);
+        for (i=0; i<nw; i++) {
+            s[i] ^= LOAD_U64_LITTLE(block + 8*i);
+        }
+        s[last] ^= 0x8000000000000000ULL;
+        keccak_function(s, inner->rounds);
+        for (i=0; i<nw; i++) {
+            STORE_U64_LITTLE(block + 8*i, s[i]);
+        }
+        memset(block + digest_size, 0, nw*8 - digest_size);
+
+        /* Outer hash */
+        block[digest_size] = padding;
+        memcpy(s, outer->state, sizeof s);
+        for (i=0; i<nw; i++) {
+            s[i] ^= LOAD_U64_LITTLE(block + 8*i);
+        }
+        s[last] ^= 0x8000000000000000ULL;
+        keccak_function(s, outer->rounds);
+        for (i=0; i<nw; i++) {
+            STORE_U64_LITTLE(block + 8*i, s[i]);
+        }
+        memset(block + digest_size, 0, nw*8 - digest_size);
+
+        for (i=0; i<8; i++) {
+            acc[i] ^= LOAD_U64_LITTLE(block + 8*i);
+        }
+    }
+
+    for (i=0; i<8; i++) {
+        STORE_U64_LITTLE(block + 8*i, acc[i]);
+    }
+    memcpy(result, block, digest_size);
+    return 0;
+}
+
 /* Keccak core function */
 
 #define KECCAK_ROUNDS 24

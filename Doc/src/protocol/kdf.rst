@@ -55,6 +55,16 @@ Example::
     salt = get_random_bytes(16)
     key = scrypt(password, salt, 16, N=2**14, r=8, p=1)
 
+With a parallelization parameter ``p`` larger than 1, scrypt computes ``p``
+independent flows, which can run on several CPU cores with the ``threads`` parameter::
+
+    key = scrypt(password, salt, 16, N=2**14, r=8, p=4, threads=4)
+
+With ``threads=0``, it uses as many threads as the CPU cores available to the process.
+The output does not depend on the number of threads, but each thread
+uses its own :math:`128 \cdot r \cdot N` bytes of memory, at the same time:
+with 4 threads, scrypt needs 4 times as much memory as with one.
+
 .. _scrypt_func:
 
 .. autofunction:: Crypto.Protocol.KDF.scrypt
@@ -95,7 +105,12 @@ and to check them::
     except ValueError:
         print("Incorrect password")
 
-.. warning:
+The bcrypt hash states its own cost (up to 31), and the time doubles at every step.
+To protect against a hash from an untrusted source, :func:`bcrypt_check` rejects
+a cost above 20 (about one minute on a recent laptop): use the parameter ``max_cost``
+to change this limit (see :ref:`the limits<pkcs8_limits>`).
+
+.. warning::
     The output of ``bcrypt`` is only meant to be stored. It is not meant to be
     used as key material.
 

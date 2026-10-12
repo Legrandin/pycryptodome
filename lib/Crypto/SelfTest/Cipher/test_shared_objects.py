@@ -56,10 +56,10 @@ class _ChaCha20State(ctypes.Structure):
 
 
 class _Salsa20State(ctypes.Structure):
+    # The key stream buffer that follows is 64 or 256 bytes long (with SSE2)
     _fields_ = [
         ("input", ctypes.c_uint32 * 16),
-        ("block", ctypes.c_uint8 * 64),
-        ("blockindex", ctypes.c_uint8),
+        ("ks_index", ctypes.c_uint),
     ]
 
 
@@ -106,7 +106,7 @@ def _c_state(cipher, struct_type):
         ("ChaCha20", _ChaCha20State, "usedKeyStream", 1 << 20),
         ("ChaCha20-IETF", _ChaCha20State, "usedKeyStream", 65),
         ("XChaCha20", _ChaCha20State, "usedKeyStream", 1000),
-        ("Salsa20", _Salsa20State, "blockindex", 200),
+        ("Salsa20", _Salsa20State, "ks_index", 1000),
         ("AES-CFB", _CfbState, "usedKeyStream", 17),
         ("AES-CFB8", _CfbState, "usedKeyStream", 1 << 20),
         ("AES-OFB", _OfbState, "usedKeyStream", 1 << 20),

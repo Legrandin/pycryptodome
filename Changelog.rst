@@ -7,6 +7,9 @@ Changelog
 Breaking changes
 ----------------
 * Remove support for Python 2.7 and 3.8. The minimum supported version is now Python 3.9.
+* ``Crypto.Protocol.KDF.bcrypt_check()`` rejects (with ``ValueError``) a bcrypt hash whose cost
+  is above 20, which takes about one minute: use the new parameter ``max_cost``
+  to accept costs up to 31, as before.
 * The ``pycryptodomex`` package (``Cryptodome`` namespace) is no longer released
   (except for important security patches, but still on the 3.x branch).
   The library is only available as ``pycryptodome``, under the ``Crypto`` namespace.
@@ -56,6 +59,21 @@ Resolved issues
 * GH#937: Importing a malformed PEM key could take quadratic time. Thanks to Brian Willows.
 * ``Crypto.Protocol.HPKE.new()`` raised ``TypeError`` with Python 3.9 to 3.11
   when ``aead_id`` was a plain integer, and not an ``HPKE.AEAD`` member.
+* Importing an encrypted OpenSSH private key (with ``RSA.import_key()`` or
+  ``ECC.import_key()``) had no limit on the number of rounds of bcrypt_pbkdf,
+  which the key states: a malicious key could tie up the CPU for months.
+  Now ``max_iteration_count`` limits it (by default, 16,384 rounds, about one minute),
+  and a key with less than one round is rejected.
+* ``Crypto.PublicKey.RSA.import_key()`` accepted a PKCS#8 key whose private key was
+  not an ``RSAPrivateKey`` (PKCS#1), including another, possibly encrypted, PKCS#8 key:
+  now such a key is rejected.
+* An encrypted PKCS#8 key with an iteration count lower than 1, or with invalid scrypt
+  parameters (*N* not a power of 2 larger than 1, *r* or *p* not positive), raised
+  other exceptions than ``ValueError`` (like ``ZeroDivisionError``): now it is rejected
+  with ``ValueError``, before any key derivation.
+* Encrypted PKCS#8 keys protected with PBKDF2 (PBES2) were exported and imported
+  with the slow Python implementation of PBKDF2-HMAC, and not with the C one:
+  now they are about 50x-150x faster (SHA-1 and SHA-2).
 
 New features
 ------------
@@ -124,11 +142,54 @@ New features
   must always be specified, and all parameters after the key are keyword-only.
 * ``Crypto.Protocol.KDF.PBKDF2()`` is about 1.25x-1.35x faster with
   HMAC based on SHA-1, SHA-224, SHA-256, SHA-384 and SHA-512.
+* ``Crypto.Protocol.KDF.PBKDF2()`` with HMAC based on SHA-3 runs its inner loop in C,
+  as for SHA-1 and SHA-2: it is about 25x-35x faster.
+* New parameter ``max_cost`` for ``Crypto.Protocol.KDF.bcrypt_check()``: the maximum cost
+  of the bcrypt hash, which states its own cost (default: 20, about one minute;
+  0 for no limit). A hash from an untrusted source could otherwise tie up the CPU for a day.
+* Encrypted OpenSSH private keys are imported about 1.9x faster: the two bcrypt
+  hashes of each round of bcrypt_pbkdf run interleaved, in C.
+* ``Crypto.Protocol.KDF.PBKDF1()`` with MD5 and SHA-1 (also used to import keys
+  protected with the legacy PBES1 algorithms) runs its inner loop in C:
+  it is about 15x faster.
 * On x86 CPUs with the SHA extensions (SHA-NI), SHA-224 and SHA-256 use them:
   hashing long messages is about 4x faster, and ``PBKDF2()`` with HMAC-SHA256 about 3.5x.
 * Set the environment variable ``PYCRYPTODOME_NO_SELFTEST`` when building
   from source to leave out the self-tests (``Crypto.SelfTest``), whose test keys
   and certificates may be reported by security scanners.
+* ``Crypto.Protocol.KDF.scrypt()`` is about 1.15x-1.3x faster for ``p=1``,
+  and up to 1.7x faster for small ``N`` and large ``p``. On Linux, its memory is
+  backed by transparent huge pages where available.
+* The Salsa20 stream cipher is faster on long messages: about 4.8x on x86-64 CPUs
+  with AVX2 and BMI2 (gcc and clang only; 8 blocks of key stream at a time),
+  2.6x with SSE2 (4 blocks at a time), and 1.3x otherwise.
+* New parameter ``threads`` for ``Crypto.Protocol.KDF.scrypt()``, to compute
+  the ``p`` independent flows on several CPU cores (``threads=0`` for all of them).
+  Each thread uses its own ``128 * r * N`` bytes of memory at the same time.
+  The output does not depend on the number of threads.
+* New parameter ``threads`` for ``Crypto.IO.PKCS8.wrap()`` and ``unwrap()``,
+  for ``import_key()`` of RSA, DSA and ECC keys, and for ``export_key()`` of RSA and ECC keys:
+  a private key protected with scrypt (PBES2) and a parallelization parameter larger than 1
+  is encrypted or decrypted on several CPU cores (``threads=0`` for all of them).
+* New parameter ``max_iteration_count`` for ``import_key()`` of RSA, DSA and ECC keys,
+  like the one of ``Crypto.IO.PKCS8.unwrap()``: the maximum iteration count
+  accepted for an encrypted PKCS#8 key.
+  When a key is above the limit, ``import_key()`` and ``PKCS8.unwrap()`` now raise
+  ``Crypto.IO.PKCS8.PbesIterationCountError`` (a ``ValueError``), whose message
+  says which value is too high and how to accept it, instead of a generic error
+  about the key format.
+  See the new page "Limits when decrypting private keys" in the documentation.
+* For scrypt, ``max_iteration_count`` now limits *N·r·p/8* (that is, *N* for the
+  usual *r=8* and *p=1*), and not only *N*: before, a key with a large *r* or *p*
+  could require any amount of time and memory. By default, the limit is 2\ :sup:`25`.
+  Since scrypt also does some work in proportion to *r·p* only, *N* counts as
+  at least 1024 in the cost.
+* New parameter ``max_memory`` for ``Crypto.IO.PKCS8.unwrap()`` and for ``import_key()``
+  of RSA, DSA and ECC keys: the maximum memory for the key derivation of an encrypted
+  PKCS#8 key (scrypt), as a total for all threads together, not for each thread
+  (and including the memory for the input and the output of all the flows).
+  The default is 256 MiB. Fewer threads are used if needed; if even one thread
+  does not fit, ``Crypto.IO.PKCS8.PbesMemoryError`` is raised.
 
 3.24.0 (4 October 2026)
 ++++++++++++++++++++++++++

@@ -25,6 +25,8 @@ from __future__ import annotations
 
 import re
 import struct
+import sys
+import types
 from functools import reduce
 from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, Union, overload
 
@@ -33,14 +35,17 @@ from Crypto.Random import get_random_bytes
 from Crypto.Util._bytes import tobytes
 from Crypto.Util._raw_api import (
     c_size_t,
+    c_uint8_ptr,
+    c_uint8_ptr_out,
     create_string_buffer,
     get_raw_buffer,
     is_buffer,
     load_pycryptodome_raw_lib,
 )
+from Crypto.Util._threads import range_boundaries, run_in_threads, threads_param
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 from Crypto.Util.number import size as bit_size
-from Crypto.Util.strxor import strxor
+from Crypto.Util.strxor import strxor, strxor_c
 
 if TYPE_CHECKING:
     from types import ModuleType
@@ -49,20 +54,12 @@ Buffer = Union[bytes, bytearray, memoryview]
 RNG = Callable[[int], bytes]
 PRF = Callable[[bytes, bytes], bytes]
 
-_raw_salsa20_lib = load_pycryptodome_raw_lib(
-    "Crypto.Cipher._Salsa20",
-    """
-                    int Salsa20_8_core(const uint8_t *x, const uint8_t *y,
-                                       uint8_t *out);
-                    """,
-)
-
 _raw_scrypt_lib = load_pycryptodome_raw_lib(
     "Crypto.Protocol._scrypt",
     """
-                    typedef int (core_t)(const uint8_t [64], const uint8_t [64], uint8_t [64]);
                     int scryptROMix(const uint8_t *data_in, uint8_t *data_out,
-                           size_t data_len, unsigned N, core_t *core);
+                           size_t data_len, unsigned N,
+                           size_t first, size_t count, size_t total_len);
                     """,
 )
 
@@ -111,9 +108,32 @@ def PBKDF1(
         raise TypeError("Selected hash algorithm has a too short digest (%d bytes)." % digest)
     if len(salt) != 8:
         raise ValueError("Salt is not 8 bytes long (%d bytes instead)." % len(salt))
+    assist = _hash_assist(hashAlgo, "_pbkdf1_assist")
+    if assist is not None and count > 1:
+        return assist(pHash.digest(), count)[:dkLen]
     for _i in range(count - 1):
         pHash = pHash.new(pHash.digest())
     return pHash.digest()[:dkLen]
+
+
+def _hash_assist(hash_module: Any, name: str) -> Optional[Callable[..., bytes]]:
+    """Return the C function ``name`` for the inner loop of a KDF with this hash
+    (like ``_pbkdf2_hmac_assist``), or None if there is none.
+
+    ``hash_module`` can also be a hash object, like the ones returned by
+    :func:`Crypto.Hash.new`: the function is in the module of its class.
+    """
+
+    if not isinstance(hash_module, types.ModuleType):
+        hash_module = sys.modules.get(type(hash_module).__module__)
+    return getattr(hash_module, name, None)
+
+
+def _pbkdf2_hmac_assist(hmac_hash_module: Any) -> Optional[Callable[..., bytes]]:
+    """Return the C function for the inner loop of PBKDF2-HMAC with this hash,
+    or None if there is none (see :func:`_hash_assist`)."""
+
+    return _hash_assist(hmac_hash_module, "_pbkdf2_hmac_assist")
 
 
 def PBKDF2(
@@ -180,7 +200,8 @@ def PBKDF2(
     if prf is None and hmac_hash_module is None:
         hmac_hash_module = SHA1
 
-    if prf or not hasattr(hmac_hash_module, "_pbkdf2_hmac_assist"):
+    assist = None if prf else _pbkdf2_hmac_assist(hmac_hash_module)
+    if assist is None:
         # Generic (and slow) implementation
 
         if prf is None:
@@ -204,7 +225,7 @@ def PBKDF2(
         while len(key) < dkLen:
             base = HMAC.new(password, b"", hmac_hash_module)
             first_digest = base.copy().update(salt + struct.pack(">I", i)).digest()
-            key += base._pbkdf2_hmac_assist(first_digest, count)
+            key += assist(base._inner, base._outer, first_digest, count)
             i += 1
 
     return key[:dkLen]
@@ -404,6 +425,40 @@ def HKDF(
     return list(kol[:num_keys])
 
 
+def _PBKDF2_HMAC_SHA256_1(password: Union[str, Buffer], salt: Union[str, Buffer], dkLen: int) -> bytearray:
+    """Same as ``PBKDF2(password, salt, dkLen, 1, hmac_hash_module=SHA256)``,
+    but much faster: HMAC is computed directly on top of SHA-256,
+    and the hash states for the key and the salt are reused for every block.
+
+    The salt can be any buffer (it is not copied), and the output is a
+    bytearray (written in place, without intermediate objects).
+    """
+
+    password = tobytes(password)
+    if isinstance(salt, str):
+        salt = tobytes(salt)
+
+    if len(password) > SHA256.block_size:
+        password = SHA256.new(password).digest()
+    password = password.ljust(SHA256.block_size, b"\x00")
+
+    inner = SHA256.new(strxor_c(password, 0x36))
+    inner.update(salt)
+    outer = SHA256.new(strxor_c(password, 0x5C))
+
+    size = SHA256.digest_size
+    nblocks = (dkLen + size - 1) // size
+    output = bytearray(nblocks * size)
+    for i in range(nblocks):
+        h_in = inner.copy()
+        h_in.update(struct.pack(">I", i + 1))
+        h_out = outer.copy()
+        h_out.update(h_in.digest())
+        output[i * size : (i + 1) * size] = h_out.digest()
+    del output[dkLen:]
+    return output
+
+
 @overload
 def scrypt(
     password: Union[str, Buffer],
@@ -413,6 +468,8 @@ def scrypt(
     r: int,
     p: int,
     num_keys: Literal[1] = 1,
+    *,
+    threads: int = 1,
 ) -> bytes: ...
 
 
@@ -425,6 +482,8 @@ def scrypt(
     r: int,
     p: int,
     num_keys: int,
+    *,
+    threads: int = 1,
 ) -> Union[bytes, list[bytes]]: ...
 
 
@@ -436,6 +495,8 @@ def scrypt(
     r: int,
     p: int,
     num_keys: int = 1,
+    *,
+    threads: int = 1,
 ) -> Union[bytes, list[bytes]]:
     """Derive one or more keys from a passphrase.
 
@@ -462,6 +523,15 @@ def scrypt(
         By default, only 1 key is generated.
         The maximum cumulative length of all keys is :math:`(2^{32}-1)*32`
         (that is, 128TB).
+     threads (integer):
+        The maximum number of threads used to compute the
+        :data:`p` independent flows in parallel
+        (default: 1, no extra threads; 0 for all CPU cores).
+        At most :data:`p` threads are used, so there is no benefit when
+        :data:`p` is 1. Each thread needs its own :math:`128 \\cdot r \\cdot N`
+        bytes of memory, at the same time: in total,
+        :math:`\\min(threads, p) \\cdot 128 \\cdot r \\cdot N` bytes.
+        The output does not depend on the number of threads.
 
     A good choice of parameters *(N, r , p)* was suggested
     by Colin Percival in his `presentation in 2009`__:
@@ -481,25 +551,43 @@ def scrypt(
         raise ValueError("N is too big")
     if p > ((2**32 - 1) * 32) // (128 * r):
         raise ValueError("p or r are too big")
+    # At least one "thread" (the caller), even when p is 0
+    threads = max(1, min(threads_param(threads), p))
 
-    prf_hmac_sha256 = lambda p, s: HMAC.new(p, s, SHA256).digest()
+    flow_len = 128 * r
+    # Each flow reads its 128*r bytes from stage_1, and writes them into data_out
+    stage_1 = _PBKDF2_HMAC_SHA256_1(password, salt, p * flow_len)
+    data_out = bytearray(p * flow_len)
 
-    stage_1 = PBKDF2(password, salt, p * 128 * r, 1, prf=prf_hmac_sha256)
+    # The p flows are independent: each thread computes a contiguous range of them
+    bounds = range_boundaries(p, threads)
 
-    scryptROMix = _raw_scrypt_lib.scryptROMix
-    core = _raw_salsa20_lib.Salsa20_8_core
+    # The pointers to the buffers are created once, by this thread: the workers
+    # only pass them to C, with their range of flows (like the CTR mode).
+    # No worker touches the Python buffer objects (not safe without the GIL).
+    in_ptr = c_uint8_ptr(stage_1)
+    with c_uint8_ptr_out(data_out) as out_ptr:
 
-    # Parallelize into p flows
-    data_out = []
-    for flow in range(p):
-        idx = flow * 128 * r
-        buffer_out = create_string_buffer(128 * r)
-        result = scryptROMix(stage_1[idx : idx + 128 * r], buffer_out, c_size_t(128 * r), N, core)
-        if result:
-            raise ValueError("Error %X while running scrypt" % result)
-        data_out += [get_raw_buffer(buffer_out)]
+        def worker(i: int) -> None:
+            first, end = bounds[i], bounds[i + 1]
+            result = _raw_scrypt_lib.scryptROMix(
+                in_ptr,
+                out_ptr,
+                c_size_t(flow_len),
+                N,
+                c_size_t(first),
+                c_size_t(end - first),
+                c_size_t(len(data_out)),
+            )
+            if result:
+                raise ValueError("Error %X while running scrypt" % result)
 
-    dk = PBKDF2(password, b"".join(data_out), key_len * num_keys, 1, prf=prf_hmac_sha256)
+        if threads > 1:
+            run_in_threads(worker, threads)
+        else:
+            worker(0)
+
+    dk = bytes(_PBKDF2_HMAC_SHA256_1(password, data_out, key_len * num_keys))
 
     if num_keys == 1:
         return dk
@@ -546,7 +634,10 @@ def _bcrypt_decode(data: bytes) -> bytes:
 
 
 def _bcrypt_hash(password: bytes, cost: int, salt: bytes, constant: bytes, invert: bool) -> bytes:
-    from Crypto.Cipher import _EKSBlowfish
+    """The core of bcrypt: the EKSBlowfish key setup with ``password`` and
+    ``salt``, then the encryption of ``constant`` 64 times in ECB mode (in C)."""
+
+    from Crypto.Cipher._EKSBlowfish import _raw_blowfish_lib
 
     if len(password) > 72:
         raise ValueError("The password is too long. It must be 72 bytes at most.")
@@ -554,11 +645,58 @@ def _bcrypt_hash(password: bytes, cost: int, salt: bytes, constant: bytes, inver
     if not (4 <= cost <= 31):
         raise ValueError("bcrypt cost factor must be in the range 4..31")
 
-    cipher = _EKSBlowfish.new(password, _EKSBlowfish.MODE_ECB, salt, cost, invert)
-    ctext = constant
-    for _ in range(64):
-        ctext = cipher.encrypt(ctext)
-    return ctext
+    out = create_string_buffer(len(constant))
+    result = _raw_blowfish_lib.EKSBlowfish_bcrypt(
+        c_uint8_ptr(password),
+        c_size_t(len(password)),
+        c_uint8_ptr(salt),
+        c_size_t(len(salt)),
+        cost,
+        int(invert),
+        c_uint8_ptr(constant),
+        c_size_t(len(constant)),
+        out,
+    )
+    if result:
+        raise ValueError("Error %d while computing bcrypt" % result)
+    return get_raw_buffer(out)
+
+
+def _bcrypt_hash2(
+    password: bytes, cost: int, salt1: bytes, salt2: bytes, constant: bytes, invert: bool
+) -> tuple[bytes, bytes]:
+    """Like :func:`_bcrypt_hash`, for two salts of the same length at once:
+    about twice as fast as two calls (on a single core)."""
+
+    from Crypto.Cipher._EKSBlowfish import _raw_blowfish_lib
+
+    if len(password) > 72:
+        raise ValueError("The password is too long. It must be 72 bytes at most.")
+
+    if not (4 <= cost <= 31):
+        raise ValueError("bcrypt cost factor must be in the range 4..31")
+
+    if len(salt1) != len(salt2):
+        raise ValueError("The two salts must have the same length")
+
+    out1 = create_string_buffer(len(constant))
+    out2 = create_string_buffer(len(constant))
+    result = _raw_blowfish_lib.EKSBlowfish_bcrypt2(
+        c_uint8_ptr(password),
+        c_size_t(len(password)),
+        c_uint8_ptr(salt1),
+        c_uint8_ptr(salt2),
+        c_size_t(len(salt1)),
+        cost,
+        int(invert),
+        c_uint8_ptr(constant),
+        c_size_t(len(constant)),
+        out1,
+        out2,
+    )
+    if result:
+        raise ValueError("Error %d while computing bcrypt" % result)
+    return get_raw_buffer(out1), get_raw_buffer(out2)
 
 
 def bcrypt(password: Union[bytes, str], cost: int, salt: Optional[bytes] = None) -> bytes:
@@ -608,7 +746,20 @@ def bcrypt(password: Union[bytes, str], cost: int, salt: Optional[bytes] = None)
     return b"$2a" + cost_enc + salt_enc + hash_enc
 
 
-def bcrypt_check(password: Union[bytes, str], bcrypt_hash: Union[bytes, bytearray, str]) -> None:
+#: Default maximum cost of a bcrypt hash in bcrypt_check() (max_cost is None):
+#: the time doubles at every step, and cost 20 takes about one minute on a recent laptop
+_DEFAULT_MAX_BCRYPT_COST = 20
+
+#: Message of the error when the cost of a bcrypt hash is above max_cost
+_BCRYPT_COST_ERROR = (
+    "The bcrypt hash has a cost of {cost}, above the maximum allowed by max_cost: {limit}. "
+    "If you trust the hash, increase max_cost (or set it to 0 to disable the check)."
+)
+
+
+def bcrypt_check(
+    password: Union[bytes, str], bcrypt_hash: Union[bytes, bytearray, str], *, max_cost: Optional[int] = None
+) -> None:
     """Verify if the provided password matches the given bcrypt hash.
 
     Args:
@@ -620,9 +771,24 @@ def bcrypt_check(password: Union[bytes, str], bcrypt_hash: Union[bytes, bytearra
       bcrypt_hash (byte string, bytearray):
         The reference bcrypt hash the password needs to be checked against.
 
+      max_cost (integer):
+        The maximum cost allowed for the bcrypt hash.
+        The hash states its own cost (up to 31), and the time doubles at every step:
+        a hash from an untrusted source could tie up the CPU for a day.
+        The default value is None (a limit of 20, about one minute on a recent laptop).
+        Set it to ``0`` to disable the check.
+        See :ref:`the limits for decryption<pkcs8_limits>`.
+
     Raises:
-        ValueError: if the password does not match
+        ValueError: if the password does not match,
+          or if the cost of the hash is above ``max_cost``
     """
+
+    if max_cost is not None:
+        if not isinstance(max_cost, int) or isinstance(max_cost, bool):
+            raise TypeError("'max_cost' must be an integer or None")
+        if max_cost < 0:
+            raise ValueError("'max_cost' must be a non-negative integer")
 
     bcrypt_hash = tobytes(bcrypt_hash)
 
@@ -640,6 +806,15 @@ def bcrypt_check(password: Union[bytes, str], bcrypt_hash: Union[bytes, bytearra
     cost = int(r.group(1))
     if not (4 <= cost <= 31):
         raise ValueError("Incorrect cost")
+
+    # Before any hashing: the cost comes from the hash
+    if max_cost is None:
+        limit = "%d (the default)" % _DEFAULT_MAX_BCRYPT_COST
+        max_cost = _DEFAULT_MAX_BCRYPT_COST
+    else:
+        limit = str(max_cost)
+    if max_cost and cost > max_cost:
+        raise ValueError(_BCRYPT_COST_ERROR.format(cost=cost, limit=limit))
 
     salt = _bcrypt_decode(r.group(2))
 

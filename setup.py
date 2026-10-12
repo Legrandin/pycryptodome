@@ -153,6 +153,12 @@ ext_modules = [
         py_limited_api=True,
     ),
     Extension(
+        "Crypto.Cipher._Salsa20_avx2_bmi2",
+        include_dirs=["src/"],
+        sources=["src/Salsa20_avx2_bmi2.c"],
+        py_limited_api=True,
+    ),
+    Extension(
         "Crypto.Cipher._chacha20", include_dirs=["src/"], sources=["src/chacha20.c"], py_limited_api=True
     ),
     # Others

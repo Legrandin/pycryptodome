@@ -77,6 +77,21 @@ When creating an encrypted PKCS#8 container, the two parameters
   |                  | value is 1.                                   |
   +------------------+-----------------------------------------------+
 
+With scrypt, the ``parallelization`` parameter (*p*) defines independent
+computations, which can run on several CPU cores: use the ``threads`` parameter
+of :func:`wrap` and :func:`unwrap`, of ``import_key()`` for RSA, DSA and ECC keys,
+and of ``export_key()`` for RSA and ECC keys.
+With ``threads=0``, as many threads as the CPU cores available are used.
+Each thread needs its own block of memory (128 · *r* · *N* bytes), at the same time.
+The result does not depend on the number of threads.
+
+
+Limits for decryption
+---------------------
+
+To protect against malicious keys, :func:`unwrap` rejects keys whose key derivation
+is too expensive (parameters ``max_iteration_count`` and ``max_memory``).
+See :doc:`kdf_limits` for the default limits and how to change them.
 
 Legacy algorithms
 -----------------

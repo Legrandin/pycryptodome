@@ -25,8 +25,9 @@ from binascii import unhexlify
 import pytest
 
 from Crypto.Cipher import AES, DES3
-from Crypto.Hash import CMAC, HMAC, MD5, SHA1, SHA224, SHA256, SHA384, SHA512
+from Crypto.Hash import CMAC, HMAC, MD5, SHA1, SHA224, SHA256, SHA384, SHA512, keccak
 from Crypto.Protocol.KDF import (
+    _PBKDF2_HMAC_SHA256_1,
     _S2V,
     HKDF,
     PBKDF1,
@@ -65,6 +66,25 @@ class TestPBKDF1:
         v = self._testData[0]
         res = PBKDF1(v[0], t2b(v[1]), v[2], v[3], SHA1)
         assert res == t2b(v[4])
+
+
+class TestPBKDF1_C:
+    """The C loop of PBKDF1 (MD5 and SHA-1) matches the generic one."""
+
+    @pytest.mark.parametrize("hashmod", [MD5, SHA1], ids=["MD5", "SHA1"])
+    @pytest.mark.parametrize("password", [b"", b"xxx", b"p" * 200], ids=["empty_pw", "short_pw", "long_pw"])
+    @pytest.mark.parametrize("count", [1, 2, 3, 77])
+    def test_same_output(self, hashmod, password, count):
+        from Crypto.Protocol.KDF import _hash_assist
+
+        assert _hash_assist(hashmod, "_pbkdf1_assist") is not None
+
+        h = hashmod.new(password + b"saltsalt")
+        for _ in range(count - 1):
+            h = hashmod.new(h.digest())
+
+        for dk_len in (1, 8, hashmod.digest_size):
+            assert PBKDF1(password, b"saltsalt", dk_len, count, hashmod) == h.digest()[:dk_len]
 
 
 class TestPBKDF2:
@@ -210,6 +230,75 @@ class TestPBKDF2:
         hashmod = self._SHA512Truncated("224")
         res = PBKDF2(b"p", b"s", 28, 3, hmac_hash_module=hashmod)
         assert res == t2b("f494b312268f820917e98f0b2f6fadc12778d9d300412603d8a51541")
+
+    @pytest.mark.parametrize(
+        "name",
+        [
+            "SHA1",
+            "SHA224",
+            "SHA256",
+            "SHA384",
+            "SHA512",
+            "SHA512-224",
+            "SHA512-256",
+            "SHA3-224",
+            "SHA3-256",
+            "SHA3-384",
+            "SHA3-512",
+        ],
+    )
+    def test_hash_object(self, name):
+        # A hash object (like the ones of Crypto.Hash.new(), which PBES2 uses)
+        # takes the C path too
+        from Crypto import Hash
+        from Crypto.Protocol.KDF import _pbkdf2_hmac_assist
+
+        hash_obj = Hash.new(name)
+        assert _pbkdf2_hmac_assist(hash_obj) is not None
+
+        def prf(p, s):
+            return HMAC.new(p, s, hash_obj).digest()
+
+        dk_len = hash_obj.digest_size * 2 + 5
+        for password in (b"xxx", b"p" * 200):
+            expected = PBKDF2(password, b"yyy", dk_len, 77, prf=prf)
+            assert PBKDF2(password, b"yyy", dk_len, 77, hmac_hash_module=hash_obj) == expected
+
+
+# Both Keccak modules, if the CPU supports the AVX2/BMI2 one
+_keccak_libs = [pytest.param(keccak._raw_keccak_portable_lib, id="portable")]
+if keccak._raw_keccak_avx2_bmi2_lib is not None:
+    _keccak_libs.append(pytest.param(keccak._raw_keccak_avx2_bmi2_lib, id="avx2_bmi2"))
+
+
+class TestPBKDF2_SHA3:
+    """The C loop for SHA-3 (in both Keccak modules) matches the generic one."""
+
+    @pytest.mark.parametrize("lib", _keccak_libs)
+    @pytest.mark.parametrize("bits", [224, 256, 384, 512])
+    @pytest.mark.parametrize("password", [b"xxx", b"p" * 200], ids=["short_pw", "long_pw"])
+    @pytest.mark.parametrize("count", [1, 2, 3, 77])
+    def test_same_output(self, monkeypatch, lib, bits, password, count):
+        import importlib
+
+        hashmod = importlib.import_module("Crypto.Hash.SHA3_%d" % bits)
+        monkeypatch.setattr(keccak, "_raw_keccak_lib", lib)
+        monkeypatch.setattr(hashmod, "_raw_keccak_lib", lib)
+
+        def prf(p, s):
+            return HMAC.new(p, s, hashmod).digest()
+
+        # More than one block of output too
+        dk_len = hashmod.digest_size * 2 + 5
+        expected = PBKDF2(password, b"yyy", dk_len, count, prf=prf)
+        assert PBKDF2(password, b"yyy", dk_len, count, hmac_hash_module=hashmod) == expected
+
+    def test_vector(self):
+        # PBKDF2-HMAC-SHA3-256 (cross-checked with OpenSSL)
+        from Crypto.Hash import SHA3_256
+
+        res = PBKDF2(b"password", b"salt", 32, 1000, hmac_hash_module=SHA3_256)
+        assert res == t2b("ee56a9b7311bb081d0bbfa8dc3c2798f30abbbec6344426829d956ed06eaecab")
 
 
 class TestS2V:
@@ -477,8 +566,143 @@ class TestScrypt:
         key1, key2, key3 = scrypt(b"password", b"salt", 4, 16, 1, 1, 3)
         assert (ref[:4], ref[4:8], ref[8:]) == (key1, key2, key3)
 
+    # The fast PBKDF2 used internally by scrypt must match the generic one,
+    # also for passwords shorter, as long as, and longer than a SHA-256 block
+    @pytest.mark.parametrize("password", [b"", b"pw", b"x" * 64, b"y" * 65, b"z" * 200])
+    @pytest.mark.parametrize("dkLen", [1, 32, 33, 1000])
+    def test_pbkdf2_hmac_sha256_1(self, password, dkLen):
+        expected = PBKDF2(password, b"salt", dkLen, 1, hmac_hash_module=SHA256)
+        assert _PBKDF2_HMAC_SHA256_1(password, b"salt", dkLen) == expected
+
+    def test_str_password(self):
+        # Strings are encoded as Latin-1
+        ref = scrypt("p\xe4ss".encode("latin-1"), b"salt", 32, 16, 1, 1)
+        assert scrypt("p\xe4ss", "salt", 32, 16, 1, 1) == ref
+
+
+class TestScryptThreads:
+    def test_threads_negative(self):
+        for threads in (1.0, "2", None, True):
+            with pytest.raises(TypeError):
+                scrypt(b"password", b"salt", 16, 16, 1, 2, threads=threads)
+        for threads in (-1, -8):
+            with pytest.raises(ValueError):
+                scrypt(b"password", b"salt", 16, 16, 1, 2, threads=threads)
+        # Keyword only
+        with pytest.raises(TypeError):
+            scrypt(b"password", b"salt", 16, 16, 1, 2, 1, 2)
+
+    @pytest.mark.parametrize("p", [1, 2, 3, 5, 16])
+    def test_output_independent_of_threads(self, p):
+        ref = scrypt(b"password", b"salt", 40, 64, 2, p)
+        for threads in (0, 2, 3, 4, 8, 32):
+            assert scrypt(b"password", b"salt", 40, 64, 2, p, threads=threads) == ref
+
+    def test_rfc7914(self):
+        # Test vector from RFC 7914 (N=1024, r=8, p=16)
+        expected = t2b(
+            """
+            fd ba be 1c 9d 34 72 00 78 56 e7 19 0d 01 e9 fe
+            7c 6a d7 cb c8 23 78 30 e7 73 76 63 4b 37 31 62
+            2e af 30 d9 2e 22 a3 88 6f f1 09 27 9d 98 30 da
+            c7 27 af b9 4a 83 ee 6d 83 60 cb df a2 cc 06 40
+            """
+        )
+        assert scrypt(b"password", b"NaCl", 64, 1024, 8, 16, threads=4) == expected
+
+    def test_p_zero(self):
+        # No flows at all: as in 3.24, only the final PBKDF2 is left (with an empty salt)
+        expected = PBKDF2(b"password", b"", 16, 1, hmac_hash_module=SHA256)
+        for threads in (1, 4):
+            assert scrypt(b"password", b"salt", 16, 16, 1, 0, threads=threads) == expected
+
+    def test_multiple_keys(self):
+        ref = scrypt(b"password", b"salt", 12, 16, 1, 4)
+        keys = scrypt(b"password", b"salt", 4, 16, 1, 4, 3, threads=2)
+        assert keys == [ref[:4], ref[4:8], ref[8:]]
+
+
+class TestBcryptHash2:
+    """_bcrypt_hash2() (two salts at once) matches two calls to _bcrypt_hash()."""
+
+    @pytest.mark.parametrize("invert", [False, True])
+    @pytest.mark.parametrize("salt_len", [1, 16, 64, 100])
+    @pytest.mark.parametrize("password", [b"p", b"x" * 72])
+    def test_same_output(self, invert, salt_len, password):
+        from Crypto.Protocol.KDF import _bcrypt_hash, _bcrypt_hash2
+
+        salt1 = bytes(range(salt_len))
+        salt2 = bytes(255 - (i % 256) for i in range(salt_len))
+        constant = b"OxychromaticBlowfishSwatDynamite"
+        expected = (
+            _bcrypt_hash(password, 4, salt1, constant, invert),
+            _bcrypt_hash(password, 4, salt2, constant, invert),
+        )
+        assert _bcrypt_hash2(password, 4, salt1, salt2, constant, invert) == expected
+
+    def test_invalid(self):
+        from Crypto.Protocol.KDF import _bcrypt_hash, _bcrypt_hash2
+
+        constant = b"OrpheanBeholderScryDoubt"
+        for cost in (3, 32):
+            with pytest.raises(ValueError):
+                _bcrypt_hash(b"p", cost, b"s" * 16, constant, False)
+            with pytest.raises(ValueError):
+                _bcrypt_hash2(b"p", cost, b"s" * 16, b"t" * 16, constant, False)
+        with pytest.raises(ValueError):
+            _bcrypt_hash2(b"p" * 73, 4, b"s" * 16, b"t" * 16, constant, False)
+        with pytest.raises(ValueError):
+            _bcrypt_hash2(b"p", 4, b"s" * 16, b"t" * 15, constant, False)
+        with pytest.raises(ValueError):
+            _bcrypt_hash(b"p", 4, b"s" * 16, b"x" * 7, False)
+        # An empty password or salt cannot fill the state of Blowfish
+        with pytest.raises(ValueError):
+            _bcrypt_hash(b"", 4, b"s" * 16, constant, False)
+        with pytest.raises(ValueError):
+            _bcrypt_hash2(b"", 4, b"s" * 16, b"t" * 16, constant, False)
+        with pytest.raises(ValueError):
+            _bcrypt_hash(b"p", 4, b"", constant, False)
+        with pytest.raises(ValueError):
+            _bcrypt_hash2(b"p", 4, b"", b"", constant, False)
+
 
 class TestBcrypt:
+    def test_max_cost(self):
+        """The cost of the hash is checked before any hashing."""
+        from Crypto.Protocol.KDF import _BCRYPT_COST_ERROR, _DEFAULT_MAX_BCRYPT_COST
+
+        password = b"password"
+        hash5 = bcrypt(password, 5)
+        assert hash5[4:7] == b"05$"
+
+        for max_cost in (5, 6, 0, None):
+            bcrypt_check(password, hash5, max_cost=max_cost)
+        with pytest.raises(ValueError) as ctx:
+            bcrypt_check(password, hash5, max_cost=4)
+        assert str(ctx.value) == _BCRYPT_COST_ERROR.format(cost=5, limit=4)
+
+        # The same hash, with a cost above the default limit (never computed)
+        for cost in (_DEFAULT_MAX_BCRYPT_COST + 1, 31):
+            costly = hash5[:4] + b"%02d" % cost + hash5[6:]
+            with pytest.raises(ValueError) as ctx:
+                bcrypt_check(password, costly)
+            expected_limit = "%d (the default)" % _DEFAULT_MAX_BCRYPT_COST
+            assert str(ctx.value) == _BCRYPT_COST_ERROR.format(cost=cost, limit=expected_limit)
+            with pytest.raises(ValueError):
+                bcrypt_check(password, costly, max_cost=cost - 1)
+
+    def test_max_cost_negative(self):
+        hash5 = bcrypt(b"password", 5)
+        for max_cost, exc in ((1.5, TypeError), ("10", TypeError), (True, TypeError), (-1, ValueError)):
+            with pytest.raises(exc):
+                bcrypt_check(b"password", hash5, max_cost=max_cost)
+            # Checked even before the hash
+            with pytest.raises(exc):
+                bcrypt_check(b"password", b"not a hash", max_cost=max_cost)
+        # Keyword only
+        with pytest.raises(TypeError):
+            bcrypt_check(b"password", hash5, 10)
+
     def test_negative_cases(self):
         with pytest.raises(ValueError):
             bcrypt(b"1" * 73, 10)

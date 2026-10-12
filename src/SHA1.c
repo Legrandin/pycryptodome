@@ -428,6 +428,53 @@ EXPORT_SYM int SHA1_pbkdf2_hmac_assist(const hash_state *inner, const hash_state
     return 0;
 }
 
+/**
+ * Compute the expensive inner loop of PBKDF1 (PKCS#5 v1.5),
+ * where T_1 = SHA1(password || salt) and T_i = SHA1(T_{i-1}).
+ *
+ * - first_digest, T_1
+ * - result, T_iterations
+ * - iterations, the total number of PBKDF1 iterations (>0)
+ */
+EXPORT_SYM int SHA1_pbkdf1_assist(const uint8_t first_digest[DIGEST_SIZE],
+                                  uint8_t result[DIGEST_SIZE],
+                                  size_t iterations)
+{
+    static const uint32_t iv[5] = { 0x67452301, 0xefcdab89, 0x98badcfe, 0x10325476, 0xc3d2e1f0 };
+    uint32_t M[16];
+    size_t i;
+    unsigned j;
+
+    if (NULL == first_digest || NULL == result) {
+        return ERR_NULL;
+    }
+
+    if (iterations == 0) {
+        return ERR_NR_ROUNDS;
+    }
+
+    /**
+     * Each hash in the loop processes a single, already padded block
+     * (the previous digest): the new digest replaces it in M.
+     **/
+    memset(M, 0, sizeof M);
+    for (j=0; j<5; j++) {
+        M[j] = LOAD_U32_BIG(&first_digest[j*4]);
+    }
+    M[5] = 0x80000000U;
+    M[15] = DIGEST_SIZE*8;
+
+    for (i=1; i<iterations; i++) {
+        sha_compress_words(iv, M, M);
+    }
+
+    for (j=0; j<5; j++) {
+        STORE_U32_BIG(&result[j*4], M[j]);
+    }
+
+    return 0;
+}
+
 #ifdef MAIN
 int main(void)
 {

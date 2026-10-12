@@ -41,6 +41,16 @@ _raw_blowfish_lib = load_pycryptodome_raw_lib(
                                 uint8_t *out,
                                 size_t data_len);
         int EKSBlowfish_stop_operation(void *state);
+        int EKSBlowfish_bcrypt(const uint8_t key[], size_t key_len,
+                               const uint8_t salt[], size_t salt_len,
+                               unsigned cost, unsigned invert,
+                               const uint8_t ctext[], size_t ctext_len,
+                               uint8_t out[]);
+        int EKSBlowfish_bcrypt2(const uint8_t key[], size_t key_len,
+                                const uint8_t salt1[], const uint8_t salt2[], size_t salt_len,
+                                unsigned cost, unsigned invert,
+                                const uint8_t ctext[], size_t ctext_len,
+                                uint8_t out1[], uint8_t out2[]);
         """,
 )
 
