@@ -669,6 +669,22 @@ void test_divmod_words(void)
     nat_free(b);
 }
 
+/* -n^{-1} mod 2^64, for odd numbers (the edge cases, and random ones) */
+void test_neg_inv64(void)
+{
+    const uint64_t edge[] = { 1, 3, MAX64, MAX64 - 2, 0x8000000000000001ULL, 0x206E7802877E6595ULL };
+    unsigned i;
+
+    assert(neg_inv64(1) == MAX64);
+    for (i=0; i<sizeof edge / sizeof edge[0]; i++)
+        assert(edge[i]*neg_inv64(edge[i]) == MAX64);
+    for (i=0; i<1000; i++) {
+        uint64_t n0 = rnd() | 1;
+
+        assert(n0*neg_inv64(n0) == MAX64);
+    }
+}
+
 void test_mod_helpers(void)
 {
     /* n = 2^128 - 159 (prime), close to 2^128 to exercise the carry */
@@ -1159,12 +1175,9 @@ void test_bgcd_helpers(void)
     /* (u*f + v*g) / 2^31 mod n */
     {
         uint64_t n[1] = { 1000003 }, u[1] = { 123 }, v[1] = { 456 }, r[1], t[3], kn[2];
-        uint64_t n0inv = n[0], i;
+        uint64_t n0inv = neg_inv64(n[0]), i;
         uint64_t inv2_31 = 1;
 
-        for (i=0; i<5; i++)
-            n0inv *= 2 - n[0]*n0inv;
-        n0inv = 0 - n0inv;
         /* 2^-31 mod n, computed by halving */
         for (i=0; i<31; i++)
             inv2_31 = (inv2_31 & 1) ? (inv2_31 + n[0]) / 2 : inv2_31 / 2;
@@ -1373,6 +1386,7 @@ int main(void)
     test_words_shifts();
     test_muladd_and_or();
     test_divmod_words();
+    test_neg_inv64();
     test_mod_helpers();
     test_montgomery();
     test_mont_ctx_private();

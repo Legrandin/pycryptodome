@@ -182,6 +182,8 @@ void mont_sqr(uint64_t *out, const uint64_t *a, MontCtx *ctx);
 void mont_to(uint64_t *out, const uint64_t *x, MontCtx *ctx);
 /** out = x/R mod n **/
 void mont_from(uint64_t *out, const uint64_t *x, MontCtx *ctx);
+/** -n0^{-1} mod 2^64, for an odd n0 (the constant of the Montgomery reduction) **/
+uint64_t neg_inv64(uint64_t n0);
 /** out = (a + b) mod n, a, b < n; out may alias **/
 void mod_add(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, size_t nw);
 /** out = (a - b) mod n, a, b < n; out may alias **/

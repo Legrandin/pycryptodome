@@ -31,6 +31,17 @@
 /* Modular helpers on word arrays                                   */
 /* ---------------------------------------------------------------- */
 
+uint64_t neg_inv64(uint64_t n0)
+{
+    uint64_t inv = n0;          /* correct to 3 bits, as n0*n0 = 1 mod 8 */
+    unsigned i;
+
+    /* Newton iteration: each step doubles the number of correct bits */
+    for (i=0; i<5; i++)
+        inv *= 2 - n0*inv;
+    return 0 - inv;
+}
+
 void mod_add(uint64_t *out, const uint64_t *a, const uint64_t *b, const uint64_t *n, size_t nw)
 {
     uint64_t carry, lt;
@@ -350,9 +361,7 @@ int mont_ctx_new(MontCtx **out, const Nat *n)
 {
     MontCtx *ctx;
     Nat *big = NULL;
-    uint64_t inv;
     size_t nw;
-    unsigned i;
     int res = ERR_MEMORY;
 
     if (ct_declassify(n->w[0] & 1) == 0)
@@ -375,11 +384,7 @@ int mont_ctx_new(MontCtx **out, const Nat *n)
     memcpy(ctx->n, n->w, nw*sizeof(uint64_t));
     ctx->unit[0] = 1;
 
-    /* Newton iteration: each step doubles the number of correct bits (3 at start) */
-    inv = n->w[0];
-    for (i=0; i<5; i++)
-        inv *= 2 - n->w[0]*inv;
-    ctx->m0 = 0 - inv;
+    ctx->m0 = neg_inv64(n->w[0]);
 
 #if defined(NAT_32BIT)
     /*
@@ -1182,7 +1187,7 @@ int inv_odd(uint64_t *out, const uint64_t *a, const uint64_t *n, size_t nw)
 {
     uint64_t *ac, *bc, *u, *v, *un, *vn, *t1, *t2, *kn, *unit;
     uint64_t n0inv;
-    size_t round, rounds, i;
+    size_t round, rounds;
     int res = ERR_MEMORY;
 
     ac = nat_words_alloc(nw);
@@ -1204,11 +1209,7 @@ int inv_odd(uint64_t *out, const uint64_t *a, const uint64_t *n, size_t nw)
     /* u = 1 mod n (which is 0 if n == 1) */
     u[0] = 1 ^ words_eq(n, unit, nw);
 
-    /* -n^{-1} mod 2^64 (Newton iteration) */
-    n0inv = n[0];
-    for (i=0; i<5; i++)
-        n0inv *= 2 - n[0]*n0inv;
-    n0inv = 0 - n0inv;
+    n0inv = neg_inv64(n[0]);
 
     rounds = (2*64*nw - 1 + BGCD_STEPS - 1) / BGCD_STEPS;
     for (round=0; round<rounds; round++) {
