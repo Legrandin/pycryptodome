@@ -170,7 +170,8 @@ New features
   SHA-224 and SHA-256 hash long messages about 4x faster.
 * New parameter ``threads``, to run on several CPU cores (``threads=0`` for all of them);
   the output does not depend on the number of threads. It is accepted by the CTR mode
-  (all block ciphers) and the GCM and OCB modes, to encrypt and decrypt long data;
+  (all block ciphers), the GCM and OCB modes and ChaCha20 (also XChaCha20),
+  to encrypt and decrypt long data;
   by ``Crypto.Protocol.KDF.scrypt()``, to compute the ``p`` independent flows
   (each thread uses its own ``128 * r * N`` bytes of memory at the same time);
   and by ``Crypto.IO.PKCS8.wrap()`` and ``unwrap()``, ``import_key()`` of RSA, DSA and
@@ -188,9 +189,10 @@ New features
   SHAKE256, cSHAKE, TurboSHAKE and KangarooTwelve, to
   ``Crypto.Hash.KangarooTwelve.digest()``, and to ``Crypto.Util.strxor.strxor()``
   and ``strxor_c()`` (up to 3.6x faster).
-* The Salsa20 stream cipher is faster on long messages: about 4.8x on x86-64 CPUs
-  with AVX2 and BMI2 (gcc and clang only; 8 blocks of key stream at a time),
-  2.6x with SSE2 (4 blocks at a time), and 1.3x otherwise.
+* The Salsa20 and ChaCha20 (also XChaCha20) stream ciphers are faster on long messages:
+  about 4.8x and 4.7x on x86-64 CPUs with AVX2 and BMI2 (gcc and clang only;
+  8 blocks of key stream at a time), 2.6x and 2.3x with SSE2 (4 blocks at a time),
+  and 1.3x and 1.1x otherwise. ChaCha20-Poly1305 is about 2x faster.
 * GH#911: New method ``export()`` for HPKE contexts, to derive secrets
   (RFC 9180, Section 5.3). With the new ``HPKE.AEAD.EXPORT_ONLY``,
   a context can only export secrets. Thanks to sebastian.

@@ -104,7 +104,8 @@ def _c_state(cipher, struct_type):
     [
         ("AES-CTR", _CtrState, "used_ks", 1 << 20),
         ("ChaCha20", _ChaCha20State, "usedKeyStream", 1 << 20),
-        ("ChaCha20-IETF", _ChaCha20State, "usedKeyStream", 65),
+        # Just beyond the largest key stream buffer (8 blocks with AVX2)
+        ("ChaCha20-IETF", _ChaCha20State, "usedKeyStream", 8 * 64 + 1),
         ("XChaCha20", _ChaCha20State, "usedKeyStream", 1000),
         ("Salsa20", _Salsa20State, "ks_index", 1000),
         ("AES-CFB", _CfbState, "usedKeyStream", 17),

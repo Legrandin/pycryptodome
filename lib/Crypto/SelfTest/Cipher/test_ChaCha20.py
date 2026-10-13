@@ -5,7 +5,9 @@ from binascii import unhexlify
 
 import pytest
 
+from Crypto import MessageTooLongError
 from Crypto.Cipher import ChaCha20
+from Crypto.Util._cpu_features import available_cores
 
 
 class TestChaCha20:
@@ -487,3 +489,154 @@ class TestOutput:
         cipher = ChaCha20.new(key=key, nonce=nonce)
         with pytest.raises(ValueError):
             cipher.decrypt(ct, output=shorter_output)
+
+
+# The modules that compute the key stream: the one in use and,
+# if different (AVX2), the portable one (SSE2 on x86)
+_chacha20_libs = [ChaCha20._raw_chacha20_lib]
+if ChaCha20._raw_chacha20_portable_lib is not ChaCha20._raw_chacha20_lib:
+    _chacha20_libs.append(ChaCha20._raw_chacha20_portable_lib)
+
+
+@pytest.fixture(
+    params=_chacha20_libs,
+    ids=lambda lib: "avx2" if lib is ChaCha20._raw_chacha20_avx2_bmi2_lib else "portable",
+)
+def chacha20_lib(request, monkeypatch):
+    monkeypatch.setattr(ChaCha20, "_raw_chacha20_lib", request.param)
+    return request.param
+
+
+@pytest.mark.usefixtures("chacha20_lib")
+class TestChaCha20Implementations:
+    """The test vectors exercise the implementation in use; these tests
+    check that all of them (4 or 8 blocks at a time) agree."""
+
+    key = bytes(range(32))
+
+    @pytest.mark.parametrize("nonce_len", [8, 12, 24])
+    def test_chunks(self, nonce_len):
+        nonce = bytes(range(nonce_len))
+        pt = bytes(i % 251 for i in range(5000))
+        ref = _reference_keystream(self.key, nonce, len(pt))
+        ct = bytes(a ^ b for a, b in zip(pt, ref))
+        for chunk_sizes in ([1] * 70, [63, 64, 65, 7], [255, 256, 257, 511, 513], [5000]):
+            cipher = ChaCha20.new(key=self.key, nonce=nonce)
+            res = b""
+            offset = 0
+            for size in chunk_sizes:
+                res += cipher.encrypt(pt[offset : offset + size])
+                offset += size
+            res += cipher.encrypt(pt[offset:])
+            assert res == ct
+
+    @pytest.mark.parametrize("nonce_len", [8, 12, 24])
+    def test_seek(self, nonce_len):
+        nonce = bytes(range(nonce_len))
+        ref = _reference_keystream(self.key, nonce, 64 * 20)
+        for position in (0, 1, 63, 64, 65, 64 * 3 + 1, 64 * 4 + 2, 64 * 7 + 63, 64 * 8, 64 * 9 + 5):
+            cipher = ChaCha20.new(key=self.key, nonce=nonce)
+            cipher.seek(position)
+            assert cipher.encrypt(bytes(300)) == ref[position : position + 300]
+
+
+def _reference_keystream(key, nonce, length):
+    """The key stream, from an independent implementation of the ChaCha20 block
+    (for XChaCha20, after the derivation of the subkey with HChaCha20)"""
+    from Crypto.SelfTest.Cipher.test_message_too_long import _chacha20_block
+
+    if len(nonce) == 24:
+        key = bytes(ChaCha20._HChaCha20(key, nonce[:16]))
+        nonce = bytes(4) + nonce[16:]
+    out = b"".join(_chacha20_block(key, nonce, block) for block in range((length + 63) // 64))
+    return out[:length]
+
+
+@pytest.mark.usefixtures("chacha20_lib")
+class TestChaCha20Threads:
+    key = bytes(range(32))
+
+    @pytest.fixture
+    def tiny_ranges(self, monkeypatch):
+        # Let each thread process even a single byte
+        monkeypatch.setattr(ChaCha20, "_MIN_BYTES_PER_THREAD", 1)
+
+    def test_threads_negative(self):
+        for threads in (1.0, "2", None, True):
+            with pytest.raises(TypeError):
+                ChaCha20.new(key=self.key, nonce=bytes(8), threads=threads)
+        for threads in (-1, -8):
+            with pytest.raises(ValueError):
+                ChaCha20.new(key=self.key, nonce=bytes(8), threads=threads)
+
+    def test_threads_all_cores(self):
+        cores = available_cores()
+        assert ChaCha20.new(key=self.key, nonce=bytes(8), threads=0)._threads == cores
+
+        pt = bytes(range(256)) * (3 * 4096 + 1)
+        ref = ChaCha20.new(key=self.key, nonce=bytes(12)).encrypt(pt)
+        assert ChaCha20.new(key=self.key, nonce=bytes(12), threads=0).encrypt(pt) == ref
+
+    @pytest.mark.parametrize("nonce_len", [8, 12, 24])
+    def test_range_boundaries(self, tiny_ranges, nonce_len):
+        nonce = bytes(range(nonce_len))
+        pt = bytes(i % 253 for i in range(64 * 8 * 3 + 7))
+        ref = ChaCha20.new(key=self.key, nonce=nonce).encrypt(pt)
+        for first in (0, 1, 63, 64, 65, 255, 256, 511, 512, 513, 700):
+            for length in (0, 1, 63, 64, 65, 512, 513, 900, len(pt) - first):
+                end = first + length
+                for threads in (2, 3, 8):
+                    cipher = ChaCha20.new(key=self.key, nonce=nonce, threads=threads)
+                    res = cipher.encrypt(pt[:first]) + cipher.encrypt(pt[first:end])
+                    # The state is correct after the threaded call
+                    res += cipher.encrypt(pt[end:])
+                    assert res == ref
+
+                    cipher = ChaCha20.new(key=self.key, nonce=nonce, threads=threads)
+                    res = cipher.decrypt(ref[:first]) + cipher.decrypt(ref[first:end])
+                    res += cipher.decrypt(ref[end:])
+                    assert res == pt
+
+    def test_after_seek(self, tiny_ranges):
+        pt = bytes(i % 251 for i in range(3000))
+        for position in (0, 5, 64 * 3 + 1, 64 * 8 + 63, 2**32 * 64 - 5000):
+            ref = ChaCha20.new(key=self.key, nonce=bytes(12))
+            ref.seek(position)
+            cipher = ChaCha20.new(key=self.key, nonce=bytes(12), threads=4)
+            cipher.seek(position)
+            assert cipher.encrypt(pt) == ref.encrypt(pt)
+            assert cipher.encrypt(pt[:100]) == ref.encrypt(pt[:100])
+
+    def test_output_param(self, tiny_ranges):
+        pt = bytes(i % 251 for i in range(1000))
+        ref = ChaCha20.new(key=self.key, nonce=bytes(8)).encrypt(pt)
+
+        output = bytearray(1000)
+        cipher = ChaCha20.new(key=self.key, nonce=bytes(8), threads=4)
+        assert cipher.encrypt(pt, output=output) is None
+        assert output == ref
+
+        buf = bytearray(ref)
+        cipher = ChaCha20.new(key=self.key, nonce=bytes(8), threads=4)
+        cipher.decrypt(buf, output=buf)
+        assert buf == pt
+
+    @pytest.mark.parametrize("threads", (2, 3, 8))
+    def test_end_of_key_stream(self, tiny_ranges, threads):
+        # If the data does not fit in the key stream, nothing is processed
+        # and the state does not change
+        end = 64 * 2**32
+        ref = ChaCha20.new(key=self.key, nonce=bytes(12))
+        ref.seek(end - 2000)
+        ks = ref.encrypt(bytes(2000))
+
+        cipher = ChaCha20.new(key=self.key, nonce=bytes(12), threads=threads)
+        cipher.seek(end - 2000)
+        assert cipher.encrypt(bytes(100)) == ks[:100]
+        output = bytearray(1901)
+        with pytest.raises(MessageTooLongError):
+            cipher.encrypt(bytes(1901), output=output)
+        assert output == bytearray(1901)
+        assert cipher.encrypt(bytes(1900)) == ks[100:]
+        with pytest.raises(MessageTooLongError):
+            cipher.encrypt(bytes(1))

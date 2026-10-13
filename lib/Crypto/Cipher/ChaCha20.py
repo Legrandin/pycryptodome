@@ -3,11 +3,12 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union, overload
+from typing import Any, Optional, Union, overload
 
 from Crypto import MessageTooLongError
 from Crypto.Cipher._state_machine import Method
 from Crypto.Random import get_random_bytes
+from Crypto.Util._cpu_features import load_avx2_bmi2_lib
 from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
@@ -20,12 +21,11 @@ from Crypto.Util._raw_api import (
     is_writeable_buffer,
     load_pycryptodome_raw_lib,
 )
+from Crypto.Util._threads import range_boundaries, run_in_threads, threads_param
 
 Buffer = Union[bytes, bytearray, memoryview]
 
-_raw_chacha20_lib = load_pycryptodome_raw_lib(
-    "Crypto.Cipher._chacha20",
-    """
+_chacha20_cdecl = """
                     int chacha20_init(void **pState,
                                       const uint8_t *key,
                                       size_t keySize,
@@ -44,11 +44,79 @@ _raw_chacha20_lib = load_pycryptodome_raw_lib(
                                       unsigned long block_low,
                                       unsigned offset);
 
+                    int chacha20_check(const void *state, size_t len);
+
+                    int chacha20_encrypt_at(const void *state,
+                                            const uint8_t in[],
+                                            uint8_t out[],
+                                            size_t offset,
+                                            size_t len);
+
+                    int chacha20_skip(void *state, size_t len);
+
                     int hchacha20(  const uint8_t key[32],
                                     const uint8_t nonce16[16],
                                     uint8_t subkey[32]);
-                    """,
-)
+                    """
+
+_raw_chacha20_portable_lib = load_pycryptodome_raw_lib("Crypto.Cipher._chacha20", _chacha20_cdecl)
+
+# The same code, with the key stream computed 8 blocks at a time (AVX2)
+_raw_chacha20_avx2_bmi2_lib = load_avx2_bmi2_lib("Crypto.Cipher._chacha20_avx2_bmi2", _chacha20_cdecl)
+
+if _raw_chacha20_avx2_bmi2_lib is not None:
+    _raw_chacha20_lib = _raw_chacha20_avx2_bmi2_lib
+else:
+    _raw_chacha20_lib = _raw_chacha20_portable_lib
+
+#: With several threads, each one processes at least this many bytes
+_MIN_BYTES_PER_THREAD = 1024 * 1024
+
+
+def _chacha20_threaded(lib: Any, state: Any, in_ptr: Any, out_ptr: Any, data_len: int, threads: int) -> int:
+    """Encrypt or decrypt ``data_len`` bytes with ChaCha20, by splitting them
+    into ``threads`` contiguous ranges, which are processed in parallel.
+    Fewer threads are used if a range would be shorter than
+    ``_MIN_BYTES_PER_THREAD`` bytes.
+    The calling thread processes the first range.
+
+    ``state``, ``in_ptr`` and ``out_ptr`` are C pointers, whose types depend
+    on the backend (cffi or ctypes): see :mod:`Crypto.Util._raw_api`.
+
+    :return: the error code of the C library (0 for success)
+    """
+
+    threads = min(threads, data_len // _MIN_BYTES_PER_THREAD)
+    if threads <= 1:
+        return lib.chacha20_encrypt(state, in_ptr, out_ptr, c_size_t(data_len))
+
+    # Like chacha20_encrypt(), process nothing if the key stream runs out
+    result = lib.chacha20_check(state, c_size_t(data_len))
+    if result:
+        return result
+
+    # Each byte of the key stream only depends on its position
+    bounds = range_boundaries(data_len, threads)
+
+    def worker(i: int) -> int:
+        # chacha20_encrypt_at() does not change the state, and writes only
+        # out_ptr[start:end] (no two threads write the same bytes)
+        start, end = bounds[i], bounds[i + 1]
+        return lib.chacha20_encrypt_at(state, in_ptr, out_ptr, c_size_t(start), c_size_t(end - start))
+
+    results: list[int] = []
+    try:
+        results = run_in_threads(worker, threads)
+    finally:
+        # Move the state forward even after an error in a thread (some ranges may
+        # be processed already), so that the same key stream cannot be used again
+        skip_result = lib.chacha20_skip(state, c_size_t(data_len))
+
+    # Report the first error of a thread, if any
+    for result in results:
+        if result:
+            return result
+    return skip_result
 
 
 def _HChaCha20(key: Buffer, nonce: Buffer) -> bytearray:
@@ -76,12 +144,13 @@ class ChaCha20Cipher:
 
     block_size: int = 1
 
-    def __init__(self, key: Buffer, nonce: Buffer) -> None:
+    def __init__(self, key: Buffer, nonce: Buffer, threads: int = 1) -> None:
         """Initialize a ChaCha20/XChaCha20 cipher object
 
         See also `new()` at the module level."""
 
         self.nonce = bytes(nonce)
+        self._threads = threads_param(threads)
 
         # XChaCha20 requires a key derivation with HChaCha20
         # See 2.3 in https://tools.ietf.org/html/draft-arciszewski-xchacha-03
@@ -154,9 +223,19 @@ class ChaCha20Cipher:
             # Check the lengths of the buffers that C code gets
             if len(ciphertext_ptr) != plaintext_len:
                 raise ValueError("output must have the same length as the input  (%d bytes)" % plaintext_len)
-            result = _raw_chacha20_lib.chacha20_encrypt(
-                self._state.get(), plaintext_ptr, ciphertext_ptr, c_size_t(plaintext_len)
-            )
+            if self._threads > 1:
+                result = _chacha20_threaded(
+                    _raw_chacha20_lib,
+                    self._state.get(),
+                    plaintext_ptr,
+                    ciphertext_ptr,
+                    plaintext_len,
+                    self._threads,
+                )
+            else:
+                result = _raw_chacha20_lib.chacha20_encrypt(
+                    self._state.get(), plaintext_ptr, ciphertext_ptr, c_size_t(plaintext_len)
+                )
         if result == 10:  # ERR_MAX_DATA
             raise MessageTooLongError("The key stream of %s is exhausted for this nonce" % self._name)
         if result:
@@ -255,7 +334,7 @@ def _derive_Poly1305_key_pair(key, nonce):
     return rs[:16], rs[16:], nonce
 
 
-def new(*, key: Buffer, nonce: Optional[Buffer] = None) -> ChaCha20Cipher:
+def new(*, key: Buffer, nonce: Optional[Buffer] = None, threads: int = 1) -> ChaCha20Cipher:
     """Create a new ChaCha20 or XChaCha20 cipher
 
     Keyword Args:
@@ -272,6 +351,11 @@ def new(*, key: Buffer, nonce: Optional[Buffer] = None) -> ChaCha20Cipher:
             If not provided, 8 bytes will be randomly generated
             (you can find them back in the ``nonce`` attribute).
 
+        threads (integer): The maximum number of threads used to
+            encrypt or decrypt long data (default: 1, no extra threads;
+            0 for as many threads as the CPU cores available to the process).
+            Each thread processes at least 1 MiB.
+
     :Return: a :class:`Crypto.Cipher.ChaCha20.ChaCha20Cipher` object
     """
 
@@ -284,7 +368,7 @@ def new(*, key: Buffer, nonce: Optional[Buffer] = None) -> ChaCha20Cipher:
     if len(nonce) not in (8, 12, 24):
         raise ValueError("Nonce must be 8/12 bytes(ChaCha20) or 24 bytes (XChaCha20)")
 
-    return ChaCha20Cipher(key, nonce)
+    return ChaCha20Cipher(key, nonce, threads)
 
 
 # Size of a data block (in bytes)
