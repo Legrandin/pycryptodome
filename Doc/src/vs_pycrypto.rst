@@ -26,7 +26,11 @@ Specifically, for public key cryptography:
   - :mod:`Crypto.Signature.DSS` for signing using DSA.
 * Method: :meth:`generate` for public key modules does not accept the ``progress_func`` parameter anymore.
 * Ambiguous method ``size`` from RSA, DSA and ElGamal key objects have been removed.
-  Instead, use methods :meth:`size_in_bytes` and :meth:`size_in_bits` and check the documentation.
+  For RSA keys, use instead methods :meth:`size_in_bytes` and :meth:`size_in_bits`.
+  DSA and ElGamal keys do not have them: the size of a DSA key is given by two numbers,
+  the size of the modulus *p* and the size of the sub-group order *q*
+  (``key.p.bit_length()`` and ``key.q.bit_length()``, see :doc:`public_key/dsa`),
+  while for ElGamal it is the size of *p* (``key.p.bit_length()``).
 * The 3 public key object types (RSA, DSA, ElGamal) are now unpickable.
   You must use the :meth:`export_key` method of each key object and select a good output format: for private
   keys that means a good password-based encryption scheme.
