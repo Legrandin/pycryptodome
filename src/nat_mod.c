@@ -16,6 +16,17 @@
 #include "common.h"
 #include "nat.h"
 #include "nat_ct.h"
+
+/*
+ * The templates in nat_rows.c ask clang to unroll their loops fully, for the
+ * elliptic curves, where the number of words is a constant. Here it is not:
+ * clang cannot do it for some loops, and warns that it did not (-Wpass-failed).
+ * The pragma still steers how clang compiles those loops, so it stays: only the
+ * warning is disabled (before the #include, as it can point to nat_rows.c).
+ */
+#if defined(__clang__)
+#pragma clang diagnostic ignored "-Wpass-failed"
+#endif
 #include "nat_rows.c"
 
 /*
