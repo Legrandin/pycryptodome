@@ -400,6 +400,34 @@ if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64" AND CMAKE_SIZEOF_VOID_P 
     add_test(NAME test_salsa20_avx2 COMMAND test_salsa20_avx2)
 endif()
 
+# ChaCha20, for each way of computing the key stream
+add_executable(test_chacha20 test_chacha20.c ../chacha20.c)
+if (MSVC)
+    # Without SSE2, even if enabled for all the other tests
+    target_compile_options(test_chacha20 PRIVATE /UUSE_SSE2)
+endif()
+add_test(NAME test_chacha20 COMMAND test_chacha20)
+
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64|i386|i686|X86|x86")
+    add_executable(test_chacha20_sse2 test_chacha20.c ../chacha20.c)
+    target_compile_definitions(test_chacha20_sse2 PRIVATE USE_SSE2)
+    if (MSVC)
+        target_compile_definitions(test_chacha20_sse2 PRIVATE HAVE_INTRIN_H)
+    else()
+        target_compile_definitions(test_chacha20_sse2 PRIVATE HAVE_X86INTRIN_H)
+        target_compile_options(test_chacha20_sse2 PRIVATE -msse2)
+    endif()
+    add_test(NAME test_chacha20_sse2 COMMAND test_chacha20_sse2)
+endif()
+
+# The AVX2 build (gcc and clang only). The test does nothing on a CPU without AVX2.
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64" AND CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT MSVC)
+    add_executable(test_chacha20_avx2 test_chacha20.c ../chacha20_avx2_bmi2.c)
+    target_compile_definitions(test_chacha20_avx2 PRIVATE TEST_CHACHA20_AVX2 USE_SSE2 HAVE_X86INTRIN_H)
+    target_compile_options(test_chacha20_avx2 PRIVATE -mavx2 -mbmi -mbmi2 -msse2)
+    add_test(NAME test_chacha20_avx2 COMMAND test_chacha20_avx2)
+endif()
+
 # curve25519
 add_library(mod25519 OBJECT ../mod25519.c)
 add_library(curve25519 OBJECT ../curve25519.c)

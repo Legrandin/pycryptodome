@@ -64,6 +64,12 @@ you need to explicitly generate and pass a 96 bit (12 byte) ``nonce`` parameter 
     nonce_rfc8439 = get_random_bytes(12)
     cipher = ChaCha20.new(key=key, nonce=nonce_rfc8439)
 
+To encrypt or decrypt long data faster on a machine with several cores,
+pass the maximum number of threads to ``new()`` with the parameter ``threads``
+(0 means as many as the cores available); each thread processes at least 1 MiB::
+
+    cipher = ChaCha20.new(key=key, nonce=nonce, threads=0)
+
 .. warning::
 
     ``ChaCha20`` does not guarantee authenticity of the data you decrypt!
