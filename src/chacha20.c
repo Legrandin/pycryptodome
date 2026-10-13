@@ -133,14 +133,21 @@ EXPORT_SYM int chacha20_init(stream_state **pState,
 
     hs->nonceSize = nonceSize;
 
-    /** The key stream from block 0 on (HChaCha20 only uses chacha20_core()) **/
-    if (nonceSize != 16) {
+    if (nonceSize == 16) {
+        /*
+         * HChaCha20: h[12..15] hold the input, and there is no block counter.
+         * hchacha20() only calls chacha20_core(), and the state cannot be used
+         * to encrypt (the key stream stays empty).
+         */
+        hs->usedKeyStream = sizeof hs->keyStream;
+    } else {
+        /** The key stream from block 0 on **/
         uint32_t h[16];
 
         chacha20_core(hs, h);
         advance_counter(hs);
+        hs->usedKeyStream = 0;
     }
-    hs->usedKeyStream = 0;
 
     return 0;
 }

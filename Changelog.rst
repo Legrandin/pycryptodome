@@ -44,7 +44,7 @@ Breaking changes
 Resolved issues
 ---------------
 * ChaCha20 and ChaCha20-Poly1305: after the error at the end of the key stream
-  (256 GiB with a nonce of 12 bytes, 2\ :sup:`70` bytes with a nonce of 8 bytes),
+  (256 GiB with a nonce of 12 or 24 bytes, 2\ :sup:`70` bytes with a nonce of 8 bytes),
   encrypting more data did not fail, but reused the key stream from block 0.
   Also, the last block of the key stream could not be used, and ``seek()`` to it failed.
   Now the whole key stream can be used, and any data beyond it is rejected

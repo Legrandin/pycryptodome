@@ -111,8 +111,8 @@ Ciphers
       and 2\ :sup:`61` - 1 bytes of associated data.
     * :ref:`CTR mode <ctr_mode>`: the counter block would wrap around to its initial value.
     * :doc:`ChaCha20 <cipher/chacha20>` and :doc:`ChaCha20-Poly1305 <cipher/chacha20_poly1305>`:
-      the 32-bit block counter (with a nonce of 12 bytes, 256 GiB)
-      or the 64-bit block counter (with a nonce of 8 or 24 bytes) would wrap around.
+      the 32-bit block counter (with a nonce of 12 or 24 bytes, 256 GiB)
+      or the 64-bit block counter (with a nonce of 8 bytes) would wrap around.
     * :doc:`Salsa20 <cipher/salsa20>`: the key stream ends after 2\ :sup:`70` bytes.
     * :ref:`KW <kw_mode>` and :ref:`KWP <kwp_mode>` modes: the plaintext must be shorter than 4 GiB.
 

@@ -193,6 +193,15 @@ class TestChaCha20:
         assert output == bytearray(55)
         assert cipher.encrypt(bytes(54)) == _chacha20_block(self.key, nonce, blocks - 1)[10:]
 
+    @pytest.mark.parametrize("method", ["encrypt", "decrypt"])
+    def test_xchacha20(self, method):
+        # The nonce of 24 bytes leaves a 32-bit block counter
+        cipher = ChaCha20.new(key=self.key, nonce=bytes(24))
+        cipher.seek(64 * (2**32 - 1))
+        getattr(cipher, method)(bytes(64))
+        with pytest.raises(MessageTooLongError):
+            getattr(cipher, method)(bytes(1))
+
     @pytest.mark.parametrize("nonce_len, blocks", [(8, 2**64), (12, 2**32)])
     def test_seek_after_the_end(self, nonce_len, blocks):
         nonce = bytes(range(nonce_len))
