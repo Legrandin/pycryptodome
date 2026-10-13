@@ -151,7 +151,7 @@ class TestPBKDF2:
         expected = t2b(v[5])
 
         if hash_mod is SHA1:
-            res = PBKDF2(password, salt, out_len, iters)
+            res = PBKDF2(password, salt, out_len, iters, hmac_hash_module=SHA1)
             assert res == expected
 
             res = PBKDF2(password, salt, out_len, iters, prf_SHA1)
@@ -182,13 +182,25 @@ class TestPBKDF2:
 
     def test4(self):
         # Verify that PBKDF2 can take bytes or strings as password or salt
-        k1 = PBKDF2("xxx", b"yyy", 16, 10)
-        k2 = PBKDF2(b"xxx", b"yyy", 16, 10)
+        k1 = PBKDF2("xxx", b"yyy", 16, 10, hmac_hash_module=SHA256)
+        k2 = PBKDF2(b"xxx", b"yyy", 16, 10, hmac_hash_module=SHA256)
         assert k1 == k2
 
-        k1 = PBKDF2(b"xxx", "yyy", 16, 10)
-        k2 = PBKDF2(b"xxx", b"yyy", 16, 10)
+        k1 = PBKDF2(b"xxx", "yyy", 16, 10, hmac_hash_module=SHA256)
+        k2 = PBKDF2(b"xxx", b"yyy", 16, 10, hmac_hash_module=SHA256)
         assert k1 == k2
+
+    def test_deprecated_defaults(self):
+        # Without count, 1000 iterations; without hash or prf, HMAC-SHA1
+        expected = PBKDF2(b"xxx", b"yyy", 16, 1000, hmac_hash_module=SHA1)
+        with pytest.warns(DeprecationWarning, match="'count'") as record:
+            assert PBKDF2(b"xxx", b"yyy", 16, hmac_hash_module=SHA1) == expected
+        assert "'hmac_hash_module'" not in str(record[0].message)
+        with pytest.warns(DeprecationWarning, match="'hmac_hash_module'") as record:
+            assert PBKDF2(b"xxx", b"yyy", 16, 1000) == expected
+        assert "'count'" not in str(record[0].message)
+        with pytest.warns(DeprecationWarning, match="'count'.*'hmac_hash_module'"):
+            assert PBKDF2(b"xxx", b"yyy") == expected
 
     class _SHA512Truncated:
         # Module-like wrapper, to drive the optimized C path with SHA-512/t

@@ -22,6 +22,10 @@ protected against advanced and motivated adversaries that can leverage GPUs.
 
 New applications and protocols should use :ref:`scrypt <scrypt_func>` or :ref:`bcrypt <bcrypt_func>` instead.
 
+Always pass the ``count`` and ``hmac_hash_module`` parameters: their defaults
+(1000 iterations and HMAC-SHA1) are weak, deprecated (they emit a :class:`DeprecationWarning`),
+and will be removed.
+
 For example, if you need to derive two AES256 keys::
 
     from Crypto.Protocol.KDF import PBKDF2

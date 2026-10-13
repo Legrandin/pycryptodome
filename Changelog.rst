@@ -68,6 +68,13 @@ Deprecations
   ``DeprecationWarning``. The default will be removed: always pass the hash
   (for instance, ``digestmod=SHA256``), as with Python's ``hmac`` module.
 
+Deprecations
+------------
+* ``Crypto.Protocol.KDF.PBKDF2()`` without ``count`` (which then uses 1000 iterations)
+  or without ``hmac_hash_module`` and ``prf`` (which then uses HMAC-SHA1) emits a
+  ``DeprecationWarning``. These weak defaults will be removed: always pass them
+  (for instance, ``count=600000, hmac_hash_module=SHA256``).
+
 Resolved issues
 ---------------
 * Exporting a private key with an empty passphrase of type ``bytes`` returned the key

@@ -27,6 +27,7 @@ import re
 import struct
 import sys
 import types
+import warnings
 from functools import reduce
 from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, Union, overload
 
@@ -141,7 +142,7 @@ def PBKDF2(
     password: Union[str, Buffer],
     salt: Union[str, Buffer],
     dkLen: int = 16,
-    count: int = 1000,
+    count: Optional[int] = None,
     prf: Optional[PRF] = None,
     hmac_hash_module: Optional[ModuleType] = None,
 ) -> bytes:
@@ -170,22 +171,31 @@ def PBKDF2(
         20 bytes in combination with ``HMAC-SHA1``.
      count (integer):
         The number of iterations to carry out. The higher the value, the slower
-        and the more secure the function becomes.
+        and the more secure the function becomes. It is mandatory.
 
         You should find the maximum number of iterations that keeps the
         key derivation still acceptable on the slowest hardware you must support.
+        For passwords, OWASP recommends at least 600 000 iterations
+        with HMAC-SHA256.
 
-        Although the default value is 1000, **it is recommended to use at least
-        1000000 (1 million) iterations**.
+        .. deprecated:: 4.0
+            If omitted, 1000 iterations are used, with a :class:`DeprecationWarning`.
+            This default will be removed.
      prf (callable):
         A pseudorandom function. It must be a function that returns a
         pseudorandom byte string from two parameters: a secret and a salt.
         The slower the algorithm, the more secure the derivation function.
-        If not specified, **HMAC-SHA1** is used.
+        This parameter is mutually exclusive with ``hmac_hash_module``.
      hmac_hash_module (module):
         A module from ``Crypto.Hash`` implementing a Merkle-Damgard cryptographic
-        hash, which PBKDF2 must use in combination with HMAC.
-        This parameter is mutually exclusive with ``prf``.
+        hash, which PBKDF2 must use in combination with HMAC
+        (for instance, :mod:`Crypto.Hash.SHA256`).
+        This parameter is mutually exclusive with ``prf``,
+        and one of the two is mandatory.
+
+        .. deprecated:: 4.0
+            If both are omitted, **HMAC-SHA1** is used, with a
+            :class:`DeprecationWarning`. This default will be removed.
 
     Return:
         A byte string of length ``dkLen`` that can be used as key material.
@@ -198,8 +208,21 @@ def PBKDF2(
     if prf and hmac_hash_module:
         raise ValueError("'prf' and 'hmac_hash_module' are mutually exlusive")
 
+    missing = []
+    if count is None:
+        missing.append("'count' (1000 iterations)")
+        count = 1000
     if prf is None and hmac_hash_module is None:
+        missing.append("'hmac_hash_module' (HMAC-SHA1)")
         hmac_hash_module = SHA1
+    if missing:
+        warnings.warn(
+            "PBKDF2 without %s uses weak defaults, which are deprecated and will be removed: "
+            "pass them explicitly (for instance, count=600000, hmac_hash_module=SHA256)"
+            % " and ".join(missing),
+            DeprecationWarning,
+            stacklevel=2,
+        )
 
     assist = None if prf else _pbkdf2_hmac_assist(hmac_hash_module)
     if assist is None:
