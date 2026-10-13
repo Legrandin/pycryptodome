@@ -114,12 +114,92 @@ class TestSalsa20:
             getattr(cipher, method)(bytes(1))
 
 
+def _chacha20_block(key, nonce, counter):
+    """Reference ChaCha20 block function (RFC 8439, and the original
+    version with a 64-bit counter and a 64-bit nonce)."""
+
+    def rotl(v, c):
+        return ((v << c) | (v >> (32 - c))) & 0xFFFFFFFF
+
+    def quarter(x, a, b, c, d):
+        x[a] = (x[a] + x[b]) & 0xFFFFFFFF
+        x[d] = rotl(x[d] ^ x[a], 16)
+        x[c] = (x[c] + x[d]) & 0xFFFFFFFF
+        x[b] = rotl(x[b] ^ x[c], 12)
+        x[a] = (x[a] + x[b]) & 0xFFFFFFFF
+        x[d] = rotl(x[d] ^ x[a], 8)
+        x[c] = (x[c] + x[d]) & 0xFFFFFFFF
+        x[b] = rotl(x[b] ^ x[c], 7)
+
+    def words(b):
+        return [int.from_bytes(b[i : i + 4], "little") for i in range(0, len(b), 4)]
+
+    if len(nonce) == 8:
+        ctr = [counter & 0xFFFFFFFF, counter >> 32]
+    else:
+        ctr = [counter]
+    state = words(b"expand 32-byte k") + words(key) + ctr + words(nonce)
+    x = list(state)
+    for _ in range(10):
+        quarter(x, 0, 4, 8, 12)
+        quarter(x, 1, 5, 9, 13)
+        quarter(x, 2, 6, 10, 14)
+        quarter(x, 3, 7, 11, 15)
+        quarter(x, 0, 5, 10, 15)
+        quarter(x, 1, 6, 11, 12)
+        quarter(x, 2, 7, 8, 13)
+        quarter(x, 3, 4, 9, 14)
+    return b"".join(((a + b) & 0xFFFFFFFF).to_bytes(4, "little") for a, b in zip(x, state))
+
+
 class TestChaCha20:
+    key = bytes(range(32))
+
+    @pytest.mark.parametrize("nonce_len, blocks", [(8, 2**64), (12, 2**32)])
+    def test_reference(self, nonce_len, blocks):
+        nonce = bytes(range(nonce_len))
+        cipher = ChaCha20.new(key=self.key, nonce=nonce)
+        assert cipher.encrypt(bytes(128)) == _chacha20_block(self.key, nonce, 0) + _chacha20_block(
+            self.key, nonce, 1
+        )
+
     @pytest.mark.parametrize("nonce_len, blocks", [(8, 2**64), (12, 2**32)])
     @pytest.mark.parametrize("method", ["encrypt", "decrypt"])
     def test_end_of_key_stream(self, method, nonce_len, blocks):
-        cipher = ChaCha20.new(key=bytes(32), nonce=bytes(nonce_len))
-        cipher.seek(64 * (blocks - 2))
-        getattr(cipher, method)(bytes(64))
+        nonce = bytes(range(nonce_len))
+        ref = _chacha20_block(self.key, nonce, blocks - 2) + _chacha20_block(self.key, nonce, blocks - 1)
+
+        # The last two blocks, up to the last byte
+        cipher = ChaCha20.new(key=self.key, nonce=nonce)
+        cipher.seek(64 * (blocks - 2) + 5)
+        assert getattr(cipher, method)(bytes(64)) == ref[5:69]
+        assert getattr(cipher, method)(bytes(59)) == ref[69:]
+
+        # No more, and no key stream from block 0 if the caller carries on
+        for _ in range(3):
+            with pytest.raises(MessageTooLongError):
+                getattr(cipher, method)(bytes(1))
+        assert getattr(cipher, method)(b"") == b""
+
+    @pytest.mark.parametrize("nonce_len, blocks", [(8, 2**64), (12, 2**32)])
+    def test_beyond_the_end_in_one_call(self, nonce_len, blocks):
+        # Nothing is encrypted, and the position does not change
+        nonce = bytes(range(nonce_len))
+        cipher = ChaCha20.new(key=self.key, nonce=nonce)
+        cipher.seek(64 * (blocks - 1) + 10)
+        output = bytearray(55)
         with pytest.raises(MessageTooLongError):
-            getattr(cipher, method)(bytes(65))
+            cipher.encrypt(bytes(55), output=output)
+        assert output == bytearray(55)
+        assert cipher.encrypt(bytes(54)) == _chacha20_block(self.key, nonce, blocks - 1)[10:]
+
+    @pytest.mark.parametrize("nonce_len, blocks", [(8, 2**64), (12, 2**32)])
+    def test_seek_after_the_end(self, nonce_len, blocks):
+        nonce = bytes(range(nonce_len))
+        cipher = ChaCha20.new(key=self.key, nonce=nonce)
+        cipher.seek(64 * (blocks - 1))
+        cipher.encrypt(bytes(64))
+        with pytest.raises(MessageTooLongError):
+            cipher.encrypt(bytes(1))
+        cipher.seek(0)
+        assert cipher.encrypt(bytes(64)) == _chacha20_block(self.key, nonce, 0)

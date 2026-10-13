@@ -11,7 +11,7 @@ FAKE_INIT(chacha20)
 #define KEY_SIZE   32
 
 typedef struct {
-    /** Initial state for the next iteration **/
+    /** Initial state for the next iteration (with the counter of the block after keyStream) **/
     uint32_t h[16];
     size_t nonceSize;  /** in bytes **/
 
@@ -20,8 +20,19 @@ typedef struct {
       */
     unsigned usedKeyStream;
 
+    /** Always computed (the block before the counter) **/
     uint8_t keyStream[sizeof(uint32_t)*16];
 } stream_state;
+
+/*
+ * The block counter has 64 bits with a nonce of 8 bytes (h[12] and h[13]),
+ * and 32 bits with a nonce of 12 bytes (h[12]). The key stream ends with
+ * the block whose counter is the largest value: using the blocks after it
+ * would mean reusing the key stream from block 0, so that must fail.
+ *
+ * keyStream[] always holds the block before the counter in h[]:
+ * after the last block, the counter has wrapped around to 0.
+ */
 
 #define ROTL(q, n)  (((q) << (n)) | ((q) >> (32 - (n))))
 
@@ -31,6 +42,9 @@ typedef struct {
     a+=b; d^=a; d=ROTL(d,8);  \
     c+=d; b^=c; b=ROTL(b,7);  \
 }
+
+static void chacha20_core(stream_state *state, uint32_t h[16]);
+static void advance_counter(stream_state *state);
 
 EXPORT_SYM int chacha20_init(stream_state **pState,
                              const uint8_t *key,
@@ -118,7 +132,15 @@ EXPORT_SYM int chacha20_init(stream_state **pState,
     }
 
     hs->nonceSize = nonceSize;
-    hs->usedKeyStream = sizeof hs->keyStream;
+
+    /** The key stream from block 0 on (HChaCha20 only uses chacha20_core()) **/
+    if (nonceSize != 16) {
+        uint32_t h[16];
+
+        chacha20_core(hs, h);
+        advance_counter(hs);
+    }
+    hs->usedKeyStream = 0;
 
     return 0;
 }
@@ -131,7 +153,8 @@ EXPORT_SYM int chacha20_destroy(stream_state *state)
     return 0;
 }
 
-static int chacha20_core(stream_state *state, uint32_t h[16])
+/** Compute keyStream[] from h[] (the counter is not advanced) **/
+static void chacha20_core(stream_state *state, uint32_t h[16])
 {
     unsigned i;
 
@@ -156,33 +179,53 @@ static int chacha20_core(stream_state *state, uint32_t h[16])
         sum = h[i] + state->h[i];
         STORE_U32_LITTLE(state->keyStream + 4*i, sum);
     }
+}
 
-    state->usedKeyStream = 0;
+/** Block counter after keyStream[] **/
+static uint64_t get_next_counter(const stream_state *state)
+{
+    if (state->nonceSize == 8)
+        return ((uint64_t)state->h[13] << 32) | state->h[12];
+    return state->h[12];
+}
 
-    switch (state->nonceSize) {
-    case 8: {
-                /** Nonce is 64 bits, counter is two words **/
-                if (++state->h[12] == 0) {
-                    if (++state->h[13] == 0) {
-                        return ERR_MAX_DATA;
-                    }
-                }
-                break;
-            }
-    case 12: {
-                /** Nonce is 96 bits, counter is one word **/
-                if (++state->h[12] == 0) {
-                    return ERR_MAX_DATA;
-                }
-                break;
-            }
-    case 16: {
-                 /** Nonce is 192 bits, there is no counter as this is intended
-                  * to be run once only (HChaCha20) **/
-                 break;
-            }
+static void set_next_counter(stream_state *state, uint64_t next_counter)
+{
+    state->h[12] = (uint32_t)next_counter;
+    if (state->nonceSize == 8)
+        state->h[13] = (uint32_t)(next_counter >> 32);
+}
+
+/** Move the block counter past the block just computed in keyStream[] (it may wrap around to 0) **/
+static void advance_counter(stream_state *state)
+{
+    set_next_counter(state, get_next_counter(state) + 1);
+}
+
+/**
+ * Return 0 if len more bytes of key stream are available,
+ * when ks_avail bytes are left in keyStream[].
+ **/
+static int check_length(const stream_state *state, unsigned ks_avail, size_t len)
+{
+    uint64_t next_counter, left;
+
+    if (len <= ks_avail)
+        return 0;
+
+    /* Blocks after keyStream[] (none if the counter is 0, after the last block) */
+    next_counter = get_next_counter(state);
+    if (state->nonceSize == 8) {
+        left = 0 - next_counter;
+        /* With 2^58 blocks or more, any len fits */
+        if (left >= ((uint64_t)1 << 58))
+            return 0;
+    } else {
+        left = (uint32_t)(0 - (uint32_t)next_counter);
     }
 
+    if ((uint64_t)(len - ks_avail) > 64 * left)
+        return ERR_MAX_DATA;
     return 0;
 }
 
@@ -192,6 +235,7 @@ EXPORT_SYM int chacha20_encrypt(stream_state *state,
                                 size_t len)
 {
     unsigned used;
+    int result;
 
     if (NULL == state || NULL == in || NULL == out)
         return ERR_NULL;
@@ -209,17 +253,19 @@ EXPORT_SYM int chacha20_encrypt(stream_state *state,
     if (used > sizeof state->keyStream)
         return ERR_STATE;
 
+    /* Fail before encrypting anything if the key stream would run out */
+    result = check_length(state, (unsigned)(sizeof state->keyStream - used), len);
+    if (result)
+        return result;
+
     while (len>0) {
         unsigned keyStreamToUse;
         unsigned i;
         uint32_t h[16];
 
         if (used == sizeof state->keyStream) {
-            int result;
-
-            result = chacha20_core(state, h);
-            if (result)
-                return result;
+            chacha20_core(state, h);
+            advance_counter(state);
             used = 0;
         }
 
@@ -240,8 +286,9 @@ EXPORT_SYM int chacha20_seek(stream_state *state,
                              unsigned long block_low,
                              unsigned offset)
 {
-    int result;
+    stream_state tmp;
     uint32_t h[16];
+    uint64_t block;
 
     if (NULL == state)
         return ERR_NULL;
@@ -252,22 +299,26 @@ EXPORT_SYM int chacha20_seek(stream_state *state,
     if (offset >= sizeof state->keyStream)
         return ERR_MAX_OFFSET;
 
-    if (state->nonceSize == 8) {
-        /** Nonce is 64 bits, counter is two words **/
-        state->h[12] = (uint32_t)block_low;
-        state->h[13] = (uint32_t)block_high;
-    } else {
-        /** Nonce is 96 bits, counter is one word **/
-        if (block_high > 0) {
-            return ERR_MAX_OFFSET;
-        }
-        state->h[12] = (uint32_t)block_low;
-    }
+    if (block_high > 0xFFFFFFFFUL || block_low > 0xFFFFFFFFUL)
+        return ERR_MAX_OFFSET;
 
-    result = chacha20_core(state, h);
-    if (result)
-        return result;
+    /** With a nonce of 12 bytes, the counter is one word **/
+    if (state->nonceSize == 12 && block_high > 0)
+        return ERR_MAX_OFFSET;
 
+    block = ((uint64_t)block_high << 32) | block_low;
+
+    /*
+     * Compute the block in a copy of the state, so that the state never
+     * holds its counter: if several threads used the object at once
+     * (not supported), a counter of 0 would look like the end of the key stream
+     */
+    memcpy(tmp.h, state->h, sizeof tmp.h);
+    tmp.nonceSize = state->nonceSize;
+    set_next_counter(&tmp, block);
+    chacha20_core(&tmp, h);
+    memcpy(state->keyStream, tmp.keyStream, sizeof state->keyStream);
+    set_next_counter(state, block + 1);
     state->usedKeyStream = offset;
 
     return 0;

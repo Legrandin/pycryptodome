@@ -96,8 +96,7 @@ Ciphers
 
     It is raised when a cipher cannot process more data with the same key and nonce,
     because of the size of its block counter or of its length fields,
-    or because the key stream would repeat. Nothing is encrypted or decrypted then,
-    except with ChaCha20, where the data before the limit is processed.
+    or because the key stream would repeat. Nothing is encrypted or decrypted then.
     For instance:
 
     * :ref:`CCM mode <ccm_mode>`: with a nonce of *n* bytes, the length of the message is
