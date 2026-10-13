@@ -33,6 +33,7 @@
 
 from __future__ import annotations
 
+import warnings
 from binascii import unhexlify
 from typing import TYPE_CHECKING, Optional, Union
 
@@ -65,6 +66,21 @@ _hash2hmac_oid = {
 _hmac2hash_oid = {v: k for k, v in _hash2hmac_oid.items()}
 
 
+def _default_digestmod() -> ModuleType:
+    """Return MD5, the deprecated default hash, with a warning
+    for the caller of :func:`new` (or of the :class:`HMAC` class)."""
+
+    warnings.warn(
+        "HMAC without 'digestmod' uses MD5, but this default is deprecated "
+        "and will be removed: pass the hash explicitly (for instance, digestmod=SHA256)",
+        DeprecationWarning,
+        stacklevel=3,
+    )
+    from Crypto.Hash import MD5
+
+    return MD5
+
+
 class HMAC:
     """An HMAC hash object.
     Do not instantiate directly. Use the :func:`new` function.
@@ -78,9 +94,7 @@ class HMAC:
 
     def __init__(self, key: Buffer, msg: Buffer = b"", digestmod: Optional[ModuleType] = None) -> None:
         if digestmod is None:
-            from Crypto.Hash import MD5
-
-            digestmod = MD5
+            digestmod = _default_digestmod()
 
         if msg is None:
             msg = b""
@@ -230,11 +244,18 @@ def new(key: Buffer, msg: Buffer = b"", digestmod: Optional[ModuleType] = None) 
             Optional. The very first chunk of the message to authenticate.
             It is equivalent to an early call to :meth:`HMAC.update`.
         digestmod (module):
-            The hash to use to implement the HMAC.
-            Default is :mod:`Crypto.Hash.MD5`.
+            The hash to use to implement the HMAC, like
+            :mod:`Crypto.Hash.SHA256` (or a hash object created from it).
+            It is mandatory.
+
+            .. deprecated:: 4.0
+                If omitted, :mod:`Crypto.Hash.MD5` is used, with a
+                :class:`DeprecationWarning`. This default will be removed.
 
     Returns:
         An :class:`HMAC` object
     """
 
+    if digestmod is None:
+        digestmod = _default_digestmod()
     return HMAC(key, msg, digestmod)

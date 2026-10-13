@@ -13,6 +13,10 @@ The strength of an HMAC depends on:
 * the strength of the hash algorithm
 * the entropy of the secret key
 
+The hash algorithm must always be passed with the ``digestmod`` parameter.
+If it is omitted, MD5 is used, but this default is deprecated
+(it emits a :class:`DeprecationWarning`) and will be removed.
+
 This is an example showing how to generate a MAC (with *HMAC-SHA256*)::
 
     >>> from Crypto.Hash import HMAC, SHA256

@@ -47,6 +47,12 @@ Breaking changes
   overflowed into the 4 zero bytes, which no specification defines. The ciphertext
   and the tag of shorter messages are unchanged.
 
+Deprecations
+------------
+* ``Crypto.Hash.HMAC.new()`` without ``digestmod`` (which then uses MD5) emits a
+  ``DeprecationWarning``. The default will be removed: always pass the hash
+  (for instance, ``digestmod=SHA256``), as with Python's ``hmac`` module.
+
 Resolved issues
 ---------------
 * Importing a private key in clear PKCS#8 format failed if a passphrase was

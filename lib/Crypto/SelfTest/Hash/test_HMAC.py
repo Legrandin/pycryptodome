@@ -58,8 +58,6 @@ hash_modules = {
     "SHA3_512": SHA3_512,
 }
 
-default_hash = None
-
 
 def xl(text):
     return hexlify(tobytes(text)).decode("latin-1")
@@ -68,8 +66,6 @@ def xl(text):
 # This is a list of (key, data, results, description) tuples.
 test_data = [
     ## Test vectors from RFC 2202 ##
-    # Test that the default hashmod is MD5
-    ("0b" * 16, "4869205468657265", {"default_hash": "9294727a3638bb1c13f48ef8158bfc9d"}, "default-is-MD5"),
     # Test case 1 (MD5)
     (
         "0b" * 16,
@@ -485,6 +481,17 @@ class TestHMAC_None:
         assert one == two
 
 
+class TestDefaultDigestmod:
+    def test(self):
+        key = b"\x04" * 20
+        with pytest.warns(DeprecationWarning, match="digestmod"):
+            h1 = HMAC.new(key, b"data")
+        with pytest.warns(DeprecationWarning, match="digestmod"):
+            h2 = HMAC.HMAC(key, b"data")
+        h3 = HMAC.new(key, b"data", MD5)
+        assert h1.digest() == h2.digest() == h3.digest()
+
+
 class TestByteArray:
     def test(self):
         key = b"0" * 16
@@ -494,8 +501,8 @@ class TestByteArray:
         key_ba = bytearray(key)
         data_ba = bytearray(data)
 
-        h1 = HMAC.new(key, data)
-        h2 = HMAC.new(key_ba, data_ba)
+        h1 = HMAC.new(key, data, digestmod=MD5)
+        h2 = HMAC.new(key_ba, data_ba, digestmod=MD5)
         key_ba[:1] = b"\xff"
         data_ba[:1] = b"\xff"
         assert h1.digest() == h2.digest()
@@ -504,8 +511,8 @@ class TestByteArray:
         key_ba = bytearray(key)
         data_ba = bytearray(data)
 
-        h1 = HMAC.new(key)
-        h2 = HMAC.new(key)
+        h1 = HMAC.new(key, digestmod=MD5)
+        h2 = HMAC.new(key, digestmod=MD5)
         h1.update(data)
         h2.update(data_ba)
         data_ba[:1] = b"\xff"
@@ -528,8 +535,8 @@ class TestMemoryView:
             key_mv = get_mv(key)
             data_mv = get_mv(data)
 
-            h1 = HMAC.new(key, data)
-            h2 = HMAC.new(key_mv, data_mv)
+            h1 = HMAC.new(key, data, digestmod=MD5)
+            h2 = HMAC.new(key_mv, data_mv, digestmod=MD5)
             if not data_mv.readonly:
                 key_mv[:1] = b"\xff"
                 data_mv[:1] = b"\xff"
@@ -538,8 +545,8 @@ class TestMemoryView:
             # Data can be a memoryview (during operation)
             data_mv = get_mv(data)
 
-            h1 = HMAC.new(key)
-            h2 = HMAC.new(key)
+            h1 = HMAC.new(key, digestmod=MD5)
+            h2 = HMAC.new(key, digestmod=MD5)
             h1.update(data)
             h2.update(data_mv)
             if not data_mv.readonly:
