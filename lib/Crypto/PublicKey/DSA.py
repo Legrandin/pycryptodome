@@ -269,8 +269,9 @@ class DsaKey:
 
         Raises:
           ValueError : when the format is unknown, when you try to encrypt a private
-            key with *DER* format and OpenSSL/OpenSSH, or when you pass
-            ``protection`` or ``prot_params`` with ``pkcs8=False``.
+            key with *DER* format and OpenSSL/OpenSSH, when you pass
+            ``protection`` or ``prot_params`` with ``pkcs8=False`` or without
+            a passphrase, or when the passphrase is empty.
 
         .. warning::
             If you don't provide a pass phrase, the private key will be
@@ -306,6 +307,11 @@ class DsaKey:
         # encodes it into BASE64.
         params = DerSequence([self.p, self.q, self.g])
         if self.has_private():
+            if passphrase is None:
+                if protection or prot_params:
+                    raise ValueError("'protection' and 'prot_params' require a passphrase")
+            elif not passphrase:
+                raise ValueError("Empty passphrase")
             if pkcs8 is None:
                 pkcs8 = True
             if pkcs8:

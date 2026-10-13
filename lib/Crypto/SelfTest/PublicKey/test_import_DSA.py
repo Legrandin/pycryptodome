@@ -397,6 +397,24 @@ eZ4k+NQDbEL8GiHmFxzDWQAuPPZKJWEEEV2p/To+WOh+kSDHQw==
         with pytest.raises(ValueError):
             DSA.importKey(self.der_pkcs8_encrypted, "wrongpwd")
 
+    def testExportError3(self):
+        # An empty passphrase is an error, for all formats
+        key = DSA.construct((self.y, self.g, self.p, self.q, self.x))
+        for fmt in ("PEM", "DER"):
+            for pkcs8 in (None, True, False):
+                for pwd in ("", b""):
+                    with pytest.raises(ValueError, match="Empty passphrase"):
+                        key.export_key(fmt, pkcs8=pkcs8, passphrase=pwd)
+
+    def testExportError4(self):
+        # A protection without a passphrase is an error (not a key in the clear)
+        key = DSA.construct((self.y, self.g, self.p, self.q, self.x))
+        for fmt in ("PEM", "DER"):
+            with pytest.raises(ValueError, match="require a passphrase"):
+                key.export_key(fmt, protection="PBKDF2WithHMAC-SHA256AndAES256-CBC")
+            with pytest.raises(ValueError, match="require a passphrase"):
+                key.export_key(fmt, prot_params={"iteration_count": 2000})
+
     def testExportError2(self):
         tup = (self.y, self.g, self.p, self.q, self.x)
         key = DSA.construct(tup)

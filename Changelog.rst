@@ -59,6 +59,8 @@ Breaking changes
   The obsolete PEM encryption is only used with an explicit ``pkcs=1`` (RSA), ``pkcs8=False`` (DSA)
   or ``use_pkcs8=False`` (ECC); with RSA and DSA, ``protection`` and ``prot_params``
   are then rejected, instead of being silently ignored.
+  Also, ``protection`` or ``prot_params`` without a passphrase raise ``ValueError``,
+  for RSA, DSA and ECC keys: before, the key was exported in the clear.
 
 Deprecations
 ------------
@@ -68,6 +70,9 @@ Deprecations
 
 Resolved issues
 ---------------
+* Exporting a private key with an empty passphrase of type ``bytes`` returned the key
+  in the clear, instead of raising ``ValueError``: for ECC keys in all formats,
+  and for RSA (``pkcs=1``) and DSA (``pkcs8=False``) keys in DER format.
 * ``RsaKey.export_key()`` with ``format='PEM'``, ``pkcs=8``, a ``protection`` but no passphrase
   labeled the key in the clear as ``ENCRYPTED PRIVATE KEY``.
 * Importing a private key in clear PKCS#8 format failed if a passphrase was

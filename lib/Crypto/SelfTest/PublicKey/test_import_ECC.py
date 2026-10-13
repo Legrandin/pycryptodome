@@ -2855,3 +2855,21 @@ class TestExport_Ed448:
         # No private keys with OpenSSH
         with pytest.raises(ValueError):
             self.ref_private.export_key(format="OpenSSH", passphrase="secret")
+
+
+@pytest.mark.parametrize("curve", ["p256", "ed25519", "curve25519"])
+class TestExportPassphrase:
+    def test_empty_passphrase(self, curve):
+        key = ECC.generate(curve=curve)
+        for fmt in ("PEM", "DER"):
+            for pwd in ("", b"", bytearray()):
+                with pytest.raises(ValueError, match="Empty passphrase"):
+                    key.export_key(format=fmt, passphrase=pwd)
+
+    def test_protection_without_passphrase(self, curve):
+        key = ECC.generate(curve=curve)
+        for fmt in ("PEM", "DER"):
+            with pytest.raises(ValueError, match="require a passphrase"):
+                key.export_key(format=fmt, protection="PBKDF2WithHMAC-SHA256AndAES256-CBC")
+            with pytest.raises(ValueError, match="require a passphrase"):
+                key.export_key(format=fmt, prot_params={"iteration_count": 2000})

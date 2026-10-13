@@ -577,10 +577,12 @@ class EccKey:
             threads = args.pop("threads", 1)
             PKCS8._check_kdf_params(threads=threads)
             passphrase = args.pop("passphrase", None)
-            if isinstance(passphrase, str):
+            if passphrase is not None:
                 passphrase = tobytes(passphrase)
                 if not passphrase:
                     raise ValueError("Empty passphrase")
+            elif args.get("protection") or args.get("prot_params"):
+                raise ValueError("'protection' and 'prot_params' require a passphrase")
 
             use_pkcs8 = args.pop("use_pkcs8", True)
             if use_pkcs8 is False:

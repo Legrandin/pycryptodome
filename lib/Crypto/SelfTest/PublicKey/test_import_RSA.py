@@ -430,11 +430,22 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
             key.export_key("PEM", "test", pkcs=1, prot_params={"iteration_count": 2000})
 
     def testExportKey12c(self):
-        # PKCS#8 without a passphrase is in the clear, also with a protection
+        # A protection without a passphrase is an error (not a key in the clear)
         key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
-        outkey = key.export_key("PEM", pkcs=8, protection="PBKDF2WithHMAC-SHA512AndAES256-CBC")
-        assert outkey.decode("latin-1").find("BEGIN PRIVATE KEY") != -1
-        assert RSA.import_key(outkey) == key
+        for fmt in ("PEM", "DER"):
+            with pytest.raises(ValueError, match="require a passphrase"):
+                key.export_key(fmt, pkcs=8, protection="PBKDF2WithHMAC-SHA256AndAES256-CBC")
+            with pytest.raises(ValueError, match="require a passphrase"):
+                key.export_key(fmt, prot_params={"iteration_count": 2000})
+
+    def testExportKey12d(self):
+        # An empty passphrase is an error, for all formats
+        key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
+        for fmt in ("PEM", "DER"):
+            for pkcs in (None, 1, 8):
+                for pwd in ("", b""):
+                    with pytest.raises(ValueError, match="Empty passphrase"):
+                        key.export_key(fmt, pwd, pkcs=pkcs)
 
     def testExportKey13(self):
         # Export and re-import the encrypted key. It must match.
