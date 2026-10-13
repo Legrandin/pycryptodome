@@ -49,16 +49,6 @@ Breaking changes
 
 Resolved issues
 ---------------
-* The documentation of ChaCha20-Poly1305 now says that the variant with an 8-byte
-  nonce is not the original ChaCha20-Poly1305 (draft-agl-tls-chacha20poly1305), and the
-  documentation of ChaCha20 refers to RFC 8439 (instead of RFC 7539), and to
-  draft-irtf-cfrg-xchacha-03 for XChaCha20.
-* ChaCha20 and ChaCha20-Poly1305: after the error at the end of the key stream
-  (256 GiB, except 2\ :sup:`70` bytes for ChaCha20 with a nonce of 8 bytes),
-  encrypting more data did not fail, but reused the key stream from block 0.
-  Also, the last block of the key stream could not be used, and ``seek()`` to it failed.
-  Now the whole key stream can be used, and any data beyond it is rejected
-  (with ``MessageTooLongError``) before anything is encrypted.
 * Importing a private key in clear PKCS#8 format failed if a passphrase was
   also given; now the passphrase is ignored, as for the other formats.
 * ``Crypto.Math.Primality``: the trial division by small primes in ``test_probable_prime()``
