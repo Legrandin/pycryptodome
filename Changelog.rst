@@ -86,6 +86,10 @@ Resolved issues
 * Encrypted PKCS#8 keys protected with PBKDF2 (PBES2) were exported and imported
   with the slow Python implementation of PBKDF2-HMAC, and not with the C one:
   now they are about 50x-150x faster (SHA-1 and SHA-2).
+* GH#794, GH#795: the C tests failed to link on Debian armel (where the gcc
+  sanitizers need ``libatomic``) and mips64el (where gcc has no sanitizers);
+  now ``libatomic`` is linked when needed, and the tests run without the
+  sanitizers if they cannot be linked at all.
 
 New features
 ------------
