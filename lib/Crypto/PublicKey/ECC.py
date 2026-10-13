@@ -46,12 +46,14 @@ from typing import (
     overload,
 )
 
+from Crypto import IncorrectPassphraseError, PassphraseRequiredError
 from Crypto.Hash import SHA512, SHAKE256
 from Crypto.Math.Numbers import Integer
 from Crypto.PublicKey import (
     _create_subject_public_key_info,
     _expand_subject_public_key_info,
     _extract_subject_public_key_info,
+    _pem_decode_key,
 )
 from Crypto.Random import get_random_bytes
 from Crypto.Util._bytes import tobytes
@@ -999,8 +1001,8 @@ def _import_der(encoded, passphrase, max_iteration_count=None, threads=1, max_me
 
     try:
         return _import_pkcs8(encoded, passphrase, max_iteration_count, threads, max_memory)
-    except (UnsupportedEccFeature, PKCS8.PbesLimitError) as err:
-        raise err
+    except (UnsupportedEccFeature, PKCS8.PbesLimitError, PassphraseRequiredError, IncorrectPassphraseError):
+        raise
     except (ValueError, TypeError, IndexError):
         pass
 
@@ -1306,8 +1308,16 @@ def import_key(
       :class:`EccKey` : a new ECC key object
 
     Raises:
-      ValueError: when the given key cannot be parsed (possibly because
-        the pass phrase is wrong).
+      PassphraseRequiredError:
+        (a ``ValueError``) when the private key is encrypted,
+        but no passphrase was provided.
+      IncorrectPassphraseError:
+        (a ``ValueError``) when the private key cannot be decrypted
+        with the passphrase (most likely, the passphrase is wrong).
+      UnsupportedEccFeature:
+        (a ``ValueError``) when the key uses a curve or a feature
+        that is not supported.
+      ValueError: when the given key cannot be parsed.
 
     .. _RFC1421: https://datatracker.ietf.org/doc/html/rfc1421
     .. _RFC1423: https://datatracker.ietf.org/doc/html/rfc1423
@@ -1343,13 +1353,18 @@ def import_key(
         ecparams_end = "-----END EC PARAMETERS-----"
         text_encoded = re.sub(ecparams_start + ".*?" + ecparams_end, "", text_encoded, flags=re.DOTALL)
 
-        der_encoded, _marker, enc_flag = PEM.decode(text_encoded, passphrase)
+        der_encoded, _marker, enc_flag = _pem_decode_key(text_encoded, passphrase)
         if enc_flag:
             passphrase = None
         try:
             result = _import_der(der_encoded, passphrase, max_iteration_count, threads, max_memory)
-        except (UnsupportedEccFeature, PKCS8.PbesLimitError) as uef:
-            raise uef
+        except (
+            UnsupportedEccFeature,
+            PKCS8.PbesLimitError,
+            PassphraseRequiredError,
+            IncorrectPassphraseError,
+        ):
+            raise
         except ValueError:
             raise ValueError("Invalid DER encoding inside the PEM file")
         return result

@@ -13,6 +13,12 @@ __all__ = ["encode", "decode"]
 import re
 from binascii import a2b_base64, b2a_base64, hexlify, unhexlify
 
+from Crypto import (
+    _INCORRECT_PASSPHRASE,
+    _PASSPHRASE_REQUIRED,
+    IncorrectPassphraseError,
+    PassphraseRequiredError,
+)
 from Crypto.Cipher import AES, DES, DES3
 from Crypto.Hash import MD5
 from Crypto.Protocol.KDF import PBKDF1
@@ -100,8 +106,13 @@ def decode(pem_data: str, passphrase: Optional[bytes] = None) -> tuple[bytes, st
       indicate if decryption was performed.
 
     Raises:
-      ValueError: if decoding fails, if the PEM file is encrypted and no passphrase has
-                  been provided or if the passphrase is incorrect.
+      PassphraseRequiredError: (a ``ValueError``) if the PEM block is encrypted
+        and no passphrase has been provided.
+      IncorrectPassphraseError: (a ``ValueError``) if the decryption fails,
+        most likely because the passphrase is incorrect.
+        It is not always detected here: decrypting with an incorrect passphrase
+        can also return garbage.
+      ValueError: if decoding fails for any other reason.
     """
 
     # Verify Pre-Encapsulation Boundary
@@ -123,7 +134,7 @@ def decode(pem_data: str, passphrase: Optional[bytes] = None) -> tuple[bytes, st
     # Decrypts, if necessary
     if lines[1].startswith("Proc-Type:4,ENCRYPTED"):
         if not passphrase:
-            raise ValueError("PEM is encrypted, but no passphrase available")
+            raise PassphraseRequiredError(_PASSPHRASE_REQUIRED)
         DEK = lines[2].split(":")
         if len(DEK) != 2 or DEK[0] != "DEK-Info":
             raise ValueError("PEM encryption format not supported.")
@@ -163,7 +174,10 @@ def decode(pem_data: str, passphrase: Optional[bytes] = None) -> tuple[bytes, st
     enc_flag = False
     if objdec:
         if padding:
-            data = unpad(objdec.decrypt(data), objdec.block_size)
+            try:
+                data = unpad(objdec.decrypt(data), objdec.block_size)
+            except ValueError:
+                raise IncorrectPassphraseError(_INCORRECT_PASSPHRASE) from None
         else:
             # There is no tag, so we don't use decrypt_and_verify
             data = objdec.decrypt(data)

@@ -32,7 +32,7 @@ import binascii
 import itertools
 import struct
 
-from Crypto import Random
+from Crypto import IncorrectPassphraseError, PassphraseRequiredError, Random
 from Crypto.Hash import SHA256
 from Crypto.IO import PEM, PKCS8
 from Crypto.Math.Numbers import Integer
@@ -41,6 +41,7 @@ from Crypto.PublicKey import (
     _create_subject_public_key_info,
     _expand_subject_public_key_info,
     _extract_subject_public_key_info,
+    _pem_decode_key,
 )
 from Crypto.Util._bytes import tobytes
 from Crypto.Util.asn1 import (
@@ -593,7 +594,7 @@ def _import_key_der(key_data, passphrase, params, max_iteration_count=None, thre
 
     try:
         return _import_pkcs8(key_data, passphrase, params, max_iteration_count, threads, max_memory)
-    except PKCS8.PbesLimitError:
+    except (PKCS8.PbesLimitError, PassphraseRequiredError, IncorrectPassphraseError):
         raise
     except ValueError:
         pass
@@ -667,8 +668,13 @@ def import_key(
       :class:`DsaKey` : a DSA key object
 
     Raises:
-      ValueError : when the given key cannot be parsed (possibly because
-        the pass phrase is wrong).
+      PassphraseRequiredError :
+        (a ``ValueError``) when the private key is encrypted,
+        but no passphrase was provided.
+      IncorrectPassphraseError :
+        (a ``ValueError``) when the private key cannot be decrypted
+        with the passphrase (most likely, the passphrase is wrong).
+      ValueError : when the given key cannot be parsed.
 
     .. _RFC1421: http://www.ietf.org/rfc/rfc1421.txt
     .. _RFC1423: http://www.ietf.org/rfc/rfc1423.txt
@@ -683,7 +689,7 @@ def import_key(
 
     if extern_key.startswith(b"-----"):
         # This is probably a PEM encoded key
-        (der, _marker, enc_flag) = PEM.decode(extern_key.decode("latin-1"), passphrase)
+        (der, _marker, enc_flag) = _pem_decode_key(extern_key.decode("latin-1"), passphrase)
         if enc_flag:
             passphrase = None
         return _import_key_der(der, passphrase, None, max_iteration_count, threads, max_memory)

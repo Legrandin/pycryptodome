@@ -182,7 +182,8 @@ In the following definition, ``<algorithm>`` could be ``AES``:
 
 The methods :func:`encrypt` and :func:`decrypt` of a CTR cipher object
 accept data of any length (i.e. padding is not needed).
-Both raise an ``OverflowError`` exception as soon as the counter wraps around to repeat the original value.
+Both raise :class:`Crypto.MessageTooLongError` (which is also an ``OverflowError``)
+as soon as the counter wraps around to repeat the original value.
 
 The CTR cipher object has a read-only attribute :attr:`nonce` (*bytes*).
 

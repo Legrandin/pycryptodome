@@ -9,6 +9,12 @@ from __future__ import annotations
 
 from typing import Callable, Optional, Union
 
+from Crypto import (
+    _INCORRECT_PASSPHRASE,
+    _PASSPHRASE_REQUIRED,
+    IncorrectPassphraseError,
+    PassphraseRequiredError,
+)
 from Crypto.IO._PBES import (
     PBES1,
     PBES2,
@@ -191,16 +197,37 @@ def unwrap(
        #. the associated parameters (bytes, DER encoded) or ``None``
 
     Raises:
-      ValueError : if decoding fails
+      PassphraseRequiredError : (a ``ValueError``) if the blob is encrypted
+        and no passphrase has been provided
+      IncorrectPassphraseError : (a ``ValueError``) if the blob cannot be
+        decrypted with the passphrase (most likely, the passphrase is incorrect)
       PbesIterationCountError : (a ``ValueError``) if the iteration count
         is above :data:`max_iteration_count`
       PbesMemoryError : (a ``ValueError``) if the key derivation needs
         more memory than :data:`max_memory`
+      ValueError : if decoding fails for any other reason
     """
 
     _check_kdf_params(max_iteration_count, threads, max_memory)
 
-    if passphrase is not None:
+    # EncryptedPrivateKeyInfo ::= SEQUENCE {
+    #     encryptionAlgorithm  AlgorithmIdentifier,
+    #     encryptedData        OCTET STRING
+    # }
+    #
+    # (a PrivateKeyInfo starts with an INTEGER instead)
+    pk_info = DerSequence().decode(p8_private_key, nr_elements=(2, 3, 4, 5))
+    encrypted = (
+        len(pk_info) == 2
+        and isinstance(pk_info[0], bytes)
+        and pk_info[0][:1] == b"\x30"
+        and isinstance(pk_info[1], bytes)
+        and pk_info[1][:1] == b"\x04"
+    )
+
+    if encrypted:
+        if passphrase is None:
+            raise PassphraseRequiredError(_PASSPHRASE_REQUIRED)
         passphrase = tobytes(passphrase)
 
         found = False
@@ -209,8 +236,8 @@ def unwrap(
                 p8_private_key, passphrase, max_iteration_count=max_iteration_count
             )
             found = True
-        except PbesLimitError:
-            # The key is well-formed, and this is the only reason to reject it
+        except (PbesLimitError, IncorrectPassphraseError):
+            # The key is well-formed, and these are the only reasons to reject it
             raise
         except PbesError as e:
             error_str = "PBES1[%s]" % str(e)
@@ -227,7 +254,7 @@ def unwrap(
                     max_memory=max_memory,
                 )
                 found = True
-            except PbesLimitError:
+            except (PbesLimitError, IncorrectPassphraseError):
                 raise
             except PbesError as e:
                 error_str += ",PBES2[%s]" % str(e)
@@ -237,9 +264,13 @@ def unwrap(
         if not found:
             raise ValueError("Error decoding PKCS#8 (%s)" % error_str)
 
-    pk_info = DerSequence().decode(p8_private_key, nr_elements=(2, 3, 4, 5))
-    if len(pk_info) == 2 and not passphrase:
-        raise ValueError("Not a valid clear PKCS#8 structure (maybe it is encrypted?)")
+        # With an incorrect passphrase, the padding may still be correct by chance
+        try:
+            pk_info = DerSequence().decode(p8_private_key, nr_elements=(3, 4, 5))
+        except ValueError:
+            raise IncorrectPassphraseError(_INCORRECT_PASSPHRASE) from None
+    elif len(pk_info) == 2:
+        raise ValueError("Not a valid PKCS#8 structure")
 
     # RFC5208, PKCS#8, version is v1(0)
     #

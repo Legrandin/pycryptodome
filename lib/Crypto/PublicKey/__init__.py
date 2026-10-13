@@ -17,7 +17,27 @@
 # SOFTWARE.
 # ===================================================================
 
+from Crypto import _INCORRECT_PASSPHRASE, IncorrectPassphraseError
 from Crypto.Util.asn1 import DerBitString, DerInteger, DerNull, DerObjectId, DerSequence
+
+
+def _pem_decode_key(pem_data, passphrase):
+    """Decode a PEM block that contains a key (DER encoded).
+
+    Like :func:`Crypto.IO.PEM.decode`, but if the block was decrypted,
+    the result must be DER: if not, the passphrase was wrong (CBC padding
+    can be correct by chance, and GCM is used without its tag).
+    """
+
+    from Crypto.IO import PEM
+
+    der, marker, enc_flag = PEM.decode(pem_data, passphrase)
+    if enc_flag:
+        try:
+            DerSequence().decode(der)
+        except ValueError:
+            raise IncorrectPassphraseError(_INCORRECT_PASSPHRASE) from None
+    return der, marker, enc_flag
 
 
 def _expand_subject_public_key_info(encoded):

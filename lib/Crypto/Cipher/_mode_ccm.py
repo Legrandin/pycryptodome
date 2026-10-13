@@ -14,6 +14,7 @@ __all__ = ["CcmMode"]
 import struct
 from binascii import unhexlify
 
+from Crypto import MessageTooLongError
 from Crypto.Cipher._state_machine import Method
 from Crypto.Hash import BLAKE2s
 from Crypto.Random import get_random_bytes
@@ -34,8 +35,8 @@ def enum(**enums):
 MacStatus = enum(NOT_STARTED=0, PROCESSING_AUTH_DATA=1, PROCESSING_PLAINTEXT=2)
 
 
-class CCMMessageTooLongError(ValueError):
-    pass
+# Before Crypto.MessageTooLongError (kept for backward compatibility)
+CCMMessageTooLongError = MessageTooLongError
 
 
 class CcmMode:
@@ -136,7 +137,7 @@ class CcmMode:
         # Message length (if known already)
         q = 15 - len(nonce)  # length of Q, the encoded message length
         if msg_len and len(long_to_bytes(msg_len)) > q:
-            raise CCMMessageTooLongError("Message too long for a %u-byte nonce" % len(nonce))
+            raise MessageTooLongError("Message too long for a %u-byte nonce" % len(nonce))
 
         # Create MAC object (the tag will be the last block
         # bytes worth of ciphertext)
@@ -245,7 +246,7 @@ class CcmMode:
 
         self._cumul_assoc_len += len(assoc_data)
         if self._assoc_len is not None and self._cumul_assoc_len > self._assoc_len:
-            raise ValueError("Associated data is too long")
+            raise MessageTooLongError("Associated data longer than declared")
 
         self._update(assoc_data)
         return self
@@ -350,7 +351,7 @@ class CcmMode:
         if self._msg_len is None:
             q = 15 - len(self.nonce)
             if len(long_to_bytes(len(plaintext))) > q:
-                raise CCMMessageTooLongError("Message too long for a %u-byte nonce" % len(self.nonce))
+                raise MessageTooLongError("Message too long for a %u-byte nonce" % len(self.nonce))
 
             self._msg_len = len(plaintext)
             self._start_mac()
@@ -362,7 +363,7 @@ class CcmMode:
                 self._cumul_msg_len,
                 self._msg_len,
             )
-            raise CCMMessageTooLongError(msg)
+            raise MessageTooLongError(msg)
 
         if self._mac_status == MacStatus.PROCESSING_AUTH_DATA:
             # Associated data is concatenated with the least number
@@ -443,7 +444,7 @@ class CcmMode:
         if self._msg_len is None:
             q = 15 - len(self.nonce)
             if len(long_to_bytes(len(ciphertext))) > q:
-                raise CCMMessageTooLongError("Message too long for a %u-byte nonce" % len(self.nonce))
+                raise MessageTooLongError("Message too long for a %u-byte nonce" % len(self.nonce))
 
             self._msg_len = len(ciphertext)
             self._start_mac()
@@ -455,7 +456,7 @@ class CcmMode:
                 self._cumul_msg_len,
                 self._msg_len,
             )
-            raise CCMMessageTooLongError(msg)
+            raise MessageTooLongError(msg)
 
         if self._mac_status == MacStatus.PROCESSING_AUTH_DATA:
             # Associated data is concatenated with the least number

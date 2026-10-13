@@ -9,7 +9,7 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, Any, Callable, Optional, TypedDict
 
-from Crypto import Hash, Random
+from Crypto import _INCORRECT_PASSPHRASE, Hash, IncorrectPassphraseError, Random
 from Crypto.Cipher import AES
 from Crypto.Protocol.KDF import PBKDF1, PBKDF2, scrypt
 from Crypto.Util._threads import threads_param
@@ -316,8 +316,10 @@ class PBES1:
         key, iv = key_iv[:8], key_iv[8:]
 
         cipher = module.new(key, module.MODE_CBC, iv, **cipher_params)
-        pt = cipher.decrypt(encrypted_data)
-        return unpad(pt, cipher.block_size)
+        try:
+            return unpad(cipher.decrypt(encrypted_data), cipher.block_size)
+        except ValueError:
+            raise IncorrectPassphraseError(_INCORRECT_PASSPHRASE) from None
 
 
 class PBES2:
@@ -696,11 +698,14 @@ class PBES2:
         if len(encrypted_data) < cipher.block_size:
             raise ValueError("Too little data to decrypt")
 
-        if aead:
-            tag_len = cipher.block_size
-            pt = cipher.decrypt_and_verify(encrypted_data[:-tag_len], encrypted_data[-tag_len:])
-        else:
-            pt_padded = cipher.decrypt(encrypted_data)
-            pt = unpad(pt_padded, cipher.block_size)
+        try:
+            if aead:
+                tag_len = cipher.block_size
+                pt = cipher.decrypt_and_verify(encrypted_data[:-tag_len], encrypted_data[-tag_len:])
+            else:
+                pt_padded = cipher.decrypt(encrypted_data)
+                pt = unpad(pt_padded, cipher.block_size)
+        except ValueError:
+            raise IncorrectPassphraseError(_INCORRECT_PASSPHRASE) from None
 
         return pt

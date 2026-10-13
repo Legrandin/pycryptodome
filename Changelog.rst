@@ -43,6 +43,8 @@ Breaking changes
 
 Resolved issues
 ---------------
+* Importing a private key in clear PKCS#8 format failed if a passphrase was
+  also given; now the passphrase is ignored, as for the other formats.
 * ``Crypto.Math.Primality``: the trial division by small primes in ``test_probable_prime()``
   never ran (only the Miller-Rabin and Lucas tests did), which made the generation
   of RSA, DSA and ElGamal keys slower; and the primality tests reported 1 as a probable prime.
@@ -93,6 +95,20 @@ Resolved issues
 
 New features
 ------------
+* GH#320: importing an encrypted private key (PEM, PKCS#8 or OpenSSH) without
+  a passphrase raises ``Crypto.PassphraseRequiredError``, and with
+  an incorrect passphrase ``Crypto.IncorrectPassphraseError``.
+  Both are subclasses of ``ValueError``, like before; the messages are also clearer.
+  This applies to ``import_key()`` of RSA, DSA and ECC, to ``Crypto.IO.PKCS8.unwrap()``
+  and to ``Crypto.IO.PEM.decode()``.
+  A new page of the documentation lists the dedicated exceptions of the library.
+* New exception ``Crypto.MessageTooLongError``, raised when a cipher would process
+  more data than allowed with the same key and nonce: CCM (it replaces
+  ``CCMMessageTooLongError``, still available as an alias), GCM, CTR, ChaCha20,
+  ChaCha20-Poly1305, Salsa20, KW and KWP. It is a subclass of both ``ValueError``
+  and ``OverflowError``, which those ciphers used to raise. GCM now checks the
+  limits before processing the data, also when decrypting; and its limit on the
+  associated data is now 2\ :sup:`64` - 1 bits (it was bytes).
 * All the big integer arithmetic for RSA, DSA, ElGamal and ECC runs in a new
   C library (``Crypto.Math._nat``), in constant time: the time and the memory
   accesses do not depend on the values of the numbers, only on their (public)

@@ -2,6 +2,8 @@ import struct
 from types import ModuleType
 from typing import Union
 
+from Crypto import MessageTooLongError
+
 from ._mode_kw import W, W_inverse
 
 
@@ -51,7 +53,7 @@ class KWPMode:
             raise ValueError("The plaintext must be at least 1 byte")
 
         if len(plaintext) >= 2**32:
-            raise ValueError("The plaintext is too long")
+            raise MessageTooLongError("The plaintext is too long")
 
         padlen = (8 - len(plaintext)) % 8
         padded = plaintext + b"\x00" * padlen

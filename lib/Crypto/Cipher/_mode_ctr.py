@@ -31,6 +31,7 @@ __all__ = ["CtrMode"]
 
 import struct
 
+from Crypto import MessageTooLongError
 from Crypto.Cipher._state_machine import Method
 from Crypto.Random import get_random_bytes
 from Crypto.Util._raw_api import (
@@ -368,7 +369,7 @@ class CtrMode:
     def _check(result: int, what: str) -> None:
         if result:
             if result == 0x60002:
-                raise OverflowError("The counter has wrapped around in CTR mode")
+                raise MessageTooLongError("The counter has wrapped around in CTR mode")
             raise ValueError("Error %X while %s in CTR mode" % (result, what))
 
 

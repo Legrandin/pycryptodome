@@ -13,6 +13,7 @@ __all__ = ["GcmMode"]
 
 from binascii import unhexlify
 
+from Crypto import MessageTooLongError
 from Crypto.Cipher._state_machine import Method
 from Crypto.Hash import BLAKE2s
 from Crypto.Random import get_random_bytes
@@ -105,6 +106,12 @@ _ghash_clmul = _get_ghash_clmul()
 # The CLMUL implementation is much faster, so it needs more data.
 _MIN_BYTES_PER_THREAD_CLMUL = 2 * 1024 * 1024
 _MIN_BYTES_PER_THREAD_PORTABLE = 256 * 1024
+
+
+# See NIST SP 800 38D, 5.2.1.1: at most 2**39 - 256 bits of plaintext
+# (the 32-bit block counter must not wrap around), and 2**64 - 1 bits of AAD
+_MAX_MSG_LEN = 2**36 - 32
+_MAX_AAD_LEN = 2**61 - 1
 
 
 class _GHASH:
@@ -351,14 +358,14 @@ class GcmMode:
         if Method.UPDATE not in self._next:
             raise TypeError("update() can only be called immediately after initialization")
 
+        # See NIST SP 800 38D, 5.2.1.1
+        if self._auth_len + len(assoc_data) > _MAX_AAD_LEN:
+            raise MessageTooLongError("Additional Authenticated Data exceeds maximum length")
+
         self._next = [Method.UPDATE, Method.ENCRYPT, Method.DECRYPT, Method.DIGEST, Method.VERIFY]
 
         self._update(assoc_data)
         self._auth_len += len(assoc_data)
-
-        # See NIST SP 800 38D, 5.2.1.1
-        if self._auth_len > 2**64 - 1:
-            raise ValueError("Additional Authenticated Data exceeds maximum length")
 
         return self
 
@@ -446,6 +453,8 @@ class GcmMode:
 
         if Method.ENCRYPT not in self._next:
             raise TypeError("encrypt() can only be called after initialization or an update()")
+        if self._msg_len + len(plaintext) > _MAX_MSG_LEN:
+            raise MessageTooLongError("Plaintext exceeds maximum length")
         self._next = [Method.ENCRYPT, Method.DIGEST]
 
         ciphertext = self._cipher.encrypt(plaintext, output=output)
@@ -456,11 +465,6 @@ class GcmMode:
 
         self._update(ciphertext if output is None else output)
         self._msg_len += len(plaintext)
-
-        # See NIST SP 800 38D, 5.2.1.1
-        # Maximum size is 2**39 - 256 bits
-        if self._msg_len > 68719476704:
-            raise ValueError("Plaintext exceeds maximum length")
 
         return ciphertext
 
@@ -512,6 +516,8 @@ class GcmMode:
 
         if Method.DECRYPT not in self._next:
             raise TypeError("decrypt() can only be called after initialization or an update()")
+        if self._msg_len + len(ciphertext) > _MAX_MSG_LEN:
+            raise MessageTooLongError("Ciphertext exceeds maximum length")
         self._next = [Method.DECRYPT, Method.VERIFY]
 
         if self._status == MacStatus.PROCESSING_AUTH_DATA:

@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from typing import Optional, Union, overload
 
+from Crypto import MessageTooLongError
 from Crypto.Cipher._state_machine import Method
 from Crypto.Random import get_random_bytes
 from Crypto.Util._raw_api import (
@@ -156,6 +157,8 @@ class ChaCha20Cipher:
             result = _raw_chacha20_lib.chacha20_encrypt(
                 self._state.get(), plaintext_ptr, ciphertext_ptr, c_size_t(plaintext_len)
             )
+        if result == 10:  # ERR_MAX_DATA
+            raise MessageTooLongError("The key stream of %s is exhausted for this nonce" % self._name)
         if result:
             raise ValueError("Error %d while encrypting with %s" % (result, self._name))
 
@@ -196,6 +199,8 @@ class ChaCha20Cipher:
 
         try:
             return self._encrypt(ciphertext, output)
+        except MessageTooLongError:
+            raise
         except ValueError as e:
             raise ValueError(str(e).replace("enc", "dec"))
 

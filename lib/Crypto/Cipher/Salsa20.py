@@ -25,6 +25,7 @@ from __future__ import annotations
 
 from typing import Optional, Union, overload
 
+from Crypto import MessageTooLongError
 from Crypto.Random import get_random_bytes
 from Crypto.Util._cpu_features import load_avx2_bmi2_lib
 from Crypto.Util._raw_api import (
@@ -126,7 +127,8 @@ class Salsa20Cipher:
           If ``output`` is ``None``, the ciphertext is returned as ``bytes``.
           Otherwise, ``None``.
         Raises:
-          OverflowError: if the data goes beyond the end of the key stream
+          MessageTooLongError: (a ``ValueError`` and an ``OverflowError``)
+            if the data goes beyond the end of the key stream
             (2**70 bytes); nothing is encrypted then.
         """
 
@@ -150,7 +152,7 @@ class Salsa20Cipher:
                 self._state.get(), plaintext_ptr, ciphertext_ptr, c_size_t(plaintext_len)
             )
         if result == 10:  # ERR_MAX_DATA
-            raise OverflowError("The key stream of Salsa20 is exhausted (2**70 bytes per nonce)")
+            raise MessageTooLongError("The key stream of Salsa20 is exhausted (2**70 bytes per nonce)")
         if result:
             raise ValueError("Error %d while encrypting with Salsa20" % result)
 
@@ -184,12 +186,15 @@ class Salsa20Cipher:
           If ``output`` is ``None``, the plaintext is returned as ``bytes``.
           Otherwise, ``None``.
         Raises:
-          OverflowError: if the data goes beyond the end of the key stream
+          MessageTooLongError: (a ``ValueError`` and an ``OverflowError``)
+            if the data goes beyond the end of the key stream
             (2**70 bytes); nothing is decrypted then.
         """
 
         try:
             return self.encrypt(ciphertext, output=output)
+        except MessageTooLongError:
+            raise
         except ValueError as e:
             raise ValueError(str(e).replace("enc", "dec"))
 

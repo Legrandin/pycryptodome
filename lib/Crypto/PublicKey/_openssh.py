@@ -6,6 +6,12 @@ from __future__ import annotations
 import struct
 from typing import Optional
 
+from Crypto import (
+    _INCORRECT_PASSPHRASE,
+    _PASSPHRASE_REQUIRED,
+    IncorrectPassphraseError,
+    PassphraseRequiredError,
+)
 from Crypto.Cipher import AES
 from Crypto.Hash import SHA512
 from Crypto.IO._PBES import _BCRYPT_ROUNDS, _DEFAULT_MAX_BCRYPT_ROUNDS, PbesError, _check_iteration_count
@@ -98,6 +104,9 @@ def import_openssh_private_generic(
     else:
         if (ciphername, kdfname) != ("aes256-ctr", "bcrypt"):
             raise ValueError("Unsupported encryption scheme %s/%s" % (ciphername, kdfname))
+        # OpenSSH never encrypts a key with an empty passphrase
+        if not password:
+            raise PassphraseRequiredError(_PASSPHRASE_REQUIRED)
 
         salt, kdfoptions = read_bytes(kdfoptions)
         iterations, kdfoptions = read_int4(kdfoptions)
@@ -118,9 +127,13 @@ def import_openssh_private_generic(
         cipher = AES.new(result[:32], AES.MODE_CTR, nonce=b"", initial_value=result[32 : 32 + 16])
         decrypted = cipher.decrypt(encrypted)
 
+    # Two copies of the same random value: after decryption with
+    # an incorrect passphrase, they match only once in 2^32 times
     checkint1, decrypted = read_int4(decrypted)
     checkint2, decrypted = read_int4(decrypted)
     if checkint1 != checkint2:
+        if ciphername != "none":
+            raise IncorrectPassphraseError(_INCORRECT_PASSPHRASE)
         raise ValueError("Incorrect checksum")
     ssh_name, decrypted = read_string(decrypted)
 

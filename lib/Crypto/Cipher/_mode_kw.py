@@ -3,6 +3,7 @@ from collections import deque
 from types import ModuleType
 from typing import Union
 
+from Crypto import MessageTooLongError
 from Crypto.Util.strxor import strxor
 
 
@@ -87,7 +88,7 @@ class KWMode:
             raise ValueError("The plaintext must be at least 16 bytes long")
 
         if len(plaintext) >= 2**32:
-            raise ValueError("The plaintext is too long")
+            raise MessageTooLongError("The plaintext is too long")
 
         res = W(self._cipher, b"\xa6\xa6\xa6\xa6\xa6\xa6\xa6\xa6" + plaintext)
         self._done = True
