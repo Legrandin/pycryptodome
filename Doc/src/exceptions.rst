@@ -60,13 +60,13 @@ They concern any kind of encrypted private key: PEM (with the ``Proc-Type: 4,ENC
         >>> from Crypto.PublicKey import RSA
         >>>
         >>> try:
-        >>>     key = RSA.import_key(data, passphrase)
-        >>> except PassphraseRequiredError:
-        >>>     print("This key is encrypted: please enter the passphrase")
-        >>> except IncorrectPassphraseError:
-        >>>     print("Wrong passphrase")
-        >>> except ValueError:
-        >>>     print("This is not an RSA key")
+        ...     key = RSA.import_key(data, passphrase)
+        ... except PassphraseRequiredError:
+        ...     print("This key is encrypted: please enter the passphrase")
+        ... except IncorrectPassphraseError:
+        ...     print("Wrong passphrase")
+        ... except ValueError:
+        ...     print("This is not an RSA key")
 
 .. py:exception:: Crypto.PublicKey.ECC.UnsupportedEccFeature
     :no-index:

@@ -49,14 +49,14 @@ And this is how you decrypt it::
     >>>
     >>> # We assume that the key was somehow securely shared
     >>> try:
-    >>>     b64 = json.loads(json_input)
-    >>>     nonce = b64decode(b64['nonce'])
-    >>>     ciphertext = b64decode(b64['ciphertext'])
-    >>>     cipher = ChaCha20.new(key=key, nonce=nonce)
-    >>>     plaintext = cipher.decrypt(ciphertext)
-    >>>     print("The message was " + plaintext)
-    >>> except (ValueError, KeyError):
-    >>>     print("Incorrect decryption")
+    ...     b64 = json.loads(json_input)
+    ...     nonce = b64decode(b64['nonce'])
+    ...     ciphertext = b64decode(b64['ciphertext'])
+    ...     cipher = ChaCha20.new(key=key, nonce=nonce)
+    ...     plaintext = cipher.decrypt(ciphertext)
+    ...     print("The message was " + plaintext)
+    ... except (ValueError, KeyError):
+    ...     print("Incorrect decryption")
 
 In order to have a `RFC8439`_-compliant ChaCha20 cipher,
 you need to explicitly generate and pass a 96 bit (12 byte) ``nonce`` parameter to ``new()``::

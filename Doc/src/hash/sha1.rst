@@ -8,7 +8,7 @@ For example::
     >>>
     >>> h = SHA1.new()
     >>> h.update(b'Hello')
-    >>> print h.hexdigest()
+    >>> print(h.hexdigest())
 
 *SHA* stands for Secure Hash Algorithm.
 

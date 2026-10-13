@@ -126,14 +126,14 @@ Example (decryption)::
     >>>
     >>> # We assume that the key was securely shared beforehand
     >>> try:
-    >>>     b64 = json.loads(json_input)
-    >>>     iv = b64decode(b64['iv'])
-    >>>     ct = b64decode(b64['ciphertext'])
-    >>>     cipher = AES.new(key, AES.MODE_CBC, iv)
-    >>>     pt = unpad(cipher.decrypt(ct), AES.block_size)
-    >>>     print("The message was: ", pt)
-    >>> except (ValueError, KeyError):
-    >>>     print("Incorrect decryption")
+    ...     b64 = json.loads(json_input)
+    ...     iv = b64decode(b64['iv'])
+    ...     ct = b64decode(b64['ciphertext'])
+    ...     cipher = AES.new(key, AES.MODE_CBC, iv)
+    ...     pt = unpad(cipher.decrypt(ct), AES.block_size)
+    ...     print("The message was: ", pt)
+    ... except (ValueError, KeyError):
+    ...     print("Incorrect decryption")
 
 .. _ctr_mode:
 
@@ -224,14 +224,14 @@ Example (decryption)::
     >>>
     >>> # We assume that the key was securely shared beforehand
     >>> try:
-    >>>     b64 = json.loads(json_input)
-    >>>     nonce = b64decode(b64['nonce'])
-    >>>     ct = b64decode(b64['ciphertext'])
-    >>>     cipher = AES.new(key, AES.MODE_CTR, nonce=nonce)
-    >>>     pt = cipher.decrypt(ct)
-    >>>     print("The message was: ", pt)
-    >>> except (ValueError, KeyError):
-    >>>     print("Incorrect decryption")
+    ...     b64 = json.loads(json_input)
+    ...     nonce = b64decode(b64['nonce'])
+    ...     ct = b64decode(b64['ciphertext'])
+    ...     cipher = AES.new(key, AES.MODE_CTR, nonce=nonce)
+    ...     pt = cipher.decrypt(ct)
+    ...     print("The message was: ", pt)
+    ... except (ValueError, KeyError):
+    ...     print("Incorrect decryption")
 
 .. _cfb_mode:
 
@@ -297,14 +297,14 @@ Example (decryption)::
     >>>
     >>> # We assume that the key was securely shared beforehand
     >>> try:
-    >>>     b64 = json.loads(json_input)
-    >>>     iv = b64decode(b64['iv'])
-    >>>     ct = b64decode(b64['ciphertext'])
-    >>>     cipher = AES.new(key, AES.MODE_CFB, iv=iv)
-    >>>     pt = cipher.decrypt(ct)
-    >>>     print("The message was: ", pt)
-    >>> except (ValueError, KeyError):
-    >>>     print("Incorrect decryption")
+    ...     b64 = json.loads(json_input)
+    ...     iv = b64decode(b64['iv'])
+    ...     ct = b64decode(b64['ciphertext'])
+    ...     cipher = AES.new(key, AES.MODE_CFB, iv=iv)
+    ...     pt = cipher.decrypt(ct)
+    ...     print("The message was: ", pt)
+    ... except (ValueError, KeyError):
+    ...     print("Incorrect decryption")
 
 .. _ofb_mode:
 
@@ -363,14 +363,14 @@ Example (decryption)::
     >>>
     >>> # We assume that the key was securely shared beforehand
     >>> try:
-    >>>     b64 = json.loads(json_input)
-    >>>     iv = b64decode(b64['iv'])
-    >>>     ct = b64decode(b64['ciphertext'])
-    >>>     cipher = AES.new(key, AES.MODE_OFB, iv=iv)
-    >>>     pt = cipher.decrypt(ct)
-    >>>     print("The message was: ", pt)
-    >>> except (ValueError, KeyError):
-    >>>     print("Incorrect decryption")
+    ...     b64 = json.loads(json_input)
+    ...     iv = b64decode(b64['iv'])
+    ...     ct = b64decode(b64['ciphertext'])
+    ...     cipher = AES.new(key, AES.MODE_OFB, iv=iv)
+    ...     pt = cipher.decrypt(ct)
+    ...     print("The message was: ", pt)
+    ... except (ValueError, KeyError):
+    ...     print("Incorrect decryption")
 
 .. _openpgp_mode:
 

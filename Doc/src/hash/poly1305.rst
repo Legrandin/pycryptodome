@@ -31,10 +31,10 @@ This is an example showing how to validate the MAC above::
     >>> nonce = unhexlify(nonce_hex)
     >>> mac = Poly1305.new(key=secret, nonce=nonce, cipher=AES, data=msg)
     >>> try:
-    >>>   mac.hexverify(mac_tag_hex)
-    >>>   print("The message '%s' is authentic" % msg)
-    >>> except ValueError:
-    >>>   print("The message or the key is wrong")
+    ...   mac.hexverify(mac_tag_hex)
+    ...   print("The message '%s' is authentic" % msg)
+    ... except ValueError:
+    ...   print("The message or the key is wrong")
 
 Note that you can get the MAC tag in one line::
 

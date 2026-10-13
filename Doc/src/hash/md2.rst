@@ -8,7 +8,7 @@ For example::
     >>>
     >>> h = MD2.new()
     >>> h.update(b'Hello')
-    >>> print h.hexdigest()
+    >>> print(h.hexdigest())
 
 MD2 stand for Message Digest version 2, and it was invented by Rivest in 1989.
 

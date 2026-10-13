@@ -10,7 +10,7 @@ The hash function produces the 256 bit digest of a message::
     >>>
     >>> h_obj = SHA3_256.new()
     >>> h_obj.update(b'Some data')
-    >>> print h_obj.hexdigest()
+    >>> print(h_obj.hexdigest())
 
 .. __: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
 

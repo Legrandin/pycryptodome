@@ -12,7 +12,7 @@ The algorithm uses 64 bit words, and it therefore works best on
     >>>
     >>> h_obj = BLAKE2b.new(digest_bits=512)
     >>> h_obj.update(b'Some data')
-    >>> print h_obj.hexdigest()
+    >>> print(h_obj.hexdigest())
 
 Optionally, BLAKE2b can work as a cryptographic MAC when initialized
 with a secret key.
@@ -21,7 +21,7 @@ with a secret key.
     >>>
     >>> mac = BLAKE2b.new(digest_bits=256, key=b'secret')
     >>> mac.update(b'Some data')
-    >>> print mac.hexdigest()
+    >>> print(mac.hexdigest())
 
 .. _BLAKE2b: https://blake2.net/
 

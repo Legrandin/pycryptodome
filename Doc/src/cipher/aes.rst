@@ -27,10 +27,10 @@ and the incoming triple ``(nonce, ciphertext, tag)``::
     >>> cipher = AES.new(key, AES.MODE_EAX, nonce=nonce)
     >>> plaintext = cipher.decrypt(ciphertext)
     >>> try:
-    >>>     cipher.verify(tag)
-    >>>     print("The message is authentic:", plaintext)
-    >>> except ValueError:
-    >>>     print("Key incorrect or message corrupted")
+    ...     cipher.verify(tag)
+    ...     print("The message is authentic:", plaintext)
+    ... except ValueError:
+    ...     print("Key incorrect or message corrupted")
 
 Constants for the modes of operation supported with AES (``mode`` parameter):
 

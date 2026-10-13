@@ -16,7 +16,7 @@ This is an example showing how to generate an AES-CMAC tag::
     >>> secret = b'Sixteen byte key'
     >>> cobj = CMAC.new(secret, ciphermod=AES)
     >>> cobj.update(b'Hello')
-    >>> print cobj.hexdigest()
+    >>> print(cobj.hexdigest())
 
 And this is an example showing how to validate the AES-CMAC::
 
@@ -30,10 +30,10 @@ And this is an example showing how to validate the AES-CMAC::
     >>> cobj = CMAC.new(secret, ciphermod=AES)
     >>> cobj.update(msg)
     >>> try:
-    >>>   cobj.verify(mac)
-    >>>   print "The message '%s' is authentic" % msg
-    >>> except ValueError:
-    >>>   print "The message or the key is wrong"
+    ...   cobj.verify(mac)
+    ...   print("The message '%s' is authentic" % msg)
+    ... except ValueError:
+    ...   print("The message or the key is wrong")
 
 A cipher block size of 128 bits (like for AES) guarantees that the risk
 of MAC collisions remains negligible even when the same CMAC key is

@@ -210,9 +210,9 @@ For instance, to accept a trusted key that needs more memory than the default::
     >>> from Crypto.PublicKey import ECC
     >>>
     >>> try:
-    >>>     key = ECC.import_key(encrypted_key, passphrase)
-    >>> except KdfMemoryLimitError:
-    >>>     key = ECC.import_key(encrypted_key, passphrase, max_memory=2**30)
+    ...     key = ECC.import_key(encrypted_key, passphrase)
+    ... except KdfMemoryLimitError:
+    ...     key = ECC.import_key(encrypted_key, passphrase, max_memory=2**30)
 
 What is not covered
 -------------------
