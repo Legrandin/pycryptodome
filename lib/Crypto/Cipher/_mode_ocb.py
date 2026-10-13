@@ -462,6 +462,7 @@ class OcbMode:
         if self._mac_tag is None:
             self._compute_mac_tag()
 
+        assert self._mac_tag is not None
         if not compare_digest(self._mac_tag, received_mac_tag):
             raise ValueError("MAC check failed")
 

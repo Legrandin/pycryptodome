@@ -219,9 +219,7 @@ class ChaCha20Poly1305Cipher:
             raise TypeError("verify() cannot be called when encrypting a message")
         self._next = (Method.VERIFY,)
 
-        self._compute_mac()
-
-        if not compare_digest(self._mac_tag, received_mac_tag):
+        if not compare_digest(self._compute_mac(), received_mac_tag):
             raise ValueError("MAC check failed")
 
     def hexverify(self, hex_mac_tag: str) -> None:

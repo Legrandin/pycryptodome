@@ -549,8 +549,7 @@ class CcmMode:
             raise TypeError("verify() cannot be called when encrypting a message")
         self._next = [Method.VERIFY]
 
-        self._digest()
-        if not compare_digest(self._mac_tag, received_mac_tag):
+        if not compare_digest(self._digest(), received_mac_tag):
             raise ValueError("MAC check failed")
 
     def hexverify(self, hex_mac_tag: str) -> None:
