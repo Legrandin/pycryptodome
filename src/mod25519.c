@@ -137,14 +137,14 @@ STATIC void convert_le25p5_to_be8(uint8_t out[32], const uint32_t in[10])
 /*
  * Return non-zero if a 256-bit mixed-radix 2²⁶/2²⁵  little-endian integer is zero.
  */
-STATIC int is_le25p5_zero(const uint32_t in[10])
+STATIC uint64_t is_le25p5_zero(const uint32_t in[10])
 {
     uint64_t out64[4];
 
     convert_le25p5_to_le64(out64, in);
     reduce_25519_le64(out64);
 
-    return (int)ct_z(out64[0] | out64[1] | out64[2] | out64[3]);
+    return ct_z(out64[0] | out64[1] | out64[2] | out64[3]);
 }
 
 static int hex2bin(char in)

@@ -5,7 +5,7 @@
 
 void convert_le64_to_le25p5(uint32_t out[10], const uint64_t in[4]);
 void convert_le25p5_to_le64(uint64_t out[4], const uint32_t in[10]);
-int is_le25p5_zero(const uint32_t in[10]);
+uint64_t is_le25p5_zero(const uint32_t in[10]);
 int convert_behex_to_le25p5(uint32_t out[10], const char *in);
 int convert_le25p5_to_behex(char **out, uint32_t in[10]);
 void reduce_25519_le64(uint64_t x[4]);
