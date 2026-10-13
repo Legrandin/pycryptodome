@@ -7,6 +7,7 @@ EAX mode.
 
 from __future__ import annotations
 
+from hmac import compare_digest
 from typing import TYPE_CHECKING, Optional, Union, overload
 
 __all__ = ["EaxMode"]
@@ -15,7 +16,7 @@ import struct
 from binascii import unhexlify
 
 from Crypto.Cipher._state_machine import Method
-from Crypto.Hash import CMAC, BLAKE2s
+from Crypto.Hash import CMAC
 from Crypto.Random import get_random_bytes
 from Crypto.Util._raw_api import is_buffer
 from Crypto.Util.number import bytes_to_long
@@ -270,7 +271,7 @@ class EaxMode:
 
         :Return: the MAC, as a hexadecimal string.
         """
-        return "".join(["%02x" % x for x in self.digest()])
+        return self.digest().hex()
 
     def verify(self, received_mac_tag: Buffer) -> None:
         """Validate the *binary* MAC tag.
@@ -299,12 +300,7 @@ class EaxMode:
                 tag = strxor(tag, self._omac[i].digest())
             self._mac_tag = tag[: self._mac_len]
 
-        secret = get_random_bytes(16)
-
-        mac1 = BLAKE2s.new(digest_bits=160, key=secret, data=self._mac_tag)
-        mac2 = BLAKE2s.new(digest_bits=160, key=secret, data=received_mac_tag)
-
-        if mac1.digest() != mac2.digest():
+        if not compare_digest(self._mac_tag, received_mac_tag):
             raise ValueError("MAC check failed")
 
     def hexverify(self, hex_mac_tag: str) -> None:

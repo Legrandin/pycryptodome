@@ -4,12 +4,13 @@
 from __future__ import annotations
 
 from binascii import unhexlify
+from hmac import compare_digest
 from typing import Optional, Union, overload
 
 from Crypto.Cipher import ChaCha20
 from Crypto.Cipher._state_machine import Method
 from Crypto.Cipher.ChaCha20 import _HChaCha20
-from Crypto.Hash import BLAKE2s, Poly1305
+from Crypto.Hash import Poly1305
 from Crypto.Random import get_random_bytes
 from Crypto.Util._raw_api import is_buffer
 from Crypto.Util.number import long_to_bytes
@@ -198,7 +199,7 @@ class ChaCha20Poly1305Cipher:
 
         :Return: the MAC tag, as a hexadecimal string.
         """
-        return "".join(["%02x" % x for x in self.digest()])
+        return self.digest().hex()
 
     def verify(self, received_mac_tag: Buffer) -> None:
         """Validate the *binary* authentication tag (MAC).
@@ -218,14 +219,9 @@ class ChaCha20Poly1305Cipher:
             raise TypeError("verify() cannot be called when encrypting a message")
         self._next = (Method.VERIFY,)
 
-        secret = get_random_bytes(16)
-
         self._compute_mac()
 
-        mac1 = BLAKE2s.new(digest_bits=160, key=secret, data=self._mac_tag)
-        mac2 = BLAKE2s.new(digest_bits=160, key=secret, data=received_mac_tag)
-
-        if mac1.digest() != mac2.digest():
+        if not compare_digest(self._mac_tag, received_mac_tag):
             raise ValueError("MAC check failed")
 
     def hexverify(self, hex_mac_tag: str) -> None:

@@ -29,10 +29,11 @@ import sys
 import types
 import warnings
 from functools import reduce
+from hmac import compare_digest
 from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, Union, overload
 
 from Crypto import KdfIterationLimitError
-from Crypto.Hash import CMAC, HMAC, SHA1, SHA256, BLAKE2s
+from Crypto.Hash import CMAC, HMAC, SHA1, SHA256
 from Crypto.Random import get_random_bytes
 from Crypto.Util._bytes import tobytes
 from Crypto.Util._raw_api import (
@@ -76,8 +77,8 @@ def PBKDF1(
     """Derive one key from a password (or passphrase).
 
     This function performs key derivation according to an old version of
-    the PKCS#5 standard (v1.5) or `RFC2898
-    <https://www.ietf.org/rfc/rfc2898.txt>`_.
+    the PKCS#5 standard (v1.5), still described in `RFC 8018
+    <https://www.rfc-editor.org/rfc/rfc8018>`_.
 
     Args:
      password (string):
@@ -206,7 +207,7 @@ def PBKDF2(
     salt = tobytes(salt)
 
     if prf and hmac_hash_module:
-        raise ValueError("'prf' and 'hmac_hash_module' are mutually exlusive")
+        raise ValueError("'prf' and 'hmac_hash_module' are mutually exclusive")
 
     missing = []
     if count is None:
@@ -261,7 +262,7 @@ class _S2V:
     This class implements a pseudorandom function family
     based on CMAC that takes as input a vector of strings.
 
-    .. _RFC5297: http://tools.ietf.org/html/rfc5297
+    .. _RFC5297: https://www.rfc-editor.org/rfc/rfc5297
     """
 
     def __init__(
@@ -429,7 +430,7 @@ def HKDF(
     Return:
         A byte string or a tuple of byte strings.
 
-    .. _RFC5869: http://tools.ietf.org/html/rfc5869
+    .. _RFC5869: https://www.rfc-editor.org/rfc/rfc5869
     """
 
     output_len = key_len * num_keys
@@ -845,11 +846,7 @@ def bcrypt_check(
 
     bcrypt_hash2 = bcrypt(password, cost, salt)
 
-    secret = get_random_bytes(16)
-
-    mac1 = BLAKE2s.new(digest_bits=160, key=secret, data=bcrypt_hash).digest()
-    mac2 = BLAKE2s.new(digest_bits=160, key=secret, data=bcrypt_hash2).digest()
-    if mac1 != mac2:
+    if not compare_digest(bcrypt_hash, bcrypt_hash2):
         raise ValueError("Incorrect bcrypt hash")
 
 

@@ -27,8 +27,8 @@
 from __future__ import annotations
 
 import math
+import operator
 import struct
-import warnings
 from typing import Callable, Optional, Union
 
 from Crypto import Random
@@ -161,7 +161,7 @@ def _rabinMillerTest(n: int, rounds: int, randfunc: Optional[RNG] = None) -> int
     Returns 1 when n is probably prime.
     Returns 2 when n is definitely prime.
 
-    If randfunc is omitted, then Random.new().read is used.
+    If randfunc is omitted, then :meth:`Random.get_random_bytes` is used.
 
     This function is for internal use only and may be renamed or removed in
     the future.
@@ -393,47 +393,14 @@ def long_to_bytes(n: int, blocksize: int = 0) -> bytes:
         an ``OverflowError`` exception is raised if :data:`n` does not fit.
     """
 
+    n = operator.index(n)
     if n < 0 or blocksize < 0:
         raise ValueError("Values must be non-negative")
 
-    result: list[bytes] = []
-    pack = struct.pack
-
-    # Fill the first block independently from the value of n
-    bsr = blocksize
-    while bsr >= 8:
-        result.insert(0, pack(">Q", n & 0xFFFFFFFFFFFFFFFF))
-        n = n >> 64
-        bsr -= 8
-
-    while bsr >= 4:
-        result.insert(0, pack(">I", n & 0xFFFFFFFF))
-        n = n >> 32
-        bsr -= 4
-
-    while bsr > 0:
-        result.insert(0, pack(">B", n & 0xFF))
-        n = n >> 8
-        bsr -= 1
-
-    if n == 0:
-        if len(result) == 0:
-            bresult = b"\x00"
-        else:
-            bresult = b"".join(result)
-    else:
-        # The encoded number exceeds the block size
-        while n > 0:
-            result.insert(0, pack(">Q", n & 0xFFFFFFFFFFFFFFFF))
-            n = n >> 64
-        result[0] = result[0].lstrip(b"\x00")
-        bresult = b"".join(result)
-        # bresult has minimum length here
-        if blocksize > 0:
-            target_len = ((len(bresult) - 1) // blocksize + 1) * blocksize
-            bresult = b"\x00" * (target_len - len(bresult)) + bresult
-
-    return bresult
+    length = max((n.bit_length() + 7) // 8, 1)
+    if blocksize > 0:
+        length = ceil_div(length, blocksize) * blocksize
+    return n.to_bytes(length, "big")
 
 
 def bytes_to_long(s: Union[bytes, bytearray, memoryview]) -> int:
@@ -450,29 +417,7 @@ def bytes_to_long(s: Union[bytes, bytearray, memoryview]) -> int:
 
     This is (essentially) the inverse of :func:`long_to_bytes`.
     """
-    acc = 0
-
-    unpack = struct.unpack
-
-    length = len(s)
-    if length % 4:
-        extra = 4 - length % 4
-        s = b"\x00" * extra + s
-        length = length + extra
-    for i in range(0, length, 4):
-        acc = (acc << 32) + unpack(">I", s[i : i + 4])[0]
-    return acc
-
-
-# For backwards compatibility...
-def long2str(n: int, blocksize: int = 0) -> bytes:
-    warnings.warn("long2str() has been replaced by long_to_bytes()")
-    return long_to_bytes(n, blocksize)
-
-
-def str2long(s: bytes) -> int:
-    warnings.warn("str2long() has been replaced by bytes_to_long()")
-    return bytes_to_long(s)
+    return int.from_bytes(s, "big")
 
 
 # The first 10000 primes used for checking primality.

@@ -53,7 +53,7 @@ def miller_rabin_test(
         return COMPOSITE
 
     if randfunc is None:
-        randfunc = Random.new().read
+        randfunc = Random.get_random_bytes
 
     # Steps 1-3 and 4.3-4.5 are in Integer._miller_rabin(), which is constant
     # time for IntegerNat (the candidate is usually a secret prime)
@@ -157,7 +157,7 @@ def test_probable_prime(
     """
 
     if randfunc is None:
-        randfunc = Random.new().read
+        randfunc = Random.get_random_bytes
 
     if not isinstance(candidate, Integer):
         candidate = Integer(candidate)
@@ -247,7 +247,7 @@ def generate_probable_prime(
         raise ValueError("Prime number is not big enough.")
 
     if randfunc is None:
-        randfunc = Random.new().read
+        randfunc = Random.get_random_bytes
 
     result = COMPOSITE
     while result == COMPOSITE:
@@ -277,7 +277,7 @@ def generate_probable_safe_prime(
     """
 
     if randfunc is None:
-        randfunc = Random.new().read
+        randfunc = Random.get_random_bytes
 
     result = COMPOSITE
     while result == COMPOSITE:

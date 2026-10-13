@@ -7,6 +7,7 @@ Galois/Counter Mode (GCM).
 
 from __future__ import annotations
 
+from hmac import compare_digest
 from typing import TYPE_CHECKING, Any, Optional, Union, overload
 
 __all__ = ["GcmMode"]
@@ -15,7 +16,6 @@ from binascii import unhexlify
 
 from Crypto import MessageTooLongError
 from Crypto.Cipher._state_machine import Method
-from Crypto.Hash import BLAKE2s
 from Crypto.Random import get_random_bytes
 from Crypto.Util import _cpu_features
 from Crypto.Util._raw_api import (
@@ -570,7 +570,7 @@ class GcmMode:
 
         :Return: the MAC, as a hexadecimal string.
         """
-        return "".join(["%02x" % x for x in self.digest()])
+        return self.digest().hex()
 
     def verify(self, received_mac_tag: Buffer) -> None:
         """Validate the *binary* MAC tag.
@@ -593,12 +593,7 @@ class GcmMode:
             raise TypeError("verify() cannot be called when encrypting a message")
         self._next = [Method.VERIFY]
 
-        secret = get_random_bytes(16)
-
-        mac1 = BLAKE2s.new(digest_bits=160, key=secret, data=self._compute_mac())
-        mac2 = BLAKE2s.new(digest_bits=160, key=secret, data=received_mac_tag)
-
-        if mac1.digest() != mac2.digest():
+        if not compare_digest(self._compute_mac(), received_mac_tag):
             raise ValueError("MAC check failed")
 
     def hexverify(self, hex_mac_tag: str) -> None:

@@ -552,8 +552,8 @@ class EccKey:
             (both ``DER`` and ``PEM`` formats), any extra parameters
             to ``export_key()`` will be passed to :mod:`Crypto.IO.PKCS8`.
 
-        .. _PEM:        http://www.ietf.org/rfc/rfc1421.txt
-        .. _`PEM encryption`: http://www.ietf.org/rfc/rfc1423.txt
+        .. _PEM:        https://www.rfc-editor.org/rfc/rfc1421
+        .. _`PEM encryption`: https://www.rfc-editor.org/rfc/rfc1423
         .. _OpenSSH:    http://www.openssh.com/txt/rfc5656.txt
         .. _RFC5480:    https://tools.ietf.org/html/rfc5480
         .. _SEC1:       https://www.secg.org/sec1-v2.pdf
@@ -606,7 +606,7 @@ class EccKey:
             elif ext_format == "DER":
                 # DER
                 if passphrase and not use_pkcs8:
-                    raise ValueError("Private keys can only be encrpyted with DER using PKCS#8")
+                    raise ValueError("Private keys can only be encrypted with DER using PKCS#8")
                 if use_pkcs8:
                     return self._export_pkcs8(passphrase=passphrase, threads=threads, **args)
                 else:
@@ -1093,7 +1093,7 @@ def _import_openssh_private_ecc(data, password, max_iteration_count=None):
 
         params = {"seed": seed, "curve": curve_name}
     else:
-        raise ValueError("Unsupport SSH agent key type:" + key_type)
+        raise ValueError("Unsupported SSH agent key type: " + key_type)
 
     _, padded = read_string(decrypted)  # Comment
     check_padding(padded)
@@ -1321,7 +1321,7 @@ def import_key(
     .. _RFC5656: https://datatracker.ietf.org/doc/html/rfc5656
     .. _RFC8709: https://datatracker.ietf.org/doc/html/rfc8709
     .. _RFC5958: https://datatracker.ietf.org/doc/html/rfc5958
-    .. _`PKCS#8`: https://datatracker.ietf.org/doc/html/rfc5208
+    .. _`PKCS#8`: https://datatracker.ietf.org/doc/html/rfc5958
     .. _`OpenSSH 6.5`: https://flak.tedunangst.com/post/new-openssh-key-format-and-bcrypt-pbkdf
     .. _SEC1: https://www.secg.org/sec1-v2.pdf
     """

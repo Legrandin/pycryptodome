@@ -404,10 +404,10 @@ class RsaKey:
             If you don't provide a pass phrase, the private key will be
             exported in the clear!
 
-        .. _RFC1421:    http://www.ietf.org/rfc/rfc1421.txt
-        .. _RFC1423:    http://www.ietf.org/rfc/rfc1423.txt
-        .. _`PKCS#1`:   http://www.ietf.org/rfc/rfc3447.txt
-        .. _`PKCS#8`:   http://www.ietf.org/rfc/rfc5208.txt
+        .. _RFC1421:    https://www.rfc-editor.org/rfc/rfc1421
+        .. _RFC1423:    https://www.rfc-editor.org/rfc/rfc1423
+        .. _`PKCS#1`:   https://www.rfc-editor.org/rfc/rfc8017
+        .. _`PKCS#8`:   https://www.rfc-editor.org/rfc/rfc5958
         """
 
         from Crypto.IO import PKCS8
@@ -942,10 +942,10 @@ def import_key(
       ValueError/IndexError/TypeError:
         When the given key cannot be parsed.
 
-    .. _RFC1421: http://www.ietf.org/rfc/rfc1421.txt
-    .. _RFC1423: http://www.ietf.org/rfc/rfc1423.txt
-    .. _`PKCS#1`: http://www.ietf.org/rfc/rfc3447.txt
-    .. _`PKCS#8`: http://www.ietf.org/rfc/rfc5208.txt
+    .. _RFC1421: https://www.rfc-editor.org/rfc/rfc1421
+    .. _RFC1423: https://www.rfc-editor.org/rfc/rfc1423
+    .. _`PKCS#1`: https://www.rfc-editor.org/rfc/rfc8017
+    .. _`PKCS#8`: https://www.rfc-editor.org/rfc/rfc5958
     .. _`OpenSSH 6.5`: https://flak.tedunangst.com/post/new-openssh-key-format-and-bcrypt-pbkdf
     """
 

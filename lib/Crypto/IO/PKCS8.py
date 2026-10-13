@@ -274,7 +274,7 @@ def unwrap(
     elif len(pk_info) == 2:
         raise ValueError("Not a valid PKCS#8 structure")
 
-    # RFC5208, PKCS#8, version is v1(0)
+    # RFC 5958 (PKCS#8), version is v1(0)
     #
     #   PrivateKeyInfo ::= SEQUENCE {
     #       version                 Version,

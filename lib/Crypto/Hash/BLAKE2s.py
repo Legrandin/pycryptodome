@@ -121,7 +121,7 @@ class BLAKE2s_Hash:
         :rtype: string
         """
 
-        return "".join(["%02x" % x for x in tuple(self.digest())])
+        return self.digest().hex()
 
     def verify(self, mac_tag: Buffer) -> None:
         """Verify that a given **binary** MAC (computed by another party)

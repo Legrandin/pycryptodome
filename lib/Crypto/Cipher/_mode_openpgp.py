@@ -35,7 +35,7 @@ class OpenPgpMode:
     known to be insecure and is ignored. The encrypted IV is therefore 2 bytes
     longer than the clean IV.
 
-    .. _OpenPGP: http://tools.ietf.org/html/rfc4880
+    .. _OpenPGP: https://www.rfc-editor.org/rfc/rfc4880
 
     :undocumented: __init__
     """

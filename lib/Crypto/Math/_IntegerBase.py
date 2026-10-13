@@ -422,7 +422,7 @@ class IntegerBase(ABC):
         """
 
         if randfunc is None:
-            randfunc = Random.new().read
+            randfunc = Random.get_random_bytes
 
         if exact_bits is not None:
             if max_bits is not None:
@@ -476,7 +476,7 @@ class IntegerBase(ABC):
             raise ValueError("Missing keyword to identify the interval")
 
         if randfunc is None:
-            randfunc = Random.new().read
+            randfunc = Random.get_random_bytes
 
         norm_maximum = cls(max_inclusive) - min_inclusive
         bits_needed = norm_maximum.size_in_bits()

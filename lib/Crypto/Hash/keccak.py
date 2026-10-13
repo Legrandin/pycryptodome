@@ -154,7 +154,7 @@ class Keccak_Hash:
         :rtype: string
         """
 
-        return "".join(["%02x" % x for x in self.digest()])
+        return self.digest().hex()
 
     def new(
         self,

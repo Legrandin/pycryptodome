@@ -22,10 +22,9 @@
 from __future__ import annotations
 
 from binascii import unhexlify
+from hmac import compare_digest
 from typing import TYPE_CHECKING, Any, Optional, Union
 
-from Crypto.Hash import BLAKE2s
-from Crypto.Random import get_random_bytes
 from Crypto.Util._bytes import tobytes
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 from Crypto.Util.strxor import strxor
@@ -223,7 +222,7 @@ class CMAC:
         :rtype: string
         """
 
-        return "".join(["%02x" % x for x in tuple(self.digest())])
+        return self.digest().hex()
 
     def verify(self, mac_tag: Buffer) -> None:
         """Verify that a given **binary** MAC (computed by another party)
@@ -237,12 +236,7 @@ class CMAC:
                 has been tampered with or that the MAC key is incorrect.
         """
 
-        secret = get_random_bytes(16)
-
-        mac1 = BLAKE2s.new(digest_bits=160, key=secret, data=mac_tag)
-        mac2 = BLAKE2s.new(digest_bits=160, key=secret, data=self.digest())
-
-        if mac1.digest() != mac2.digest():
+        if not compare_digest(mac_tag, self.digest()):
             raise ValueError("MAC check failed")
 
     def hexverify(self, hex_mac_tag: str) -> None:

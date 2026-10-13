@@ -35,10 +35,9 @@ from __future__ import annotations
 
 import warnings
 from binascii import unhexlify
+from hmac import compare_digest
 from typing import TYPE_CHECKING, Optional, Union
 
-from Crypto.Hash import BLAKE2s
-from Crypto.Random import get_random_bytes
 from Crypto.Util._bytes import tobytes
 from Crypto.Util.strxor import strxor
 
@@ -167,7 +166,7 @@ class HMAC:
 
         new_hmac = HMAC(b"fake key", digestmod=self._digestmod)
 
-        # Syncronize the state
+        # Synchronize the state
         new_hmac._inner = self._inner.copy()
         new_hmac._outer = self._outer.copy()
 
@@ -198,12 +197,7 @@ class HMAC:
                 has been tampered with or that the MAC key is incorrect.
         """
 
-        secret = get_random_bytes(16)
-
-        mac1 = BLAKE2s.new(digest_bits=160, key=secret, data=mac_tag)
-        mac2 = BLAKE2s.new(digest_bits=160, key=secret, data=self.digest())
-
-        if mac1.digest() != mac2.digest():
+        if not compare_digest(mac_tag, self.digest()):
             raise ValueError("MAC check failed")
 
     def hexdigest(self) -> str:
@@ -214,7 +208,7 @@ class HMAC:
         :rtype: string
         """
 
-        return "".join(["%02x" % x for x in tuple(self.digest())])
+        return self.digest().hex()
 
     def hexverify(self, hex_mac_tag: str) -> None:
         """Verify that a given **printable** MAC (computed by another party)

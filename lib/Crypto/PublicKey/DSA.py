@@ -277,10 +277,10 @@ class DsaKey:
             If you don't provide a pass phrase, the private key will be
             exported in the clear!
 
-        .. _RFC1421:    http://www.ietf.org/rfc/rfc1421.txt
-        .. _RFC1423:    http://www.ietf.org/rfc/rfc1423.txt
-        .. _RFC4253:    http://www.ietf.org/rfc/rfc4253.txt
-        .. _`PKCS#8`:   http://www.ietf.org/rfc/rfc5208.txt
+        .. _RFC1421:    https://www.rfc-editor.org/rfc/rfc1421
+        .. _RFC1423:    https://www.rfc-editor.org/rfc/rfc1423
+        .. _RFC4253:    https://www.rfc-editor.org/rfc/rfc4253
+        .. _`PKCS#8`:   https://www.rfc-editor.org/rfc/rfc5958
         """
 
         if passphrase is not None:
@@ -490,7 +490,7 @@ def generate(
         raise ValueError("Mismatch between size of modulus (%d) and 'bits' parameter (%d)" % (L, bits))
 
     if (L, N) not in [(1024, 160), (2048, 224), (2048, 256), (3072, 256)]:
-        raise ValueError("Lengths of p and q (%d, %d) are not compatibleto FIPS 186-3" % (L, N))
+        raise ValueError("Lengths of p and q (%d, %d) are not compatible with FIPS 186-3" % (L, N))
 
     if not 1 < g < p:
         raise ValueError("Incorrent DSA generator")
@@ -702,10 +702,10 @@ def import_key(
         with the passphrase (most likely, the passphrase is wrong).
       ValueError : when the given key cannot be parsed.
 
-    .. _RFC1421: http://www.ietf.org/rfc/rfc1421.txt
-    .. _RFC1423: http://www.ietf.org/rfc/rfc1423.txt
-    .. _RFC4253: http://www.ietf.org/rfc/rfc4253.txt
-    .. _PKCS#8: http://www.ietf.org/rfc/rfc5208.txt
+    .. _RFC1421: https://www.rfc-editor.org/rfc/rfc1421
+    .. _RFC1423: https://www.rfc-editor.org/rfc/rfc1423
+    .. _RFC4253: https://www.rfc-editor.org/rfc/rfc4253
+    .. _PKCS#8: https://www.rfc-editor.org/rfc/rfc5958
     """
 
     PKCS8._check_kdf_params(max_iteration_count, threads, max_memory)

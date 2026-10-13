@@ -57,7 +57,7 @@ class PSS_SigScheme:
             If a public half is given, only verification is possible.
           mgfunc : callable
             A mask generation function that accepts two parameters:
-            a string to use as seed, and the lenth of the mask to
+            a string to use as seed, and the length of the mask to
             generate, in bytes.
           saltLen : integer
             Length of the salt, in bytes.
@@ -104,7 +104,7 @@ class PSS_SigScheme:
 
         modBits = Crypto.Util.number.size(self._key.n)
 
-        # See 8.1.1 in RFC3447
+        # See 8.1.1 in RFC 8017
         ceil_div(modBits, 8)  # k is length in bytes of the modulus
         # Step 1
         em = _EMSA_PSS_ENCODE(msg_hash, modBits - 1, self._randfunc, mgf, sLen)
@@ -122,7 +122,7 @@ class PSS_SigScheme:
 
         This function is also called ``RSASSA-PSS-VERIFY`` and
         it is specified in
-        `section 8.1.2 of RFC8037 <https://tools.ietf.org/html/rfc8017#section-8.1.2>`_.
+        `section 8.1.2 of RFC8017 <https://tools.ietf.org/html/rfc8017#section-8.1.2>`_.
 
         :parameter msg_hash:
             The hash that was carried out over the message. This is an object
@@ -148,7 +148,7 @@ class PSS_SigScheme:
 
         modBits = Crypto.Util.number.size(self._key.n)
 
-        # See 8.1.2 in RFC3447
+        # See 8.1.2 in RFC 8017
         k = ceil_div(modBits, 8)  # Convert from bits to bytes
         # Step 1
         if len(signature) != k:
@@ -196,7 +196,7 @@ def MGF1(mgfSeed: bytes, maskLen: int, hash_gen: _HashGenerator) -> bytes:
 def _EMSA_PSS_ENCODE(mhash: Hash, emBits: int, randFunc: RndFunction, mgf: MaskFunction, sLen: int) -> bytes:
     r"""
     Implement the ``EMSA-PSS-ENCODE`` function, as defined
-    in PKCS#1 v2.1 (RFC3447, 9.1.1).
+    in PKCS#1 v2.2 (RFC 8017, 9.1.1).
 
     The original ``EMSA-PSS-ENCODE`` actually accepts the message ``M``
     as input, and hash it internally. Here, we expect that the message
@@ -212,7 +212,7 @@ def _EMSA_PSS_ENCODE(mhash: Hash, emBits: int, randFunc: RndFunction, mgf: MaskF
         a string of random bytes, to be used as salt.
       mgf : callable
         A mask generation function that accepts two parameters: a string to
-        use as seed, and the lenth of the mask to generate, in bytes.
+        use as seed, and the length of the mask to generate, in bytes.
       sLen : int
         Length of the salt, in bytes.
 
@@ -259,7 +259,7 @@ def _EMSA_PSS_ENCODE(mhash: Hash, emBits: int, randFunc: RndFunction, mgf: MaskF
 def _EMSA_PSS_VERIFY(mhash: Hash, em: bytes, emBits: int, mgf: MaskFunction, sLen: int) -> None:
     """
     Implement the ``EMSA-PSS-VERIFY`` function, as defined
-    in PKCS#1 v2.1 (RFC3447, 9.1.2).
+    in PKCS#1 v2.2 (RFC 8017, 9.1.2).
 
     ``EMSA-PSS-VERIFY`` actually accepts the message ``M`` as input,
     and hash it internally. Here, we expect that the message has already
@@ -275,7 +275,7 @@ def _EMSA_PSS_VERIFY(mhash: Hash, em: bytes, emBits: int, mgf: MaskFunction, sLe
         Length of the final encoding (em), in bits.
       mgf : callable
         A mask generation function that accepts two parameters: a string to
-        use as seed, and the lenth of the mask to generate, in bytes.
+        use as seed, and the length of the mask to generate, in bytes.
       sLen : int
         Length of the salt, in bytes.
 

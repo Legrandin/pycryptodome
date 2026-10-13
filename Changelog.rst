@@ -61,15 +61,14 @@ Breaking changes
   are then rejected, instead of being silently ignored.
   Also, ``protection`` or ``prot_params`` without a passphrase raise ``ValueError``,
   for RSA, DSA and ECC keys: before, the key was exported in the clear.
+* Removed ``Crypto.Util.number.long2str()`` and ``str2long()``, aliases of
+  ``long_to_bytes()`` and ``bytes_to_long()`` deprecated since PyCrypto.
 
 Deprecations
 ------------
 * ``Crypto.Hash.HMAC.new()`` without ``digestmod`` (which then uses MD5) emits a
   ``DeprecationWarning``. The default will be removed: always pass the hash
   (for instance, ``digestmod=SHA256``), as with Python's ``hmac`` module.
-
-Deprecations
-------------
 * ``Crypto.Protocol.KDF.PBKDF2()`` without ``count`` (which then uses 1000 iterations)
   or without ``hmac_hash_module`` and ``prf`` (which then uses HMAC-SHA1) emits a
   ``DeprecationWarning``. These weak defaults will be removed: always pass them
@@ -77,11 +76,17 @@ Deprecations
 
 Resolved issues
 ---------------
+* ``Crypto.Util.number.long_to_bytes()`` took quadratic time on large integers:
+  now it uses ``int.to_bytes()``, and ``bytes_to_long()`` uses ``int.from_bytes()``.
+* The ``verify()`` methods of MACs and AEAD modes, and ``bcrypt_check()``, compare
+  the tags with ``hmac.compare_digest()``, instead of two BLAKE2s MACs with a random key.
+* Updated the references to superseded RFCs (PKCS#1 to RFC 8017, PKCS#5 to RFC 8018,
+  PKCS#8 to RFC 5958), and fixed typos in error messages.
 * Exporting a private key with an empty passphrase of type ``bytes`` returned the key
   in the clear, instead of raising ``ValueError``: for ECC keys in all formats,
   and for RSA (``pkcs=1``) and DSA (``pkcs8=False``) keys in DER format.
 * ``RsaKey.export_key()`` with ``format='PEM'``, ``pkcs=8``, a ``protection`` but no passphrase
-  labeled the key in the clear as ``ENCRYPTED PRIVATE KEY``.
+  labeled the key in the clear as ``ENCRYPTED PRIVATE KEY`` (now it raises ``ValueError``).
 * Importing a private key in clear PKCS#8 format failed if a passphrase was
   also given; now the passphrase is ignored, as for the other formats.
 * ``Crypto.Math.Primality``: the trial division by small primes in ``test_probable_prime()``

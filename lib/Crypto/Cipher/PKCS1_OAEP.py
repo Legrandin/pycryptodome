@@ -85,7 +85,7 @@ def new(
 
     :param mgfunc:
       A mask generation function that accepts two parameters: a string to
-      use as seed, and the lenth of the mask to generate, in bytes.
+      use as seed, and the length of the mask to generate, in bytes.
       If not specified, the standard MGF1 consistent with ``hashAlgo`` is used (a safe choice).
     :type mgfunc: callable
 

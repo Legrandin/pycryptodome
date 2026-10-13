@@ -67,7 +67,7 @@ class TupleHash:
         :rtype: string
         """
 
-        return "".join(["%02x" % x for x in tuple(self.digest())])
+        return self.digest().hex()
 
     def new(
         self, *, digest_bytes: Optional[int] = None, digest_bits: Optional[int] = None, custom: Buffer = b""

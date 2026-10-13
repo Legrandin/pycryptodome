@@ -188,7 +188,7 @@ class ElGamalKey:
 
     def __init__(self, randfunc: Optional[RNG] = None) -> None:
         if randfunc is None:
-            randfunc = Random.new().read
+            randfunc = Random.get_random_bytes
         self._randfunc = randfunc
 
     @property

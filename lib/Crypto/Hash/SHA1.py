@@ -128,7 +128,7 @@ class SHA1Hash:
         :rtype: string
         """
 
-        return "".join(["%02x" % x for x in self.digest()])
+        return self.digest().hex()
 
     def copy(self) -> SHA1Hash:
         """Return a copy ("clone") of the hash object.

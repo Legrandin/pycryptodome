@@ -239,9 +239,9 @@ def _scrypt_threads(N: int, r: int, p: int, threads: int, max_memory: Optional[i
 
 class PBES1:
     """Deprecated encryption scheme with password-based key derivation
-    (originally defined in PKCS#5 v1.5, but still present in `v2.0`__).
+    (originally defined in PKCS#5 v1.5, but still present in `v2.1`__).
 
-    .. __: http://www.ietf.org/rfc/rfc2898.txt
+    .. __: https://www.rfc-editor.org/rfc/rfc8018
     """
 
     @staticmethod
@@ -327,9 +327,10 @@ class PBES1:
 
 class PBES2:
     """Encryption scheme with password-based key derivation
-    (defined in `PKCS#5 v2.0`__).
+    (defined in `PKCS#5 v2.1`__).
 
-    .. __: http://www.ietf.org/rfc/rfc2898.txt."""
+    .. __: https://www.rfc-editor.org/rfc/rfc8018
+    """
 
     @staticmethod
     def encrypt(
@@ -391,7 +392,7 @@ class PBES2:
             prot_params = {}
 
         if randfunc is None:
-            randfunc = Random.new().read
+            randfunc = Random.get_random_bytes
 
         pattern = re.compile(r"^(PBKDF2WithHMAC-([0-9A-Z-]+)|scrypt)And([0-9A-Z-]+)$")
         res = pattern.match(protection)

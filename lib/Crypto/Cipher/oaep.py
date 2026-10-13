@@ -106,7 +106,7 @@ class PKCS1OAEP_Cipher:
             if the message is too long.
         """
 
-        # See 7.1.1 in RFC3447
+        # See 7.1.1 in RFC 8017
         modBits = Crypto.Util.number.size(self._key.n)
         k = ceil_div(modBits, 8)  # Convert from bits to bytes
         hLen = self._hashObj.digest_size
@@ -160,7 +160,7 @@ class PKCS1OAEP_Cipher:
             to decrypt using a public key).
         """
 
-        # See 7.1.2 in RFC3447
+        # See 7.1.2 in RFC 8017
         modBits = Crypto.Util.number.size(self._key.n)
         k = ceil_div(modBits, 8)  # Convert from bits to bytes
         hLen = self._hashObj.digest_size

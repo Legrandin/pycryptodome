@@ -164,7 +164,7 @@ def decode(pem_data: str, passphrase: Optional[bytes] = None) -> tuple[bytes, st
             objdec = AES.new(key, AES.MODE_GCM, nonce=salt)
             padding = False
         else:
-            raise ValueError("Unsupport PEM encryption algorithm (%s)." % algo)
+            raise ValueError("Unsupported PEM encryption algorithm (%s)." % algo)
         lines = lines[2:]
     else:
         objdec = None

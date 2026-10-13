@@ -348,7 +348,7 @@ def new(
     .. _FIPS 186-3: http://csrc.nist.gov/publications/fips/fips186-3/fips_186-3.pdf
     .. _FIPS 186-4: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf
     .. _NIST SP 800 Part 1 Rev 4: http://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-57pt1r4.pdf
-    .. _RFC6979: http://tools.ietf.org/html/rfc6979
+    .. _RFC6979: https://www.rfc-editor.org/rfc/rfc6979
     .. _RFC3279: https://tools.ietf.org/html/rfc3279#section-2.2.2
     """
 

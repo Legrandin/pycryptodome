@@ -56,7 +56,7 @@ class PKCS115_SigScheme:
         :raise TypeError: if the RSA key has no private half.
         """
 
-        # See 8.2.1 in RFC3447
+        # See 8.2.1 in RFC 8017
         modBits = Crypto.Util.number.size(self._key.n)
         k = ceil_div(modBits, 8)  # Convert from bits to bytes
 
@@ -76,7 +76,7 @@ class PKCS115_SigScheme:
 
         This function is also called ``RSASSA-PKCS1-V1_5-VERIFY`` and
         it is specified in
-        `section 8.2.2 of RFC8037 <https://tools.ietf.org/html/rfc8017#page-37>`_.
+        `section 8.2.2 of RFC8017 <https://tools.ietf.org/html/rfc8017#page-37>`_.
 
         :parameter msg_hash:
             The hash that was carried out over the message. This is an object
@@ -90,7 +90,7 @@ class PKCS115_SigScheme:
         :raise ValueError: if the signature is not valid.
         """
 
-        # See 8.2.2 in RFC3447
+        # See 8.2.2 in RFC 8017
         modBits = Crypto.Util.number.size(self._key.n)
         k = ceil_div(modBits, 8)  # Convert from bits to bytes
 
@@ -128,7 +128,7 @@ class PKCS115_SigScheme:
 def _EMSA_PKCS1_V1_5_ENCODE(msg_hash: Hash, emLen: int, with_hash_parameters: Optional[bool] = True) -> bytes:
     """
     Implement the ``EMSA-PKCS1-V1_5-ENCODE`` function, as defined
-    in PKCS#1 v2.1 (RFC3447, 9.2).
+    in PKCS#1 v2.2 (RFC 8017, 9.2).
 
     ``_EMSA-PKCS1-V1_5-ENCODE`` actually accepts the message ``M`` as input,
     and hash it internally. Here, we expect that the message has already
