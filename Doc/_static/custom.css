@@ -1,0 +1,9 @@
+/* API names (like MODE_ECB or encrypt_and_digest()) in the sidebars are code:
+   show them at the size of the text around them, so that they stay readable */
+.toc-tree code.literal,
+.sidebar-tree code.literal {
+    font-size: 100%;
+    background: none;
+    border: none;
+    padding: 0;
+}

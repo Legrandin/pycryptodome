@@ -29,7 +29,7 @@ Where to go next:
 * :doc:`src/faq`, for the most frequent questions.
 
 .. toctree::
-   :maxdepth: 1
+   :hidden:
    :caption: Contents
 
    src/introduction
