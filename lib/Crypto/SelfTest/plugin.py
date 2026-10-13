@@ -5,7 +5,12 @@
 
 import pytest
 
-from Crypto.SelfTest import st_common
+from Crypto.SelfTest import loader, st_common
+
+_NO_TEST_VECTORS = (
+    "pycryptodome-test-vectors is not installed: the extended tests are skipped "
+    "(pip install pycryptodome-test-vectors)"
+)
 
 pytest.register_assert_rewrite("Crypto.SelfTest.Cipher.common", "Crypto.SelfTest.Hash.common")
 
@@ -21,6 +26,23 @@ def pytest_addoption(parser):
 def pytest_configure(config):
     config.addinivalue_line("markers", "slow: slow test, deselected with --skip-slow-tests")
     st_common.options["wycheproof_warnings"] = config.getoption("wycheproof_warnings")
+
+
+def pytest_report_header(config):
+    if not loader.test_vectors_available:
+        return _NO_TEST_VECTORS
+    try:
+        from importlib.metadata import version
+
+        return "pycryptodome-test-vectors " + version("pycryptodome-test-vectors")
+    except Exception:
+        return "pycryptodome-test-vectors installed"
+
+
+def pytest_terminal_summary(terminalreporter):
+    # The header is far above, at the end of a long log
+    if not loader.test_vectors_available:
+        terminalreporter.write_line(_NO_TEST_VECTORS)
 
 
 def pytest_collection_modifyitems(config, items):

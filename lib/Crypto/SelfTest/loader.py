@@ -17,6 +17,19 @@ except ImportError:
     test_vectors_available = False
 
 
+def warn_skipped_tests(message, stacklevel=2):
+    """Warn that some extended tests are skipped, because a file of test vectors
+    is missing from the package pycryptodome-test-vectors.
+
+    If the whole package is not installed, nothing is reported here: the plugin
+    of the self-tests says it once, at the start and at the end of the run
+    (instead of a warning for each file).
+    ``stacklevel`` is the one of the caller of this function."""
+
+    if test_vectors_available:
+        warnings.warn(message, UserWarning, stacklevel=stacklevel + 1)
+
+
 def _load_tests(dir_comps, file_in, description, conversions):
     """Load and parse a test vector file
 
@@ -138,7 +151,7 @@ def load_test_vectors(dir_comps, file_name, description, conversions):
             results = _load_tests(dir_comps, file_in, description, conversions)
 
     except FileNotFoundError:
-        warnings.warn("Warning: skipping extended tests for " + description, UserWarning, stacklevel=2)
+        warn_skipped_tests("Warning: skipping extended tests for " + description)
 
     return results
 
@@ -155,7 +168,7 @@ def load_test_vectors_wycheproof(dir_comps, file_name, description, root_tag={},
             tv_tree = json.load(file_in)
 
     except FileNotFoundError:
-        warnings.warn("Warning: skipping extended tests for " + description, UserWarning, stacklevel=2)
+        warn_skipped_tests("Warning: skipping extended tests for " + description)
         return result
 
     class TestVector:

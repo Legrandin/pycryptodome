@@ -3,13 +3,13 @@
 
 import errno
 import os
-import warnings
 from binascii import unhexlify
 
 import pytest
 
 from Crypto.Hash import SHAKE128
 from Crypto.PublicKey import ECC
+from Crypto.SelfTest.loader import warn_skipped_tests
 from Crypto.Util.asn1 import DerBitString, DerSequence
 
 try:
@@ -34,7 +34,7 @@ def load_file(file_name, mode="rb"):
             results = file_in.read()
 
     except FileNotFoundError:
-        warnings.warn("Warning: skipping extended tests for ECC", UserWarning, stacklevel=2)
+        warn_skipped_tests("Warning: skipping extended tests for ECC")
 
     if results is None:
         pytest.skip("Missing %s" % file_name)

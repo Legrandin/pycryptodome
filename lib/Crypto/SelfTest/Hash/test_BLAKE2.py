@@ -3,12 +3,12 @@
 
 import os
 import re
-import warnings
 from binascii import hexlify, unhexlify
 
 import pytest
 
 from Crypto.Hash import BLAKE2b, BLAKE2s
+from Crypto.SelfTest.loader import warn_skipped_tests
 from Crypto.Util._bytes import tobytes
 from Crypto.Util.strxor import strxor_c
 
@@ -301,7 +301,7 @@ class Blake2OfficialTestVector:
         try:
             import pycryptodome_test_vectors  # type: ignore
         except ImportError:
-            warnings.warn("Warning: skipping extended tests for %s" % self.name, UserWarning)
+            warn_skipped_tests("Warning: skipping extended tests for %s" % self.name, stacklevel=1)
             self.test_vectors = []
             return
 
@@ -355,7 +355,7 @@ class Blake2TestVector1:
         try:
             import pycryptodome_test_vectors
         except ImportError:
-            warnings.warn("Warning: skipping extended tests for %s" % self.name, UserWarning)
+            warn_skipped_tests("Warning: skipping extended tests for %s" % self.name, stacklevel=1)
             self.test_vectors = []
             return
 
@@ -410,7 +410,7 @@ class Blake2TestVector2:
         try:
             import pycryptodome_test_vectors  # type: ignore
         except ImportError:
-            warnings.warn("Warning: skipping extended tests for %s" % self.name, UserWarning)
+            warn_skipped_tests("Warning: skipping extended tests for %s" % self.name, stacklevel=1)
             self.test_vectors = []
             return
 

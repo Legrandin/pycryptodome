@@ -22,13 +22,13 @@
 import errno
 import os
 import re
-import warnings
 
 import pytest
 
 from Crypto import KdfIterationLimitError
 from Crypto.IO import PEM
 from Crypto.PublicKey import RSA
+from Crypto.SelfTest.loader import warn_skipped_tests
 from Crypto.SelfTest.st_common import a2b_hex
 from Crypto.Util import asn1
 from Crypto.Util.number import inverse
@@ -55,7 +55,7 @@ def load_file(file_name, mode="rb"):
             results = file_in.read()
 
     except FileNotFoundError:
-        warnings.warn("Skipping tests for RSA based on %s" % file_name, UserWarning, stacklevel=2)
+        warn_skipped_tests("Skipping tests for RSA based on %s" % file_name)
 
     if results is None:
         pytest.skip("Missing %s" % file_name)

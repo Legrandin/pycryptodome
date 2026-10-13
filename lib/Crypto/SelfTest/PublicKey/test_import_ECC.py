@@ -3,7 +3,6 @@
 
 import errno
 import os
-import warnings
 from binascii import unhexlify
 
 import pytest
@@ -12,6 +11,7 @@ from Crypto import KdfIterationLimitError
 from Crypto.Hash import SHAKE128
 from Crypto.PublicKey import ECC
 from Crypto.PublicKey.ECC import _import_rfc5915_der
+from Crypto.SelfTest.loader import warn_skipped_tests
 from Crypto.Util.asn1 import DerBitString, DerSequence
 from Crypto.Util.number import bytes_to_long
 
@@ -37,7 +37,7 @@ def load_file(file_name, mode="rb"):
             results = file_in.read()
 
     except FileNotFoundError:
-        warnings.warn("Skipping extended tests for ECC", UserWarning, stacklevel=2)
+        warn_skipped_tests("Skipping extended tests for ECC")
 
     if results is None:
         pytest.skip("Missing %s" % file_name)

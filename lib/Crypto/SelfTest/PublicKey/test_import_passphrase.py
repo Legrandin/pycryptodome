@@ -7,13 +7,13 @@
 
 import errno
 import os
-import warnings
 
 import pytest
 
 from Crypto import IncorrectPassphraseError, KdfIterationLimitError, PassphraseRequiredError
 from Crypto.IO import PEM, PKCS8
 from Crypto.PublicKey import DSA, ECC, RSA
+from Crypto.SelfTest.loader import warn_skipped_tests
 
 try:
     import pycryptodome_test_vectors
@@ -31,7 +31,7 @@ def load_file(sub_dir, file_name):
         with open(os.path.join(init_dir, "PublicKey", sub_dir, file_name), "rb") as file_in:
             return file_in.read()
     except FileNotFoundError:
-        warnings.warn("Skipping tests for encrypted OpenSSH keys", UserWarning, stacklevel=2)
+        warn_skipped_tests("Skipping tests for encrypted OpenSSH keys")
         pytest.skip("Missing %s" % file_name)
 
 
