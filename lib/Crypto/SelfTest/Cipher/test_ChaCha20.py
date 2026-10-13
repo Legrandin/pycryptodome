@@ -119,8 +119,8 @@ class TestChaCha20:
         ct = cipher.encrypt(bytes([0]) * len(expected_key_stream))
         assert expected_key_stream == ct
 
-    def test_rfc7539(self):
-        # from https://tools.ietf.org/html/rfc7539 Annex A.1
+    def test_rfc8439(self):
+        # from https://datatracker.ietf.org/doc/html/rfc8439 Appendix A.1
         # Each item is: key, nonce, block #, plaintext, ciphertext
         tvs = [
             # Test Vector #1
@@ -227,7 +227,7 @@ class TestChaCha20:
 
 
 class TestXChaCha20:
-    # From https://tools.ietf.org/html/draft-arciszewski-xchacha-03
+    # From https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-xchacha-03
 
     def test_hchacha20(self):
         # Section 2.2.1

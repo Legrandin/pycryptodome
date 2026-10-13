@@ -12,11 +12,16 @@ There are three variants, defined by the length of the nonce:
     :header: Nonce length, Description, Max data, If random nonce and same key
     :widths: 5, 50, 20, 20
 
-    "8 bytes (default)", "The original ChaCha20 designed by Bernstein.", "No limitations", "Max 200 000 messages"
-    "12 bytes", "The TLS ChaCha20 as defined in `RFC7539`_.", "256 GB", "Max 13 billions messages"
-    "24 bytes", "XChaCha20, still in `draft stage <https://tools.ietf.org/html/draft-arciszewski-xchacha-03>`_.", "256 GB", "No limitations"
+    "8 bytes (default)", "The original ChaCha20 designed by Bernstein (64-bit block counter).", "No limitations", "Max 200 000 messages"
+    "12 bytes", "The ChaCha20 used in TLS, specified in `RFC8439`_ (32-bit block counter).", "256 GB", "Max 13 billion messages"
+    "24 bytes", "XChaCha20, specified in the expired draft `draft-irtf-cfrg-xchacha-03`_ (it never became an RFC).", "256 GB", "No limitations"
 
-.. see probability p=10⁻⁶ in table https://en.wikipedia.org/wiki/Birthday_problem#Probability_table
+.. see probability p=10⁻⁹ in table https://en.wikipedia.org/wiki/Birthday_problem#Probability_table
+
+XChaCha20 follows the draft: it derives a subkey with HChaCha20, and then it is the ChaCha20
+of `RFC8439`_, with a 32-bit block counter. Some implementations, like libsodium, use instead
+a 64-bit block counter: the key stream is the same for the first 256 GB, after which
+PyCryptodome raises :class:`Crypto.MessageTooLongError`.
 
 This is an example of how `ChaCha20`_ (Bernstein's version) can encrypt data::
 
@@ -53,11 +58,11 @@ And this is how you decrypt it::
     >>> except (ValueError, KeyError):
     >>>     print("Incorrect decryption")
 
-In order to have a `RFC7539`_-compliant ChaCha20 cipher,
+In order to have a `RFC8439`_-compliant ChaCha20 cipher,
 you need to explicitly generate and pass a 96 bit (12 byte) ``nonce`` parameter to ``new()``::
 
-    nonce_rfc7539 = get_random_bytes(12)
-    cipher = ChaCha20.new(key=key, nonce=nonce_rfc7539)
+    nonce_rfc8439 = get_random_bytes(12)
+    cipher = ChaCha20.new(key=key, nonce=nonce_rfc8439)
 
 .. warning::
 
@@ -68,7 +73,8 @@ you need to explicitly generate and pass a 96 bit (12 byte) ``nonce`` parameter 
     (*encrypt-then-mac*). Alternatively, you can use :doc:`ChaCha20_Poly1305 <chacha20_poly1305>`.
 
 .. _ChaCha20: https://cr.yp.to/chacha.html
-.. _RFC7539: https://tools.ietf.org/html/rfc7539
+.. _RFC8439: https://datatracker.ietf.org/doc/html/rfc8439
+.. _draft-irtf-cfrg-xchacha-03: https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-xchacha-03
 
 .. automodule:: Crypto.Cipher.ChaCha20
     :members:

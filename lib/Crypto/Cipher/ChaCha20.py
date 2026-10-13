@@ -84,7 +84,7 @@ class ChaCha20Cipher:
         self.nonce = bytes(nonce)
 
         # XChaCha20 requires a key derivation with HChaCha20
-        # See 2.3 in https://tools.ietf.org/html/draft-arciszewski-xchacha-03
+        # See 2.3 in https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-xchacha-03
         if len(nonce) == 24:
             key = _HChaCha20(key, nonce[:16])
             nonce = b"\x00" * 4 + nonce[16:]
@@ -238,7 +238,7 @@ def _derive_Poly1305_key_pair(key, nonce):
     if nonce is None:
         padded_nonce = nonce = get_random_bytes(12)
     elif len(nonce) == 8:
-        # See RFC7538, 2.6: [...] ChaCha20 as specified here requires a 96-bit
+        # See RFC 8439, 2.6: [...] ChaCha20 as specified here requires a 96-bit
         # nonce.  So if the provided nonce is only 64-bit, then the first 32
         # bits of the nonce will be set to a constant number.
         # This will usually be zero, but for protocols with multiple senders it may be

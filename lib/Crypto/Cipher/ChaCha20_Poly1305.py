@@ -283,7 +283,9 @@ def new(*, key: Buffer, nonce: Optional[Buffer] = None) -> ChaCha20Poly1305Ciphe
         A value that must never be reused for any other encryption
         done with this key.
 
-        For ChaCha20-Poly1305, it must be 8 or 12 bytes long.
+        For ChaCha20-Poly1305, it must be 8 or 12 bytes long
+        (as in Section 2.6 of RFC 8439, a nonce of 8 bytes is prefixed
+        by 4 zero bytes).
 
         For XChaCha20-Poly1305, it must be 24 bytes long.
 
@@ -300,7 +302,11 @@ def new(*, key: Buffer, nonce: Optional[Buffer] = None) -> ChaCha20Poly1305Ciphe
     if nonce is None:
         nonce = get_random_bytes(12)
 
-    if len(nonce) in (8, 12):
+    chacha20_poly1305_nonce: Buffer
+    if len(nonce) == 8:
+        # RFC 8439, 2.6: the first 32 bits of the 96-bit nonce are constant
+        chacha20_poly1305_nonce = b"\x00\x00\x00\x00" + bytes(nonce)
+    elif len(nonce) == 12:
         chacha20_poly1305_nonce = nonce
     elif len(nonce) == 24:
         key = _HChaCha20(key, nonce[:16])

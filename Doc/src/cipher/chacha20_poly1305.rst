@@ -12,9 +12,17 @@ There are three variants of the algorithm, defined by the length of the nonce:
     :header: Nonce length, Description, Max plaintext, If random nonce and same key
     :widths: 5, 50, 20, 20
 
-    "8 bytes", "Based on Bernstein's original ChaCha20.", "No limitations", "Max 200 000 messages"
-    "12 bytes (default)", "Version used in TLS and specified in `RFC7539`_.", "256 GB", "Max 13 billion messages"
-    "24 bytes", "XChaCha20-Poly1305, still in `draft stage <https://tools.ietf.org/html/draft-arciszewski-xchacha-03>`_.", "256 GB", "No limitations"
+    "8 bytes", "The ChaCha20-Poly1305 of `RFC8439`_, with the nonce prefixed by 4 zero bytes (see Section 2.6 of `RFC8439`_).", "256 GB", "Max 200 000 messages"
+    "12 bytes (default)", "Version used in TLS and specified in `RFC8439`_.", "256 GB", "Max 13 billion messages"
+    "24 bytes", "XChaCha20-Poly1305, specified in the expired draft `draft-irtf-cfrg-xchacha-03`_ (it never became an RFC).", "256 GB", "No limitations"
+
+.. see probability p=10⁻⁹ in table https://en.wikipedia.org/wiki/Birthday_problem#Probability_table
+
+All variants follow `RFC8439`_. With an 8-byte nonce, the cipher is **not** the original
+ChaCha20-Poly1305 (defined in draft-agl-tls-chacha20poly1305, and implemented for instance as
+``crypto_aead_chacha20poly1305`` in libsodium), which computes a different tag:
+it is compatible with the RFC version (``crypto_aead_chacha20poly1305_ietf`` in libsodium)
+with the nonce prefixed by 4 zero bytes.
 
 The API of the cipher and its finite state machine are the same as for the :doc:`modern modes of operation of block ciphers <modern>`.
 
@@ -62,7 +70,8 @@ This is how you decrypt the data and check its authenticity::
     >>> except (ValueError, KeyError):
     >>>     print("Incorrect decryption")
 
-.. _RFC7539: https://tools.ietf.org/html/rfc7539
+.. _RFC8439: https://datatracker.ietf.org/doc/html/rfc8439
+.. _draft-irtf-cfrg-xchacha-03: https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-xchacha-03
 
 .. automodule:: Crypto.Cipher.ChaCha20_Poly1305
     :members:

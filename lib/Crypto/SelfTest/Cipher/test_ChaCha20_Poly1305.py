@@ -5,6 +5,7 @@ from binascii import unhexlify
 
 import pytest
 
+from Crypto import MessageTooLongError
 from Crypto.Cipher import ChaCha20_Poly1305
 from Crypto.Hash import SHAKE128
 from Crypto.SelfTest.loader import load_test_vectors_wycheproof, wycheproof_id
@@ -268,7 +269,7 @@ class TestXChaCha20Poly1305:
         assert cipher.nonce == b"H" * 24
 
     def test_encrypt(self):
-        # From https://tools.ietf.org/html/draft-arciszewski-xchacha-03
+        # From https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-xchacha-03
         # Section A.3.1
 
         pt = b"""
@@ -443,12 +444,82 @@ class TestChaCha20Poly1305FSM:
                 getattr(cipher, method_name)(self.data_128)
 
 
+class TestNonce8Bytes:
+    """With an 8-byte nonce, the cipher is the one of RFC 8439, with the nonce
+    prefixed by 4 zero bytes (RFC 8439, 2.6). The vectors were computed with
+    crypto_aead_chacha20poly1305_ietf_encrypt() of libsodium."""
+
+    key = bytes(range(0x80, 0xA0))
+    nonce = bytes.fromhex("0706050403020100")
+
+    # AAD, PT, CT, TAG, and the tag of the original ChaCha20-Poly1305
+    # (draft-agl-tls-chacha20poly1305, crypto_aead_chacha20poly1305 in libsodium)
+    test_vectors_hex = [
+        ("", "", "", "9ce69372bdf83e2b8d6cb2f551911d6b", "9ce69372bdf83e2b8d6cb2f551911d6b"),
+        (
+            "",
+            "53686f7274206d657373616765",
+            "4e00decbb7c6949707fd6045c1",
+            "bc66e925d3db6ac02a36eaa0f03977ee",
+            "344259c3b12f2f4f9bbcded0c9a175da",
+        ),
+        (
+            "50515253c0c1c2c3c4c5c6c7",
+            bytes(range(130)).hex(),
+            "1d69b3bac7e3fff57c870b29a8b6fef41333eb1d3053e7ca749c4734191a6c135ce2505a15ee7e7f86959294"
+            "fcd54e4d9258b8253eca6c5692fac381d26df714ed1fcf6bee19159860263ae63bf14b3548ab65b6512e9b66"
+            "9707230e7539abca4770fb5b005f052c247eef150bd6c1fbcc8a0387b4066409540da21739a781774b8f",
+            "2245366ab43c93a05e010e05297eeae2",
+            "addd9dddecc89e6df62f60de4e7278d2",
+        ),
+    ]
+
+    @pytest.mark.parametrize("vector", test_vectors_hex)
+    def test_vectors(self, vector):
+        aad, pt, ct, tag, original_tag = (bytes.fromhex(x) for x in vector)
+
+        cipher = ChaCha20_Poly1305.new(key=self.key, nonce=self.nonce)
+        cipher.update(aad)
+        assert cipher.encrypt_and_digest(pt) == (ct, tag)
+        assert cipher.nonce == self.nonce
+
+        cipher = ChaCha20_Poly1305.new(key=self.key, nonce=self.nonce)
+        cipher.update(aad)
+        assert cipher.decrypt_and_verify(ct, tag) == pt
+
+        # The tag of the original ChaCha20-Poly1305 is not accepted (the two
+        # constructions only agree when there is no data and no associated data)
+        if original_tag != tag:
+            cipher = ChaCha20_Poly1305.new(key=self.key, nonce=self.nonce)
+            cipher.update(aad)
+            with pytest.raises(ValueError):
+                cipher.decrypt_and_verify(ct, original_tag)
+
+    def test_same_as_12_bytes(self):
+        aad, pt = b"header", bytes(range(200))
+        results = []
+        for nonce in (self.nonce, b"\x00" * 4 + self.nonce):
+            cipher = ChaCha20_Poly1305.new(key=self.key, nonce=nonce)
+            cipher.update(aad)
+            results.append(cipher.encrypt_and_digest(pt))
+        assert results[0] == results[1]
+
+    def test_max_plaintext(self):
+        # Like with a 12-byte nonce, the block counter has 32 bits:
+        # at most 2**32 - 1 blocks (block 0 is for the Poly1305 key)
+        cipher = ChaCha20_Poly1305.new(key=self.key, nonce=self.nonce)
+        cipher._cipher.seek(64 * (2**32 - 1))
+        cipher.encrypt(bytes(64))
+        with pytest.raises(MessageTooLongError):
+            cipher.encrypt(bytes(1))
+
+
 def compact(x):
     return unhexlify(x.replace(" ", "").replace(":", ""))
 
 
 class TestVectorsRFC:
-    """Test cases from RFC7539"""
+    """Test cases from RFC 8439 (first published as RFC 7539)"""
 
     # AAD, PT, CT, MAC, KEY, NONCE
     test_vectors_hex = [

@@ -41,11 +41,20 @@ Breaking changes
   is above 20, which takes about one minute: a hash from an untrusted source, which states
   its own cost, could otherwise tie up the CPU for a day. Use the new parameter ``max_cost``
   to accept costs up to 31, as before (0 for no limit).
+* ChaCha20-Poly1305 with an 8-byte nonce follows RFC 8439 (the nonce is prefixed
+  by 4 zero bytes, and the block counter has 32 bits): a single message longer than
+  about 256 GiB is now rejected with ``MessageTooLongError``. Before, the counter
+  overflowed into the 4 zero bytes, which no specification defines. The ciphertext
+  and the tag of shorter messages are unchanged.
 
 Resolved issues
 ---------------
+* The documentation of ChaCha20-Poly1305 now says that the variant with an 8-byte
+  nonce is not the original ChaCha20-Poly1305 (draft-agl-tls-chacha20poly1305), and the
+  documentation of ChaCha20 refers to RFC 8439 (instead of RFC 7539), and to
+  draft-irtf-cfrg-xchacha-03 for XChaCha20.
 * ChaCha20 and ChaCha20-Poly1305: after the error at the end of the key stream
-  (256 GiB with a nonce of 12 or 24 bytes, 2\ :sup:`70` bytes with a nonce of 8 bytes),
+  (256 GiB, except 2\ :sup:`70` bytes for ChaCha20 with a nonce of 8 bytes),
   encrypting more data did not fail, but reused the key stream from block 0.
   Also, the last block of the key stream could not be used, and ``seek()`` to it failed.
   Now the whole key stream can be used, and any data beyond it is rejected
