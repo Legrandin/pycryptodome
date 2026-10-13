@@ -4,6 +4,8 @@
 # SPDX-FileCopyrightText: 2026 Helder Eijs <helderijs@gmail.com>
 # SPDX-License-Identifier: BSD-2-Clause
 
+import sys
+
 import pytest
 
 from Crypto import MessageTooLongError
@@ -97,6 +99,9 @@ class TestCTR:
 
 
 class TestKeyWrap:
+    # On a 32-bit Python, len() cannot return 2**32 (OverflowError), and no
+    # buffer can be that long: the limit of KW and KWP cannot be reached
+    @pytest.mark.skipif(sys.maxsize < 2**32, reason="len() is limited to 2**31 - 1 on 32-bit Python")
     @pytest.mark.parametrize("mode", [AES.MODE_KW, AES.MODE_KWP])
     def test_too_long(self, mode):
         cipher = AES.new(KEY, mode)
