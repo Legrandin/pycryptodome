@@ -19,7 +19,7 @@ This is an example::
     >>>
     >>> keccak_hash = keccak.new(digest_bits=512)
     >>> keccak_hash.update(b'Some data')
-    >>> print keccak_hash.hexdigest()
+    >>> print(keccak_hash.hexdigest())
 
 .. _Keccak: http://www.keccak.noekeon.org/Keccak-specifications.pdf
 .. _FIPS 202: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf

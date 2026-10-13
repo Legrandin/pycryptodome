@@ -59,16 +59,16 @@ This is how you decrypt the data and check its authenticity::
     >>>
     >>> # We assume that the key was securely shared beforehand
     >>> try:
-    >>>     b64 = json.loads(json_input)
-    >>>     jk = [ 'nonce', 'header', 'ciphertext', 'tag' ]
-    >>>     jv = {k:b64decode(b64[k]) for k in jk}
+    ...     b64 = json.loads(json_input)
+    ...     jk = [ 'nonce', 'header', 'ciphertext', 'tag' ]
+    ...     jv = {k:b64decode(b64[k]) for k in jk}
     >>>
-    >>>     cipher = ChaCha20_Poly1305.new(key=key, nonce=jv['nonce'])
-    >>>     cipher.update(jv['header'])
-    >>>     plaintext = cipher.decrypt_and_verify(jv['ciphertext'], jv['tag'])
-    >>>     print("The message was: " + plaintext.decode())
-    >>> except (ValueError, KeyError):
-    >>>     print("Incorrect decryption")
+    ...     cipher = ChaCha20_Poly1305.new(key=key, nonce=jv['nonce'])
+    ...     cipher.update(jv['header'])
+    ...     plaintext = cipher.decrypt_and_verify(jv['ciphertext'], jv['tag'])
+    ...     print("The message was: " + plaintext.decode())
+    ... except (ValueError, KeyError):
+    ...     print("Incorrect decryption")
 
 .. _RFC8439: https://datatracker.ietf.org/doc/html/rfc8439
 .. _draft-irtf-cfrg-xchacha-03: https://datatracker.ietf.org/doc/html/draft-irtf-cfrg-xchacha-03

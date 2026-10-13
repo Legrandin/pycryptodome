@@ -8,7 +8,7 @@ For example:
     >>>
     >>> h = MD5.new()
     >>> h.update(b'Hello')
-    >>> print h.hexdigest()
+    >>> print(h.hexdigest())
 
 MD5 stand for Message Digest version 5, and it was invented by Rivest in 1991.
 

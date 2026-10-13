@@ -23,15 +23,15 @@ resistant to brute force attacks::
 
     >>> pwd = b'secret'
     >>> with open("myprivatekey.pem", "wt") as f:
-    >>>     data = mykey.export_key(format='PEM', passphrase=pwd)
-    >>>     f.write(data)
+    ...     data = mykey.export_key(format='PEM', passphrase=pwd)
+    ...     f.write(data)
 
 and reimport it later::
 
     >>> pwd = b'secret'
     >>> with open("myprivatekey.pem", "rt") as f:
-    >>>     data = f.read()
-    >>>     mykey = ECC.import_key(data, pwd)
+    ...     data = f.read()
+    ...     mykey = ECC.import_key(data, pwd)
 
 The key is encrypted with PKCS#8 and ``'PBKDF2WithHMAC-SHA256AndAES256-CBC'``
 by default. To choose another scheme, pass the ``protection`` and ``prot_params``
@@ -40,7 +40,7 @@ parameters (see :ref:`the encryption parameters of PKCS#8<enc_params>`).
 You can also export the public key, which is not sensitive::
 
     >>> with open("mypublickey.pem", "wt") as f:
-    >>>     data = mykey.public_key().export_key(format='PEM')
+    ...     data = mykey.public_key().export_key(format='PEM')
 
 .. _ECC table:
 .. csv-table::

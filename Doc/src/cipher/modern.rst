@@ -166,16 +166,16 @@ Example (decryption)::
     >>>
     >>> # We assume that the key was securely shared beforehand
     >>> try:
-    >>>     b64 = json.loads(json_input)
-    >>>     json_k = [ 'nonce', 'header', 'ciphertext', 'tag' ]
-    >>>     jv = {k:b64decode(b64[k]) for k in json_k}    
-    >>>     
-    >>>     cipher = AES.new(key, AES.MODE_CCM, nonce=jv['nonce'])
-    >>>     cipher.update(jv['header'])
-    >>>     plaintext = cipher.decrypt_and_verify(jv['ciphertext'], jv['tag'])
-    >>>     print("The message was: " + plaintext.decode('utf-8'))
-    >>> except (ValueError, KeyError):
-    >>>     print("Incorrect decryption")
+    ...     b64 = json.loads(json_input)
+    ...     json_k = [ 'nonce', 'header', 'ciphertext', 'tag' ]
+    ...     jv = {k:b64decode(b64[k]) for k in json_k}    
+    ...     
+    ...     cipher = AES.new(key, AES.MODE_CCM, nonce=jv['nonce'])
+    ...     cipher.update(jv['header'])
+    ...     plaintext = cipher.decrypt_and_verify(jv['ciphertext'], jv['tag'])
+    ...     print("The message was: " + plaintext.decode('utf-8'))
+    ... except (ValueError, KeyError):
+    ...     print("Incorrect decryption")
 
 .. _eax_mode:
 
@@ -231,16 +231,16 @@ Example (decryption)::
     >>>
     >>> # We assume that the key was securely shared beforehand
     >>> try:
-    >>>     b64 = json.loads(json_input)
-    >>>     json_k = [ 'nonce', 'header', 'ciphertext', 'tag' ]
-    >>>     jv = {k:b64decode(b64[k]) for k in json_k}    
-    >>>     
-    >>>     cipher = AES.new(key, AES.MODE_EAX, nonce=jv['nonce'])
-    >>>     cipher.update(jv['header'])
-    >>>     plaintext = cipher.decrypt_and_verify(jv['ciphertext'], jv['tag'])
-    >>>     print("The message was: " + plaintext.decode('utf-8'))
-    >>> except (ValueError, KeyError):
-    >>>     print("Incorrect decryption")
+    ...     b64 = json.loads(json_input)
+    ...     json_k = [ 'nonce', 'header', 'ciphertext', 'tag' ]
+    ...     jv = {k:b64decode(b64[k]) for k in json_k}    
+    ...     
+    ...     cipher = AES.new(key, AES.MODE_EAX, nonce=jv['nonce'])
+    ...     cipher.update(jv['header'])
+    ...     plaintext = cipher.decrypt_and_verify(jv['ciphertext'], jv['tag'])
+    ...     print("The message was: " + plaintext.decode('utf-8'))
+    ... except (ValueError, KeyError):
+    ...     print("Incorrect decryption")
 
 .. _gcm_mode:
 
@@ -303,16 +303,16 @@ Example (decryption)::
     >>>
     >>> # We assume that the key was securely shared beforehand
     >>> try:
-    >>>     b64 = json.loads(json_input)
-    >>>     json_k = [ 'nonce', 'header', 'ciphertext', 'tag' ]
-    >>>     jv = {k:b64decode(b64[k]) for k in json_k}
+    ...     b64 = json.loads(json_input)
+    ...     json_k = [ 'nonce', 'header', 'ciphertext', 'tag' ]
+    ...     jv = {k:b64decode(b64[k]) for k in json_k}
     >>>
-    >>>     cipher = AES.new(key, AES.MODE_GCM, nonce=jv['nonce'])
-    >>>     cipher.update(jv['header'])
-    >>>     plaintext = cipher.decrypt_and_verify(jv['ciphertext'], jv['tag'])
-    >>>     print("The message was: " + plaintext.decode('utf-8'))
-    >>> except (ValueError, KeyError):
-    >>>     print("Incorrect decryption")
+    ...     cipher = AES.new(key, AES.MODE_GCM, nonce=jv['nonce'])
+    ...     cipher.update(jv['header'])
+    ...     plaintext = cipher.decrypt_and_verify(jv['ciphertext'], jv['tag'])
+    ...     print("The message was: " + plaintext.decode('utf-8'))
+    ... except (ValueError, KeyError):
+    ...     print("Incorrect decryption")
 
 .. note::
   GCM is most commonly used with 96-bit (12-byte) nonces, which is also the length recommended by NIST SP 800-38D.
@@ -368,7 +368,7 @@ Example (encryption)::
     >>> key = get_random_bytes(16 * 2)
     >>> nonce = get_random_bytes(16)
     >>> cipher = AES.new(key, AES.MODE_SIV, nonce=nonce)    # Without nonce, the encryption
-    >>>                                                     # becomes deterministic
+    ...                                                     # becomes deterministic
     >>> cipher.update(header)
     >>> ciphertext, tag = cipher.encrypt_and_digest(data)
     >>>
@@ -386,16 +386,16 @@ Example (decryption)::
     >>>
     >>> # We assume that the key was securely shared beforehand
     >>> try:
-    >>>     b64 = json.loads(json_input)
-    >>>     json_k = [ 'nonce', 'header', 'ciphertext', 'tag' ]
-    >>>     jv = {k:b64decode(b64[k]) for k in json_k}    
-    >>>     
-    >>>     cipher = AES.new(key, AES.MODE_SIV, nonce=jv['nonce'])
-    >>>     cipher.update(jv['header'])
-    >>>     plaintext = cipher.decrypt_and_verify(jv['ciphertext'], jv['tag'])
-    >>>     print("The message was: " + plaintext.decode('utf-8'))
-    >>> except (ValueError, KeyError):
-    >>>     print("Incorrect decryption")
+    ...     b64 = json.loads(json_input)
+    ...     json_k = [ 'nonce', 'header', 'ciphertext', 'tag' ]
+    ...     jv = {k:b64decode(b64[k]) for k in json_k}    
+    ...     
+    ...     cipher = AES.new(key, AES.MODE_SIV, nonce=jv['nonce'])
+    ...     cipher.update(jv['header'])
+    ...     plaintext = cipher.decrypt_and_verify(jv['ciphertext'], jv['tag'])
+    ...     print("The message was: " + plaintext.decode('utf-8'))
+    ... except (ValueError, KeyError):
+    ...     print("Incorrect decryption")
 
 One side-effect is that encryption (or decryption) must take place in one go
 with the method ``encrypt_and_digest()`` (or ``decrypt_and_verify()``).
@@ -501,16 +501,16 @@ Example (decryption as a once-off operation)::
     >>>
     >>> # We assume that the key was securely shared beforehand
     >>> try:
-    >>>     b64 = json.loads(json_input)
-    >>>     json_k = [ 'nonce', 'header', 'ciphertext', 'tag' ]
-    >>>     jv = {k:b64decode(b64[k]) for k in json_k}
+    ...     b64 = json.loads(json_input)
+    ...     json_k = [ 'nonce', 'header', 'ciphertext', 'tag' ]
+    ...     jv = {k:b64decode(b64[k]) for k in json_k}
     >>>
-    >>>     cipher = AES.new(key, AES.MODE_OCB, nonce=jv['nonce'])
-    >>>     cipher.update(jv['header'])
-    >>>     plaintext = cipher.decrypt_and_verify(jv['ciphertext'], jv['tag'])
-    >>>     print("The message was: " + plaintext.decode('utf-8'))
-    >>> except (ValueError, KeyError):
-    >>>     print("Incorrect decryption")
+    ...     cipher = AES.new(key, AES.MODE_OCB, nonce=jv['nonce'])
+    ...     cipher.update(jv['header'])
+    ...     plaintext = cipher.decrypt_and_verify(jv['ciphertext'], jv['tag'])
+    ...     print("The message was: " + plaintext.decode('utf-8'))
+    ... except (ValueError, KeyError):
+    ...     print("Incorrect decryption")
 
 Example (encryption with multiple chunks)::
 
@@ -526,7 +526,7 @@ Example (encryption with multiple chunks)::
     >>> cipher.update(header)
     >>> ciphertext = b''
     >>> for chunk in data:
-    >>>     ciphertext += cipher.encrypt(chunk)
+    ...     ciphertext += cipher.encrypt(chunk)
     >>> ciphertext += cipher.encrypt()
     >>> tag = cipher.digest()
     >>>
@@ -544,26 +544,26 @@ Example (decryption with multiple chunks)::
     >>>
     >>> # We assume that the key was securely shared beforehand
     >>> try:
-    >>>     b64 = json.loads(json_input)
-    >>>     json_k = [ 'nonce', 'header', 'ciphertext', 'tag' ]
-    >>>     jv = {k:b64decode(b64[k]) for k in json_k}
+    ...     b64 = json.loads(json_input)
+    ...     json_k = [ 'nonce', 'header', 'ciphertext', 'tag' ]
+    ...     jv = {k:b64decode(b64[k]) for k in json_k}
     >>>
-    >>>     cipher = AES.new(key, AES.MODE_OCB, nonce=jv['nonce'])
-    >>>     cipher.update(jv['header'])
-    >>>     ciphertext = jv['ciphertext']
+    ...     cipher = AES.new(key, AES.MODE_OCB, nonce=jv['nonce'])
+    ...     cipher.update(jv['header'])
+    ...     ciphertext = jv['ciphertext']
     >>>
-    >>>     # Split into small chunks, just for demo purposes
-    >>>     chunks = [ ciphertext[i:i+2] for i in range(0, len(ciphertext), 2) ]
+    ...     # Split into small chunks, just for demo purposes
+    ...     chunks = [ ciphertext[i:i+2] for i in range(0, len(ciphertext), 2) ]
     >>>
-    >>>     plaintext = b''
-    >>>     for chunk in chunks:
-    >>>         plaintext += cipher.decrypt(chunk)
-    >>>     plaintext += cipher.decrypt()
-    >>>     cipher.verify(jv['tag'])
+    ...     plaintext = b''
+    ...     for chunk in chunks:
+    ...         plaintext += cipher.decrypt(chunk)
+    ...     plaintext += cipher.decrypt()
+    ...     cipher.verify(jv['tag'])
     >>>
-    >>>     print("The message was: " + plaintext.decode('utf-8'))
-    >>> except (ValueError, KeyError):
-    >>>     print("Incorrect decryption")
+    ...     print("The message was: " + plaintext.decode('utf-8'))
+    ... except (ValueError, KeyError):
+    ...     print("Incorrect decryption")
 
 .. _kw_mode:
 
@@ -613,9 +613,9 @@ Example of decryption::
     >>> wrapping_key = get_random_bytes(16)
     >>> cipher = AES.new(wrapping_key, AES.MODE_KW)
     >>> try:
-    >>>     unwrapped_key = cipher.unseal(ciphertext)
-    >>> except ValueError:
-    >>>     print("Invalid decryption")
+    ...     unwrapped_key = cipher.unseal(ciphertext)
+    ... except ValueError:
+    ...     print("Invalid decryption")
 
 .. _kwp_mode:
 
@@ -665,6 +665,6 @@ Example of decryption::
     >>> wrapping_key = get_random_bytes(16)
     >>> cipher = AES.new(wrapping_key, AES.MODE_KWP)
     >>> try:
-    >>>     unwrapped_key = cipher.unseal(ciphertext)
-    >>> except ValueError:
-    >>>     print("Invalid decryption")
+    ...     unwrapped_key = cipher.unseal(ciphertext)
+    ... except ValueError:
+    ...     print("Invalid decryption")

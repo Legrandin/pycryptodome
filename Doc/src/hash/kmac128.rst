@@ -28,10 +28,10 @@ And this is an example showing how to validate the KMAC128 tag::
     >>> mac = KMAC128.new(key=secret, mac_len=16)
     >>> mac.update(msg)
     >>> try:
-    >>>   mac.verify(mac_tag)
-    >>>   print("The message '%s' is authentic" % msg)
-    >>> except ValueError:
-    >>>   print("The message or the key is wrong")
+    ...   mac.verify(mac_tag)
+    ...   print("The message '%s' is authentic" % msg)
+    ... except ValueError:
+    ...   print("The message or the key is wrong")
 
 An application can select the length of the MAC tag by means of the initialization parameter ``mac_len``.
 For instance, while the traditional HMAC-SHA256 can only produce 32-byte tags,

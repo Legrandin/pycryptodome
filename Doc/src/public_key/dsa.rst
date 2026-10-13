@@ -59,10 +59,10 @@ key in a file called ``public_key.pem``, sign a message (with
     >>>
     >>> # Verify the authenticity of the message
     >>> try:
-    >>>     verifier.verify(hash_obj, signature)
-    >>>     print "The message is authentic."
-    >>> except ValueError:
-    >>>     print "The message is not authentic."
+    ...     verifier.verify(hash_obj, signature)
+    ...     print("The message is authentic.")
+    ... except ValueError:
+    ...     print("The message is not authentic.")
 
 .. _DSA: http://en.wikipedia.org/wiki/Digital_Signature_Algorithm
 .. _DLP: http://www.cosic.esat.kuleuven.be/publications/talk-78.pdf
