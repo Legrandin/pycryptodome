@@ -1,4 +1,0 @@
-`Crypto.PublicKey` package
-==========================
-
-Hello

@@ -87,6 +87,22 @@ Every hash object has the following attributes:
 Modern hash algorithms
 ----------------------
 
+.. toctree::
+    :hidden:
+
+    sha224
+    sha256
+    sha384
+    sha512
+    sha3_224
+    sha3_256
+    sha3_384
+    sha3_512
+    tuplehash128
+    tuplehash256
+    blake2s
+    blake2b
+
 - SHA-2 family (FIPS 180-4)
 
     - :doc:`sha224`
@@ -110,6 +126,16 @@ Modern hash algorithms
 
 Extensible-Output Functions (XOF)
 ---------------------------------
+
+.. toctree::
+    :hidden:
+
+    shake128
+    shake256
+    cshake128
+    cshake256
+    k12
+    turboshake
 
 A XOF is similar to a conventional cryptographic hash: it is
 a one-way function that maps a piece of data of arbitrary size to
@@ -142,6 +168,15 @@ Instead, it has a ``read(N)`` method to extract the next ``N`` bytes of the outp
 Message Authentication Code (MAC) algorithms
 --------------------------------------------
 
+.. toctree::
+    :hidden:
+
+    hmac
+    cmac
+    poly1305
+    kmac128
+    kmac256
+
 - :doc:`hmac`
 - :doc:`cmac`
 - :doc:`poly1305`
@@ -153,6 +188,16 @@ Message Authentication Code (MAC) algorithms
 
 Historic hash algorithms
 -------------------------
+
+.. toctree::
+    :hidden:
+
+    sha1
+    md2
+    md4
+    md5
+    ripemd160
+    keccak
 
 The following algorithms should not be used in new designs:
 

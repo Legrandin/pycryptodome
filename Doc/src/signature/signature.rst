@@ -39,6 +39,14 @@ Verifying a signature
 Available mechanisms
 --------------------
 
+.. toctree::
+    :hidden:
+
+    pkcs1_v1_5
+    pkcs1_pss
+    eddsa
+    dsa
+
 * :doc:`pkcs1_v1_5`
 
 * :doc:`pkcs1_pss`

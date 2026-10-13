@@ -4,6 +4,11 @@
 Introduction
 ------------
 
+.. toctree::
+    :hidden:
+
+    oaep
+
 The :mod:`Crypto.Cipher` package contains algorithms for protecting the confidentiality
 of data.
 
@@ -109,11 +114,26 @@ authentication (MAC). For instance:
 .. toctree::
     :hidden:
 
+    aes
     Classic modes of operation <classic>
     Modern modes of operation <modern>
+    chacha20
+    salsa20
+    chacha20_poly1305
 
 Legacy ciphers
 --------------
+
+.. toctree::
+    :hidden:
+
+    des
+    des3
+    arc2
+    arc4
+    blowfish
+    cast
+    pkcs1_v1_5
 
 A number of ciphers are implemented in this library purely for backward compatibility purposes.
 They are deprecated or even fully broken and should not be used in new designs.

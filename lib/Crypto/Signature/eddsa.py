@@ -16,8 +16,7 @@ from Crypto.PublicKey.ECC import (
 )
 from Crypto.Util._raw_api import is_buffer
 
-# A public constant (a Python int is not), for scalar multiplications with no blinding
-_EIGHT = Integer(8, public=True)
+__all__ = ["EdDSASigScheme", "new", "import_public_key", "import_private_key"]
 
 
 class Hash(Protocol):
@@ -262,10 +261,13 @@ class EdDSASigScheme:
         # Step 2
         k_hash = SHA512.new(dom2 + signature[:32] + self._A + PHM).digest()
         k = Integer.from_bytes(k_hash, "little", public=True) % self._order
-        # Step 3 (no blinding: s and k are public)
-        point1 = s * _EIGHT * self._key._curve.G
+        # Step 3 (no blinding: s and k are public). The cofactor 8 is a
+        # public Integer too (a Python int is not), created here and not at
+        # import time, so that importing this module runs no C code
+        eight = Integer(8, public=True)
+        point1 = s * eight * self._key._curve.G
         # OPTIMIZE: with double-scalar multiplication
-        point2 = _EIGHT * R + k * _EIGHT * self._key.pointQ
+        point2 = eight * R + k * eight * self._key.pointQ
         if point1 != point2:
             raise ValueError("The signature is not authentic")
 
@@ -292,10 +294,13 @@ class EdDSASigScheme:
         # Step 2
         k_hash = SHAKE256.new(dom4 + signature[:57] + self._A + PHM).read(114)
         k = Integer.from_bytes(k_hash, "little", public=True) % self._order
-        # Step 3 (no blinding: s and k are public)
-        point1 = s * _EIGHT * self._key._curve.G
+        # Step 3 (no blinding: s and k are public). The cofactor 8 is a
+        # public Integer too (a Python int is not), created here and not at
+        # import time, so that importing this module runs no C code
+        eight = Integer(8, public=True)
+        point1 = s * eight * self._key._curve.G
         # OPTIMIZE: with double-scalar multiplication
-        point2 = _EIGHT * R + k * _EIGHT * self._key.pointQ
+        point2 = eight * R + k * eight * self._key.pointQ
         if point1 != point2:
             raise ValueError("The signature is not authentic")
 
