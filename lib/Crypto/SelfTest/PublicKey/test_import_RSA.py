@@ -26,6 +26,7 @@ import warnings
 
 import pytest
 
+from Crypto import KdfIterationLimitError
 from Crypto.IO import PEM
 from Crypto.PublicKey import RSA
 from Crypto.SelfTest.st_common import a2b_hex
@@ -627,11 +628,10 @@ class TestImport_2048:
 
     def test_import_openssh_private_limit(self):
         # The vector has 16 rounds of bcrypt_pbkdf
-        from Crypto.IO.PKCS8 import PbesIterationCountError
 
         key_file = load_file("rsa2048_private_openssh_pwd.pem")
         assert RSA.import_key(key_file, b"password", max_iteration_count=16).has_private()
-        with pytest.raises(PbesIterationCountError):
+        with pytest.raises(KdfIterationLimitError):
             RSA.import_key(key_file, b"password", max_iteration_count=15)
 
     def test_import_openssh_private_password(self):

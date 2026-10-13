@@ -13,7 +13,7 @@ Most errors in PyCryptodome are reported with the standard Python exceptions:
 In a few cases, a dedicated exception tells **why** the operation failed,
 so that an application can react without parsing the error message.
 They are all subclasses of ``ValueError``: code that catches ``ValueError`` catches them too.
-The most general ones are in the top-level package :mod:`Crypto`
+The most general ones are in the top-level package ``Crypto``
 (for instance, ``from Crypto import MessageTooLongError``).
 
 .. csv-table::
@@ -22,7 +22,7 @@ The most general ones are in the top-level package :mod:`Crypto`
 
     :class:`~Crypto.PassphraseRequiredError`, "An encrypted private key is imported without a passphrase."
     :class:`~Crypto.IncorrectPassphraseError`, "An encrypted private key cannot be decrypted with the passphrase."
-    :class:`~Crypto.IO.PKCS8.PbesLimitError`, "Decrypting a private key would take too much time or memory."
+    :class:`~Crypto.KdfLimitError`, "Deriving a key from a password would take too much time or memory."
     :exc:`~Crypto.PublicKey.ECC.UnsupportedEccFeature`, "An ECC key uses a curve or a feature that is not supported."
     :class:`~Crypto.MessageTooLongError`, "A cipher would process more data than allowed with the same key and nonce."
     :exc:`~Crypto.Protocol.HPKE.DeserializeError`, "The encapsulated key received with HPKE is not valid."
@@ -68,24 +68,36 @@ They concern any kind of encrypted private key: PEM (with the ``Proc-Type: 4,ENC
         >>> except ValueError:
         >>>     print("This is not an RSA key")
 
-:class:`Crypto.IO.PKCS8.PbesLimitError`
-
-    The derivation of the decryption key from the passphrase would need more time or memory
-    than the limits set with the ``max_iteration_count`` and ``max_memory`` parameters
-    (or than the default limits): a malicious key could otherwise tie up the CPU or all the memory.
-    It is raised before the passphrase is checked.
-
-    Its subclasses tell which limit applies:
-    :class:`~Crypto.IO.PKCS8.PbesIterationCountError` (time)
-    and :class:`~Crypto.IO.PKCS8.PbesMemoryError` (memory).
-    See :ref:`pkcs8_limits`.
-
 .. py:exception:: Crypto.PublicKey.ECC.UnsupportedEccFeature
     :no-index:
 
     The key is well-formed, but uses an elliptic curve or a key type that PyCryptodome
     does not support (an unknown curve or algorithm OID, or an unknown curve name).
     It is raised by :func:`Crypto.PublicKey.ECC.import_key` for public and private keys.
+
+Key derivation limits
+---------------------
+
+Deriving a key from a password or a passphrase can be made as expensive as wanted,
+and the data that states the cost may come from an attacker:
+an encrypted private key, or a bcrypt hash.
+The functions that process such data reject a cost above a limit,
+before doing any work. See :ref:`pkcs8_limits`.
+
+.. autoexception:: Crypto.KdfLimitError
+
+.. autoexception:: Crypto.KdfIterationLimitError
+
+    It is raised by :func:`Crypto.PublicKey.RSA.import_key`, :func:`Crypto.PublicKey.DSA.import_key`,
+    :func:`Crypto.PublicKey.ECC.import_key` and :func:`Crypto.IO.PKCS8.unwrap`
+    (parameter ``max_iteration_count``), and by :func:`Crypto.Protocol.KDF.bcrypt_check`
+    (parameter ``max_cost``).
+
+.. autoexception:: Crypto.KdfMemoryLimitError
+
+    It is raised by :func:`Crypto.PublicKey.RSA.import_key`, :func:`Crypto.PublicKey.DSA.import_key`,
+    :func:`Crypto.PublicKey.ECC.import_key` and :func:`Crypto.IO.PKCS8.unwrap`
+    (parameter ``max_memory``), for keys protected with scrypt.
 
 Ciphers
 -------

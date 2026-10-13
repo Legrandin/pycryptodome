@@ -149,7 +149,7 @@ A hash from an untrusted source (for instance, user accounts imported from elsew
 could therefore tie up the CPU.
 
 For this reason, ``bcrypt_check()`` rejects a hash whose cost is above ``max_cost``,
-before any hashing, with a ``ValueError``:
+before any hashing, with :class:`Crypto.KdfIterationLimitError` (a ``ValueError``):
 
 * by default (``max_cost=None``), the limit is 20, about one minute;
 * an explicit ``max_cost`` is the highest cost allowed;
@@ -197,20 +197,21 @@ Errors
 
 When a key is above a limit, the functions raise:
 
-* :class:`Crypto.IO.PKCS8.PbesIterationCountError`, for ``max_iteration_count``;
-* :class:`Crypto.IO.PKCS8.PbesMemoryError`, for ``max_memory``.
+* :class:`Crypto.KdfIterationLimitError`, for ``max_iteration_count``
+  (and :func:`Crypto.Protocol.KDF.bcrypt_check`, for ``max_cost``);
+* :class:`Crypto.KdfMemoryLimitError`, for ``max_memory``.
 
-Both are subclasses of :class:`Crypto.IO.PKCS8.PbesLimitError`, which is a ``ValueError``.
+Both are subclasses of :class:`Crypto.KdfLimitError`, which is a ``ValueError``.
 Their message says which value is too high, and which limit applies.
 
 For instance, to accept a trusted key that needs more memory than the default::
 
-    >>> from Crypto.IO.PKCS8 import PbesMemoryError
+    >>> from Crypto import KdfMemoryLimitError
     >>> from Crypto.PublicKey import ECC
     >>>
     >>> try:
     >>>     key = ECC.import_key(encrypted_key, passphrase)
-    >>> except PbesMemoryError:
+    >>> except KdfMemoryLimitError:
     >>>     key = ECC.import_key(encrypted_key, passphrase, max_memory=2**30)
 
 What is not covered

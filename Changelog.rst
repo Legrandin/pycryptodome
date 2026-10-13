@@ -36,7 +36,8 @@ Breaking changes
   ``RSA.construct()`` and ``RSA.import_key()`` raise ``ValueError`` for
   larger ones. The constant-time arithmetic is slower than GMP, and a large
   public key from an untrusted source could take minutes to import or use.
-* ``Crypto.Protocol.KDF.bcrypt_check()`` rejects (with ``ValueError``) a bcrypt hash whose cost
+* ``Crypto.Protocol.KDF.bcrypt_check()`` rejects (with ``Crypto.KdfIterationLimitError``,
+  a ``ValueError``) a bcrypt hash whose cost
   is above 20, which takes about one minute: a hash from an untrusted source, which states
   its own cost, could otherwise tie up the CPU for a day. Use the new parameter ``max_cost``
   to accept costs up to 31, as before (0 for no limit).
@@ -211,7 +212,7 @@ New features
   ``import_key()`` of RSA, DSA and ECC keys, like the one of ``Crypto.IO.PKCS8.unwrap()``:
   the maximum iteration count accepted for an encrypted PKCS#8 key.
   When a key is above the limit, ``import_key()`` and ``PKCS8.unwrap()`` now raise
-  ``Crypto.IO.PKCS8.PbesIterationCountError`` (a ``ValueError``), whose message
+  ``Crypto.KdfIterationLimitError`` (a ``ValueError``), whose message
   says which value is too high and how to accept it, instead of a generic error
   about the key format. For scrypt, ``max_iteration_count`` now limits *N·r·p/8*
   (that is, *N* for the usual *r=8* and *p=1*), and not only *N*: before, a key with
@@ -222,7 +223,9 @@ New features
   memory for the scrypt key derivation, as a total for all threads together, not for
   each thread (and including the memory for the input and the output of all the flows).
   The default is 256 MiB. Fewer threads are used if needed; if even one thread
-  does not fit, ``Crypto.IO.PKCS8.PbesMemoryError`` is raised.
+  does not fit, ``Crypto.KdfMemoryLimitError`` is raised.
+  Both are subclasses of ``Crypto.KdfLimitError``; ``bcrypt_check()`` also raises
+  ``Crypto.KdfIterationLimitError`` when the cost of the hash is above ``max_cost``.
 * Set the environment variable ``PYCRYPTODOME_NO_SELFTEST`` when building
   from source to leave out the self-tests (``Crypto.SelfTest``), whose test keys
   and certificates may be reported by security scanners.

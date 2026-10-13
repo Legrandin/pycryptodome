@@ -9,7 +9,14 @@ from __future__ import annotations
 import re
 from typing import TYPE_CHECKING, Any, Callable, Optional, TypedDict
 
-from Crypto import _INCORRECT_PASSPHRASE, Hash, IncorrectPassphraseError, Random
+from Crypto import (
+    _INCORRECT_PASSPHRASE,
+    Hash,
+    IncorrectPassphraseError,
+    KdfIterationLimitError,
+    KdfMemoryLimitError,
+    Random,
+)
 from Crypto.Cipher import AES
 from Crypto.Protocol.KDF import PBKDF1, PBKDF2, scrypt
 from Crypto.Util._threads import threads_param
@@ -86,21 +93,7 @@ class PbesError(ValueError):
     pass
 
 
-class PbesLimitError(PbesError):
-    """The key derivation of the encrypted data is above a limit,
-    set to protect against malicious data."""
-
-
-class PbesIterationCountError(PbesLimitError):
-    """The iteration count (or the scrypt cost) of the KDF is
-    above the limit set with ``max_iteration_count``."""
-
-
-class PbesMemoryError(PbesLimitError):
-    """The KDF needs more memory than the limit set with ``max_memory``."""
-
-
-#: Message of :class:`PbesIterationCountError`
+#: Message of :class:`KdfIterationLimitError`
 _ITERATION_COUNT_ERROR = (
     "The encrypted key has a {what} of {count}, above the maximum allowed by "
     "max_iteration_count: {limit}. If you trust the key, increase "
@@ -115,7 +108,7 @@ _PBKDF2_COUNT = "PBKDF2 iteration count"
 _SCRYPT_COST = "scrypt cost N*r*p/8"
 _BCRYPT_ROUNDS = "bcrypt_pbkdf rounds count"
 
-#: Message of :class:`PbesMemoryError`
+#: Message of :class:`KdfMemoryLimitError`
 _MEMORY_ERROR = (
     "The encrypted key needs {memory} bytes of memory for scrypt, above the maximum "
     "allowed by max_memory: {limit}. If you trust the key, increase max_memory "
@@ -124,7 +117,7 @@ _MEMORY_ERROR = (
 
 
 def _check_iteration_count(what: str, count: int, max_iteration_count: Optional[int], default: int) -> None:
-    """Raise :class:`PbesIterationCountError` if ``count`` (``what``, like
+    """Raise :class:`KdfIterationLimitError` if ``count`` (``what``, like
     :data:`_PBKDF2_COUNT`) is above ``max_iteration_count``
     (``None`` for the ``default`` limit, ``0`` for no limit)."""
 
@@ -135,7 +128,7 @@ def _check_iteration_count(what: str, count: int, max_iteration_count: Optional[
         limit = str(max_iteration_count)
 
     if max_iteration_count and count > max_iteration_count:
-        raise PbesIterationCountError(_ITERATION_COUNT_ERROR.format(what=what, count=count, limit=limit))
+        raise KdfIterationLimitError(_ITERATION_COUNT_ERROR.format(what=what, count=count, limit=limit))
 
 
 def _check_scrypt_params(N: int, r: int, p: int) -> None:
@@ -147,7 +140,7 @@ def _check_scrypt_params(N: int, r: int, p: int) -> None:
 
 
 def _check_scrypt_cost(N: int, r: int, p: int, max_iteration_count: Optional[int]) -> None:
-    """Raise :class:`PbesIterationCountError` if the cost N*r*p/8 of scrypt
+    """Raise :class:`KdfIterationLimitError` if the cost N*r*p/8 of scrypt
     (with N at least :data:`_SCRYPT_MIN_N_COST`) is above ``max_iteration_count``
     (``None`` for the default limit)."""
 
@@ -160,7 +153,7 @@ def _scrypt_threads(N: int, r: int, p: int, threads: int, max_memory: Optional[i
     all CPU cores, and at most ``p``), so that its memory stays within
     ``max_memory`` (``None`` for the default limit, ``0`` for no limit).
 
-    Raise :class:`PbesMemoryError` if even one thread needs too much memory.
+    Raise :class:`KdfMemoryLimitError` if even one thread needs too much memory.
     """
 
     if max_memory is None:
@@ -174,7 +167,7 @@ def _scrypt_threads(N: int, r: int, p: int, threads: int, max_memory: Optional[i
     each = 128 * (N + 2) * r  # The memory of ROMix, for each thread
     if max_memory:
         if shared + each > max_memory:
-            raise PbesMemoryError(_MEMORY_ERROR.format(memory=shared + each, limit=limit))
+            raise KdfMemoryLimitError(_MEMORY_ERROR.format(memory=shared + each, limit=limit))
         threads = min(threads, (max_memory - shared) // each)
     return max(threads, 1)
 

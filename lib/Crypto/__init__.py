@@ -14,6 +14,9 @@ __all__ = [
     "PassphraseRequiredError",
     "IncorrectPassphraseError",
     "MessageTooLongError",
+    "KdfLimitError",
+    "KdfIterationLimitError",
+    "KdfMemoryLimitError",
 ]
 
 version_info: tuple[int, int, Union[int, str]] = (4, 0, "0b0")
@@ -45,6 +48,29 @@ class MessageTooLongError(ValueError, OverflowError):
     and nonce (for instance, the key stream would repeat).
 
     This is a subclass of both ``ValueError`` and ``OverflowError``.
+    """
+
+
+class KdfLimitError(ValueError):
+    """Deriving a key from a password or a passphrase would take more time
+    or memory than allowed, as set to protect against malicious data
+    (for instance, an encrypted private key or a password hash that
+    states an extremely high cost).
+
+    This is a subclass of ``ValueError``.
+    """
+
+
+class KdfIterationLimitError(KdfLimitError):
+    """The cost of the key derivation (the iteration count of PBKDF2,
+    the cost of scrypt, or the rounds of bcrypt) is above the limit
+    (for instance, the one set with ``max_iteration_count``).
+    """
+
+
+class KdfMemoryLimitError(KdfLimitError):
+    """The key derivation needs more memory than the limit
+    (for instance, the one set with ``max_memory``).
     """
 
 

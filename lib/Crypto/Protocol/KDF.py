@@ -30,6 +30,7 @@ import types
 from functools import reduce
 from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, Union, overload
 
+from Crypto import KdfIterationLimitError
 from Crypto.Hash import CMAC, HMAC, SHA1, SHA256, BLAKE2s
 from Crypto.Random import get_random_bytes
 from Crypto.Util._bytes import tobytes
@@ -780,8 +781,9 @@ def bcrypt_check(
         See :ref:`the limits for decryption<pkcs8_limits>`.
 
     Raises:
-        ValueError: if the password does not match,
-          or if the cost of the hash is above ``max_cost``
+        KdfIterationLimitError: (a ``ValueError``) if the cost of the hash
+          is above ``max_cost``
+        ValueError: if the password does not match
     """
 
     if max_cost is not None:
@@ -814,7 +816,7 @@ def bcrypt_check(
     else:
         limit = str(max_cost)
     if max_cost and cost > max_cost:
-        raise ValueError(_BCRYPT_COST_ERROR.format(cost=cost, limit=limit))
+        raise KdfIterationLimitError(_BCRYPT_COST_ERROR.format(cost=cost, limit=limit))
 
     salt = _bcrypt_decode(r.group(2))
 

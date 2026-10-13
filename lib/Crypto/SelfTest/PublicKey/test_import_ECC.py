@@ -8,8 +8,8 @@ from binascii import unhexlify
 
 import pytest
 
+from Crypto import KdfIterationLimitError
 from Crypto.Hash import SHAKE128
-from Crypto.IO.PKCS8 import PbesIterationCountError
 from Crypto.PublicKey import ECC
 from Crypto.PublicKey.ECC import _import_rfc5915_der
 from Crypto.Util.asn1 import DerBitString, DerSequence
@@ -2322,14 +2322,14 @@ class TestImportOpenSSHLimits:
     def test_explicit_limit(self):
         for limit in (16, 17, 0, None):
             assert ECC.import_key(self.pem, b"password", max_iteration_count=limit) == self.ref
-        with pytest.raises(PbesIterationCountError, match="bcrypt_pbkdf rounds count of 16"):
+        with pytest.raises(KdfIterationLimitError, match="bcrypt_pbkdf rounds count of 16"):
             ECC.import_key(self.pem, b"password", max_iteration_count=15)
 
     def test_default_limit(self):
         from Crypto.IO._PBES import _DEFAULT_LIMIT, _DEFAULT_MAX_BCRYPT_ROUNDS
 
         rounds = _DEFAULT_MAX_BCRYPT_ROUNDS + 1
-        with pytest.raises(PbesIterationCountError) as ctx:
+        with pytest.raises(KdfIterationLimitError) as ctx:
             ECC.import_key(_patch_openssh_rounds(self.pem, rounds), b"password")
         assert "of %d," % rounds in str(ctx.value)
         assert _DEFAULT_LIMIT.format(_DEFAULT_MAX_BCRYPT_ROUNDS) in str(ctx.value)
@@ -2337,9 +2337,9 @@ class TestImportOpenSSHLimits:
     @pytest.mark.parametrize("rounds", [2**31, 2**32 - 1])
     def test_huge_rounds(self, rounds):
         # Rejected before any key derivation, even with a high explicit limit
-        with pytest.raises(PbesIterationCountError):
+        with pytest.raises(KdfIterationLimitError):
             ECC.import_key(_patch_openssh_rounds(self.pem, rounds), b"password")
-        with pytest.raises(PbesIterationCountError):
+        with pytest.raises(KdfIterationLimitError):
             ECC.import_key(_patch_openssh_rounds(self.pem, rounds), b"password", max_iteration_count=10**6)
 
     def test_zero_rounds(self):

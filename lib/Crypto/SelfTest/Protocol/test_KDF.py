@@ -24,6 +24,7 @@ from binascii import unhexlify
 
 import pytest
 
+from Crypto import KdfIterationLimitError
 from Crypto.Cipher import AES, DES3
 from Crypto.Hash import CMAC, HMAC, MD5, SHA1, SHA224, SHA256, SHA384, SHA512, keccak
 from Crypto.Protocol.KDF import (
@@ -677,18 +678,18 @@ class TestBcrypt:
 
         for max_cost in (5, 6, 0, None):
             bcrypt_check(password, hash5, max_cost=max_cost)
-        with pytest.raises(ValueError) as ctx:
+        with pytest.raises(KdfIterationLimitError) as ctx:
             bcrypt_check(password, hash5, max_cost=4)
         assert str(ctx.value) == _BCRYPT_COST_ERROR.format(cost=5, limit=4)
 
         # The same hash, with a cost above the default limit (never computed)
         for cost in (_DEFAULT_MAX_BCRYPT_COST + 1, 31):
             costly = hash5[:4] + b"%02d" % cost + hash5[6:]
-            with pytest.raises(ValueError) as ctx:
+            with pytest.raises(KdfIterationLimitError) as ctx:
                 bcrypt_check(password, costly)
             expected_limit = "%d (the default)" % _DEFAULT_MAX_BCRYPT_COST
             assert str(ctx.value) == _BCRYPT_COST_ERROR.format(cost=cost, limit=expected_limit)
-            with pytest.raises(ValueError):
+            with pytest.raises(KdfIterationLimitError):
                 bcrypt_check(password, costly, max_cost=cost - 1)
 
     def test_max_cost_negative(self):

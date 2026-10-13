@@ -39,7 +39,7 @@ import binascii
 import math
 import struct
 
-from Crypto import IncorrectPassphraseError, PassphraseRequiredError, Random
+from Crypto import IncorrectPassphraseError, KdfLimitError, PassphraseRequiredError, Random
 from Crypto.Math.Numbers import Integer
 from Crypto.Math.Primality import COMPOSITE, generate_probable_prime, test_probable_prime
 from Crypto.PublicKey import (
@@ -829,11 +829,9 @@ def _import_keyDER(extern_key, passphrase, max_iteration_count=None, threads=1, 
         except ValueError:
             pass
 
-    from Crypto.IO import PKCS8
-
     try:
         return _import_pkcs8(extern_key, passphrase, max_iteration_count, threads, max_memory)
-    except (PKCS8.PbesLimitError, PassphraseRequiredError, IncorrectPassphraseError):
+    except (KdfLimitError, PassphraseRequiredError, IncorrectPassphraseError):
         raise
     except ValueError:
         pass

@@ -32,7 +32,7 @@ import binascii
 import itertools
 import struct
 
-from Crypto import IncorrectPassphraseError, PassphraseRequiredError, Random
+from Crypto import IncorrectPassphraseError, KdfLimitError, PassphraseRequiredError, Random
 from Crypto.Hash import SHA256
 from Crypto.IO import PEM, PKCS8
 from Crypto.Math.Numbers import Integer
@@ -593,7 +593,7 @@ def _import_key_der(key_data, passphrase, params, max_iteration_count=None, thre
 
     try:
         return _import_pkcs8(key_data, passphrase, params, max_iteration_count, threads, max_memory)
-    except (PKCS8.PbesLimitError, PassphraseRequiredError, IncorrectPassphraseError):
+    except (KdfLimitError, PassphraseRequiredError, IncorrectPassphraseError):
         raise
     except ValueError:
         pass

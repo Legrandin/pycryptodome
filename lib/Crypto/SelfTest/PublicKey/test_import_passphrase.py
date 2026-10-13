@@ -11,7 +11,7 @@ import warnings
 
 import pytest
 
-from Crypto import IncorrectPassphraseError, PassphraseRequiredError
+from Crypto import IncorrectPassphraseError, KdfIterationLimitError, PassphraseRequiredError
 from Crypto.IO import PEM, PKCS8
 from Crypto.PublicKey import DSA, ECC, RSA
 
@@ -198,7 +198,7 @@ class TestOtherErrors:
             format="DER", passphrase="pw", protection=CBC, prot_params={"iteration_count": 2}
         )
         for passphrase in ("pw", "wrong"):
-            with pytest.raises(PKCS8.PbesIterationCountError):
+            with pytest.raises(KdfIterationLimitError):
                 ECC.import_key(encrypted, passphrase=passphrase, max_iteration_count=1)
 
 

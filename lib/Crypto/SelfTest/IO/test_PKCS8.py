@@ -10,6 +10,7 @@ from binascii import unhexlify
 
 import pytest
 
+from Crypto import KdfIterationLimitError, KdfLimitError, KdfMemoryLimitError
 from Crypto.IO import _PBES, PKCS8
 from Crypto.Protocol.KDF import scrypt
 from Crypto.Util._cpu_features import available_cores
@@ -567,10 +568,10 @@ class TestKeyKdfParams:
         assert scrypt_threads == [2, 2, 3]
         # Not even one thread fits: the specific error is not hidden
         expected = _PBES._MEMORY_ERROR.format(memory=self._memory(1), limit=self._memory(1) - 1)
-        with pytest.raises(PKCS8.PbesMemoryError) as ctx:
+        with pytest.raises(KdfMemoryLimitError) as ctx:
             module.import_key(encrypted, "pw", max_memory=self._memory(1) - 1)
         assert str(ctx.value) == expected
-        assert isinstance(ctx.value, PKCS8.PbesLimitError)
+        assert isinstance(ctx.value, KdfLimitError)
 
     def test_rsa_payload_is_pkcs1(self, keys):
         """The payload of an RSA PKCS#8 key must be an RSAPrivateKey:
@@ -634,7 +635,7 @@ class TestKeyKdfParams:
         for limit in (self.cost, 4 * self.cost, 0, None):
             assert module.import_key(encrypted, "pw", max_iteration_count=limit) == key
         # The specific error is not hidden by the other key formats
-        with pytest.raises(PKCS8.PbesIterationCountError, match="max_iteration_count"):
+        with pytest.raises(KdfIterationLimitError, match="max_iteration_count"):
             module.import_key(encrypted, "pw", max_iteration_count=self.cost - 1)
 
     def test_max_iteration_count_pbkdf2(self, keys):
@@ -647,7 +648,7 @@ class TestKeyKdfParams:
             prot_params={"iteration_count": 2000},
         )
         assert module.import_key(encrypted, "pw", max_iteration_count=2000) == key
-        with pytest.raises(PKCS8.PbesIterationCountError):
+        with pytest.raises(KdfIterationLimitError):
             module.import_key(encrypted, "pw", max_iteration_count=1999)
 
     def test_max_iteration_count_unwrap(self, keys):
@@ -656,7 +657,7 @@ class TestKeyKdfParams:
         expected = _PBES._ITERATION_COUNT_ERROR.format(
             what=_PBES._SCRYPT_COST, count=self.cost, limit=self.cost - 1
         )
-        with pytest.raises(PKCS8.PbesIterationCountError) as ctx:
+        with pytest.raises(KdfIterationLimitError) as ctx:
             PKCS8.unwrap(encrypted, "pw", self.cost - 1)
         assert str(ctx.value) == expected
         # It is a ValueError

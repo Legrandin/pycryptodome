@@ -46,7 +46,7 @@ from typing import (
     overload,
 )
 
-from Crypto import IncorrectPassphraseError, PassphraseRequiredError
+from Crypto import IncorrectPassphraseError, KdfLimitError, PassphraseRequiredError
 from Crypto.Hash import SHA512, SHAKE256
 from Crypto.Math.Numbers import Integer
 from Crypto.PublicKey import (
@@ -996,11 +996,9 @@ def _import_der(encoded, passphrase, max_iteration_count=None, threads=1, max_me
     except (ValueError, TypeError, IndexError):
         pass
 
-    from Crypto.IO import PKCS8
-
     try:
         return _import_pkcs8(encoded, passphrase, max_iteration_count, threads, max_memory)
-    except (UnsupportedEccFeature, PKCS8.PbesLimitError, PassphraseRequiredError, IncorrectPassphraseError):
+    except (UnsupportedEccFeature, KdfLimitError, PassphraseRequiredError, IncorrectPassphraseError):
         raise
     except (ValueError, TypeError, IndexError):
         pass
@@ -1359,7 +1357,7 @@ def import_key(
             result = _import_der(der_encoded, passphrase, max_iteration_count, threads, max_memory)
         except (
             UnsupportedEccFeature,
-            PKCS8.PbesLimitError,
+            KdfLimitError,
             PassphraseRequiredError,
             IncorrectPassphraseError,
         ):

@@ -13,15 +13,13 @@ from Crypto import (
     _INCORRECT_PASSPHRASE,
     _PASSPHRASE_REQUIRED,
     IncorrectPassphraseError,
+    KdfLimitError,
     PassphraseRequiredError,
 )
 from Crypto.IO._PBES import (
     PBES1,
     PBES2,
     PbesError,
-    PbesIterationCountError,
-    PbesLimitError,
-    PbesMemoryError,
     ProtParams,
 )
 from Crypto.Util._bytes import tobytes
@@ -34,7 +32,7 @@ from Crypto.Util.asn1 import (
     DerSequence,
 )
 
-__all__ = ["wrap", "unwrap", "PbesLimitError", "PbesIterationCountError", "PbesMemoryError"]
+__all__ = ["wrap", "unwrap"]
 
 
 def _check_kdf_params(
@@ -185,7 +183,7 @@ def unwrap(
         Only scrypt uses a significant amount: 128 · (*N* + 2) · *r* bytes for
         **each** thread, plus 256 · *r* · *p* bytes for all the flows together.
         If the requested threads do not fit, fewer are used (down to one);
-        if a single thread does not fit, :class:`PbesMemoryError` is raised.
+        if a single thread does not fit, :class:`Crypto.KdfMemoryLimitError` is raised.
         The default value is None (a limit of 256 MiB).
         Set it to ``0`` to disable the check.
 
@@ -201,9 +199,9 @@ def unwrap(
         and no passphrase has been provided
       IncorrectPassphraseError : (a ``ValueError``) if the blob cannot be
         decrypted with the passphrase (most likely, the passphrase is incorrect)
-      PbesIterationCountError : (a ``ValueError``) if the iteration count
+      KdfIterationLimitError : (a ``ValueError``) if the iteration count
         is above :data:`max_iteration_count`
-      PbesMemoryError : (a ``ValueError``) if the key derivation needs
+      KdfMemoryLimitError : (a ``ValueError``) if the key derivation needs
         more memory than :data:`max_memory`
       ValueError : if decoding fails for any other reason
     """
@@ -236,7 +234,7 @@ def unwrap(
                 p8_private_key, passphrase, max_iteration_count=max_iteration_count
             )
             found = True
-        except (PbesLimitError, IncorrectPassphraseError):
+        except (KdfLimitError, IncorrectPassphraseError):
             # The key is well-formed, and these are the only reasons to reject it
             raise
         except PbesError as e:
@@ -254,7 +252,7 @@ def unwrap(
                     max_memory=max_memory,
                 )
                 found = True
-            except (PbesLimitError, IncorrectPassphraseError):
+            except (KdfLimitError, IncorrectPassphraseError):
                 raise
             except PbesError as e:
                 error_str += ",PBES2[%s]" % str(e)
