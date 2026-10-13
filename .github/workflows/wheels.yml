@@ -60,6 +60,12 @@ jobs:
           # The tests only enforce it for 64-bit Python, not for the win32 wheels.
           PYCRYPTODOME_REQUIRE_SHA_NI: ${{ matrix.os == 'windows-2025' && '1' || '' }}
 
+          # Build the Windows x86_64 (AMD64) wheels with clang-cl, which compiles the
+          # code for AVX2, BMI2 and ADX (MSVC cannot), and fail if it is not used.
+          # Neither applies to the win32 wheels.
+          PYCRYPTODOME_CLANG_CL: ${{ matrix.os == 'windows-2022' && '1' || '' }}
+          PYCRYPTODOME_REQUIRE_AVX2_BMI2: ${{ matrix.os == 'windows-2022' && '1' || '' }}
+
       - name: Delete manylinux1 wheels
         if: runner.os == 'Linux'
         run: |

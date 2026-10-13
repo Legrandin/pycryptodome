@@ -29,13 +29,20 @@ from setuptools.command.build_ext import build_ext
 
 sys.path.append(os.getcwd())
 
-from compiler_opt import set_compiler_options
+from compiler_opt import print_clang_cl_version, set_compiler_options, use_clang_cl
 
 
 class PCTBuildExt(build_ext):
     # Avoid linking Python's dynamic library
     def get_libraries(self, ext):
         return []
+
+    # On Windows x86-64, compile with clang-cl if PYCRYPTODOME_CLANG_CL is set
+    # (see compiler_opt.use_clang_cl)
+    def build_extensions(self):
+        if use_clang_cl(self.compiler):
+            print_clang_cl_version(self.compiler)
+        super().build_extensions()
 
 
 ext_modules = [

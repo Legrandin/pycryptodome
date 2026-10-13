@@ -3,10 +3,82 @@
 
 import distutils
 import os
+import shutil
 import struct
+import subprocess
 import sys
 from distutils import ccompiler
 from distutils.errors import CCompilerError
+from distutils.util import get_platform
+
+
+def _find_clang_cl(compiler, setting):
+    """Return the path of clang-cl.exe, or None.
+
+    ``setting`` is the value of PYCRYPTODOME_CLANG_CL: a path to clang-cl.exe,
+    or any other value to look for it on the PATH (also the one of Visual Studio)
+    and in Visual Studio (component "C++ Clang tools for Windows")."""
+
+    if os.path.isfile(setting):
+        return setting
+
+    paths = os.pathsep.join([getattr(compiler, "_paths", ""), os.environ.get("PATH", "")])
+    found = shutil.which("clang-cl", path=paths)
+    if found:
+        return found
+
+    # cl.exe is in VC\Tools\MSVC\<version>\bin\Host<arch>\<arch>,
+    # clang-cl.exe in VC\Tools\Llvm\x64\bin
+    tools_dir = os.path.dirname(compiler.cc)
+    for _ in range(5):
+        tools_dir = os.path.dirname(tools_dir)
+    candidate = os.path.join(tools_dir, "Llvm", "x64", "bin", "clang-cl.exe")
+    if os.path.isfile(candidate):
+        return candidate
+    return None
+
+
+def use_clang_cl(compiler):
+    """Make a distutils MSVC compiler object compile with clang-cl instead of
+    cl.exe, if the environment variable PYCRYPTODOME_CLANG_CL is set
+    (to a path to clang-cl.exe, or to 1 to look for it).
+
+    clang-cl is compatible with the ABI and the command line of MSVC, and it
+    supports what cl.exe does not: GCC-style inline assembly and cpuid.h, used
+    by the code for CPUs with AVX2, BMI2 and ADX. The objects are linked with
+    the linker of MSVC as usual. Only for Windows on x86-64: on other targets,
+    and if the variable is not set, nothing changes.
+
+    Return True if clang-cl is used."""
+
+    setting = os.environ.get("PYCRYPTODOME_CLANG_CL")
+    if not setting or compiler.compiler_type != "msvc" or get_platform() != "win-amd64":
+        return False
+
+    if not compiler.initialized:
+        compiler.initialize()
+
+    clang_cl = _find_clang_cl(compiler, setting)
+    if clang_cl is None:
+        raise CCompilerError("PYCRYPTODOME_CLANG_CL is set, but clang-cl.exe was not found")
+    compiler.cc = clang_cl
+
+    # Whole program optimization (/GL, /LTCG) is specific to cl.exe
+    for options in (compiler.compile_options, compiler.compile_options_debug):
+        while "/GL" in options:
+            options.remove("/GL")
+    for ldflags in compiler._ldflags.values():
+        while "/LTCG" in ldflags:
+            ldflags.remove("/LTCG")
+
+    return True
+
+
+def print_clang_cl_version(compiler):
+    """Print the path and the version of clang-cl, for the build log"""
+
+    version = subprocess.run([compiler.cc, "--version"], capture_output=True, text=True).stdout
+    print("Compiling with %s: %s" % (compiler.cc, version.splitlines()[0] if version else "?"))
 
 
 def test_compilation(program, extra_cc_options=None, extra_libraries=None, msg=""):
@@ -38,6 +110,7 @@ def test_compilation(program, extra_cc_options=None, extra_libraries=None, msg="
     try:
         compiler = ccompiler.new_compiler()
         distutils.sysconfig.customize_compiler(compiler)
+        use_clang_cl(compiler)
 
         if compiler.compiler_type in ["msvc"]:
             # Force creation of the manifest file (http://bugs.python.org/issue16296)
