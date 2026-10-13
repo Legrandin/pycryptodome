@@ -294,9 +294,10 @@ class TestExport_Curve25519:
         with pytest.raises(ValueError):
             self.ref_private.export_key(format="XXX")
 
-        # Missing 'protection' parameter when PKCS#8 is used
-        with pytest.raises(ValueError):
-            self.ref_private.export_key(format="PEM", passphrase="secret")
+        # Without 'protection', PKCS#8 uses the default scheme
+        encoded = self.ref_private.export_key(format="PEM", passphrase="secret")
+        assert "BEGIN ENCRYPTED PRIVATE KEY" in encoded
+        assert ECC.import_key(encoded, "secret") == self.ref_private
 
         # Empty password
         with pytest.raises(ValueError):

@@ -24,7 +24,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import Callable, Optional, Union
+from typing import TYPE_CHECKING, Callable, Optional, Union
 
 __all__ = ["generate", "construct", "DsaKey", "import_key"]
 
@@ -47,6 +47,9 @@ from Crypto.Util.asn1 import (
     DerInteger,
     DerSequence,
 )
+
+if TYPE_CHECKING:
+    from Crypto.IO._PBES import ProtParams
 
 RNG = Callable[[int], bytes]
 Int = Union[int, Integer]
@@ -209,6 +212,7 @@ class DsaKey:
         passphrase: Optional[Union[str, bytes]] = None,
         protection: Optional[str] = None,
         randfunc: Optional[RNG] = None,
+        prot_params: Optional[ProtParams] = None,
     ) -> bytes:
         """Export this DSA key.
 
@@ -236,12 +240,15 @@ class DsaKey:
             If :data:`pkcs8` takes value ``True``, this is the PKCS#8
             algorithm to use for deriving the secret and encrypting
             the private DSA key.
-            For a complete list of algorithms, see :mod:`Crypto.IO.PKCS8`.
-            The default is *PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC*.
+            The default is ``'PBKDF2WithHMAC-SHA256AndAES256-CBC'``.
+            For a complete list of algorithms, see
+            :ref:`the encryption parameters of PKCS#8<enc_params>`.
 
             If :data:`pkcs8` is ``False``, the obsolete PEM encryption scheme is
-            used. It is based on MD5 for key derivation, and Triple DES for
-            encryption. Parameter :data:`protection` is then ignored.
+            used, and :data:`protection` is not allowed. It derives the key
+            with a single round of MD5, and is therefore easy to brute force:
+            use it only with a high-entropy passphrase (like 16 random bytes),
+            for compatibility with old software.
 
             The combination ``format='DER'`` and ``pkcs8=False`` is not allowed
             if a passphrase is present.
@@ -250,12 +257,20 @@ class DsaKey:
             A function that returns random bytes.
             By default it is :func:`Crypto.Random.get_random_bytes`.
 
+          prot_params (dict):
+            *Only with PKCS#8 and a pass phrase*.
+            The parameters to use to derive the encryption key
+            from the passphrase.
+            For all possible values,
+            refer to :ref:`the encryption parameters of PKCS#8<enc_params>`.
+
         Returns:
           byte string : the encoded key
 
         Raises:
-          ValueError : when the format is unknown or when you try to encrypt a private
-            key with *DER* format and OpenSSL/OpenSSH.
+          ValueError : when the format is unknown, when you try to encrypt a private
+            key with *DER* format and OpenSSL/OpenSSH, or when you pass
+            ``protection`` or ``prot_params`` with ``pkcs8=False``.
 
         .. warning::
             If you don't provide a pass phrase, the private key will be
@@ -294,11 +309,15 @@ class DsaKey:
             if pkcs8 is None:
                 pkcs8 = True
             if pkcs8:
-                if not protection:
-                    protection = "PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC"
                 private_key = DerInteger(self.x).encode()
                 binary_key = PKCS8.wrap(
-                    private_key, oid, passphrase, protection, key_params=params, randfunc=randfunc
+                    private_key,
+                    oid,
+                    passphrase,
+                    protection,
+                    prot_params=prot_params,
+                    key_params=params,
+                    randfunc=randfunc,
                 )
                 if passphrase:
                     key_type = "ENCRYPTED PRIVATE"
@@ -306,6 +325,8 @@ class DsaKey:
                     key_type = "PRIVATE"
                 passphrase = None
             else:
+                if protection or prot_params:
+                    raise ValueError("'protection' and 'prot_params' are only supported for PKCS#8")
                 if format != "PEM" and passphrase:
                     raise ValueError("DSA private key cannot be encrypted")
                 ints = [0, self.p, self.q, self.g, self.y, self.x]

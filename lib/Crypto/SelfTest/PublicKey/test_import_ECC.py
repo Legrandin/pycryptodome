@@ -1065,10 +1065,11 @@ class TestExport_P192:
         with pytest.raises(ValueError):
             self.ref_private.export_key(format="XXX")
 
-        # Missing 'protection' parameter when PKCS#8 is used
+        # Without 'protection', PKCS#8 uses the default scheme
         self.ref_private.export_key(format="PEM", passphrase="secret", use_pkcs8=False)
-        with pytest.raises(ValueError):
-            self.ref_private.export_key(format="PEM", passphrase="secret")
+        encoded = self.ref_private.export_key(format="PEM", passphrase="secret")
+        assert "BEGIN ENCRYPTED PRIVATE KEY" in encoded
+        assert ECC.import_key(encoded, "secret") == self.ref_private
 
         # DER format but no PKCS#8
         with pytest.raises(ValueError):
@@ -1328,10 +1329,11 @@ class TestExport_P224:
         with pytest.raises(ValueError):
             self.ref_private.export_key(format="XXX")
 
-        # Missing 'protection' parameter when PKCS#8 is used
+        # Without 'protection', PKCS#8 uses the default scheme
         self.ref_private.export_key(format="PEM", passphrase="secret", use_pkcs8=False)
-        with pytest.raises(ValueError):
-            self.ref_private.export_key(format="PEM", passphrase="secret")
+        encoded = self.ref_private.export_key(format="PEM", passphrase="secret")
+        assert "BEGIN ENCRYPTED PRIVATE KEY" in encoded
+        assert ECC.import_key(encoded, "secret") == self.ref_private
 
         # DER format but no PKCS#8
         with pytest.raises(ValueError):
@@ -1621,10 +1623,11 @@ class TestExport_P256:
         with pytest.raises(ValueError):
             self.ref_private.export_key(format="XXX")
 
-        # Missing 'protection' parameter when PKCS#8 is used
+        # Without 'protection', PKCS#8 uses the default scheme
         self.ref_private.export_key(format="PEM", passphrase="secret", use_pkcs8=False)
-        with pytest.raises(ValueError):
-            self.ref_private.export_key(format="PEM", passphrase="secret")
+        encoded = self.ref_private.export_key(format="PEM", passphrase="secret")
+        assert "BEGIN ENCRYPTED PRIVATE KEY" in encoded
+        assert ECC.import_key(encoded, "secret") == self.ref_private
 
         # DER format but no PKCS#8
         with pytest.raises(ValueError):
@@ -1916,10 +1919,11 @@ class TestExport_P384:
         with pytest.raises(ValueError):
             self.ref_private.export_key(format="XXX")
 
-        # Missing 'protection' parameter when PKCS#8 is used
+        # Without 'protection', PKCS#8 uses the default scheme
         self.ref_private.export_key(format="PEM", passphrase="secret", use_pkcs8=False)
-        with pytest.raises(ValueError):
-            self.ref_private.export_key(format="PEM", passphrase="secret")
+        encoded = self.ref_private.export_key(format="PEM", passphrase="secret")
+        assert "BEGIN ENCRYPTED PRIVATE KEY" in encoded
+        assert ECC.import_key(encoded, "secret") == self.ref_private
 
         # DER format but no PKCS#8
         with pytest.raises(ValueError):
@@ -2223,10 +2227,11 @@ class TestExport_P521:
         with pytest.raises(ValueError):
             self.ref_private.export_key(format="XXX")
 
-        # Missing 'protection' parameter when PKCS#8 is used
+        # Without 'protection', PKCS#8 uses the default scheme
         self.ref_private.export_key(format="PEM", passphrase="secret", use_pkcs8=False)
-        with pytest.raises(ValueError):
-            self.ref_private.export_key(format="PEM", passphrase="secret")
+        encoded = self.ref_private.export_key(format="PEM", passphrase="secret")
+        assert "BEGIN ENCRYPTED PRIVATE KEY" in encoded
+        assert ECC.import_key(encoded, "secret") == self.ref_private
 
         # DER format but no PKCS#8
         with pytest.raises(ValueError):
@@ -2589,9 +2594,10 @@ class TestExport_Ed25519:
         with pytest.raises(ValueError):
             self.ref_private.export_key(format="XXX")
 
-        # Missing 'protection' parameter when PKCS#8 is used
-        with pytest.raises(ValueError):
-            self.ref_private.export_key(format="PEM", passphrase="secret")
+        # Without 'protection', PKCS#8 uses the default scheme
+        encoded = self.ref_private.export_key(format="PEM", passphrase="secret")
+        assert "BEGIN ENCRYPTED PRIVATE KEY" in encoded
+        assert ECC.import_key(encoded, "secret") == self.ref_private
 
         # Empty password
         with pytest.raises(ValueError):
@@ -2831,9 +2837,10 @@ class TestExport_Ed448:
         with pytest.raises(ValueError):
             self.ref_private.export_key(format="XXX")
 
-        # Missing 'protection' parameter when PKCS#8 is used
-        with pytest.raises(ValueError):
-            self.ref_private.export_key(format="PEM", passphrase="secret")
+        # Without 'protection', PKCS#8 uses the default scheme
+        encoded = self.ref_private.export_key(format="PEM", passphrase="secret")
+        assert "BEGIN ENCRYPTED PRIVATE KEY" in encoded
+        assert ECC.import_key(encoded, "secret") == self.ref_private
 
         # Empty password
         with pytest.raises(ValueError):

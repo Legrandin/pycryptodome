@@ -55,7 +55,7 @@ def keys():
 # Each item: (description, module to import with, function that takes
 # the keys and returns the key encrypted with the passphrase "pw")
 ENCRYPTED = [
-    ("RSA PEM PKCS#1", RSA, lambda k: k["RSA"].export_key("PEM", passphrase="pw")),
+    ("RSA PEM PKCS#1", RSA, lambda k: k["RSA"].export_key("PEM", passphrase="pw", pkcs=1)),
     (
         "RSA PEM PKCS#8 CBC",
         RSA,

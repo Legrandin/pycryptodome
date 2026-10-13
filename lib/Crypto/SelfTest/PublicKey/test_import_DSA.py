@@ -349,8 +349,47 @@ eZ4k+NQDbEL8GiHmFxzDWQAuPPZKJWEEEV2p/To+WOh+kSDHQw==
         tup = (self.y, self.g, self.p, self.q, self.x)
         key = DSA.construct(tup)
         randfunc = BytesIO(unhexlify(b"27A1C66C42AFEECE" + b"D725BF1B6B8239F4")).read
-        encoded = key.export_key("DER", pkcs8=True, passphrase="PWDTEST", randfunc=randfunc)
+        encoded = key.export_key(
+            "DER",
+            pkcs8=True,
+            passphrase="PWDTEST",
+            protection="PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC",
+            prot_params={"iteration_count": 1000},
+            randfunc=randfunc,
+        )
         assert self.der_pkcs8_encrypted == encoded
+
+    def testExportKey11(self):
+        # PKCS#8 with a passphrase and the default protection
+        tup = (self.y, self.g, self.p, self.q, self.x)
+        key = DSA.construct(tup)
+        encoded = key.export_key("PEM", passphrase="PWDTEST")
+        assert b"BEGIN ENCRYPTED PRIVATE KEY" in encoded
+        assert DSA.import_key(encoded, "PWDTEST") == key
+        encoded = key.export_key("DER", passphrase="PWDTEST", prot_params={"iteration_count": 2000})
+        assert DSA.import_key(encoded, "PWDTEST", max_iteration_count=2000) == key
+
+    def testExportKey12(self):
+        # PKCS#8 encryption, round trip
+        tup = (self.y, self.g, self.p, self.q, self.x)
+        key = DSA.construct(tup)
+        encoded = key.export_key(
+            "PEM",
+            passphrase="PWDTEST",
+            protection="PBKDF2WithHMAC-SHA512AndAES256-CBC",
+            prot_params={"iteration_count": 2000},
+        )
+        assert b"BEGIN ENCRYPTED PRIVATE KEY" in encoded
+        assert DSA.import_key(encoded, "PWDTEST") == key
+
+    def testExportKey13(self):
+        # The old PEM encryption does not accept a PKCS#8 protection
+        tup = (self.y, self.g, self.p, self.q, self.x)
+        key = DSA.construct(tup)
+        with pytest.raises(ValueError):
+            key.export_key(
+                "PEM", pkcs8=False, passphrase="PWDTEST", protection="PBKDF2WithHMAC-SHA512AndAES256-CBC"
+            )
 
     # ----
 

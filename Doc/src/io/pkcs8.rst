@@ -19,8 +19,7 @@ normally you would use the ``export_key`` method of the key itself)::
                     pkey,
                     "1.2.840.10045.2.1",  # unrestricted ECC
                     passphrase=passphrase,
-                    protection='PBKDF2WithHMAC-SHA512AndAES256-CBC',
-                    prot_params={'iteration_count': 210000}
+                    protection='PBKDF2WithHMAC-SHA256AndAES256-CBC'
                     )
 
 .. _enc_params:
@@ -31,7 +30,8 @@ Encryption parameters
 When creating an encrypted PKCS#8 container, the two parameters
 ``protection`` and ``prot_params`` drive the encryption algorithm:
 
-* ``protection`` (mandatory), a string that defines how the encryption
+* ``protection`` (optional, the default is ``'PBKDF2WithHMAC-SHA256AndAES256-CBC'``),
+  a string that defines how the encryption
   key is derived from the passphrase, and which cipher to use.
   The string must follow one of the two patterns:
 
@@ -39,7 +39,7 @@ When creating an encrypted PKCS#8 container, the two parameters
   #. ``'scryptAnd'`` + **cipher**
 
   where **hash** is the name of the cryptographic hash
-  (recommended: ``'SHA512'``) and **cipher** is the name
+  (recommended: ``'SHA256'``) and **cipher** is the name
   of the cipher mode to use (recommended: ``'AES256-CBC'``).
 
   Other values for **hash** are ``'SHA1'``, ``'SHA224'``, ``'SHA256'``,
@@ -51,7 +51,11 @@ When creating an encrypted PKCS#8 container, the two parameters
   ``'AES128-CBC'``, ``'AES192-CBC'`` or ``'DES-EDE3-CBC'``.
 
 * ``prot_params`` (optional), a dictionary to override the parameters of the
-  key derivation function:
+  key derivation function. The defaults meet the
+  `OWASP recommendations <https://cheatsheetseries.owasp.org/cheatsheets/Password_Storage_Cheat_Sheet.html>`_
+  for scrypt and for PBKDF2 with SHA-256 or SHA-512 (but not SHA-1, which should not be used):
+  there is no need to change them, except to make
+  the key cheaper to decrypt (for instance, on a slow device).
 
   +------------------+-----------------------------------------------+
   | Key              | Description                                   |
@@ -60,11 +64,8 @@ When creating an encrypted PKCS#8 container, the two parameters
   |                  | slow down brute force attacks on passwords    |
   |                  | (called *N* or CPU/memory cost in scrypt).    |
   |                  |                                               |
-  |                  | **For PBKDF2 with SHA512 the recommended      |
-  |                  | value is 210 000** (default is 1 000).        |
-  |                  |                                               |
-  |                  | **For scrypt the recommended value is         |
-  |                  | 131 072** (default value is 16 384).          |
+  |                  | The default value is 600 000 for PBKDF2       |
+  |                  | (whatever the hash), and 131 072 for scrypt.  |
   +------------------+-----------------------------------------------+
   | salt_size        | Salt is used to thwart dictionary and rainbow |
   |                  | attacks on passwords. The default value is 8  |

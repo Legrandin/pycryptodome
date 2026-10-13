@@ -390,16 +390,14 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
             key.export_key("invalid-format")
 
     def testExportKey10(self):
-        # Export and re-import the encrypted key. It must match.
-        # PEM envelope, PKCS#1, old PEM encryption
+        # With a passphrase, the default is PKCS#8 with the default protection
         key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
         outkey = key.export_key("PEM", "test")
-        assert outkey.decode("latin-1").find("4,ENCRYPTED") != -1
-        assert outkey.decode("latin-1").find("BEGIN RSA PRIVATE KEY") != -1
-        inkey = RSA.importKey(outkey, "test")
-        assert key.n == inkey.n
-        assert key.e == inkey.e
-        assert key.d == inkey.d
+        assert outkey.decode("latin-1").find("4,ENCRYPTED") == -1
+        assert outkey.decode("latin-1").find("BEGIN ENCRYPTED PRIVATE KEY") != -1
+        assert RSA.import_key(outkey, "test") == key
+        outkey = key.export_key("DER", "test")
+        assert RSA.import_key(outkey, "test") == key
 
     def testExportKey11(self):
         # Export and re-import the encrypted key. It must match.
@@ -414,16 +412,29 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         assert key.d == inkey.d
 
     def testExportKey12(self):
-        # Export and re-import the encrypted key. It must match.
-        # PEM envelope, PKCS#8, old PEM encryption
+        # PKCS#8 with a passphrase, default protection, with and without prot_params
         key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
         outkey = key.export_key("PEM", "test", pkcs=8)
-        assert outkey.decode("latin-1").find("4,ENCRYPTED") != -1
+        assert outkey.decode("latin-1").find("4,ENCRYPTED") == -1
+        assert outkey.decode("latin-1").find("BEGIN ENCRYPTED PRIVATE KEY") != -1
+        assert RSA.import_key(outkey, "test") == key
+        outkey = key.export_key("DER", "test", pkcs=8, prot_params={"iteration_count": 2000})
+        assert RSA.import_key(outkey, "test", max_iteration_count=2000) == key
+
+    def testExportKey12b(self):
+        # PKCS#1 does not accept a PKCS#8 protection
+        key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
+        with pytest.raises(ValueError):
+            key.export_key("PEM", "test", pkcs=1, protection="PBKDF2WithHMAC-SHA512AndAES256-CBC")
+        with pytest.raises(ValueError):
+            key.export_key("PEM", "test", pkcs=1, prot_params={"iteration_count": 2000})
+
+    def testExportKey12c(self):
+        # PKCS#8 without a passphrase is in the clear, also with a protection
+        key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
+        outkey = key.export_key("PEM", pkcs=8, protection="PBKDF2WithHMAC-SHA512AndAES256-CBC")
         assert outkey.decode("latin-1").find("BEGIN PRIVATE KEY") != -1
-        inkey = RSA.importKey(outkey, "test")
-        assert key.n == inkey.n
-        assert key.e == inkey.e
-        assert key.d == inkey.d
+        assert RSA.import_key(outkey) == key
 
     def testExportKey13(self):
         # Export and re-import the encrypted key. It must match.
@@ -441,7 +452,7 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         # Export and re-import the encrypted key. It must match.
         # DER envelope, PKCS#8, PKCS#8 encryption
         key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
-        outkey = key.export_key("DER", "test", pkcs=8)
+        outkey = key.export_key("DER", "test", pkcs=8, protection="PBKDF2WithHMAC-SHA512AndAES256-CBC")
         inkey = RSA.importKey(outkey, "test")
         assert key.n == inkey.n
         assert key.e == inkey.e

@@ -35,6 +35,10 @@ from Crypto.Util.asn1 import (
 __all__ = ["wrap", "unwrap"]
 
 
+#: Encryption scheme of a private key, when the ``protection`` is not specified
+DEFAULT_PROTECTION = "PBKDF2WithHMAC-SHA256AndAES256-CBC"
+
+
 def _check_kdf_params(
     max_iteration_count: Optional[int] = None, threads: int = 1, max_memory: Optional[int] = None
 ) -> None:
@@ -87,7 +91,7 @@ def wrap(
       protection (string):
         The identifier of the algorithm to use for securely wrapping the key.
         Refer to :ref:`the encryption parameters<enc_params>` .
-        The default value is ``'PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC'``.
+        The default value is ``'PBKDF2WithHMAC-SHA256AndAES256-CBC'``.
 
       prot_params (dictionary):
         Parameters for the key derivation function (KDF).
@@ -141,7 +145,7 @@ def wrap(
     # Encryption with PBES2
     passphrase = tobytes(passphrase)
     if protection is None:
-        protection = "PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC"
+        protection = DEFAULT_PROTECTION
     return PBES2.encrypt(pk_info_der, passphrase, protection, prot_params, randfunc, threads=threads)
 
 

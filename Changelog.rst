@@ -46,6 +46,19 @@ Breaking changes
   about 256 GiB is now rejected with ``MessageTooLongError``. Before, the counter
   overflowed into the 4 zero bytes, which no specification defines. The ciphertext
   and the tag of shorter messages are unchanged.
+* Exporting a private key with a passphrase uses PKCS#8 with
+  ``'PBKDF2WithHMAC-SHA256AndAES256-CBC'`` and 600 000 iterations by default,
+  instead of weak schemes. With RSA keys, ``export_key(passphrase=...)`` returned
+  a PKCS#1 key with the obsolete PEM encryption (one round of MD5 and 3DES, easy to brute force),
+  and now returns an ``ENCRYPTED PRIVATE KEY``: the parameter ``pkcs`` of ``RsaKey.export_key()``
+  is now ``None`` by default (PKCS#1 for a key in the clear, as before, PKCS#8 with a passphrase).
+  Without ``protection``, ``export_key()`` of RSA and DSA keys and ``Crypto.IO.PKCS8.wrap()``
+  used ``'PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC'``, and ECC keys raised ``ValueError``.
+  When ``prot_params`` does not specify them, the iteration count of PBKDF2 is now 600 000 (it was 1000)
+  and the cost N of scrypt 131 072 (it was 16 384), which meet the OWASP recommendations.
+  The obsolete PEM encryption is only used with an explicit ``pkcs=1`` (RSA), ``pkcs8=False`` (DSA)
+  or ``use_pkcs8=False`` (ECC); with RSA and DSA, ``protection`` and ``prot_params``
+  are then rejected, instead of being silently ignored.
 
 Deprecations
 ------------
@@ -55,6 +68,8 @@ Deprecations
 
 Resolved issues
 ---------------
+* ``RsaKey.export_key()`` with ``format='PEM'``, ``pkcs=8``, a ``protection`` but no passphrase
+  labeled the key in the clear as ``ENCRYPTED PRIVATE KEY``.
 * Importing a private key in clear PKCS#8 format failed if a passphrase was
   also given; now the passphrase is ignored, as for the other formats.
 * ``Crypto.Math.Primality``: the trial division by small primes in ``test_probable_prime()``
@@ -198,6 +213,7 @@ New features
   about 4.8x and 4.7x on x86-64 CPUs with AVX2 and BMI2 (gcc and clang only;
   8 blocks of key stream at a time), 2.6x and 2.3x with SSE2 (4 blocks at a time),
   and 1.3x and 1.1x otherwise. ChaCha20-Poly1305 is about 2x faster.
+* New parameter ``prot_params`` for ``DsaKey.export_key()``, as for RSA and ECC keys.
 * GH#911: New method ``export()`` for HPKE contexts, to derive secrets
   (RFC 9180, Section 5.3). With the new ``HPKE.AEAD.EXPORT_ONLY``,
   a context can only export secrets. Thanks to sebastian.

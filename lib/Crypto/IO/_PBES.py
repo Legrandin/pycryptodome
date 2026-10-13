@@ -59,6 +59,16 @@ _OID_AES128_GCM = "2.16.840.1.101.3.4.1.6"
 _OID_AES192_GCM = "2.16.840.1.101.3.4.1.26"
 _OID_AES256_GCM = "2.16.840.1.101.3.4.1.46"
 
+# Default parameters for encryption, when ``prot_params`` does not specify them,
+# from the OWASP Password Storage Cheat Sheet (as revised in March 2026)
+
+#: Iteration count of PBKDF2 (the OWASP value for HMAC-SHA256, used for all hashes;
+#: OWASP gives 220 000 for HMAC-SHA512, and 1 400 000 for HMAC-SHA1, legacy only)
+_DEFAULT_PBKDF2_COUNT = 600_000
+
+#: Cost N of scrypt, with r = 8 and p = 1 (128 MiB of memory)
+_DEFAULT_SCRYPT_N = 2**17
+
 # Default limits for decryption (when max_iteration_count is None), against
 # crafted blobs that would tie up the CPU or the memory. With each of them,
 # the key derivation takes at most about one minute on a recent x86-64 laptop,
@@ -339,7 +349,6 @@ class PBES2:
             The passphrase to use for encrypting the data.
           protection : string
             The identifier of the encryption algorithm to use.
-            The default value is '``PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC``'.
           prot_params : dictionary
             Parameters of the protection algorithm.
 
@@ -350,8 +359,8 @@ class PBES2:
             |                  | slow down brute force attacks on passwords    |
             |                  | (called *N* or CPU/memory cost in scrypt).    |
             |                  |                                               |
-            |                  | The default value for PBKDF2 is 1 000.        |
-            |                  | The default value for scrypt is 16 384.       |
+            |                  | The default value for PBKDF2 is 600 000.      |
+            |                  | The default value for scrypt is 131 072.      |
             +------------------+-----------------------------------------------+
             | salt_size        | Salt is used to thwart dictionary and rainbow |
             |                  | attacks on passwords. The default value is 8  |
@@ -454,7 +463,7 @@ class PBES2:
 
         # Derive key from password
         if pbkdf == "pbkdf2":
-            count = prot_params.get("iteration_count", 1000)
+            count = prot_params.get("iteration_count", _DEFAULT_PBKDF2_COUNT)
             digestmod: Any = Hash.new(pbkdf2_hmac_algo)
 
             key = PBKDF2(passphrase, salt, key_size, count, hmac_hash_module=digestmod)
@@ -476,7 +485,7 @@ class PBES2:
             )
 
         elif pbkdf == "scrypt":
-            count = prot_params.get("iteration_count", 16384)
+            count = prot_params.get("iteration_count", _DEFAULT_SCRYPT_N)
             scrypt_r = prot_params.get("block_size", 8)
             scrypt_p = prot_params.get("parallelization", 1)
             key = scrypt(passphrase, salt, key_size, count, scrypt_r, scrypt_p, threads=threads)

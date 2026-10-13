@@ -14,7 +14,7 @@ from Crypto import KdfIterationLimitError, KdfLimitError, KdfMemoryLimitError
 from Crypto.IO import _PBES, PKCS8
 from Crypto.Protocol.KDF import scrypt
 from Crypto.Util._cpu_features import available_cores
-from Crypto.Util.asn1 import DerNull, DerObject
+from Crypto.Util.asn1 import DerNull, DerObject, DerObjectId, DerSequence
 
 oid_key = "1.2.840.113549.1.1.1"
 
@@ -425,6 +425,35 @@ class TestPKCS8_Decrypt:
                 randfunc=rng,
             )
             assert wrapped == t[4]
+
+    def test_wrap_default_protection(self):
+        """Verify the default protection: PBKDF2 with HMAC-SHA256
+        and 600 000 iterations, AES256-CBC"""
+
+        wrapped = PKCS8.wrap(self.clear_key, self.oid_key, b"TestTest")
+        # EncryptedPrivateKeyInfo / PBES2-params
+        enc_alg = DerSequence().decode(DerSequence().decode(wrapped)[0])
+        pbes2_params = DerSequence().decode(enc_alg[1])
+        kdf = DerSequence().decode(pbes2_params[0])
+        assert DerObjectId().decode(kdf[0]).value == "1.2.840.113549.1.5.12"  # PBKDF2
+        pbkdf2_params = DerSequence().decode(kdf[1])
+        assert pbkdf2_params[1] == 600_000
+        prf = DerSequence().decode(pbkdf2_params[2])
+        assert DerObjectId().decode(prf[0]).value == "1.2.840.113549.2.9"  # HMAC-SHA256
+        enc = DerSequence().decode(pbes2_params[1])
+        assert DerObjectId().decode(enc[0]).value == "2.16.840.1.101.3.4.1.42"  # AES256-CBC
+        assert PKCS8.unwrap(wrapped, b"TestTest")[1] == self.clear_key
+
+    def test_wrap_default_scrypt_params(self):
+        """Verify the default parameters of scrypt: N = 131072, r = 8, p = 1"""
+
+        wrapped = PKCS8.wrap(self.clear_key, self.oid_key, b"TestTest", protection="scryptAndAES128-CBC")
+        enc_alg = DerSequence().decode(DerSequence().decode(wrapped)[0])
+        kdf = DerSequence().decode(DerSequence().decode(enc_alg[1])[0])
+        assert DerObjectId().decode(kdf[0]).value == "1.3.6.1.4.1.11591.4.11"  # scrypt
+        scrypt_params = DerSequence().decode(kdf[1])
+        assert list(scrypt_params[1:4]) == [131072, 8, 1]
+        assert PKCS8.unwrap(wrapped, b"TestTest")[1] == self.clear_key
 
     def test_import_botan_keys(self):
         botan_scrypt_der = txt2bin(botan_scrypt)

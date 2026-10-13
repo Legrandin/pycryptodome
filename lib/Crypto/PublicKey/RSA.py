@@ -310,7 +310,7 @@ class RsaKey:
         self,
         format: str = "PEM",
         passphrase: Optional[Union[bytes, str]] = None,
-        pkcs: int = 1,
+        pkcs: Optional[int] = None,
         protection: Optional[str] = None,
         randfunc: Optional[RNG] = None,
         prot_params: Optional[ProtParams] = None,
@@ -338,13 +338,21 @@ class RsaKey:
             (*Private keys only*) The standard to use for
             serializing the key: PKCS#1 or PKCS#8.
 
-            With ``pkcs=1`` (*default*), the private key is encoded with a
+            With ``pkcs=1``, the private key is encoded with a
             simple `PKCS#1`_ structure (``RSAPrivateKey``). The key cannot be
-            securely encrypted.
+            securely encrypted: with a ``passphrase`` (and ``format='PEM'``),
+            the obsolete PEM encryption is used, which derives the key with
+            a single round of MD5 and is therefore easy to brute force.
+            Use it only with a high-entropy passphrase (like 16 random bytes),
+            for compatibility with old software.
 
             With ``pkcs=8``, the private key is encoded with a `PKCS#8`_ structure
             (``PrivateKeyInfo``). PKCS#8 offers the best ways to securely
             encrypt the key.
+
+            If ``None`` (default), PKCS#1 is used for a key in the clear,
+            and PKCS#8 when there is a ``passphrase`` (that is, the key
+            is always securely encrypted).
 
             .. note::
                 This parameter is ignored for a public key.
@@ -356,29 +364,20 @@ class RsaKey:
             The encryption scheme to use for protecting the private key
             using the passphrase.
 
-            You can only specify a value if ``pkcs=8``.
+            It is only allowed with PKCS#8 (not with ``pkcs=1``).
             For all possible protection schemes,
             refer to :ref:`the encryption parameters of PKCS#8<enc_params>`.
-            The recommended value is
-            ``'PBKDF2WithHMAC-SHA512AndAES256-CBC'``.
-
-            If ``None`` (default), the behavior depends on :attr:`format`:
-
-            - if ``format='PEM'``, the obsolete PEM encryption scheme is used.
-              It is based on MD5 for key derivation, and 3DES for encryption.
-
-            - if ``format='DER'``, the ``'PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC'``
-              scheme is used.
+            The default is ``'PBKDF2WithHMAC-SHA256AndAES256-CBC'``.
 
           prot_params (dict):
             (*For private keys only*)
 
             The parameters to use to derive the encryption key
-            from the passphrase. ``'protection'`` must be also specified.
+            from the passphrase. It is only allowed with PKCS#8.
             For all possible values,
             refer to :ref:`the encryption parameters of PKCS#8<enc_params>`.
-            The recommendation is to use ``{'iteration_count':21000}`` for PBKDF2,
-            and ``{'iteration_count':131072}`` for scrypt.
+            The defaults meet the OWASP recommendations (with the default
+            ``protection``): there is no need to set them.
 
           randfunc (callable):
             A function that provides random bytes. Only used for PEM encoding.
@@ -396,8 +395,9 @@ class RsaKey:
           bytes: the encoded key
 
         Raises:
-          ValueError:when the format is unknown or when you try to encrypt a private
-            key with *DER* format and PKCS#1.
+          ValueError:when the format is unknown, when you try to encrypt a private
+            key with *DER* format and PKCS#1, or when you pass ``protection``
+            or ``prot_params`` with PKCS#1.
 
         .. warning::
             If you don't provide a pass phrase, the private key will be
@@ -444,20 +444,20 @@ class RsaKey:
                     int(Integer(self.q).inverse(self.p)),
                 ]
             ).encode()
+            if pkcs is None:
+                pkcs = 1 if passphrase is None else 8
             if pkcs == 1:
                 key_type = "RSA PRIVATE KEY"
+                if protection or prot_params:
+                    raise ValueError("'protection' and 'prot_params' are only supported for PKCS#8")
                 if format == "DER" and passphrase:
                     raise ValueError("PKCS#1 private key cannot be encrypted")
             else:  # PKCS#8
-                if format == "PEM" and protection is None:
+                if passphrase is None:
                     key_type = "PRIVATE KEY"
                     binary_key = PKCS8.wrap(binary_key, oid, None, key_params=DerNull())
                 else:
                     key_type = "ENCRYPTED PRIVATE KEY"
-                    if not protection:
-                        if prot_params:
-                            raise ValueError("'protection' parameter must be set")
-                        protection = "PBKDF2WithHMAC-SHA1AndDES-EDE3-CBC"
                     binary_key = PKCS8.wrap(
                         binary_key,
                         oid,

@@ -392,9 +392,6 @@ class EccKey:
     def _export_pkcs8(self, **kwargs):
         from Crypto.IO import PKCS8
 
-        if kwargs.get("passphrase") is not None and "protection" not in kwargs:
-            raise ValueError("At least the 'protection' parameter must be present")
-
         if self._seed is not None:
             oid = self._curve.oid
             private_key = DerOctetString(self._seed).encode()
@@ -429,8 +426,6 @@ class EccKey:
         from Crypto.IO import PEM
 
         assert passphrase
-        if "protection" not in kwargs:
-            raise ValueError("At least the 'protection' parameter should be present")
         encoded_der = self._export_pkcs8(passphrase=passphrase, **kwargs)
         return PEM.encode(encoded_der, "ENCRYPTED PRIVATE KEY")
 
@@ -509,15 +504,17 @@ class EccKey:
             It must be ``True`` for Ed25519, Ed448, Curve25519, and Curve448.
 
             If ``False`` and a passphrase is present, the obsolete PEM
-            encryption will be used.
+            encryption will be used. It derives the key with a single round
+            of MD5, and is therefore easy to brute force: use it only with
+            a high-entropy passphrase (like 16 random bytes), for
+            compatibility with old software.
 
           protection (string):
-            When a private key is exported with password-protection
-            and PKCS#8 (both ``DER`` and ``PEM`` formats), this parameter MUST be
-            present,
+            The encryption scheme used when a private key is exported with
+            password-protection and PKCS#8 (both ``DER`` and ``PEM`` formats).
             For all possible protection schemes,
             refer to :ref:`the encryption parameters of PKCS#8<enc_params>`.
-            It is recommended to use ``'PBKDF2WithHMAC-SHA512AndAES128-CBC'``.
+            The default is ``'PBKDF2WithHMAC-SHA256AndAES256-CBC'``.
 
           compress (boolean):
             If ``True``, the method returns a more compact representation
@@ -535,8 +532,8 @@ class EccKey:
             from the passphrase.
             For all possible values,
             refer to :ref:`the encryption parameters of PKCS#8<enc_params>`.
-            The recommendation is to use ``{'iteration_count':21000}`` for PBKDF2,
-            and ``{'iteration_count':131072}`` for scrypt.
+            The defaults meet the OWASP recommendations (with the default
+            ``protection``): there is no need to set them.
 
           threads (integer):
             (*Private keys only*)
