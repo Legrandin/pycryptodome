@@ -46,7 +46,6 @@ from Crypto.PublicKey import (
     _create_subject_public_key_info,
     _expand_subject_public_key_info,
     _extract_subject_public_key_info,
-    _pem_decode_key,
 )
 from Crypto.Util._bytes import tobytes
 from Crypto.Util.asn1 import DerNull, DerSequence
@@ -961,7 +960,7 @@ def import_key(
 
     if extern_key.startswith(b"-----"):
         # This is probably a PEM encoded key.
-        (der, _marker, enc_flag) = _pem_decode_key(extern_key.decode("latin-1"), passphrase)
+        (der, _marker, enc_flag) = PEM.decode(extern_key.decode("latin-1"), passphrase)
         if enc_flag:
             passphrase = None
         return _import_keyDER(der, passphrase, max_iteration_count, threads, max_memory)

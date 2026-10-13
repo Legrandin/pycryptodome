@@ -24,6 +24,7 @@ from Crypto.Hash import MD5
 from Crypto.Protocol.KDF import PBKDF1
 from Crypto.Random import get_random_bytes
 from Crypto.Util._bytes import tobytes
+from Crypto.Util.asn1 import DerSequence
 from Crypto.Util.Padding import pad, unpad
 
 
@@ -108,10 +109,9 @@ def decode(pem_data: str, passphrase: Optional[bytes] = None) -> tuple[bytes, st
     Raises:
       PassphraseRequiredError: (a ``ValueError``) if the PEM block is encrypted
         and no passphrase has been provided.
-      IncorrectPassphraseError: (a ``ValueError``) if the decryption fails,
-        most likely because the passphrase is incorrect.
-        It is not always detected here: decrypting with an incorrect passphrase
-        can also return garbage.
+      IncorrectPassphraseError: (a ``ValueError``) if the PEM block cannot
+        be decrypted with the passphrase (most likely, the passphrase is incorrect).
+        The content of an encrypted PEM block must be DER (as for a private key).
       ValueError: if decoding fails for any other reason.
     """
 
@@ -182,5 +182,13 @@ def decode(pem_data: str, passphrase: Optional[bytes] = None) -> tuple[bytes, st
             # There is no tag, so we don't use decrypt_and_verify
             data = objdec.decrypt(data)
         enc_flag = True
+
+        # An encrypted PEM block holds a private key, encoded in DER.
+        # With an incorrect passphrase, the padding may still be correct
+        # by chance (and GCM is used without its tag): the result is garbage.
+        try:
+            DerSequence().decode(data)
+        except ValueError:
+            raise IncorrectPassphraseError(_INCORRECT_PASSPHRASE) from None
 
     return (data, marker, enc_flag)

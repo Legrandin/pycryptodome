@@ -236,3 +236,11 @@ class TestIO:
         with pytest.raises(PassphraseRequiredError):
             PEM.decode(encrypted)
         assert PEM.decode(encrypted, b"pw")[0] == b"\x30\x03\x02\x01\x00"
+
+    def test_pem_decode_incorrect_passphrase(self):
+        # The padding is correct by chance about once in 256 times:
+        # the content must then be DER
+        encrypted = PEM.encode(b"\x30\x03\x02\x01\x00", "PRIVATE KEY", passphrase=b"pw")
+        for i in range(1000):
+            with pytest.raises(IncorrectPassphraseError):
+                PEM.decode(encrypted, b"wrong%d" % i)

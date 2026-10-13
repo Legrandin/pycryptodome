@@ -53,7 +53,6 @@ from Crypto.PublicKey import (
     _create_subject_public_key_info,
     _expand_subject_public_key_info,
     _extract_subject_public_key_info,
-    _pem_decode_key,
 )
 from Crypto.Random import get_random_bytes
 from Crypto.Util._bytes import tobytes
@@ -1353,7 +1352,7 @@ def import_key(
         ecparams_end = "-----END EC PARAMETERS-----"
         text_encoded = re.sub(ecparams_start + ".*?" + ecparams_end, "", text_encoded, flags=re.DOTALL)
 
-        der_encoded, _marker, enc_flag = _pem_decode_key(text_encoded, passphrase)
+        der_encoded, _marker, enc_flag = PEM.decode(text_encoded, passphrase)
         if enc_flag:
             passphrase = None
         try:
