@@ -8,7 +8,7 @@ jobs:
     strategy:
       matrix:
         os: [ ubuntu-latest ]
-        python-version: [ 3.9, "3.10", "3.11", "3.12", "3.13", "3.14", "3.14t" ]
+        python-version: [ 3.9, "3.10", "3.11", "3.12", "3.13", "3.14", "3.15", "3.15t" ]
         cffi: [ yes, no ]
         include:
           - os: ubuntu-latest
@@ -64,7 +64,7 @@ jobs:
     # of the NIST curves)
     # (once per Python API: ctypes and cffi)
     - name: Test the portable build of the big integer code
-      if: runner.arch == 'X64' && matrix.python-version == '3.14'
+      if: runner.arch == 'X64' && matrix.python-version == '3.15'
       shell: bash
       env:
         PYCRYPTODOME_DISABLE_BMI2_ADX: 1
@@ -78,11 +78,8 @@ jobs:
     strategy:
       matrix:
         os: [ macos-15, windows-latest, windows-11-arm ]
-        python-version: [ "3.13", "3.14" ]
+        python-version: [ "3.15t", "3.15" ]
         cffi: [ yes, no ]
-        exclude:
-          - os: macos-15
-            cffi: no
     env:
       CFLAGS: "-Wconversion"
 
@@ -121,8 +118,8 @@ jobs:
     runs-on: ubuntu-24.04-arm
     strategy:
       matrix:
-        python-version: [ "3.13", "3.14" ]
-        cffi: [ yes ]
+        python-version: [ "3.15t", "3.15" ]
+        cffi: [ no, yes ]
     env:
       CFLAGS: "-Wconversion"
 
@@ -229,10 +226,10 @@ jobs:
             arch: arm64
     steps:
     - uses: actions/checkout@v7
-    - name: Set up Python "3.14"
+    - name: Set up Python "3.15"
       uses: actions/setup-python@v7
       with:
-        python-version: "3.14"
+        python-version: "3.15"
     - name: Install MSVC
       uses: ilammy/msvc-dev-cmd@v1
       with:
