@@ -32,7 +32,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-22.04, windows-2022, macos-15, ubuntu-22.04-arm, windows-11-arm]
+        os: [ubuntu-24.04, windows-2025, macos-15, ubuntu-24.04-arm, windows-11-arm]
 
     if: github.actor == 'Legrandin'
 
@@ -63,7 +63,7 @@ jobs:
 
           # The Windows x86_64 (AMD64) runners support SHA-NI: fail if it is not used.
           # The tests only enforce it for 64-bit Python, not for the win32 wheels.
-          PYCRYPTODOME_REQUIRE_SHA_NI: ${{ matrix.os == 'windows-2022' && '1' || '' }}
+          PYCRYPTODOME_REQUIRE_SHA_NI: ${{ matrix.os == 'windows-2025' && '1' || '' }}
 
       - name: Delete manylinux1 wheels
         if: runner.os == 'Linux'
