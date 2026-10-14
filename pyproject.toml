@@ -94,3 +94,20 @@ known-first-party = ["Crypto"]
 # (the sources in lib/ lack the compiled extensions)
 addopts = ["-p", "Crypto.SelfTest.plugin", "--pyargs"]
 testpaths = ["Crypto.SelfTest"]
+
+[tool.cibuildwheel.linux]
+# The CPython wheels are built for glibc 2.17 and newer (manylinux2014)
+manylinux-x86_64-image = "manylinux2014"
+manylinux-i686-image = "manylinux2014"
+manylinux-aarch64-image = "manylinux2014"
+
+[[tool.cibuildwheel.overrides]]
+# PyPy 8.0 (PyPy 3.11 since cibuildwheel 4.3.0) requires glibc 2.28: it cannot be
+# installed in the manylinux2014 image. cibuildwheel 4.3 builds PyPy in the image of
+# CPython (the manylinux-pypy_*-image options have no effect), hence this override.
+# These options must not be set with CIBW_* environment variables, which would take
+# precedence over it.
+select = "pp*"
+manylinux-x86_64-image = "manylinux_2_28"
+manylinux-i686-image = "manylinux_2_28"
+manylinux-aarch64-image = "manylinux_2_28"
