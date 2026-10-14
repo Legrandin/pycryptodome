@@ -95,6 +95,11 @@ known-first-party = ["Crypto"]
 addopts = ["-p", "Crypto.SelfTest.plugin", "--pyargs"]
 testpaths = ["Crypto.SelfTest"]
 
+[tool.cibuildwheel.windows]
+# delvewheel should find no DLL to vendor: it is kept as a check.
+# vcruntime140.dll is excluded, as delvewheel 1.13 does not know that PyPy 8.0 provides it.
+repair-wheel-command = "delvewheel repair --exclude vcruntime140.dll -w {dest_dir} -v {wheel}"
+
 [tool.cibuildwheel.linux]
 # The CPython wheels are built for glibc 2.17 and newer (manylinux2014)
 manylinux-x86_64-image = "manylinux2014"
