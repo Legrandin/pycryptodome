@@ -35,7 +35,6 @@ Where to go next:
    src/introduction
    src/features
    src/installation
-   src/vs_pycrypto
    src/api
    src/exceptions
    src/examples
