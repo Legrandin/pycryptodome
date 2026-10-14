@@ -80,13 +80,6 @@ jobs:
         os: [ macos-15, windows-latest, windows-11-arm ]
         python-version: [ "3.15t", "3.15" ]
         cffi: [ yes, no ]
-        include:
-          # One Windows x86_64 job builds with clang-cl, like the wheels:
-          # it compiles the code for AVX2, BMI2 and ADX, which must be used
-          - os: windows-latest
-            python-version: "3.15"
-            cffi: yes
-            clang_cl: "1"
     env:
       CFLAGS: "-Wconversion"
 
@@ -111,7 +104,7 @@ jobs:
 
     - name: Install package
       env:
-        PYCRYPTODOME_CLANG_CL: ${{ matrix.clang_cl }}
+        PYCRYPTODOME_CLANG_CL: ${{ matrix.os == 'windows-latest' && '1' || '' }}
       run: |
         pip install -v .
 
@@ -121,7 +114,7 @@ jobs:
         # The Windows x86_64 (AMD64) runners support SHA-NI: fail if it is not used
         PYCRYPTODOME_REQUIRE_SHA_NI: ${{ matrix.os == 'windows-latest' && '1' || '' }}
         # Likewise for AVX2, BMI2 and ADX, when built with clang-cl
-        PYCRYPTODOME_REQUIRE_AVX2_BMI2: ${{ matrix.clang_cl }}
+        PYCRYPTODOME_REQUIRE_AVX2_BMI2: ${{ matrix.os == 'windows-latest' && '1' || '' }}
       run: |
         python -m Crypto.SelfTest
 
@@ -247,6 +240,8 @@ jobs:
       with:
         arch: ${{ matrix.arch }}
     - name: Test Windows 32 and 64
+      env:
+        CC: ${{ matrix.os == 'windows-latest' && matrix.arch == 'x64' && 'clang-cl' || 'cl' }}
       run: |
         cd src/test
         mkdir build
