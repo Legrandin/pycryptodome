@@ -1,7 +1,7 @@
 Changelog
 =========
 
-4.0.0 (under development)
+4.0.0 (14 October 2026)
 ++++++++++++++++++++++++++
 
 Breaking changes
