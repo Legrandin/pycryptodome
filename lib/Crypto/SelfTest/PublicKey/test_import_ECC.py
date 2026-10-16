@@ -470,6 +470,12 @@ class TestImport_P256:
         key = ECC.import_key(key_file)
         assert self.ref_private == key
 
+    def test_import_private_pkcs8_in_pem_with_parameters_clear(self):
+        key_file = load_file("ecc_p256_private_with_parameters_clear.pem")
+
+        key = ECC.import_key(key_file)
+        self.assertEqual(ref_private, key)        
+
     def test_import_private_pkcs8_encrypted_1(self):
         key_file = load_file("ecc_p256_private_p8.der")
 
