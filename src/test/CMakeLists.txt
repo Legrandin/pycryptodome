@@ -101,6 +101,17 @@ if (MSVC)
     	add_compile_definitions(HAVE_WMMINTRIN_H)
     	add_compile_definitions(HAVE_TMMINTRIN_H)
     endif()
+
+    # Unlike cl.exe, clang-cl only accepts the intrinsics of the
+    # instruction sets that are enabled
+    if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
+        if (SSE)
+            add_compile_options(-mssse3 -mpclmul)
+        endif()
+        if (AESNI)
+            add_compile_options(-maes)
+        endif()
+    endif()
 else()
     if (SSE)
         message(STATUS "Using SSE instructions")
