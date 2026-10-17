@@ -385,6 +385,27 @@ def compiler_has_memalign():
     return test_compilation(source, msg="memalign")
 
 
+def check_compiler_works():
+    """Raise CCompilerError if the C compiler cannot build a minimal program.
+
+    With a broken toolchain (e.g. an assembler too old for the compiler),
+    all the tests of the platform features fail, and the build stops later
+    with misleading errors (GH#386)."""
+
+    source = """
+    int main(void)
+    {
+        return 0;
+    }
+    """
+    if not test_compilation(source, msg="a minimal C program"):
+        raise CCompilerError(
+            "The C compiler cannot build a minimal program: check the C toolchain "
+            "(compiler, assembler and linker). "
+            "Set the environment variable PYCRYPTODOME_DEBUG=1 to see its errors."
+        )
+
+
 def compiler_is_clang():
     source = """
     #if !defined(__clang__)
