@@ -450,6 +450,9 @@ cleanup:
  */
 #if defined(NAT_BMI2_ADX)
 
+#define NEWLINE "\n\t"
+
+
 STATIC uint64_t addmul_row(uint64_t *t, const uint64_t *a, uint64_t b, size_t nw)
 {
     uint64_t *t_end = t + nw;
@@ -459,59 +462,62 @@ STATIC uint64_t addmul_row(uint64_t *t, const uint64_t *a, uint64_t b, size_t nw
     uint64_t hi;
 
     __asm__ volatile (
-        "xor %%r10d, %%r10d\n\t"            /* high word so far = 0; CF = OF = 0 */
+        /* high word so far = 0; CF = OF = 0 */
+        "xor %%r10d, %%r10d"                NEWLINE
 
         /* The first nw % 4 words, one at a time (rcx counts up to 0) */
-        "mov %[r], %%rcx\n\t"
-        "jrcxz 3f\n\t"
-        "4:\n\t"
-        "mulx (%[a],%[i],8), %%r8, %%r9\n\t"
-        "adcx (%[t],%[i],8), %%r8\n\t"
-        "adox %%r10, %%r8\n\t"
-        "mov %%r8, (%[t],%[i],8)\n\t"
-        "mov %%r9, %%r10\n\t"
-        "lea 1(%[i]), %[i]\n\t"
-        "lea 1(%%rcx), %%rcx\n\t"
-        "jrcxz 3f\n\t"
-        "jmp 4b\n\t"
+        "mov %[r], %%rcx"                   NEWLINE
+        "jrcxz 3f"                          NEWLINE
+        "4:"                                NEWLINE
+        "mulx (%[a],%[i],8), %%r8, %%r9"    NEWLINE
+        "adcx (%[t],%[i],8), %%r8"          NEWLINE
+        "adox %%r10, %%r8"                  NEWLINE
+        "mov %%r8, (%[t],%[i],8)"           NEWLINE
+        "mov %%r9, %%r10"                   NEWLINE
+        "lea 1(%[i]), %[i]"                 NEWLINE
+        "lea 1(%%rcx), %%rcx"               NEWLINE
+        "jrcxz 3f"                          NEWLINE
+        "jmp 4b"                            NEWLINE
 
         /* The other words, four at a time (rcx counts up to 0) */
-        "3:\n\t"
-        "mov %[i], %%rcx\n\t"
-        "jrcxz 2f\n\t"
-        "1:\n\t"
-        "mulx (%[a],%%rcx,8), %%r8, %%r9\n\t"
-        "adcx (%[t],%%rcx,8), %%r8\n\t"
-        "adox %%r10, %%r8\n\t"
-        "mov %%r8, (%[t],%%rcx,8)\n\t"
-        "mulx 8(%[a],%%rcx,8), %%r8, %%r10\n\t"
-        "adcx 8(%[t],%%rcx,8), %%r8\n\t"
-        "adox %%r9, %%r8\n\t"
-        "mov %%r8, 8(%[t],%%rcx,8)\n\t"
-        "mulx 16(%[a],%%rcx,8), %%r8, %%r9\n\t"
-        "adcx 16(%[t],%%rcx,8), %%r8\n\t"
-        "adox %%r10, %%r8\n\t"
-        "mov %%r8, 16(%[t],%%rcx,8)\n\t"
-        "mulx 24(%[a],%%rcx,8), %%r8, %%r10\n\t"
-        "adcx 24(%[t],%%rcx,8), %%r8\n\t"
-        "adox %%r9, %%r8\n\t"
-        "mov %%r8, 24(%[t],%%rcx,8)\n\t"
-        "lea 4(%%rcx), %%rcx\n\t"
-        "jrcxz 2f\n\t"
-        "jmp 1b\n\t"
+        "3:"                                NEWLINE
+        "mov %[i], %%rcx"                   NEWLINE
+        "jrcxz 2f"                          NEWLINE
+        "1:"                                NEWLINE
+        "mulx (%[a],%%rcx,8), %%r8, %%r9"   NEWLINE
+        "adcx (%[t],%%rcx,8), %%r8"         NEWLINE
+        "adox %%r10, %%r8"                  NEWLINE
+        "mov %%r8, (%[t],%%rcx,8)"          NEWLINE
+        "mulx 8(%[a],%%rcx,8), %%r8, %%r10" NEWLINE
+        "adcx 8(%[t],%%rcx,8), %%r8"        NEWLINE
+        "adox %%r9, %%r8"                   NEWLINE
+        "mov %%r8, 8(%[t],%%rcx,8)"         NEWLINE
+        "mulx 16(%[a],%%rcx,8), %%r8, %%r9" NEWLINE
+        "adcx 16(%[t],%%rcx,8), %%r8"       NEWLINE
+        "adox %%r10, %%r8"                  NEWLINE
+        "mov %%r8, 16(%[t],%%rcx,8)"        NEWLINE
+        "mulx 24(%[a],%%rcx,8), %%r8, %%r10" NEWLINE
+        "adcx 24(%[t],%%rcx,8), %%r8"       NEWLINE
+        "adox %%r9, %%r8"                   NEWLINE
+        "mov %%r8, 24(%[t],%%rcx,8)"        NEWLINE
+        "lea 4(%%rcx), %%rcx"               NEWLINE
+        "jrcxz 2f"                          NEWLINE
+        "jmp 1b"                            NEWLINE
 
         /* The high word: the last high half, plus both carries */
-        "2:\n\t"
-        "mov $0, %%r9d\n\t"
-        "adcx %%r9, %%r10\n\t"
-        "adox %%r9, %%r10\n\t"
-        "mov %%r10, %[hi]\n\t"
+        "2:"                                NEWLINE
+        "mov $0, %%r9d"                     NEWLINE
+        "adcx %%r9, %%r10"                  NEWLINE
+        "adox %%r9, %%r10"                  NEWLINE
+        "mov %%r10, %[hi]"                  NEWLINE
         : [i] "+r" (i), [hi] "=r" (hi)
         : [a] "r" (a_end), [t] "r" (t_end), [r] "r" (r), "d" (b)
         : "rcx", "r8", "r9", "r10", "cc", "memory");
 
     return hi;
 }
+
+#undef NEWLINE
 
 #elif !defined(NAT_32BIT) || defined(NAT_TESTS)
 
