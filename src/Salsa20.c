@@ -85,6 +85,7 @@ typedef struct  {
 #if defined(SALSA20_AVX2)
 
 #include <immintrin.h>
+#include "sse2_unaligned.h"
 
 #define SALSA20_ROTL_AVX2(v, c) _mm256_or_si256(_mm256_slli_epi32((v), (c)), _mm256_srli_epi32((v), 32-(c)))
 
@@ -105,14 +106,14 @@ static inline void store_4x8(const __m256i v[4], uint8_t *out)
     r1 = _mm256_unpackhi_epi64(t0, t1);
     r2 = _mm256_unpacklo_epi64(t2, t3);
     r3 = _mm256_unpackhi_epi64(t2, t3);
-    _mm_storeu_si128((__m128i*)(out + 0*64), _mm256_castsi256_si128(r0));
-    _mm_storeu_si128((__m128i*)(out + 1*64), _mm256_castsi256_si128(r1));
-    _mm_storeu_si128((__m128i*)(out + 2*64), _mm256_castsi256_si128(r2));
-    _mm_storeu_si128((__m128i*)(out + 3*64), _mm256_castsi256_si128(r3));
-    _mm_storeu_si128((__m128i*)(out + 4*64), _mm256_extracti128_si256(r0, 1));
-    _mm_storeu_si128((__m128i*)(out + 5*64), _mm256_extracti128_si256(r1, 1));
-    _mm_storeu_si128((__m128i*)(out + 6*64), _mm256_extracti128_si256(r2, 1));
-    _mm_storeu_si128((__m128i*)(out + 7*64), _mm256_extracti128_si256(r3, 1));
+    STOREU_128(out + 0*64, _mm256_castsi256_si128(r0));
+    STOREU_128(out + 1*64, _mm256_castsi256_si128(r1));
+    STOREU_128(out + 2*64, _mm256_castsi256_si128(r2));
+    STOREU_128(out + 3*64, _mm256_castsi256_si128(r3));
+    STOREU_128(out + 4*64, _mm256_extracti128_si256(r0, 1));
+    STOREU_128(out + 5*64, _mm256_extracti128_si256(r1, 1));
+    STOREU_128(out + 6*64, _mm256_extracti128_si256(r2, 1));
+    STOREU_128(out + 7*64, _mm256_extracti128_si256(r3, 1));
 }
 
 /** Compute the next 8 blocks of key stream **/
@@ -169,10 +170,10 @@ static inline void store_4x4(const __m128i v[4], uint8_t *out)
     t1 = _mm_unpacklo_epi32(c, d);
     t2 = _mm_unpackhi_epi32(a, b);
     t3 = _mm_unpackhi_epi32(c, d);
-    _mm_storeu_si128((__m128i*)(out + 0*64), _mm_unpacklo_epi64(t0, t1));
-    _mm_storeu_si128((__m128i*)(out + 1*64), _mm_unpackhi_epi64(t0, t1));
-    _mm_storeu_si128((__m128i*)(out + 2*64), _mm_unpacklo_epi64(t2, t3));
-    _mm_storeu_si128((__m128i*)(out + 3*64), _mm_unpackhi_epi64(t2, t3));
+    STOREU_128(out + 0*64, _mm_unpacklo_epi64(t0, t1));
+    STOREU_128(out + 1*64, _mm_unpackhi_epi64(t0, t1));
+    STOREU_128(out + 2*64, _mm_unpacklo_epi64(t2, t3));
+    STOREU_128(out + 3*64, _mm_unpackhi_epi64(t2, t3));
 }
 
 /** Compute the next 4 blocks of key stream (x86 is little-endian) **/

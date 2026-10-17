@@ -1,5 +1,5 @@
-#ifndef _CURVE25519_H
-#define _CURVE25519_H
+#ifndef CURVE25519_H
+#define CURVE25519_H
 
 typedef struct Point {
     uint32_t X[10];

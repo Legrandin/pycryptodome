@@ -3,7 +3,7 @@ project(test_crypto LANGUAGES C)
 include(CMakePrintHelpers)
 enable_testing()
 
-cmake_print_variables(CMAKE_CXX_COMPILER_ID CMAKE_CXX_COMPILER_VERSION CMAKE_SIZEOF_VOID_P SSE CMAKE_C_COMPILER_ARCHITECTURE_ID)
+cmake_print_variables(CMAKE_C_COMPILER_ID CMAKE_C_COMPILER_VERSION CMAKE_SIZEOF_VOID_P SSE CMAKE_C_COMPILER_ARCHITECTURE_ID)
 
 if (CMAKE_C_COMPILER_ARCHITECTURE_ID MATCHES "x86_64|AMD64|i686|X86|x64")
     set(X86 TRUE)
@@ -100,6 +100,19 @@ if (MSVC)
     	add_compile_definitions(USE_SSE2)
     	add_compile_definitions(HAVE_WMMINTRIN_H)
     	add_compile_definitions(HAVE_TMMINTRIN_H)
+    endif()
+
+    # Unlike cl.exe, clang-cl only accepts the intrinsics of the
+    # instruction sets that are enabled
+    if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
+        # /Wall is -Weverything for clang-cl: the casts that drop const are expected
+        add_compile_options(-Wno-cast-qual)
+        if (SSE)
+            add_compile_options(-mssse3 -mpclmul)
+        endif()
+        if (AESNI)
+            add_compile_options(-maes)
+        endif()
     endif()
 else()
     if (SSE)

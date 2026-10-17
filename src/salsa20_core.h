@@ -32,6 +32,7 @@
 #include <xmmintrin.h>
 #include <emmintrin.h>
 #endif
+#include "sse2_unaligned.h"
 #endif
 
 #define SALSA20_ROTL32(v, c) (((v) << (c)) | ((v) >> (32 - (c))))
@@ -74,26 +75,23 @@
 static inline void salsa20_core(unsigned rounds, uint32_t B[16], const uint32_t *Bx, const uint32_t *By)
 {
     __m128i X0, X1, X2, X3, Y0, Y1, Y2, Y3;
-    __m128i *b = (__m128i*)B;
-    const __m128i *bx = (const __m128i*)Bx;
-    const __m128i *by = (const __m128i*)By;
     unsigned i;
 
-    X0 = _mm_loadu_si128(b+0);
-    X1 = _mm_loadu_si128(b+1);
-    X2 = _mm_loadu_si128(b+2);
-    X3 = _mm_loadu_si128(b+3);
-    if (bx != NULL) {
-        X0 = _mm_xor_si128(X0, _mm_loadu_si128(bx+0));
-        X1 = _mm_xor_si128(X1, _mm_loadu_si128(bx+1));
-        X2 = _mm_xor_si128(X2, _mm_loadu_si128(bx+2));
-        X3 = _mm_xor_si128(X3, _mm_loadu_si128(bx+3));
+    X0 = LOADU_128(B+0);
+    X1 = LOADU_128(B+4);
+    X2 = LOADU_128(B+8);
+    X3 = LOADU_128(B+12);
+    if (Bx != NULL) {
+        X0 = _mm_xor_si128(X0, LOADU_128(Bx+0));
+        X1 = _mm_xor_si128(X1, LOADU_128(Bx+4));
+        X2 = _mm_xor_si128(X2, LOADU_128(Bx+8));
+        X3 = _mm_xor_si128(X3, LOADU_128(Bx+12));
     }
-    if (by != NULL) {
-        X0 = _mm_xor_si128(X0, _mm_loadu_si128(by+0));
-        X1 = _mm_xor_si128(X1, _mm_loadu_si128(by+1));
-        X2 = _mm_xor_si128(X2, _mm_loadu_si128(by+2));
-        X3 = _mm_xor_si128(X3, _mm_loadu_si128(by+3));
+    if (By != NULL) {
+        X0 = _mm_xor_si128(X0, LOADU_128(By+0));
+        X1 = _mm_xor_si128(X1, LOADU_128(By+4));
+        X2 = _mm_xor_si128(X2, LOADU_128(By+8));
+        X3 = _mm_xor_si128(X3, LOADU_128(By+12));
     }
     Y0 = X0;
     Y1 = X1;
@@ -118,10 +116,10 @@ static inline void salsa20_core(unsigned rounds, uint32_t B[16], const uint32_t 
         X3 = _mm_shuffle_epi32(X3, 0x93);
     }
 
-    _mm_storeu_si128(b+0, _mm_add_epi32(X0, Y0));
-    _mm_storeu_si128(b+1, _mm_add_epi32(X1, Y1));
-    _mm_storeu_si128(b+2, _mm_add_epi32(X2, Y2));
-    _mm_storeu_si128(b+3, _mm_add_epi32(X3, Y3));
+    STOREU_128(B+0, _mm_add_epi32(X0, Y0));
+    STOREU_128(B+4, _mm_add_epi32(X1, Y1));
+    STOREU_128(B+8, _mm_add_epi32(X2, Y2));
+    STOREU_128(B+12, _mm_add_epi32(X3, Y3));
 }
 
 #else

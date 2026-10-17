@@ -29,8 +29,8 @@
 #define MIN(a,b) ((a)<(b)?(a):(b))
 #endif
 
-#define _PASTE(x,y) x##y
-#define _PASTE2(x,y) _PASTE(x,y)
+#define PASTE(x,y) x##y
+#define PASTE2(x,y) PASTE(x,y)
 
 #ifdef HAVE_STDINT_H
 #include <stdint.h>
@@ -95,9 +95,9 @@ typedef unsigned __int64 uint64_t;
 #elif defined(_MSC_VER) || defined(__MINGW32__)
  #include <Python.h>
  #if PY_MAJOR_VERSION >= 3
-  #define FAKE_INIT(x) PyMODINIT_FUNC _PASTE2(PyInit__,x) (void) { return NULL; }
+  #define FAKE_INIT(x) PyMODINIT_FUNC PASTE2(PyInit__,x) (void) { return NULL; }
  #else
-  #define FAKE_INIT(x) PyMODINIT_FUNC _PASTE2(init_,x) (void) { return; }
+  #define FAKE_INIT(x) PyMODINIT_FUNC PASTE2(init_,x) (void) { return; }
  #endif
 #else
  #define FAKE_INIT(x)

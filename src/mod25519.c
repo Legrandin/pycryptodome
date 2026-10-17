@@ -1,5 +1,5 @@
-#ifndef __MOD25519_C
-#define __MOD25519_C
+#ifndef MOD25519_C
+#define MOD25519_C
 
 #include "common.h"
 #include "endianess.h"
@@ -611,4 +611,4 @@ STATIC void sub_25519(uint32_t out[10], const uint32_t a[10], const uint32_t b[1
     add_25519(out, out, zero);
 }
 
-#endif  /* __MOD25519_C */
+#endif  /* MOD25519_C */

@@ -7,11 +7,11 @@
 
 #include "block_base.h"
 
-#define CIPHER_STATE_TYPE       _PASTE2(MODULE_NAME, _State)
-#define CIPHER_ENCRYPT          _PASTE2(MODULE_NAME, _encrypt)
-#define CIPHER_DECRYPT          _PASTE2(MODULE_NAME, _decrypt)
-#define CIPHER_STOP_OPERATION   _PASTE2(MODULE_NAME, _stop_operation)
-#define CIPHER_START_OPERATION  _PASTE2(MODULE_NAME, _start_operation)
+#define CIPHER_STATE_TYPE       PASTE2(MODULE_NAME, _State)
+#define CIPHER_ENCRYPT          PASTE2(MODULE_NAME, _encrypt)
+#define CIPHER_DECRYPT          PASTE2(MODULE_NAME, _decrypt)
+#define CIPHER_STOP_OPERATION   PASTE2(MODULE_NAME, _stop_operation)
+#define CIPHER_START_OPERATION  PASTE2(MODULE_NAME, _start_operation)
 
 typedef struct {
     BlockBase  base_state;

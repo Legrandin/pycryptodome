@@ -1,5 +1,6 @@
 #include "common.h"
 #include <wmmintrin.h>
+#include "sse2_unaligned.h"
 #include <stdio.h>
 
 enum SubType { OnlySub, SubRotXor };
@@ -43,7 +44,7 @@ int m128i_array_differ(__m128i a, const uint8_t *ref)
     uint8_t *array;
     unsigned i;
     array = (uint8_t*)align_alloc(16, 16);
-    _mm_storeu_si128((__m128i*)array, a);
+    STOREU_128(array, a);
     for (i=0; i<16; i++) {
         if (array[i] != ref[i])
             return -1;

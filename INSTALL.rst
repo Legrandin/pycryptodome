@@ -82,6 +82,20 @@ components freely made available by Microsoft.
         > pip install pytest pycryptodome-test-vectors
         > python -m Crypto.SelfTest
 
+On x86-64 (AMD64), the Microsoft compiler (``cl.exe``) cannot build the code
+that uses AVX2, BMI2 and ADX: SHA-3, KangarooTwelve, ChaCha20 and Salsa20,
+and the big integers of RSA, DSA and the NIST curves, are then slower.
+The wheels on PyPI are built with ``clang-cl`` instead, which is compatible with
+MSVC and supports them. To do the same, also install the Visual Studio component
+*C++ Clang tools for Windows* (or `LLVM <https://llvm.org/>`_),
+and set the environment variable ``PYCRYPTODOME_CLANG_CL`` to ``1``
+(or to the path of ``clang-cl.exe``)::
+
+        > set PYCRYPTODOME_CLANG_CL=1
+        > pip install pycryptodome --no-binary :all:
+
+The build stops if ``clang-cl`` cannot be found.
+
 .. _no_selftest:
 
 Installing without the self-tests
