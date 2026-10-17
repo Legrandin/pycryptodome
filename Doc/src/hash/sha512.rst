@@ -19,6 +19,12 @@ This is an example showing how to use SHA-512:
     >>> print(h.hexdigest())
     3615f80c9d293ed7402687f94b22d58e529b8cc7916f8fac7fddf7fbd5af4cf777d3d795a7a00a16bf7e7f3fb9561ee9baae480da9fe7a18769e71886b03f315
 
+If the whole message is available at once, :func:`Crypto.Hash.SHA512.digest`
+returns the digest with a single call, which is faster for short messages::
+
+    >>> print(SHA512.digest(b'Hello').hex())
+    3615f80c9d293ed7402687f94b22d58e529b8cc7916f8fac7fddf7fbd5af4cf777d3d795a7a00a16bf7e7f3fb9561ee9baae480da9fe7a18769e71886b03f315
+
 This is an example showing how to use SHA-512/256:
 
     >>> from Crypto.Hash import SHA512

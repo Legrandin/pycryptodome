@@ -47,6 +47,10 @@ _raw_sha512_lib = load_pycryptodome_raw_lib(
                                           uint8_t *digest,
                                           size_t digest_size);
                         int SHA512_copy(const void *src, void *dst);
+                        int SHA512_oneshot(const uint8_t *in,
+                                        size_t len,
+                                        uint8_t *digest,
+                                        size_t digest_size);
 
                         int SHA512_pbkdf2_hmac_assist(const void *inner,
                                             const void *outer,
@@ -177,6 +181,41 @@ def new(data: Optional[Buffer] = None, truncate: Optional[str] = None) -> SHA512
     """
 
     return SHA512Hash(data, truncate)
+
+
+def digest(data: Buffer, *, truncate: Optional[str] = None) -> bytes:
+    """Compute the SHA-512 digest of a complete message, in one go.
+
+    It returns the same bytes as ``new(data, truncate).digest()``,
+    but it is faster for short messages.
+
+    Args:
+      data (bytes/bytearray/memoryview):
+        The whole message to hash.
+      truncate (string):
+        Optional, keyword-only. The desired length of the digest:
+        "224" (SHA-512/224) or "256" (SHA-512/256).
+        If not present, the digest is 512 bits long.
+
+    :Return: the digest (64, 28 or 32 bytes)
+    :rtype: byte string
+    """
+
+    if truncate is None:
+        size = 64
+    elif truncate == "224":
+        size = 28
+    elif truncate == "256":
+        size = 32
+    else:
+        raise ValueError("Incorrect truncation length. It must be '224' or '256'.")
+
+    bfr = create_string_buffer(size)
+    data_ptr, data_len = c_uint8_ptr_len(data)
+    result = _raw_sha512_lib.SHA512_oneshot(data_ptr, c_size_t(data_len), bfr, c_size_t(size))
+    if result:
+        raise ValueError("Error %d while computing SHA512" % result)
+    return get_raw_buffer(bfr)
 
 
 # The size of the full SHA-512 hash in bytes.

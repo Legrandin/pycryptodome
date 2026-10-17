@@ -385,6 +385,38 @@ static void sha_compress(hash_state * hs)
     sha_compress_block(hs, hs->buf);
 }
 
+/** Set the initial state, for a digest of digest_size bytes **/
+static void sha_init_state(hash_state *hs, size_t digest_size)
+{
+    int i;
+#if DIGEST_SIZE == (512/8)
+    size_t variant;
+#endif
+
+    hs->curlen = 0;
+    hs->totbits[0] = hs->totbits[1] = 0;
+
+    /** Digest size and initial intermediate hash value **/
+    hs->digest_size = digest_size;
+#if DIGEST_SIZE == (512/8)
+    switch (digest_size) {
+        case 28: variant = 1;   /** SHA-512/224 **/
+                 break;
+        case 32: variant = 2;   /** SHA-512/256 **/
+                 break;
+        default: variant = 0;   /** Vanilla SHA-512 **/
+    }
+
+    for (i=0; i<8; i++) {
+        hs->h[i] = H_SHA_512[variant][i];
+    }
+#else
+    for (i=0; i<8; i++) {
+        hs->h[i] = H[i];
+    }
+#endif
+}
+
 EXPORT_SYM int FUNC_NAME(_init)(hash_state **shaState
 #if DIGEST_SIZE == (512/8)
         , size_t digest_size
@@ -392,10 +424,6 @@ EXPORT_SYM int FUNC_NAME(_init)(hash_state **shaState
         )
 {
     hash_state *hs;
-    int i;
-#if DIGEST_SIZE == (512/8)
-    size_t variant;
-#endif
 
     if (NULL == shaState) {
         return ERR_NULL;
@@ -405,29 +433,10 @@ EXPORT_SYM int FUNC_NAME(_init)(hash_state **shaState
     if (NULL == hs)
         return ERR_MEMORY;
 
-    hs->curlen = 0;
-    hs->totbits[0] = hs->totbits[1] = 0;
-
-    /** Digest size and initial intermediate hash value **/
 #if DIGEST_SIZE == (512/8)
-    hs->digest_size = digest_size;
-
-    switch (digest_size) {
-        case 28: variant = 1;   /** SHA-512/224 **/
-                 break;
-        case 32: variant = 2;   /** SHA-512/256 **/
-                 break;
-        default: variant = 0;   /** Vanilla SHA-512 **/
-    }
-    
-    for (i=0; i<8; i++) {
-        hs->h[i] = H_SHA_512[variant][i];
-    }
+    sha_init_state(hs, digest_size);
 #else
-    hs->digest_size = DIGEST_SIZE;
-    for (i=0; i<8; i++) {
-        hs->h[i] = H[i];
-    }
+    sha_init_state(hs, DIGEST_SIZE);
 #endif
 
     return 0;
@@ -559,6 +568,40 @@ EXPORT_SYM int FUNC_NAME(_digest)(const hash_state *shaState, uint8_t *digest, s
 
     temp = *shaState;
     return sha_finalize(&temp, digest, digest_size);
+}
+
+/**
+ * Hash a whole message in one call, without allocating a state.
+ * For SHA-512, digest_size selects the variant (28, 32 or 64 bytes);
+ * for the other hashes, it must be the size of their digest.
+ */
+EXPORT_SYM int FUNC_NAME(_oneshot)(const uint8_t *in, size_t len, uint8_t *digest, size_t digest_size)
+{
+    hash_state hs;
+    int result;
+
+    if ((NULL == in && len > 0) || NULL == digest) {
+        return ERR_NULL;
+    }
+
+#if DIGEST_SIZE == (512/8)
+    if (digest_size != 28 && digest_size != 32 && digest_size != 64) {
+        return ERR_DIGEST_SIZE;
+    }
+#else
+    if (digest_size != DIGEST_SIZE) {
+        return ERR_DIGEST_SIZE;
+    }
+#endif
+
+    sha_init_state(&hs, digest_size);
+    if (len > 0) {
+        result = FUNC_NAME(_update)(&hs, in, len);
+        if (result) {
+            return result;
+        }
+    }
+    return sha_finalize(&hs, digest, digest_size);
 }
 
 EXPORT_SYM int FUNC_NAME(_copy)(const hash_state *src, hash_state *dst)

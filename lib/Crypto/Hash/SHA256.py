@@ -43,6 +43,10 @@ _sha256_cdecl = """
                                           uint8_t *digest,
                                           size_t digest_size);
                         int SHA256_copy(const void *src, void *dst);
+                        int SHA256_oneshot(const uint8_t *in,
+                                        size_t len,
+                                        uint8_t *digest,
+                                        size_t digest_size);
 
                         int SHA256_pbkdf2_hmac_assist(const void *inner,
                                             const void *outer,
@@ -183,6 +187,28 @@ def new(data: Optional[Union[bytes, bytearray, memoryview]] = None) -> SHA256Has
     """
 
     return SHA256Hash().new(data)
+
+
+def digest(data: Union[bytes, bytearray, memoryview]) -> bytes:
+    """Compute the SHA-256 digest of a complete message, in one go.
+
+    It returns the same bytes as ``new(data).digest()``,
+    but it is faster for short messages.
+
+    Args:
+       data (bytes/bytearray/memoryview):
+        The whole message to hash.
+
+    :Return: the 32-byte digest
+    :rtype: byte string
+    """
+
+    bfr = create_string_buffer(32)
+    data_ptr, data_len = c_uint8_ptr_len(data)
+    result = _raw_sha256_lib.SHA256_oneshot(data_ptr, c_size_t(data_len), bfr, c_size_t(32))
+    if result:
+        raise ValueError("Error %d while computing SHA256" % result)
+    return get_raw_buffer(bfr)
 
 
 # The size of the resulting hash in bytes.

@@ -18,6 +18,11 @@ This is an example showing how to use SHA-384:
     >>> h.update(b'Hello')
     >>> print(h.hexdigest())
 
+If the whole message is available at once, :func:`Crypto.Hash.SHA384.digest`
+returns the digest with a single call, which is faster for short messages::
+
+    >>> print(SHA384.digest(b'Hello').hex())
+
 *SHA* stands for Secure Hash Algorithm.
 
 SHA-384 is **not** vulnerable to `length-extension attacks <https://crypto.stackexchange.com/questions/3978/understanding-the-length-extension-attack>`_.

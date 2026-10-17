@@ -38,6 +38,13 @@ _keccak_cdecl = """
                                           uint8_t padding);
                         int keccak_copy(const void *src, void *dst);
                         int keccak_reset(void *state);
+                        int keccak_oneshot(const uint8_t *in,
+                                           size_t in_len,
+                                           uint8_t *out,
+                                           size_t out_len,
+                                           size_t capacity_bytes,
+                                           uint8_t rounds,
+                                           uint8_t padding);
                         int keccak_pbkdf2_hmac_assist(const void *inner,
                                                       const void *outer,
                                                       const uint8_t *first_hmac,

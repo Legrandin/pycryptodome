@@ -157,6 +157,30 @@ def new(data: Optional[Buffer] = None, *, update_after_digest: bool = False) -> 
     return SHA3_256_Hash(data, update_after_digest)
 
 
+def digest(data: Buffer) -> bytes:
+    """Compute the SHA3-256 digest of a complete message, in one go.
+
+    It returns the same bytes as ``new(data).digest()``,
+    but it is faster for short messages.
+
+    Args:
+        data (byte string/byte array/memoryview):
+            The whole message to hash.
+
+    :Return: the 32-byte digest
+    :rtype: byte string
+    """
+
+    bfr = create_string_buffer(32)
+    data_ptr, data_len = c_uint8_ptr_len(data)
+    result = _raw_keccak_lib.keccak_oneshot(
+        data_ptr, c_size_t(data_len), bfr, c_size_t(32), c_size_t(64), c_ubyte(24), c_ubyte(0x06)
+    )
+    if result:
+        raise ValueError("Error %d while computing SHA-3/256" % result)
+    return get_raw_buffer(bfr)
+
+
 # The size of the resulting hash in bytes.
 digest_size: int = SHA3_256_Hash.digest_size
 

@@ -45,6 +45,10 @@ _sha224_cdecl = """
                                           uint8_t *digest,
                                           size_t digest_size);
                         int SHA224_copy(const void *src, void *dst);
+                        int SHA224_oneshot(const uint8_t *in,
+                                        size_t len,
+                                        uint8_t *digest,
+                                        size_t digest_size);
 
                         int SHA224_pbkdf2_hmac_assist(const void *inner,
                                             const void *outer,
@@ -167,6 +171,28 @@ def new(data: Optional[Buffer] = None) -> SHA224Hash:
     :Return: A :class:`SHA224Hash` hash object
     """
     return SHA224Hash().new(data)
+
+
+def digest(data: Buffer) -> bytes:
+    """Compute the SHA-224 digest of a complete message, in one go.
+
+    It returns the same bytes as ``new(data).digest()``,
+    but it is faster for short messages.
+
+    Args:
+       data (bytes/bytearray/memoryview):
+        The whole message to hash.
+
+    :Return: the 28-byte digest
+    :rtype: byte string
+    """
+
+    bfr = create_string_buffer(28)
+    data_ptr, data_len = c_uint8_ptr_len(data)
+    result = _raw_sha224_lib.SHA224_oneshot(data_ptr, c_size_t(data_len), bfr, c_size_t(28))
+    if result:
+        raise ValueError("Error %d while computing SHA224" % result)
+    return get_raw_buffer(bfr)
 
 
 # The size of the resulting hash in bytes.

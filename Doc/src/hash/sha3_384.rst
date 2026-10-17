@@ -12,6 +12,11 @@ The hash function produces the 384 bit digest of a message::
     >>> h_obj.update(b'Some data')
     >>> print(h_obj.hexdigest())
 
+If the whole message is available at once, :func:`Crypto.Hash.SHA3_384.digest`
+returns the digest with a single call, which is faster for short messages::
+
+    >>> print(SHA3_384.digest(b'Some data').hex())
+
 .. __: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.202.pdf
 
 *SHA* stands for Secure Hash Algorithm.

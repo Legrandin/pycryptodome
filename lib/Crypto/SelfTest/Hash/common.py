@@ -99,6 +99,10 @@ def make_hash_tests(module, module_name, test_data, digest_size, oid=None, extra
                 out5 = binascii.b2a_hex(h2.digest())
                 assert expected == out5
 
+            # The one-shot function of the module, if it has one
+            if callable(getattr(module, "digest", None)):
+                assert expected == binascii.b2a_hex(module.digest(data, **extra_params))
+
         def test_digest_size(self):
             if "truncate" not in extra_params:
                 assert module.digest_size == digest_size

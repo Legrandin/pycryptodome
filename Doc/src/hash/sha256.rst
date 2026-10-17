@@ -10,6 +10,11 @@ It produces the 256 bit digest of a message.
     >>> h.update(b'Hello')
     >>> print(h.hexdigest())
 
+If the whole message is available at once, :func:`Crypto.Hash.SHA256.digest`
+returns the digest with a single call, which is faster for short messages::
+
+    >>> print(SHA256.digest(b'Hello').hex())
+
 *SHA* stands for Secure Hash Algorithm.
 
 .. warning::

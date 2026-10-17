@@ -116,16 +116,8 @@ keccak_squeeze_internal (keccak_state *self)
     }
 }
 
-KECCAK_API int keccak_init (keccak_state **state,
-                            size_t capacity_bytes,
-                            uint8_t rounds)
+static int keccak_check_params(size_t capacity_bytes, uint8_t rounds)
 {
-    keccak_state *ks;
-
-    if (NULL == state) {
-        return ERR_NULL;
-    }
-
     if (capacity_bytes >= KECCAK_F1600_STATE)
         return ERR_DIGEST_SIZE;
 
@@ -136,16 +128,40 @@ KECCAK_API int keccak_init (keccak_state **state,
     if ((rounds != 12) && (rounds != 24))
         return ERR_NR_ROUNDS;
 
-    *state = ks = (keccak_state*) calloc(1, sizeof(keccak_state));
-    if (NULL == ks)
-        return ERR_MEMORY;
+    return 0;
+}
 
+/* Set an all-zero state up, with parameters already checked */
+static void keccak_init_state(keccak_state *ks, size_t capacity_bytes, uint8_t rounds)
+{
     ks->capacity  = (unsigned)capacity_bytes;
 
     ks->rate      = KECCAK_F1600_STATE - ks->capacity;
 
     ks->squeezing = 0;
     ks->rounds    = rounds;
+}
+
+KECCAK_API int keccak_init (keccak_state **state,
+                            size_t capacity_bytes,
+                            uint8_t rounds)
+{
+    keccak_state *ks;
+    int result;
+
+    if (NULL == state) {
+        return ERR_NULL;
+    }
+
+    result = keccak_check_params(capacity_bytes, rounds);
+    if (result)
+        return result;
+
+    *state = ks = (keccak_state*) calloc(1, sizeof(keccak_state));
+    if (NULL == ks)
+        return ERR_MEMORY;
+
+    keccak_init_state(ks, capacity_bytes, rounds);
 
     return 0;
 }
@@ -293,6 +309,36 @@ KECCAK_API int keccak_digest(keccak_state *state, uint8_t *digest, size_t len, u
 
     tmp = *state;
     return keccak_squeeze(&tmp, digest, len, padding);
+}
+
+/*
+ * Absorb a whole message and squeeze out_len bytes, in one call,
+ * without allocating a state (e.g. SHA-3: capacity 2*out_len,
+ * 24 rounds, padding 0x06).
+ */
+KECCAK_API int keccak_oneshot(const uint8_t *in, size_t in_len,
+                              uint8_t *out, size_t out_len,
+                              size_t capacity_bytes, uint8_t rounds, uint8_t padding)
+{
+    keccak_state ks;
+    int result;
+
+    if ((NULL == in && in_len > 0) || NULL == out)
+        return ERR_NULL;
+
+    result = keccak_check_params(capacity_bytes, rounds);
+    if (result)
+        return result;
+
+    memset(&ks, 0, sizeof ks);
+    keccak_init_state(&ks, capacity_bytes, rounds);
+
+    if (in_len > 0) {
+        result = keccak_absorb(&ks, in, in_len);
+        if (result)
+            return result;
+    }
+    return keccak_squeeze(&ks, out, out_len, padding);
 }
 
 KECCAK_API int keccak_copy(const keccak_state *src, keccak_state *dst)

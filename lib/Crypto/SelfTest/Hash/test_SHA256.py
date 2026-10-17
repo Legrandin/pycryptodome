@@ -61,6 +61,11 @@ class TestImplementations:
         for length in range(300):
             assert SHA256.new(data[:length]).digest() == hashlib.sha256(data[:length]).digest()
 
+    def test_oneshot_all_lengths(self):
+        data = bytes(range(256)) * 2
+        for length in range(300):
+            assert SHA256.digest(data[:length]) == hashlib.sha256(data[:length]).digest()
+
     def test_chunks(self):
         # Partial and whole blocks, in any order
         data = bytes(range(256)) * 8

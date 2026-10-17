@@ -1,6 +1,17 @@
 Changelog
 =========
 
+4.1.0 (Under development)
+++++++++++++++++++++++++++
+
+New features
+------------
+* New function ``digest()`` in the modules of the SHA-2 and SHA-3 hashes
+  (``Crypto.Hash.SHA224``, ``SHA256``, ``SHA384``, ``SHA512``, ``SHA3_224``, ``SHA3_256``,
+  ``SHA3_384`` and ``SHA3_512``), to hash a whole message with a single call,
+  like ``Crypto.Hash.KangarooTwelve.digest()``. For messages up to 1 KiB,
+  it is 1.5x to 3.4x faster than ``new()`` followed by ``digest()``.
+
 4.0.1(17 October 2026)
 ++++++++++++++++++++++++++
 
