@@ -1,6 +1,17 @@
 Changelog
 =========
 
+4.0.1(17 October 2026)
+++++++++++++++++++++++++++
+
+New features
+------------
+* The Windows wheels for x86-64 are built with ``clang-cl`` (compatible with MSVC), so the
+  code for CPUs with AVX2, BMI2 and ADX is also used on Windows: SHA-3 and the other
+  Keccak-based functions, KangarooTwelve, ChaCha20, Salsa20, and the big integers of RSA,
+  DSA and the NIST curves. To build from source with ``clang-cl``, set the environment
+  variable ``PYCRYPTODOME_CLANG_CL`` (see the installation instructions).
+
 4.0.0 (14 October 2026)
 ++++++++++++++++++++++++++
 
@@ -139,11 +150,6 @@ Resolved issues
 
 New features
 ------------
-* The Windows wheels for x86-64 are built with ``clang-cl`` (compatible with MSVC), so the
-  code for CPUs with AVX2, BMI2 and ADX is also used on Windows: SHA-3 and the other
-  Keccak-based functions, KangarooTwelve, ChaCha20, Salsa20, and the big integers of RSA,
-  DSA and the NIST curves. To build from source with ``clang-cl``, set the environment
-  variable ``PYCRYPTODOME_CLANG_CL`` (see the installation instructions).
 * GH#320: importing an encrypted private key (PEM, PKCS#8 or OpenSSH) without
   a passphrase raises ``Crypto.PassphraseRequiredError``, and with
   an incorrect passphrase ``Crypto.IncorrectPassphraseError``.
