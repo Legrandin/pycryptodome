@@ -1,5 +1,5 @@
-#ifndef _BLOCK_BASE
-#define _BLOCK_BASE
+#ifndef BLOCK_BASE_H
+#define BLOCK_BASE_H
 
 #include "common.h"
 

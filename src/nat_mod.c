@@ -36,7 +36,7 @@
  */
 #if defined(NAT_32BIT) && defined(USE_SSE2)
 #define NAT_SSE2
-#include <emmintrin.h>
+#include "sse2_unaligned.h"
 #endif
 
 /* ---------------------------------------------------------------- */
@@ -134,7 +134,7 @@ STATIC uint32_t addmul_row32(uint32_t *t, const uint32_t *a, uint32_t b, size_t 
         __m128i va, vt, s;
 
         /* { a[j], 0, a[j+1], 0 } and { t[j], 0, t[j+1], 0 } */
-        va = _mm_unpacklo_epi32(_mm_loadl_epi64((const __m128i*)(a + j)), zero);
+        va = _mm_unpacklo_epi32(LOADL_64(a + j), zero);
         vt = _mm_unpacklo_epi64(_mm_cvtsi32_si128((int)t[j]), _mm_cvtsi32_si128((int)t[j + 1]));
         /* a[j]*b + t[j] and a[j+1]*b + t[j+1]; plus a 32-bit carry,
            (2^32-1)^2 + 2*(2^32-1) = 2^64-1: it always fits */
@@ -321,9 +321,9 @@ STATIC int mont_ctx_alloc_scratch(MontCtx *ctx)
 STATIC void mont_ctx_free_scratch(MontCtx *ctx)
 {
     nat_words_free(ctx->tmp, 2*ctx->nw + 2);
-    nat_words_free((uint64_t*)ctx->t32, 2*ctx->nw + 1);
-    nat_words_free((uint64_t*)ctx->x32, ctx->nw);
-    nat_words_free((uint64_t*)ctx->y32, ctx->nw);
+    nat_words_free((void*)ctx->t32, 2*ctx->nw + 1);
+    nat_words_free((void*)ctx->x32, ctx->nw);
+    nat_words_free((void*)ctx->y32, ctx->nw);
 }
 
 int mont_ctx_new_private(MontCtx **out, const MontCtx *ctx)
@@ -361,7 +361,7 @@ void mont_ctx_free(MontCtx *ctx)
     nat_words_free(ctx->one, ctx->nw);
     nat_words_free(ctx->unit, ctx->nw);
     /* The 32-bit arrays are allocated as 64-bit words (see mont_ctx_new) */
-    nat_words_free((uint64_t*)ctx->n32, ctx->nw);
+    nat_words_free((void*)ctx->n32, ctx->nw);
     mont_ctx_free_scratch(ctx);
     free(ctx);
 }

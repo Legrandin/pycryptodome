@@ -206,6 +206,7 @@ void fe_mul(EcWs *ws, uint64_t *out, const uint64_t *a, const uint64_t *b)
     switch (ws->f->kind) {
     case EC_FIELD_P448: fe_p448_mul(ws, out, a, b); break;
     case EC_FIELD_P521: fe_p521_mul(ws, out, a, b); break;
+    case EC_FIELD_MONT:
     default: fe_mont_mul(ws, out, a, b); break;
     }
 }
@@ -215,6 +216,7 @@ void fe_sqr(EcWs *ws, uint64_t *out, const uint64_t *a)
     switch (ws->f->kind) {
     case EC_FIELD_P448: fe_p448_sqr(ws, out, a); break;
     case EC_FIELD_P521: fe_p521_sqr(ws, out, a); break;
+    case EC_FIELD_MONT:
     default: fe_mont_sqr(ws, out, a); break;
     }
 }

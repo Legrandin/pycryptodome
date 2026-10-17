@@ -98,8 +98,10 @@ static void test_field(const EcField *field, const Nat *n)
         random_fe(b);
         if (t == 0)
             memset(a, 0, sizeof a);
-        if (t == 1)
-            memcpy(b, p256, sizeof b), b[0]--;          /* p - 1 */
+        if (t == 1) {
+            memcpy(b, p256, sizeof b);
+            b[0]--;                                     /* p - 1 */
+        }
         memcpy(na->w, a, sizeof a);
         memcpy(nb->w, b, sizeof b);
 
@@ -660,8 +662,10 @@ static void test_special_fields(void)
                 memcpy(a, p, nw*8);
                 a[0]--;
                 memcpy(b, a, nw*8);
-                if (t == 2)
-                    b[0] = 1, memset(b + 1, 0, (nw - 1)*8);
+                if (t == 2) {
+                    b[0] = 1;
+                    memset(b + 1, 0, (nw - 1)*8);
+                }
             }
             memcpy(na->w, a, nw*8);
             memcpy(nb->w, b, nw*8);

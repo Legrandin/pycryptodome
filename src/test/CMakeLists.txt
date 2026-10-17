@@ -105,6 +105,8 @@ if (MSVC)
     # Unlike cl.exe, clang-cl only accepts the intrinsics of the
     # instruction sets that are enabled
     if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
+        # /Wall is -Weverything for clang-cl: the casts that drop const are expected
+        add_compile_options(-Wno-cast-qual)
         if (SSE)
             add_compile_options(-mssse3 -mpclmul)
         endif()

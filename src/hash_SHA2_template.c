@@ -26,9 +26,10 @@ FAKE_INIT(SHA2_MODULE)
 #error SHA-NI is only available for SHA-224 and SHA-256
 #endif
 #include <immintrin.h>
+#include "sse2_unaligned.h"
 #endif
 
-#define FUNC_NAME(pf) _PASTE2(MODULE_NAME, pf)
+#define FUNC_NAME(pf) PASTE2(MODULE_NAME, pf)
 
 /**
  * SHA-2 as defined in FIPS 180-4 http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
@@ -176,7 +177,7 @@ static int add_bits(hash_state *hs, sha2_word_t bits)
 
 /** Rounds 4g to 4g+3, with message words w = W[4g..4g+3] **/
 #define SHANI_ROUNDS(g, w) do { \
-    wk = _mm_add_epi32(w, _mm_loadu_si128((const __m128i*)&K[(g)*4])); \
+    wk = _mm_add_epi32(w, LOADU_128(&K[(g)*4])); \
     cdgh = _mm_sha256rnds2_epu32(cdgh, abef, wk); \
     wk = _mm_shuffle_epi32(wk, 0x0E); \
     abef = _mm_sha256rnds2_epu32(abef, cdgh, wk); \
@@ -200,8 +201,8 @@ static void sha_compress_words(const sha2_word_t h_in[8], sha2_word_t h_out[8], 
     __m128i m0, m1, m2, m3, wk, tmp;
 
     /** The SHA-NI instructions want the state as {A,B,E,F} and {C,D,G,H} **/
-    tmp  = _mm_loadu_si128((const __m128i*)&h_in[0]);   /** D C B A (lane 3..0) **/
-    cdgh = _mm_loadu_si128((const __m128i*)&h_in[4]);   /** H G F E **/
+    tmp  = LOADU_128(&h_in[0]);                         /** D C B A (lane 3..0) **/
+    cdgh = LOADU_128(&h_in[4]);                         /** H G F E **/
     tmp  = _mm_shuffle_epi32(tmp, 0xB1);                /** C D A B **/
     cdgh = _mm_shuffle_epi32(cdgh, 0x1B);               /** E F G H **/
     abef = _mm_alignr_epi8(tmp, cdgh, 8);               /** A B E F **/
@@ -211,10 +212,10 @@ static void sha_compress_words(const sha2_word_t h_in[8], sha2_word_t h_out[8], 
     cdgh_save = cdgh;
 
     /** m0..m3 are a rolling window of the last 16 words of the message schedule **/
-    m0 = _mm_loadu_si128((const __m128i*)&M[0]);
-    m1 = _mm_loadu_si128((const __m128i*)&M[4]);
-    m2 = _mm_loadu_si128((const __m128i*)&M[8]);
-    m3 = _mm_loadu_si128((const __m128i*)&M[12]);
+    m0 = LOADU_128(&M[0]);
+    m1 = LOADU_128(&M[4]);
+    m2 = LOADU_128(&M[8]);
+    m3 = LOADU_128(&M[12]);
 
     SHANI_ROUNDS( 0, m0);
     SHANI_ROUNDS( 1, m1);
@@ -242,8 +243,8 @@ static void sha_compress_words(const sha2_word_t h_in[8], sha2_word_t h_out[8], 
     abef = _mm_blend_epi16(tmp, cdgh, 0xF0);            /** D C B A **/
     cdgh = _mm_alignr_epi8(cdgh, tmp, 8);               /** H G F E **/
 
-    _mm_storeu_si128((__m128i*)&h_out[0], abef);
-    _mm_storeu_si128((__m128i*)&h_out[4], cdgh);
+    STOREU_128(&h_out[0], abef);
+    STOREU_128(&h_out[4], cdgh);
 }
 
 #else

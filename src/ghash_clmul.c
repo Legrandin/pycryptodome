@@ -21,6 +21,7 @@ FAKE_INIT(ghash_clmul)
 #if defined(HAVE_WMMINTRIN_H) && defined(HAVE_TMMINTRIN_H)
 #include <wmmintrin.h>
 #include <tmmintrin.h>
+#include "sse2_unaligned.h"
 #else
 #error No CLMUL headers available
 #endif
@@ -92,7 +93,7 @@ STATIC __m128i reduce(__m128i prod_high, __m128i prod_low)
    
     t1 = prod_high;                                     /* U3:U2 */
     t7 = prod_low;                                      /* U1:U0 */
-    t3 = _mm_loadl_epi64((__m128i*)&c2);
+    t3 = LOADL_64(&c2);
     t2 = _mm_clmulepi64_si128(t3, t7, 0x00);            /* A */
     t4 = _mm_shuffle_epi32(t7, _MM_SHUFFLE(1,0,3,2));   /* U0:U1 */
     t4 = _mm_xor_si128(t4, t2);                         /* B */
@@ -136,8 +137,8 @@ STATIC __m128i multx(__m128i a)
     r = (msb ^ 1) - 1;                          /* MSB is copied into all 64 positions */
     p0 = (uint64_t)r & 0x0000000000000001U;     /* Zero or XOR mask (low) */
     p1 = (uint64_t)r & ((uint64_t)0xc2 << 56);  /* Zero or XOR mask (high) */
-    t0 = _mm_loadl_epi64((__m128i*)&p0);
-    t1 = _mm_loadl_epi64((__m128i*)&p1);
+    t0 = LOADL_64(&p0);
+    t1 = LOADL_64(&p1);
     t2 = _mm_unpacklo_epi64(t0, t1);        /* Zero or XOR mask */
 
     /* Shift value a left by 1 bit */
@@ -173,7 +174,7 @@ EXPORT_SYM int ghash_expand_clmul(const uint8_t h[16], struct exp_key **expanded
     if (NULL == *expanded)
         return ERR_MEMORY;
 
-    h128 = swap(_mm_loadu_si128((__m128i*)h));
+    h128 = swap(LOADU_128(h));
     (*expanded)->h[0] = multx(h128);    /** x*H **/
     
     for (i=1; i<4; i++) {
@@ -210,7 +211,7 @@ EXPORT_SYM int ghash_clmul(
     if (len % 16)
         return ERR_NOT_ENOUGH_DATA;
 
-    y_temp = swap(_mm_loadu_si128((__m128i*)y_in));
+    y_temp = swap(LOADU_128(y_in));
 
     /** Authenticate 64 bytes per cycle **/
     len16 = len ^ (len & 0x3F);
@@ -219,10 +220,10 @@ EXPORT_SYM int ghash_clmul(
         __m128i xm3, xm2, xm1, x;
         __m128i r0, r1, r2, r3, r4, r5, r6;
 
-        xm3 = swap(_mm_loadu_si128((__m128i*)&block_data[i]));
-        xm2 = swap(_mm_loadu_si128((__m128i*)&block_data[i+16]));
-        xm1 = swap(_mm_loadu_si128((__m128i*)&block_data[i+16*2]));
-        x = swap(_mm_loadu_si128((__m128i*)&block_data[i+16*3]));
+        xm3 = swap(LOADU_128(&block_data[i]));
+        xm2 = swap(LOADU_128(&block_data[i+16]));
+        xm1 = swap(LOADU_128(&block_data[i+16*2]));
+        x = swap(LOADU_128(&block_data[i+16*3]));
 
         /** (X_{i-3} + Y_{i-4}) * H^4 **/
         r0 = _mm_xor_si128(xm3, y_temp);
@@ -252,14 +253,14 @@ EXPORT_SYM int ghash_clmul(
         __m128i z, xi;
         __m128i prod_hi, prod_lo;
 
-        xi = swap(_mm_loadu_si128((__m128i*)&block_data[i]));
+        xi = swap(LOADU_128(&block_data[i]));
         z = _mm_xor_si128(y_temp, xi);
         clmult(&prod_hi, &prod_lo, z, expanded->h[0]);
         y_temp = reduce(prod_hi, prod_lo);
     }
 
     y_temp = swap(y_temp);
-    _mm_storeu_si128((__m128i*)y_out, y_temp);
+    STOREU_128(y_out, y_temp);
     return 0;
 }
 
@@ -306,7 +307,7 @@ EXPORT_SYM int ghash_combine_clmul(
     if (NULL==y_out || NULL==y_in || NULL==g || NULL==expanded)
         return ERR_NULL;
 
-    y = swap(_mm_loadu_si128((__m128i*)y_in));
+    y = swap(LOADU_128(y_in));
 
     /**
      * Square and multiply, from the least significant bit of n_blocks.
@@ -327,8 +328,8 @@ EXPORT_SYM int ghash_combine_clmul(
         }
     }
 
-    y = _mm_xor_si128(y, swap(_mm_loadu_si128((__m128i*)g)));
-    _mm_storeu_si128((__m128i*)y_out, swap(y));
+    y = _mm_xor_si128(y, swap(LOADU_128(g)));
+    STOREU_128(y_out, swap(y));
     return 0;
 }
 

@@ -1,5 +1,5 @@
-#ifndef _ED25519_H
-#define _ED25519_H
+#ifndef ED25519_H
+#define ED25519_H
 
 typedef struct Point {
     uint32_t X[10];

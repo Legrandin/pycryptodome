@@ -32,6 +32,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <wmmintrin.h>
+#include "sse2_unaligned.h"
 #include "common.h"
 #include "endianess.h"
 #include "block_base.h"
@@ -124,7 +125,7 @@ STATIC int expand_key(__m128i *erk, __m128i *drk, const uint8_t *key, unsigned N
     }
 
     for (i=0; i<tot_words; i+=4) {
-        *erk++ = _mm_loadu_si128((__m128i*)&rk[i]);
+        *erk++ = LOADU_128(&rk[i]);
     }
 
     erk--;  /** Point to the last round **/
@@ -144,14 +145,14 @@ STATIC int internal_AESNI_encrypt(__m128i r[], unsigned rounds, const uint8_t *i
         __m128i pt[8], data[8];
         unsigned j;
 
-        pt[0] = _mm_loadu_si128((__m128i*)in); in+=16;
-        pt[1] = _mm_loadu_si128((__m128i*)in); in+=16;
-        pt[2] = _mm_loadu_si128((__m128i*)in); in+=16;
-        pt[3] = _mm_loadu_si128((__m128i*)in); in+=16;
-        pt[4] = _mm_loadu_si128((__m128i*)in); in+=16;
-        pt[5] = _mm_loadu_si128((__m128i*)in); in+=16;
-        pt[6] = _mm_loadu_si128((__m128i*)in); in+=16;
-        pt[7] = _mm_loadu_si128((__m128i*)in); in+=16;
+        pt[0] = LOADU_128(in); in+=16;
+        pt[1] = LOADU_128(in); in+=16;
+        pt[2] = LOADU_128(in); in+=16;
+        pt[3] = LOADU_128(in); in+=16;
+        pt[4] = LOADU_128(in); in+=16;
+        pt[5] = LOADU_128(in); in+=16;
+        pt[6] = LOADU_128(in); in+=16;
+        pt[7] = LOADU_128(in); in+=16;
 
         data[0] = _mm_xor_si128(pt[0], r[0]);
         data[1] = _mm_xor_si128(pt[1], r[0]);
@@ -193,14 +194,14 @@ STATIC int internal_AESNI_encrypt(__m128i r[], unsigned rounds, const uint8_t *i
         data[6] = _mm_aesenclast_si128(data[6], r[rounds]);
         data[7] = _mm_aesenclast_si128(data[7], r[rounds]);
 
-        _mm_storeu_si128((__m128i*)out, data[0]); out+=16;
-        _mm_storeu_si128((__m128i*)out, data[1]); out+=16;
-        _mm_storeu_si128((__m128i*)out, data[2]); out+=16;
-        _mm_storeu_si128((__m128i*)out, data[3]); out+=16;
-        _mm_storeu_si128((__m128i*)out, data[4]); out+=16;
-        _mm_storeu_si128((__m128i*)out, data[5]); out+=16;
-        _mm_storeu_si128((__m128i*)out, data[6]); out+=16;
-        _mm_storeu_si128((__m128i*)out, data[7]); out+=16;
+        STOREU_128(out, data[0]); out+=16;
+        STOREU_128(out, data[1]); out+=16;
+        STOREU_128(out, data[2]); out+=16;
+        STOREU_128(out, data[3]); out+=16;
+        STOREU_128(out, data[4]); out+=16;
+        STOREU_128(out, data[5]); out+=16;
+        STOREU_128(out, data[6]); out+=16;
+        STOREU_128(out, data[7]); out+=16;
     }
 
     /** There are 7 blocks or fewer left **/
@@ -208,7 +209,7 @@ STATIC int internal_AESNI_encrypt(__m128i r[], unsigned rounds, const uint8_t *i
         __m128i pt, data;
         unsigned i;
 
-        pt = _mm_loadu_si128((__m128i*)in);
+        pt = LOADU_128(in);
         data = _mm_xor_si128(pt, r[0]);
         for (i=1; i<10; i++) {
             data = _mm_aesenc_si128(data, r[i]);
@@ -218,7 +219,7 @@ STATIC int internal_AESNI_encrypt(__m128i r[], unsigned rounds, const uint8_t *i
             data = _mm_aesenc_si128(data, r[i+1]);
         }
         data = _mm_aesenclast_si128(data, r[rounds]);
-        _mm_storeu_si128((__m128i*)out, data);
+        STOREU_128(out, data);
     }
 
     if (data_len) {
@@ -258,14 +259,14 @@ STATIC int internal_AESNI_decrypt(__m128i r[], unsigned rounds, const uint8_t *i
         __m128i ct[8], data[8];
         unsigned j;
 
-        ct[0] = _mm_loadu_si128((__m128i*)in); in+=16;
-        ct[1] = _mm_loadu_si128((__m128i*)in); in+=16;
-        ct[2] = _mm_loadu_si128((__m128i*)in); in+=16;
-        ct[3] = _mm_loadu_si128((__m128i*)in); in+=16;
-        ct[4] = _mm_loadu_si128((__m128i*)in); in+=16;
-        ct[5] = _mm_loadu_si128((__m128i*)in); in+=16;
-        ct[6] = _mm_loadu_si128((__m128i*)in); in+=16;
-        ct[7] = _mm_loadu_si128((__m128i*)in); in+=16;
+        ct[0] = LOADU_128(in); in+=16;
+        ct[1] = LOADU_128(in); in+=16;
+        ct[2] = LOADU_128(in); in+=16;
+        ct[3] = LOADU_128(in); in+=16;
+        ct[4] = LOADU_128(in); in+=16;
+        ct[5] = LOADU_128(in); in+=16;
+        ct[6] = LOADU_128(in); in+=16;
+        ct[7] = LOADU_128(in); in+=16;
 
         data[0] = _mm_xor_si128(ct[0], r[0]);
         data[1] = _mm_xor_si128(ct[1], r[0]);
@@ -307,14 +308,14 @@ STATIC int internal_AESNI_decrypt(__m128i r[], unsigned rounds, const uint8_t *i
         data[6] = _mm_aesdeclast_si128(data[6], r[rounds]);
         data[7] = _mm_aesdeclast_si128(data[7], r[rounds]);
 
-        _mm_storeu_si128((__m128i*)out, data[0]); out+=16;
-        _mm_storeu_si128((__m128i*)out, data[1]); out+=16;
-        _mm_storeu_si128((__m128i*)out, data[2]); out+=16;
-        _mm_storeu_si128((__m128i*)out, data[3]); out+=16;
-        _mm_storeu_si128((__m128i*)out, data[4]); out+=16;
-        _mm_storeu_si128((__m128i*)out, data[5]); out+=16;
-        _mm_storeu_si128((__m128i*)out, data[6]); out+=16;
-        _mm_storeu_si128((__m128i*)out, data[7]); out+=16;
+        STOREU_128(out, data[0]); out+=16;
+        STOREU_128(out, data[1]); out+=16;
+        STOREU_128(out, data[2]); out+=16;
+        STOREU_128(out, data[3]); out+=16;
+        STOREU_128(out, data[4]); out+=16;
+        STOREU_128(out, data[5]); out+=16;
+        STOREU_128(out, data[6]); out+=16;
+        STOREU_128(out, data[7]); out+=16;
     }
 
     /** There are 7 blocks or fewer left **/
@@ -322,7 +323,7 @@ STATIC int internal_AESNI_decrypt(__m128i r[], unsigned rounds, const uint8_t *i
         __m128i ct, data;
         unsigned i;
 
-        ct = _mm_loadu_si128((__m128i*)in);
+        ct = LOADU_128(in);
         data = _mm_xor_si128(ct, r[0]);
         for (i=1; i<10; i++) {
             data = _mm_aesdec_si128(data, r[i]);
@@ -332,7 +333,7 @@ STATIC int internal_AESNI_decrypt(__m128i r[], unsigned rounds, const uint8_t *i
             data = _mm_aesdec_si128(data, r[i+1]);
         }
         data = _mm_aesdeclast_si128(data, r[rounds]);
-        _mm_storeu_si128((__m128i*)out, data);
+        STOREU_128(out, data);
     }
 
     if (data_len) {
