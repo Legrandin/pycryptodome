@@ -47,10 +47,12 @@ Available key types
 
     rsa
     ecc
+    mldsa
     dsa
 
 * :doc:`RSA keys <rsa>`
 * :doc:`Elliptic Curve keys <ecc>`
+* :doc:`ML-DSA keys (post-quantum) <mldsa>`
 * :doc:`DSA keys (obsolete) <dsa>`
 
 Obsolete key type

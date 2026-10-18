@@ -6,7 +6,8 @@ include requirements-test.txt
 graft Doc
 prune Doc/_build
 include .github/workflows/*.yml
-recursive-include src *.h *.c
+recursive-include src *.h *.c *.inc
+include src/mldsa-native/LICENSE src/mldsa-native/README.md
 graft src/test
 recursive-exclude src *.pyc *.swp
 prune src/test/build

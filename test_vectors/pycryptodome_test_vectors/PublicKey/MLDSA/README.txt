@@ -1,0 +1,34 @@
+Test vectors for ML-DSA (FIPS 204)
+
+ML-DSA-keyGen-FIPS204.json
+ML-DSA-sigGen-FIPS204.json
+ML-DSA-sigVer-FIPS204.json
+
+    A subset of the NIST ACVP vectors (internalProjection.json, with both the
+    inputs and the expected results) from:
+
+        https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files
+        (commit 975de31eb83d87039ec88934fdc47d8c312b892d)
+
+    keyGen:  the first 3 tests of each group.
+    sigGen:  the groups for the internal interface and for pure ML-DSA
+             (not HashML-DSA), and the test with the shortest message in each.
+    sigVer:  the same groups, with one valid and up to two invalid signatures
+             each (with different reasons).
+
+rfc9881_*.pem
+
+    The examples in Appendix C of RFC 9881 (Algorithm Identifiers for the
+    Module-Lattice-Based Digital Signature Algorithm (ML-DSA) in Internet X.509
+    Public Key Infrastructure):
+
+        https://www.rfc-editor.org/rfc/rfc9881.txt
+
+    ml_dsa_*_seed.pem          C.1, private key with the seed 000102...1e1f
+    ml_dsa_*_expanded.pem      C.1, the same, as expanded private key
+    ml_dsa_*_both.pem          C.1, the same, with seed and expanded private key
+    ml_dsa_*_public.pem        C.2, the matching public key
+    ml_dsa_*_cert.pem          C.3, self-signed certificate for that key
+    ml_dsa_44_inconsistent_*   C.4, inconsistent private keys (1: the seed and
+                               the expanded key don't match; 2: wrong tr;
+                               3: wrong t0)
