@@ -120,7 +120,6 @@ _oids = {
 }
 
 # The formats of the private key in a OneAsymmetricKey (RFC 9881, Section 6)
-_PRIVATE_FORMATS = ("seed", "expanded", "both")
 
 
 def _check_param_set(param_set: ParamSet) -> _Sizes:
@@ -280,7 +279,6 @@ class MLDSAKey:
         self,
         *,
         format: Literal["DER"] = "DER",
-        private_format: Optional[str] = None,
         include_public_key: bool = False,
         passphrase: Optional[Union[bytes, str]] = None,
         protection: Optional[str] = None,
@@ -294,7 +292,6 @@ class MLDSAKey:
         self,
         *,
         format: Literal["PEM"],
-        private_format: Optional[str] = None,
         include_public_key: bool = False,
         passphrase: Optional[Union[bytes, str]] = None,
         protection: Optional[str] = None,
@@ -308,7 +305,6 @@ class MLDSAKey:
         self,
         *,
         format: str = "DER",
-        private_format: Optional[str] = None,
         include_public_key: bool = False,
         passphrase: Optional[Union[bytes, str]] = None,
         protection: Optional[str] = None,
@@ -321,7 +317,6 @@ class MLDSAKey:
         self,
         *,
         format: str = "DER",
-        private_format: Optional[str] = None,
         include_public_key: bool = False,
         passphrase: Optional[Union[bytes, str]] = None,
         protection: Optional[str] = None,
@@ -335,6 +330,9 @@ class MLDSAKey:
 
         A private key is encoded as a `PKCS#8`_ ``OneAsymmetricKey``
         (in the clear, or encrypted if ``passphrase`` is set).
+        It contains the 32-byte seed (the format recommended by RFC 9881),
+        or the expanded private key if the seed of this key is not known
+        (see :attr:`seed`).
 
         Args:
           format (string):
@@ -342,17 +340,6 @@ class MLDSAKey:
             - ``'PEM'``: textual encoding of `RFC 7468`_, as a string,
               with the label ``PUBLIC KEY``, ``PRIVATE KEY`` or
               ``ENCRYPTED PRIVATE KEY``.
-
-          private_format (string):
-            (*Private keys only*) What the private key in the ``OneAsymmetricKey``
-            contains (the ``ML-DSA-PrivateKey`` CHOICE of RFC 9881):
-
-            - ``'seed'``: the 32-byte seed only (recommended by RFC 9881).
-            - ``'expanded'``: the expanded private key only.
-            - ``'both'``: the seed and the expanded private key.
-
-            The default is ``'seed'``, or ``'expanded'`` if the seed of
-            this key is not known (see :attr:`seed`).
 
           include_public_key (boolean):
             (*Private keys only*) If ``True``, the public key is also stored
@@ -408,7 +395,6 @@ class MLDSAKey:
             raise ValueError("Unknown format '%s'" % format)
 
         der = self._export_der(
-            private_format=private_format,
             include_public_key=include_public_key,
             passphrase=passphrase,
             protection=protection,
@@ -431,7 +417,6 @@ class MLDSAKey:
     def _export_der(
         self,
         *,
-        private_format: Optional[str] = None,
         include_public_key: bool = False,
         passphrase: Optional[Union[bytes, str]] = None,
         protection: Optional[str] = None,
@@ -445,8 +430,7 @@ class MLDSAKey:
 
         if not self.has_private():
             if (
-                private_format is not None
-                or include_public_key
+                include_public_key
                 or passphrase is not None
                 or protection is not None
                 or prot_params is not None
@@ -467,26 +451,17 @@ class MLDSAKey:
         elif protection is not None or prot_params is not None:
             raise ValueError("'protection' and 'prot_params' require a passphrase")
 
-        if private_format is None:
-            private_format = "seed" if self._seed is not None else "expanded"
-        if private_format not in _PRIVATE_FORMATS:
-            raise ValueError("Unknown private_format '%s'" % private_format)
-        if private_format in ("seed", "both") and self._seed is None:
-            raise ValueError("The seed of this private key is not known: use private_format='expanded'")
-
         # ML-DSA-PrivateKey ::= CHOICE {
         #   seed [0] OCTET STRING (SIZE (32)),
         #   expandedKey OCTET STRING,
         #   both SEQUENCE { seed OCTET STRING, expandedKey OCTET STRING } }
-        assert self._sk is not None
-        if private_format == "seed":
-            assert self._seed is not None
+        #
+        # We write the seed if we know it, otherwise the expanded key
+        if self._seed is not None:
             private_key = DerOctetString(self._seed, implicit=0).encode()
-        elif private_format == "expanded":
-            private_key = DerOctetString(self._sk).encode()
         else:
-            assert self._seed is not None
-            private_key = DerSequence([DerOctetString(self._seed), DerOctetString(self._sk)]).encode()
+            assert self._sk is not None
+            private_key = DerOctetString(self._sk).encode()
 
         return PKCS8.wrap(
             private_key,

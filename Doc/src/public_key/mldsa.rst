@@ -64,11 +64,11 @@ and import it later (the format is detected automatically)::
     >>> with open("myprivatekey.pem", "rt") as f:
     ...     key = MLDSA.import_key(f.read(), "secret")
 
-By default, the private key in the ``OneAsymmetricKey`` is the seed.
-With the parameter ``private_format``, it can also be the expanded private key
-(``'expanded'``) or both (``'both'``), for other implementations that require it.
+The private key in the ``OneAsymmetricKey`` is the seed
+or, if the seed is not known, the expanded private key.
 The parameter ``include_public_key`` adds the public key too.
-:func:`import_key` accepts all these variants, and it checks that the seed,
+:func:`import_key` accepts all the variants of RFC 9881
+(the seed, the expanded private key, or both), and it checks that the seed,
 the expanded private key and the public key match.
 
 .. note::
