@@ -11,7 +11,7 @@ import pytest
 from Crypto.Hash import SHAKE128, SHAKE256
 from Crypto.IO import PEM, PKCS8
 from Crypto.PublicKey import MLDSA, _expand_subject_public_key_info
-from Crypto.PublicKey.MLDSA import MLDSAKey
+from Crypto.PublicKey.MLDSA import MLDSAKey, ParamSet
 from Crypto.SelfTest.loader import warn_skipped_tests
 from Crypto.Util.asn1 import DerBitString, DerOctetString, DerSequence
 
@@ -23,20 +23,20 @@ except ImportError:
     test_vectors_available = False
 
 
-PARAM_SETS = ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"]
+PARAM_SETS = list(ParamSet)
 
 # Sizes of the public key, of the expanded private key and of the signature
 SIZES = {
-    "ML-DSA-44": (1312, 2560, 2420),
-    "ML-DSA-65": (1952, 4032, 3309),
-    "ML-DSA-87": (2592, 4896, 4627),
+    ParamSet.ML_DSA_44: (1312, 2560, 2420),
+    ParamSet.ML_DSA_65: (1952, 4032, 3309),
+    ParamSet.ML_DSA_87: (2592, 4896, 4627),
 }
 
 # id-ml-dsa-* (RFC 9881)
 OIDS = {
-    "ML-DSA-44": "2.16.840.1.101.3.4.3.17",
-    "ML-DSA-65": "2.16.840.1.101.3.4.3.18",
-    "ML-DSA-87": "2.16.840.1.101.3.4.3.19",
+    ParamSet.ML_DSA_44: "2.16.840.1.101.3.4.3.17",
+    ParamSet.ML_DSA_65: "2.16.840.1.101.3.4.3.18",
+    ParamSet.ML_DSA_87: "2.16.840.1.101.3.4.3.19",
 }
 
 ZERO_RND = b"\x00" * 32
@@ -93,22 +93,26 @@ class TestMLDSAKey:
             seeds.append(b"\xaa" * n)
             return seeds[-1]
 
-        key = MLDSA.generate(param_set="ML-DSA-44", randfunc=randfunc)
+        key = MLDSA.generate(param_set=ParamSet.ML_DSA_44, randfunc=randfunc)
         assert seeds == [b"\xaa" * 32]
         assert key.seed == seeds[0]
-        assert key == MLDSA.construct(param_set="ML-DSA-44", seed=seeds[0])
+        assert key == MLDSA.construct(param_set=ParamSet.ML_DSA_44, seed=seeds[0])
 
-    def test_param_set_names(self):
-        for name in ("ML-DSA-65", "ml-dsa-65", "MLDSA65", "mldsa65", "ML_DSA_65"):
-            key = MLDSA.generate(param_set=name)
-            assert key.param_set == "ML-DSA-65"
+    def test_param_set_enum(self):
+        assert [ps.value for ps in ParamSet] == ["ML-DSA-44", "ML-DSA-65", "ML-DSA-87"]
+        assert ParamSet("ML-DSA-65") is ParamSet.ML_DSA_65
 
-        for name in ("ML-DSA-66", "ML-DSA", "", "ML-KEM-768"):
-            with pytest.raises(ValueError):
-                MLDSA.generate(param_set=name)
+        key = MLDSA.generate(param_set=ParamSet.ML_DSA_65)
+        assert key.param_set is ParamSet.ML_DSA_65
 
-        with pytest.raises(TypeError):
-            MLDSA.generate(param_set=65)
+        # Only members of the enum
+        for bad in ("ML-DSA-65", "mldsa65", 65, None):
+            with pytest.raises(TypeError):
+                MLDSA.generate(param_set=bad)
+            with pytest.raises(TypeError):
+                MLDSA.construct(param_set=bad, pk=key.pk)
+            with pytest.raises(TypeError):
+                MLDSAKey(param_set=bad, pk=key.pk)
 
     @pytest.mark.parametrize("param_set", PARAM_SETS)
     def test_construct(self, param_set):
@@ -148,50 +152,50 @@ class TestMLDSAKey:
             assert MLDSA.construct(param_set=param_set, pk=conv(key.pk)) == key.public_key()
 
     def test_construct_errors(self):
-        key = MLDSA.generate(param_set="ML-DSA-44")
-        other = MLDSA.generate(param_set="ML-DSA-44")
+        key = MLDSA.generate(param_set=ParamSet.ML_DSA_44)
+        other = MLDSA.generate(param_set=ParamSet.ML_DSA_44)
 
         with pytest.raises(ValueError):
-            MLDSA.construct(param_set="ML-DSA-44")
+            MLDSA.construct(param_set=ParamSet.ML_DSA_44)
 
         # Wrong lengths
         with pytest.raises(ValueError):
-            MLDSA.construct(param_set="ML-DSA-44", seed=key.seed[:-1])
+            MLDSA.construct(param_set=ParamSet.ML_DSA_44, seed=key.seed[:-1])
         with pytest.raises(ValueError):
-            MLDSA.construct(param_set="ML-DSA-44", seed=key.seed + b"\x00")
+            MLDSA.construct(param_set=ParamSet.ML_DSA_44, seed=key.seed + b"\x00")
         with pytest.raises(ValueError):
-            MLDSA.construct(param_set="ML-DSA-44", sk=key.sk[:-1])
+            MLDSA.construct(param_set=ParamSet.ML_DSA_44, sk=key.sk[:-1])
         with pytest.raises(ValueError):
-            MLDSA.construct(param_set="ML-DSA-44", pk=key.pk[:-1])
+            MLDSA.construct(param_set=ParamSet.ML_DSA_44, pk=key.pk[:-1])
         with pytest.raises(ValueError):
-            MLDSA.construct(param_set="ML-DSA-65", sk=key.sk)
+            MLDSA.construct(param_set=ParamSet.ML_DSA_65, sk=key.sk)
         with pytest.raises(ValueError):
-            MLDSA.construct(param_set="ML-DSA-65", pk=key.pk)
+            MLDSA.construct(param_set=ParamSet.ML_DSA_65, pk=key.pk)
 
         # Mismatches
         with pytest.raises(ValueError):
-            MLDSA.construct(param_set="ML-DSA-44", seed=key.seed, sk=other.sk)
+            MLDSA.construct(param_set=ParamSet.ML_DSA_44, seed=key.seed, sk=other.sk)
         with pytest.raises(ValueError):
-            MLDSA.construct(param_set="ML-DSA-44", seed=key.seed, pk=other.pk)
+            MLDSA.construct(param_set=ParamSet.ML_DSA_44, seed=key.seed, pk=other.pk)
         with pytest.raises(ValueError):
-            MLDSA.construct(param_set="ML-DSA-44", sk=key.sk, pk=other.pk)
+            MLDSA.construct(param_set=ParamSet.ML_DSA_44, sk=key.sk, pk=other.pk)
 
         # Corrupted expanded private key (in s1)
         sk = bytearray(key.sk)
         sk[128 + 10] ^= 0xFF
         with pytest.raises(ValueError):
-            MLDSA.construct(param_set="ML-DSA-44", sk=sk)
+            MLDSA.construct(param_set=ParamSet.ML_DSA_44, sk=sk)
 
     def test_eq_repr(self):
-        key = MLDSA.generate(param_set="ML-DSA-44")
-        assert key == MLDSA.construct(param_set="ML-DSA-44", seed=key.seed)
-        assert key != MLDSA.generate(param_set="ML-DSA-44")
-        assert key != MLDSA.construct(param_set="ML-DSA-65", seed=key.seed)
+        key = MLDSA.generate(param_set=ParamSet.ML_DSA_44)
+        assert key == MLDSA.construct(param_set=ParamSet.ML_DSA_44, seed=key.seed)
+        assert key != MLDSA.generate(param_set=ParamSet.ML_DSA_44)
+        assert key != MLDSA.construct(param_set=ParamSet.ML_DSA_65, seed=key.seed)
         assert key != key.seed
         assert key.public_key() == key.public_key()
 
-        assert repr(key) == "MLDSAKey(param_set='ML-DSA-44', private=True)"
-        assert repr(key.public_key()) == "MLDSAKey(param_set='ML-DSA-44', private=False)"
+        assert repr(key) == "MLDSAKey(param_set=ParamSet.ML_DSA_44, private=True)"
+        assert repr(key.public_key()) == "MLDSAKey(param_set=ParamSet.ML_DSA_44, private=False)"
         assert key.seed.hex() not in repr(key)
 
     @pytest.mark.parametrize("param_set", PARAM_SETS)
@@ -243,7 +247,7 @@ class TestMLDSAKey:
         assert key._sign(memoryview(b""), bytearray(ZERO_RND), prefix=memoryview(b"")) == sig
 
     def test_sign_errors(self):
-        key = MLDSA.generate(param_set="ML-DSA-44")
+        key = MLDSA.generate(param_set=ParamSet.ML_DSA_44)
 
         with pytest.raises(TypeError):
             key.public_key()._sign(b"msg", ZERO_RND)
@@ -257,7 +261,7 @@ class TestMLDSAKey:
             key._sign("msg", ZERO_RND)
 
     def test_external_mu(self):
-        key = MLDSA.generate(param_set="ML-DSA-65")
+        key = MLDSA.generate(param_set=ParamSet.ML_DSA_65)
 
         # mu = SHAKE256(tr || M', 64), with tr = SHAKE256(pk, 64)
         tr = SHAKE256.new(key.pk).read(64)
@@ -291,12 +295,12 @@ class TestCCTVAccumulated:
     """
 
     results = {
-        ("ML-DSA-44", 100): "d51148e1f9f4fa1a723a6cf42e25f2a99eb5c1b378b3d2dbbd561b1203beeae4",
-        ("ML-DSA-65", 100): "8358a1843220194417cadbc2651295cd8fc65125b5a5c1a239a16dc8b57ca199",
-        ("ML-DSA-87", 100): "8c3ad714777622b8f21ce31bb35f71394f23bc0fcf3c78ace5d608990f3b061b",
-        ("ML-DSA-44", 10000): "e7fd21f6a59bcba60d65adc44404bb29a7c00e5d8d3ec06a732c00a306a7d143",
-        ("ML-DSA-65", 10000): "5ff5e196f0b830c3b10a9eb5358e7c98a3a20136cb677f3ae3b90175c3ace329",
-        ("ML-DSA-87", 10000): "80a8cf39317f7d0be0e24972c51ac152bd2a3e09bc0c32ce29dd82c4e7385e60",
+        (ParamSet.ML_DSA_44, 100): "d51148e1f9f4fa1a723a6cf42e25f2a99eb5c1b378b3d2dbbd561b1203beeae4",
+        (ParamSet.ML_DSA_65, 100): "8358a1843220194417cadbc2651295cd8fc65125b5a5c1a239a16dc8b57ca199",
+        (ParamSet.ML_DSA_87, 100): "8c3ad714777622b8f21ce31bb35f71394f23bc0fcf3c78ace5d608990f3b061b",
+        (ParamSet.ML_DSA_44, 10000): "e7fd21f6a59bcba60d65adc44404bb29a7c00e5d8d3ec06a732c00a306a7d143",
+        (ParamSet.ML_DSA_65, 10000): "5ff5e196f0b830c3b10a9eb5358e7c98a3a20136cb677f3ae3b90175c3ace329",
+        (ParamSet.ML_DSA_87, 10000): "80a8cf39317f7d0be0e24972c51ac152bd2a3e09bc0c32ce29dd82c4e7385e60",
     }
 
     def accumulate(self, param_set, iterations):
@@ -353,7 +357,7 @@ class TestRFC9881:
 
     @pytest.mark.parametrize("param_set", PARAM_SETS)
     def test_private_keys(self, param_set):
-        base = "rfc9881_" + param_set.lower().replace("-", "_")
+        base = "rfc9881_" + param_set.value.lower().replace("-", "_")
 
         ps, seed, expanded_key = _rfc9881_private_key(base + "_seed.pem")
         assert ps == param_set
@@ -382,7 +386,7 @@ class TestRFC9881:
 
     @pytest.mark.parametrize("param_set", PARAM_SETS)
     def test_certificate(self, param_set):
-        base = "rfc9881_" + param_set.lower().replace("-", "_")
+        base = "rfc9881_" + param_set.value.lower().replace("-", "_")
 
         der, marker, _ = PEM.decode(load_file(base + "_cert.pem", "r"))
         assert marker == "CERTIFICATE"
@@ -408,7 +412,7 @@ class TestRFC9881:
     def test_inconsistent_1(self):
         # The seed and the expanded key don't match
         ps, seed, expanded_key = _rfc9881_private_key("rfc9881_ml_dsa_44_inconsistent_1.pem")
-        assert ps == "ML-DSA-44"
+        assert ps == ParamSet.ML_DSA_44
         assert seed is not None and expanded_key is not None
         with pytest.raises(ValueError):
             MLDSA.construct(param_set=ps, seed=seed, sk=expanded_key)
@@ -418,7 +422,7 @@ class TestRFC9881:
     def test_inconsistent_2_3(self, index):
         # Wrong tr (2) or wrong t0 (3)
         ps, seed, expanded_key = _rfc9881_private_key("rfc9881_ml_dsa_44_inconsistent_%d.pem" % index)
-        assert ps == "ML-DSA-44"
+        assert ps == ParamSet.ML_DSA_44
         assert seed is None
         with pytest.raises(ValueError):
             MLDSA.construct(param_set=ps, sk=expanded_key)
@@ -462,13 +466,13 @@ class TestACVP:
 
     @pytest.mark.parametrize("group,test", _load_acvp("ML-DSA-keyGen-FIPS204.json"))
     def test_keygen(self, group, test):
-        key = MLDSA.construct(param_set=group["parameterSet"], seed=unhexlify(test["seed"]))
+        key = MLDSA.construct(param_set=ParamSet(group["parameterSet"]), seed=unhexlify(test["seed"]))
         assert key.pk == unhexlify(test["pk"])
         assert key.sk == unhexlify(test["sk"])
 
     @pytest.mark.parametrize("group,test", _load_acvp("ML-DSA-sigGen-FIPS204.json"))
     def test_siggen(self, group, test):
-        key = MLDSA.construct(param_set=group["parameterSet"], sk=unhexlify(test["sk"]))
+        key = MLDSA.construct(param_set=ParamSet(group["parameterSet"]), sk=unhexlify(test["sk"]))
         assert key.pk == unhexlify(test["pk"])
 
         msg, prefix, external_mu = _acvp_message(group, test)
@@ -478,7 +482,7 @@ class TestACVP:
 
     @pytest.mark.parametrize("group,test", _load_acvp("ML-DSA-sigVer-FIPS204.json"))
     def test_sigver(self, group, test):
-        key = MLDSA.construct(param_set=group["parameterSet"], pk=unhexlify(test["pk"]))
+        key = MLDSA.construct(param_set=ParamSet(group["parameterSet"]), pk=unhexlify(test["pk"]))
 
         msg, prefix, external_mu = _acvp_message(group, test)
         signature = unhexlify(test["signature"])

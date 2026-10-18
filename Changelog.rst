@@ -12,7 +12,8 @@ New features
   like ``Crypto.Hash.KangarooTwelve.digest()``. For messages up to 1 KiB,
   it is 1.5x to 3.4x faster than ``new()`` followed by ``digest()``.
 * New module ``Crypto.PublicKey.MLDSA``, for ML-DSA keys (FIPS 204):
-  ``generate()`` and ``construct()``, for the parameter sets ML-DSA-44, ML-DSA-65 and ML-DSA-87.
+  ``generate()`` and ``construct()``, for the parameter sets ML-DSA-44, ML-DSA-65 and ML-DSA-87
+  (enum ``Crypto.PublicKey.MLDSA.ParamSet``).
   It is based on the portable C code of `mldsa-native <https://github.com/pq-code-package/mldsa-native>`_
   (v2.0.0). The signature schemes will come in a dedicated module of ``Crypto.Signature``.
 

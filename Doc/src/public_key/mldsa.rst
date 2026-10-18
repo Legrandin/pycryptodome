@@ -9,19 +9,20 @@ Its security is based on the hardness of lattice problems (Module-LWE and Module
 which are believed to be hard even for quantum computers.
 Compared to RSA and ECC, keys and signatures are much larger.
 
-FIPS 204 defines three parameter sets:
+FIPS 204 defines three parameter sets, which are the members of the enum
+:class:`Crypto.PublicKey.MLDSA.ParamSet`:
 
 .. _ML-DSA table:
 .. csv-table::
-   :header: Parameter set, NIST security category, Public key, Expanded private key, Signature
-   :widths: 20, 20, 20, 20, 20
+   :header: Parameter set, Enum member, NIST security category, Public key, Expanded private key, Signature
+   :widths: 15, 25, 15, 15, 15, 15
 
-   "``'ML-DSA-44'``", "2", "1312 bytes", "2560 bytes", "2420 bytes"
-   "``'ML-DSA-65'``", "3", "1952 bytes", "4032 bytes", "3309 bytes"
-   "``'ML-DSA-87'``", "5", "2592 bytes", "4896 bytes", "4627 bytes"
+   "ML-DSA-44", "``ParamSet.ML_DSA_44``", "2", "1312 bytes", "2560 bytes", "2420 bytes"
+   "ML-DSA-65", "``ParamSet.ML_DSA_65``", "3", "1952 bytes", "4032 bytes", "3309 bytes"
+   "ML-DSA-87", "``ParamSet.ML_DSA_87``", "5", "2592 bytes", "4896 bytes", "4627 bytes"
 
-The name of a parameter set is not case sensitive, and the dashes can be omitted
-(for instance, ``'mldsa65'`` is the same as ``'ML-DSA-65'``).
+The value of each member is the name of the parameter set
+(for instance, ``ParamSet('ML-DSA-65')`` is ``ParamSet.ML_DSA_65``).
 
 A private key can be represented in two ways:
 
@@ -34,16 +35,17 @@ A private key can be represented in two ways:
 With this module you can generate a new ML-DSA key::
 
     >>> from Crypto.PublicKey import MLDSA
+    >>> from Crypto.PublicKey.MLDSA import ParamSet
     >>>
-    >>> key = MLDSA.generate(param_set='ML-DSA-65')
+    >>> key = MLDSA.generate(param_set=ParamSet.ML_DSA_65)
     >>> seed = key.seed       # 32 bytes, keep it secret
     >>> pk = key.pk           # 1952 bytes
 
 and rebuild it later from its seed (or from the expanded private key),
 or get the public key::
 
-    >>> key = MLDSA.construct(param_set='ML-DSA-65', seed=seed)
-    >>> pub_key = MLDSA.construct(param_set='ML-DSA-65', pk=pk)
+    >>> key = MLDSA.construct(param_set=ParamSet.ML_DSA_65, seed=seed)
+    >>> pub_key = MLDSA.construct(param_set=ParamSet.ML_DSA_65, pk=pk)
     >>> pub_key == key.public_key()
     True
 

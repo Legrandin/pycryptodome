@@ -6,6 +6,7 @@
 from __future__ import annotations
 
 import hmac
+from enum import Enum
 from typing import Callable, NamedTuple, Optional, Union
 
 from Crypto.Random import get_random_bytes
@@ -17,7 +18,7 @@ from Crypto.Util._raw_api import (
     load_pycryptodome_raw_lib,
 )
 
-__all__ = ["MLDSAKey", "generate", "construct"]
+__all__ = ["ParamSet", "MLDSAKey", "generate", "construct"]
 
 Buffer = Union[bytes, bytearray, memoryview]
 RNG = Callable[[int], bytes]
@@ -57,8 +58,21 @@ _RND_LEN = 32
 _MU_LEN = 64
 
 
-class _ParamSet(NamedTuple):
-    name: str
+class ParamSet(Enum):
+    """The ML-DSA parameter sets (FIPS 204, Section 4).
+    The value of each member is its name in FIPS 204."""
+
+    ML_DSA_44 = "ML-DSA-44"
+    """NIST security category 2"""
+
+    ML_DSA_65 = "ML-DSA-65"
+    """NIST security category 3"""
+
+    ML_DSA_87 = "ML-DSA-87"
+    """NIST security category 5"""
+
+
+class _Sizes(NamedTuple):
     level: int
     pk_len: int
     sk_len: int
@@ -66,24 +80,17 @@ class _ParamSet(NamedTuple):
 
 
 # FIPS 204, Table 2
-_param_sets = {
-    "ML-DSA-44": _ParamSet("ML-DSA-44", 44, 1312, 2560, 2420),
-    "ML-DSA-65": _ParamSet("ML-DSA-65", 65, 1952, 4032, 3309),
-    "ML-DSA-87": _ParamSet("ML-DSA-87", 87, 2592, 4896, 4627),
+_sizes = {
+    ParamSet.ML_DSA_44: _Sizes(44, 1312, 2560, 2420),
+    ParamSet.ML_DSA_65: _Sizes(65, 1952, 4032, 3309),
+    ParamSet.ML_DSA_87: _Sizes(87, 2592, 4896, 4627),
 }
 
 
-def _get_param_set(name: str) -> _ParamSet:
-    """The parameter set with the given name, like "ML-DSA-44".
-    Case, dashes and underscores do not matter ("mldsa44" is also valid)."""
-
-    if not isinstance(name, str):
-        raise TypeError("The parameter set must be a string")
-    normalized = name.upper().replace("-", "").replace("_", "")
-    for param_set in _param_sets.values():
-        if param_set.name.replace("-", "") == normalized:
-            return param_set
-    raise ValueError("Unsupported ML-DSA parameter set '%s'" % name)
+def _check_param_set(param_set: ParamSet) -> _Sizes:
+    if not isinstance(param_set, ParamSet):
+        raise TypeError("The parameter set must be a member of Crypto.PublicKey.MLDSA.ParamSet")
+    return _sizes[param_set]
 
 
 class MLDSAKey:
@@ -91,15 +98,14 @@ class MLDSAKey:
     Do not instantiate directly.
     Use :func:`generate` or :func:`construct` instead.
 
-    :ivar param_set: The name of the parameter set:
-                     ``'ML-DSA-44'``, ``'ML-DSA-65'`` or ``'ML-DSA-87'``.
-    :vartype param_set: string
+    :ivar param_set: The parameter set.
+    :vartype param_set: :class:`ParamSet`
     """
 
     def __init__(
         self,
         *,
-        param_set: str,
+        param_set: ParamSet,
         seed: Optional[Buffer] = None,
         sk: Optional[Buffer] = None,
         pk: Optional[Buffer] = None,
@@ -107,8 +113,8 @@ class MLDSAKey:
         """Create a new ML-DSA key.
 
         Keywords:
-          param_set : string
-            The name of the parameter set.
+          param_set : ParamSet
+            The parameter set.
           seed : bytes
             The 32-byte seed of the private key.
           sk : bytes
@@ -120,8 +126,8 @@ class MLDSAKey:
         If more than one is present, they must match.
         """
 
-        self._ps = _get_param_set(param_set)
-        self.param_set = self._ps.name
+        self._ps = _check_param_set(param_set)
+        self.param_set = param_set
 
         self._seed: Optional[bytes] = None
         self._sk: Optional[bytes] = None
@@ -191,7 +197,7 @@ class MLDSAKey:
         return other.param_set == self.param_set and other._pk == self._pk
 
     def __repr__(self) -> str:
-        return "MLDSAKey(param_set='%s', private=%s)" % (self.param_set, self.has_private())
+        return "MLDSAKey(param_set=%s, private=%s)" % (self.param_set, self.has_private())
 
     def has_private(self) -> bool:
         """``True`` if this key can be used for making signatures."""
@@ -314,13 +320,12 @@ class MLDSAKey:
         return True
 
 
-def generate(*, param_set: str, randfunc: Optional[RNG] = None) -> MLDSAKey:
+def generate(*, param_set: ParamSet, randfunc: Optional[RNG] = None) -> MLDSAKey:
     """Generate a new ML-DSA private key (FIPS 204, Algorithm 1).
 
     Args:
-      param_set (string):
-        Mandatory. The name of the parameter set:
-        ``'ML-DSA-44'``, ``'ML-DSA-65'`` or ``'ML-DSA-87'``.
+      param_set (:class:`ParamSet`):
+        Mandatory. The parameter set, for instance ``ParamSet.ML_DSA_65``.
 
       randfunc (callable):
         Optional. The RNG to read the 32-byte seed from.
@@ -332,13 +337,13 @@ def generate(*, param_set: str, randfunc: Optional[RNG] = None) -> MLDSAKey:
 
     if randfunc is None:
         randfunc = get_random_bytes
-    _get_param_set(param_set)
+    _check_param_set(param_set)
     return MLDSAKey(param_set=param_set, seed=randfunc(_SEED_LEN))
 
 
 def construct(
     *,
-    param_set: str,
+    param_set: ParamSet,
     seed: Optional[Buffer] = None,
     sk: Optional[Buffer] = None,
     pk: Optional[Buffer] = None,
@@ -346,9 +351,8 @@ def construct(
     """Build an ML-DSA key (private or public) from its components.
 
     Args:
-      param_set (string):
-        Mandatory. The name of the parameter set:
-        ``'ML-DSA-44'``, ``'ML-DSA-65'`` or ``'ML-DSA-87'``.
+      param_set (:class:`ParamSet`):
+        Mandatory. The parameter set, for instance ``ParamSet.ML_DSA_65``.
 
       seed (bytes):
         The 32-byte seed of a private key (:math:`\\xi` in FIPS 204).
