@@ -279,7 +279,6 @@ class MLDSAKey:
         self,
         *,
         format: Literal["DER"] = "DER",
-        include_public_key: bool = False,
         passphrase: Optional[Union[bytes, str]] = None,
         protection: Optional[str] = None,
         prot_params: Optional[ProtParams] = None,
@@ -292,7 +291,6 @@ class MLDSAKey:
         self,
         *,
         format: Literal["PEM"],
-        include_public_key: bool = False,
         passphrase: Optional[Union[bytes, str]] = None,
         protection: Optional[str] = None,
         prot_params: Optional[ProtParams] = None,
@@ -305,7 +303,6 @@ class MLDSAKey:
         self,
         *,
         format: str = "DER",
-        include_public_key: bool = False,
         passphrase: Optional[Union[bytes, str]] = None,
         protection: Optional[str] = None,
         prot_params: Optional[ProtParams] = None,
@@ -317,7 +314,6 @@ class MLDSAKey:
         self,
         *,
         format: str = "DER",
-        include_public_key: bool = False,
         passphrase: Optional[Union[bytes, str]] = None,
         protection: Optional[str] = None,
         prot_params: Optional[ProtParams] = None,
@@ -340,11 +336,6 @@ class MLDSAKey:
             - ``'PEM'``: textual encoding of `RFC 7468`_, as a string,
               with the label ``PUBLIC KEY``, ``PRIVATE KEY`` or
               ``ENCRYPTED PRIVATE KEY``.
-
-          include_public_key (boolean):
-            (*Private keys only*) If ``True``, the public key is also stored
-            in the ``publicKey`` field (``OneAsymmetricKey`` version 2).
-            The default is ``False`` (version 1, also known as ``PrivateKeyInfo``).
 
           passphrase (bytes or string):
             (*Private keys only*) The passphrase to protect the private key
@@ -395,7 +386,6 @@ class MLDSAKey:
             raise ValueError("Unknown format '%s'" % format)
 
         der = self._export_der(
-            include_public_key=include_public_key,
             passphrase=passphrase,
             protection=protection,
             prot_params=prot_params,
@@ -417,7 +407,6 @@ class MLDSAKey:
     def _export_der(
         self,
         *,
-        include_public_key: bool = False,
         passphrase: Optional[Union[bytes, str]] = None,
         protection: Optional[str] = None,
         prot_params: Optional[ProtParams] = None,
@@ -430,8 +419,7 @@ class MLDSAKey:
 
         if not self.has_private():
             if (
-                include_public_key
-                or passphrase is not None
+                passphrase is not None
                 or protection is not None
                 or prot_params is not None
                 or randfunc is not None
@@ -472,7 +460,6 @@ class MLDSAKey:
             key_params=None,
             randfunc=randfunc,
             threads=threads,
-            public_key=self._pk if include_public_key else None,
         )
 
     def _sign(self, msg: Buffer, rnd: Buffer, prefix: Buffer = b"", external_mu: bool = False) -> bytes:

@@ -16,9 +16,10 @@ New features
   (constants ``MLDSA.ML_DSA_44``, ``MLDSA.ML_DSA_65`` and ``MLDSA.ML_DSA_87``).
   ``import_key()`` and ``MLDSAKey.export_key()`` support the encodings of RFC 9881, in DER or PEM:
   X.509 ``SubjectPublicKeyInfo`` and certificates (import only) for public keys, and
-  PKCS#8 ``OneAsymmetricKey`` (v1 and v2, in the clear or encrypted) for private keys,
-  with the seed, the expanded private key or both (import), and with the seed or,
-  if it is not known, the expanded private key (export).
+  PKCS#8 ``OneAsymmetricKey`` (in the clear or encrypted) for private keys.
+  On import, the private key can be the seed, the expanded private key or both,
+  with or without the public key (version 2); on export, it is the seed or,
+  if it is not known, the expanded private key, without the public key.
   It is based on the portable C code of `mldsa-native <https://github.com/pq-code-package/mldsa-native>`_
   (v2.0.0). The signature schemes will come in a dedicated module of ``Crypto.Signature``.
 * ``Crypto.IO.PKCS8.wrap()`` has a new parameter ``public_key``, to create a ``OneAsymmetricKey``

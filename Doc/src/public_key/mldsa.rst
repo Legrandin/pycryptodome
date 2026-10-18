@@ -66,10 +66,11 @@ and import it later (the format is detected automatically)::
 
 The private key in the ``OneAsymmetricKey`` is the seed
 or, if the seed is not known, the expanded private key.
-The parameter ``include_public_key`` adds the public key too.
+It does not contain the public key (the optional ``publicKey`` field of
+``OneAsymmetricKey`` version 2), which can always be computed again.
 :func:`import_key` accepts all the variants of RFC 9881
-(the seed, the expanded private key, or both), and it checks that the seed,
-the expanded private key and the public key match.
+(the seed, the expanded private key, or both, with or without the public key),
+and it checks that the seed, the expanded private key and the public key match.
 
 .. note::
 
