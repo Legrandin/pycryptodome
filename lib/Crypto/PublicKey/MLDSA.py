@@ -19,7 +19,7 @@ from Crypto.Util._raw_api import (
     get_raw_buffer,
     load_pycryptodome_raw_lib,
 )
-from Crypto.Util.asn1 import DerBitString, DerNull, DerObjectId, DerOctetString, DerSequence
+from Crypto.Util.asn1 import DerBitString, DerInteger, DerNull, DerObjectId, DerOctetString, DerSequence
 
 if TYPE_CHECKING:
     from Crypto.IO._PBES import ProtParams
@@ -302,6 +302,20 @@ class MLDSAKey:
         randfunc: Optional[RNG] = None,
         threads: int = 1,
     ) -> str: ...
+
+    @overload
+    def export_key(
+        self,
+        *,
+        format: str = "DER",
+        private_format: Optional[str] = None,
+        include_public_key: bool = False,
+        passphrase: Optional[Union[bytes, str]] = None,
+        protection: Optional[str] = None,
+        prot_params: Optional[ProtParams] = None,
+        randfunc: Optional[RNG] = None,
+        threads: int = 1,
+    ) -> Union[bytes, str]: ...
 
     def export_key(
         self,
@@ -662,24 +676,45 @@ def _import_der(
     #   Certificate             SEQUENCE { SEQUENCE, SEQUENCE, BIT STRING }
     #   OneAsymmetricKey        SEQUENCE { INTEGER, ... }
     #   EncryptedPrivateKeyInfo SEQUENCE { SEQUENCE, OCTET STRING }
-    outer = DerSequence().decode(encoded, nr_elements=(2, 3, 4, 5), strict=True)
-    first, second = outer[0], outer[1]
+    types = DerSequence().decode(encoded, nr_elements=(2, 3, 4, 5), strict=True).item_types()
 
-    if isinstance(first, int):
+    if types[0] == DerInteger:
         key = _import_pkcs8(encoded, passphrase, max_iteration_count, threads, max_memory)
         return key, "PRIVATE KEY"
 
-    if isinstance(second, bytes) and len(outer) == 2:
-        if second[:1] == b"\x03":
-            return _import_subject_public_key_info(encoded), "PUBLIC KEY"
-        if second[:1] == b"\x04":
-            key = _import_pkcs8(encoded, passphrase, max_iteration_count, threads, max_memory)
-            return key, "ENCRYPTED PRIVATE KEY"
+    if types == [DerSequence, DerBitString]:
+        return _import_subject_public_key_info(encoded), "PUBLIC KEY"
 
-    if len(outer) == 3:
+    if types == [DerSequence, DerOctetString]:
+        key = _import_pkcs8(encoded, passphrase, max_iteration_count, threads, max_memory)
+        return key, "ENCRYPTED PRIVATE KEY"
+
+    if types == [DerSequence, DerSequence, DerBitString]:
         return _import_subject_public_key_info(_extract_subject_public_key_info(encoded)), "CERTIFICATE"
 
     raise ValueError("Not a DER-encoded ML-DSA key")
+
+
+def _decode_private_key_choice(private_key: bytes) -> tuple[Optional[bytes], Optional[bytes]]:
+    """Decode an ML-DSA-PrivateKey into the seed and the expanded private key
+    (either can be ``None``)."""
+
+    try:
+        return DerOctetString(implicit=0).decode(private_key, strict=True).payload, None
+    except ValueError:
+        pass
+    try:
+        return None, DerOctetString().decode(private_key, strict=True).payload
+    except ValueError:
+        pass
+    try:
+        both = DerSequence().decode(private_key, nr_elements=2, strict=True)
+        seed = DerOctetString().decode(both[0], strict=True).payload
+        sk = DerOctetString().decode(both[1], strict=True).payload
+        return seed, sk
+    except (ValueError, TypeError):
+        pass
+    raise ValueError("Invalid ML-DSA private key: unknown format")
 
 
 def _import_pkcs8(
@@ -705,18 +740,7 @@ def _import_pkcs8(
     #   both SEQUENCE { seed OCTET STRING, expandedKey OCTET STRING } }
     #
     # The tag selects the alternative (RFC 9881, Section 6)
-    seed = sk = None
-    tag = private_key[:1]
-    if tag == b"\x80":
-        seed = DerOctetString(implicit=0).decode(private_key, strict=True).payload
-    elif tag == b"\x04":
-        sk = DerOctetString().decode(private_key, strict=True).payload
-    elif tag == b"\x30":
-        both = DerSequence().decode(private_key, nr_elements=2, strict=True)
-        seed = DerOctetString().decode(both[0], strict=True).payload
-        sk = DerOctetString().decode(both[1], strict=True).payload
-    else:
-        raise ValueError("Invalid ML-DSA private key: unknown format")
+    seed, sk = _decode_private_key_choice(private_key)
 
     if seed is not None and len(seed) != _SEED_LEN:
         raise ValueError("Invalid ML-DSA private key: the seed must be %d bytes long" % _SEED_LEN)

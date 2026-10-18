@@ -25,6 +25,7 @@ from Crypto.IO._PBES import (
 from Crypto.Util._bytes import tobytes
 from Crypto.Util._threads import threads_param
 from Crypto.Util.asn1 import (
+    ContextTag,
     DerBitString,
     DerNull,
     DerObject,
@@ -288,15 +289,9 @@ def unwrap(
     #     encryptedData        OCTET STRING
     # }
     #
-    # (a PrivateKeyInfo starts with an INTEGER instead)
+    # (a PrivateKeyInfo/OneAsymmetricKey starts with an INTEGER instead)
     pk_info = DerSequence().decode(p8_private_key, nr_elements=(2, 3, 4, 5))
-    encrypted = (
-        len(pk_info) == 2
-        and isinstance(pk_info[0], bytes)
-        and pk_info[0][:1] == b"\x30"
-        and isinstance(pk_info[1], bytes)
-        and pk_info[1][:1] == b"\x04"
-    )
+    encrypted = pk_info.item_types() == [DerSequence, DerOctetString]
 
     if encrypted:
         if passphrase is None:
@@ -394,8 +389,8 @@ def unwrap(
     # publicKey [1] IMPLICIT BIT STRING is only valid in v2,
     # but we return it in any case, so that the caller can check it
     public_key = None
-    for item in pk_info[3:]:
-        if isinstance(item, bytes) and item[:1] == b"\x81":
+    for item_type, item in zip(pk_info.item_types()[3:], pk_info[3:]):
+        if item_type == ContextTag(1):
             public_key = DerBitString(implicit=1).decode(item, strict=True).value
 
     return UnwrappedKey._create(algo_oid, private_key, algo_params, public_key)
