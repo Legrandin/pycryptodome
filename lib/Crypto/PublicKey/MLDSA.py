@@ -19,7 +19,7 @@ from Crypto.Util._raw_api import (
     get_raw_buffer,
     load_pycryptodome_raw_lib,
 )
-from Crypto.Util.asn1 import DerBitString, DerObjectId, DerOctetString, DerSequence
+from Crypto.Util.asn1 import DerBitString, DerNull, DerObjectId, DerOctetString, DerSequence
 
 if TYPE_CHECKING:
     from Crypto.IO._PBES import ProtParams
@@ -639,7 +639,8 @@ def _import_subject_public_key_info(encoded: bytes) -> MLDSAKey:
     spki = DerSequence().decode(encoded, nr_elements=2, strict=True)
     algo = DerSequence().decode(spki[0], nr_elements=(1, 2), strict=True)
     param_set = _param_set_from_oid(DerObjectId().decode(algo[0], strict=True).value)
-    if len(algo) != 1:
+    # The parameters must be absent (RFC 9881, Section 2), but we also accept NULL
+    if len(algo) != 1 and algo[1] != DerNull().encode():
         raise ValueError("The parameters of an ML-DSA AlgorithmIdentifier must be absent")
     pk = DerBitString().decode(spki[1], strict=True).value
     return MLDSAKey(param_set=param_set, pk=pk)
@@ -693,7 +694,8 @@ def _import_pkcs8(
     unwrapped = PKCS8.unwrap(encoded, passphrase, max_iteration_count, threads=threads, max_memory=max_memory)
     oid, private_key, pk = unwrapped.oid, unwrapped.private_key, unwrapped.public_key
     param_set = _param_set_from_oid(oid)
-    if unwrapped.raw_params is not None:
+    # The parameters must be absent (RFC 9881, Section 2), but NULL is accepted too
+    if unwrapped.params is not None:
         raise ValueError("The parameters of an ML-DSA AlgorithmIdentifier must be absent")
     sk_len = _sizes[param_set].sk_len
 
@@ -747,7 +749,8 @@ def import_key(
           (version 1 or 2, in the clear or encrypted).
           The private key can contain the seed, the expanded private key or both.
 
-        The parameters of the ``AlgorithmIdentifier`` must be absent.
+        The parameters of the ``AlgorithmIdentifier`` must be absent
+        (or ``NULL``, which is tolerated).
 
         In PEM format, the label must match the content: ``PUBLIC KEY``,
         ``CERTIFICATE`` (or ``X509 CERTIFICATE``, ``X.509 CERTIFICATE``),

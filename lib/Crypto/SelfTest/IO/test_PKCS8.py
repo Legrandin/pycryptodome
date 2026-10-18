@@ -761,7 +761,6 @@ class TestOneAsymmetricKey:
         assert unwrapped.oid == self.oid
         assert unwrapped.public_key == self.rfc8410_public_key
         assert unwrapped.params is None
-        assert unwrapped.raw_params is None
 
     def test_unwrap_v1_with_public_key(self):
         # Not allowed by RFC 5958, but returned so that the caller can check it
@@ -785,18 +784,17 @@ class TestOneAsymmetricKey:
         assert unwrapped[2] == unwrapped.params
 
     @pytest.mark.parametrize(
-        "key_params, params, raw_params",
+        "key_params, params",
         [
-            (None, None, None),
-            (DerNull(), None, b"\x05\x00"),
-            (DerObjectId("1.2.3"), b"\x06\x02\x2a\x03", b"\x06\x02\x2a\x03"),
+            (None, None),
+            (DerNull(), None),
+            (DerObjectId("1.2.3"), b"\x06\x02\x2a\x03"),
         ],
     )
-    def test_params(self, key_params, params, raw_params):
+    def test_params(self, key_params, params):
         wrapped = PKCS8.wrap(self.private_key, self.oid, key_params=key_params)
         unwrapped = PKCS8.unwrap(wrapped)
         assert unwrapped.params == params
-        assert unwrapped.raw_params == raw_params
 
     def test_pickle(self):
         wrapped = PKCS8.wrap(self.private_key, self.oid, public_key=self.public_key)
@@ -804,7 +802,6 @@ class TestOneAsymmetricKey:
         copy = pickle.loads(pickle.dumps(unwrapped))
         assert copy == unwrapped
         assert copy.public_key == self.public_key
-        assert copy.raw_params == b"\x05\x00"
 
     def test_repr(self):
         wrapped = PKCS8.wrap(self.private_key, self.oid, public_key=self.public_key)

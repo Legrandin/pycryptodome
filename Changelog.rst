@@ -23,8 +23,7 @@ New features
 * ``Crypto.IO.PKCS8.wrap()`` has a new parameter ``public_key``, to create a ``OneAsymmetricKey``
   version 2 (RFC 5958) with the field ``publicKey``.
   ``Crypto.IO.PKCS8.unwrap()`` returns an ``UnwrappedKey``: still a tuple ``(oid, private_key, params)``,
-  with the same items as attributes, plus ``public_key`` (the field ``publicKey``, if present)
-  and ``raw_params`` (the parameters as encoded, without mapping ``NULL`` to ``None``).
+  with the same items as attributes, plus ``public_key`` (the field ``publicKey``, if present).
 
 Resolved issues
 ---------------

@@ -55,22 +55,15 @@ class UnwrappedKey(tuple[str, bytes, Optional[bytes]]):
     #: or to check that it matches the private key.
     public_key: Optional[bytes]
 
-    #: The ``parameters`` of the ``AlgorithmIdentifier`` (bytes, DER encoded),
-    #: or ``None`` if they are absent.
-    #: Unlike :attr:`params`, ``NULL`` parameters are returned as they are.
-    raw_params: Optional[bytes]
-
     @classmethod
     def _create(
         cls,
         oid: str,
         private_key: bytes,
         params: Optional[bytes],
-        raw_params: Optional[bytes],
         public_key: Optional[bytes],
     ) -> UnwrappedKey:
         result = cls((oid, private_key, params))
-        result.raw_params = raw_params
         result.public_key = public_key
         return result
 
@@ -91,11 +84,10 @@ class UnwrappedKey(tuple[str, bytes, Optional[bytes]]):
         return self[2]
 
     def __repr__(self) -> str:
-        return "UnwrappedKey(oid=%r, private_key=<%d bytes>, params=%r, raw_params=%r, public_key=%s)" % (
+        return "UnwrappedKey(oid=%r, private_key=<%d bytes>, params=%r, public_key=%s)" % (
             self.oid,
             len(self.private_key),
             self.params,
-            self.raw_params,
             None if self.public_key is None else "<%d bytes>" % len(self.public_key),
         )
 
@@ -275,8 +267,7 @@ def unwrap(
        #. the associated parameters (bytes, DER encoded) or ``None``
           (also if they are ``NULL``)
 
-      with the same items as attributes, plus the attributes
-      ``raw_params`` and ``public_key``.
+      with the same items as attributes, plus the attribute ``public_key``.
 
     Raises:
       PassphraseRequiredError : (a ``ValueError``) if the blob is encrypted
@@ -386,10 +377,9 @@ def unwrap(
 
     algo = DerSequence().decode(pk_info[1], nr_elements=(1, 2))
     algo_oid = DerObjectId().decode(algo[0]).value
-    raw_params = None if len(algo) == 1 else algo[1]
+    algo_params = None if len(algo) == 1 else algo[1]
 
     # NULL parameters are treated as absent
-    algo_params = raw_params
     if algo_params is not None:
         try:
             DerNull().decode(algo_params)
@@ -408,4 +398,4 @@ def unwrap(
         if isinstance(item, bytes) and item[:1] == b"\x81":
             public_key = DerBitString(implicit=1).decode(item, strict=True).value
 
-    return UnwrappedKey._create(algo_oid, private_key, algo_params, raw_params, public_key)
+    return UnwrappedKey._create(algo_oid, private_key, algo_params, public_key)
