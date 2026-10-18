@@ -2943,3 +2943,36 @@ Z9w7lshQhqowtrbLDFw4rXAxZuE=
     assert _public_key_bytes(key) == unhexlify(
         "19bf44096984cdfe8541bac167dc3b96c85086aa30b6b6cb0c5c38ad703166e1"
     )
+
+
+@pytest.mark.parametrize("curve", ["p256", "ed25519", "curve25519"])
+class TestExportKeyParameters:
+    """The keyword parameters of EccKey.export_key()"""
+
+    def test_randfunc(self, curve):
+        # randfunc reaches the PKCS#8 encryption (salt and IV)
+        key = ECC.generate(curve=curve)
+        prot = {"passphrase": "pw", "prot_params": {"iteration_count": 1000}}
+        for fmt in ("PEM", "DER"):
+            out1 = key.export_key(format=fmt, randfunc=lambda n: b"\x01" * n, **prot)
+            out2 = key.export_key(format=fmt, randfunc=lambda n: b"\x01" * n, **prot)
+            assert out1 == out2
+            assert ECC.import_key(out1, "pw") == key
+
+    def test_public_key_defaults(self, curve):
+        # Private-only parameters with their default values are accepted for a public key
+        key = ECC.generate(curve=curve).public_key()
+        out = key.export_key(format="DER", passphrase=None, use_pkcs8=True, protection=None, threads=1)
+        assert out == key.export_key(format="DER")
+        with pytest.raises(ValueError, match="Unexpected parameters"):
+            key.export_key(format="DER", passphrase="pw")
+        with pytest.raises(ValueError, match="Unexpected parameters"):
+            key.export_key(format="DER", randfunc=lambda n: b"\x01" * n)
+
+    def test_unknown_parameter(self, curve):
+        key = ECC.generate(curve=curve)
+        for k in (key, key.public_key()):
+            with pytest.raises(TypeError):
+                k.export_key(format="PEM", unknown=1)
+            with pytest.raises(TypeError):
+                k.export_key()

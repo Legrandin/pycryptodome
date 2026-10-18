@@ -70,15 +70,6 @@ RNG = Callable[[int], bytes]
 Int = Union[int, Integer]
 
 
-class ExportParams(TypedDict, total=False):
-    passphrase: Union[bytes, str]
-    use_pkcs8: bool
-    protection: str
-    compress: bool
-    prot_params: ProtParams
-    threads: int
-
-
 class _CurveRequired(TypedDict):
     curve: str
 
@@ -457,14 +448,59 @@ class EccKey:
         return desc + " " + binascii.b2a_base64(blob).decode("latin-1")
 
     @overload
-    def export_key(self, *, format: Literal["PEM", "OpenSSH"], **kwargs: Unpack[ExportParams]) -> str: ...
+    def export_key(
+        self,
+        *,
+        format: Literal["PEM", "OpenSSH"],
+        passphrase: Optional[Union[bytes, str]] = None,
+        use_pkcs8: bool = True,
+        protection: Optional[str] = None,
+        compress: bool = False,
+        prot_params: Optional[ProtParams] = None,
+        randfunc: Optional[RNG] = None,
+        threads: int = 1,
+    ) -> str: ...
 
     @overload
     def export_key(
-        self, *, format: Literal["DER", "SEC1", "raw"], **kwargs: Unpack[ExportParams]
+        self,
+        *,
+        format: Literal["DER", "SEC1", "raw"],
+        passphrase: Optional[Union[bytes, str]] = None,
+        use_pkcs8: bool = True,
+        protection: Optional[str] = None,
+        compress: bool = False,
+        prot_params: Optional[ProtParams] = None,
+        randfunc: Optional[RNG] = None,
+        threads: int = 1,
     ) -> bytes: ...
 
-    def export_key(self, **kwargs: Any) -> Union[str, bytes]:
+    @overload
+    def export_key(
+        self,
+        *,
+        format: str,
+        passphrase: Optional[Union[bytes, str]] = None,
+        use_pkcs8: bool = True,
+        protection: Optional[str] = None,
+        compress: bool = False,
+        prot_params: Optional[ProtParams] = None,
+        randfunc: Optional[RNG] = None,
+        threads: int = 1,
+    ) -> Union[str, bytes]: ...
+
+    def export_key(
+        self,
+        *,
+        format: str,
+        passphrase: Optional[Union[bytes, str]] = None,
+        use_pkcs8: bool = True,
+        protection: Optional[str] = None,
+        compress: bool = False,
+        prot_params: Optional[ProtParams] = None,
+        randfunc: Optional[RNG] = None,
+        threads: int = 1,
+    ) -> Union[str, bytes]:
         """Export this ECC key.
 
         Args:
@@ -535,6 +571,11 @@ class EccKey:
             The defaults meet the OWASP recommendations (with the default
             ``protection``): there is no need to set them.
 
+          randfunc (callable):
+            (*Private keys only*)
+            A function that returns random bytes, for the encryption
+            (salt and IV). By default, :func:`Crypto.Random.get_random_bytes`.
+
           threads (integer):
             (*Private keys only*)
             The maximum number of threads used to derive the encryption key
@@ -546,11 +587,6 @@ class EccKey:
         .. warning::
             If you don't provide a passphrase, the private key will be
             exported in the clear!
-
-        .. note::
-            When exporting a private key with password-protection and `PKCS#8`_
-            (both ``DER`` and ``PEM`` formats), any extra parameters
-            to ``export_key()`` will be passed to :mod:`Crypto.IO.PKCS8`.
 
         .. _PEM:        https://www.rfc-editor.org/rfc/rfc1421
         .. _`PEM encryption`: https://www.rfc-editor.org/rfc/rfc1423
@@ -564,58 +600,66 @@ class EccKey:
             ``bytes`` (for ``'DER'``, ``'SEC1'``, and ``'raw'``) with the encoded key.
         """
 
-        args = kwargs.copy()
-        ext_format = args.pop("format")
+        ext_format = format
         if ext_format not in ("PEM", "DER", "OpenSSH", "SEC1", "raw"):
             raise ValueError("Unknown format '%s'" % ext_format)
-
-        compress = args.pop("compress", False)
 
         if self.has_private():
             from Crypto.IO import PKCS8
 
-            threads = args.pop("threads", 1)
             PKCS8._check_kdf_params(threads=threads)
-            passphrase = args.pop("passphrase", None)
             if passphrase is not None:
                 passphrase = tobytes(passphrase)
                 if not passphrase:
                     raise ValueError("Empty passphrase")
-            elif args.get("protection") or args.get("prot_params"):
+            elif protection or prot_params:
                 raise ValueError("'protection' and 'prot_params' require a passphrase")
 
-            use_pkcs8 = args.pop("use_pkcs8", True)
             if use_pkcs8 is False:
                 if self._curve.is_edwards:
                     raise ValueError("'pkcs8' must be True for EdDSA curves")
                 if self._curve.is_montgomery:
                     raise ValueError("'pkcs8' must be True for Curve25519")
-                if "protection" in args:
+                if protection is not None:
                     raise ValueError("'protection' is only supported for PKCS#8")
+
+            # The parameters for the encryption with PKCS#8
+            enc_args = {"protection": protection, "prot_params": prot_params, "randfunc": randfunc}
 
             if ext_format == "PEM":
                 if use_pkcs8:
                     if passphrase:
                         return self._export_private_encrypted_pkcs8_in_clear_pem(
-                            passphrase, threads=threads, **args
+                            passphrase, threads=threads, **enc_args
                         )
                     else:
                         return self._export_private_clear_pkcs8_in_clear_pem()
                 else:
-                    return self._export_private_pem(passphrase, **args)
+                    if prot_params is not None:
+                        raise ValueError("'prot_params' is only supported for PKCS#8")
+                    return self._export_private_pem(passphrase, randfunc=randfunc)
             elif ext_format == "DER":
                 # DER
                 if passphrase and not use_pkcs8:
                     raise ValueError("Private keys can only be encrypted with DER using PKCS#8")
                 if use_pkcs8:
-                    return self._export_pkcs8(passphrase=passphrase, threads=threads, **args)
+                    return self._export_pkcs8(passphrase=passphrase, threads=threads, **enc_args)
                 else:
                     return self._export_rfc5915_private_der()
             else:
                 raise ValueError("Private keys cannot be exported in the '%s' format" % ext_format)
         else:  # Public key
-            if args:
-                raise ValueError("Unexpected parameters: '%s'" % args)
+            private_only = {
+                "passphrase": passphrase,
+                "use_pkcs8": None if use_pkcs8 is True else use_pkcs8,
+                "protection": protection,
+                "prot_params": prot_params,
+                "randfunc": randfunc,
+                "threads": None if threads == 1 else threads,
+            }
+            unexpected = {k: v for k, v in private_only.items() if v is not None}
+            if unexpected:
+                raise ValueError("Unexpected parameters: '%s'" % unexpected)
             if ext_format == "PEM":
                 return self._export_public_pem(compress)
             elif ext_format == "DER":
