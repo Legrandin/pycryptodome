@@ -1,9 +1,11 @@
 # SPDX-FileCopyrightText: 2026 Helder Eijs <helderijs@gmail.com>
 # SPDX-License-Identifier: BSD-2-Clause
 
+import copy
 import errno
 import json
 import os
+import pickle
 from binascii import unhexlify
 
 import pytest
@@ -70,6 +72,26 @@ def load_file(file_name, mode="rb"):
 
 
 class TestMLDSAKey:
+    @pytest.mark.parametrize("protocol", range(pickle.HIGHEST_PROTOCOL + 1))
+    def test_pickle(self, protocol):
+        key = MLDSA.generate(param_set=MLDSA.ML_DSA_44)
+        key_sk = MLDSA.construct(param_set=MLDSA.ML_DSA_44, sk=key.sk)
+
+        # Private keys cannot be pickled (nor copied)
+        for private_key in (key, key_sk):
+            with pytest.raises(pickle.PicklingError):
+                pickle.dumps(private_key, protocol)
+            with pytest.raises(pickle.PicklingError):
+                copy.deepcopy(private_key)
+
+        # Public keys can
+        pub_key = key.public_key()
+        pub_key2 = pickle.loads(pickle.dumps(pub_key, protocol))
+        assert pub_key2 == pub_key
+        assert not pub_key2.has_private()
+        assert pub_key2.param_set is MLDSA.ML_DSA_44
+        assert pub_key2._verify(b"msg", key._sign(b"msg", bytes(32)))
+
     @pytest.mark.parametrize("param_set", PARAM_SETS)
     def test_generate(self, param_set):
         key = MLDSA.generate(param_set=param_set)

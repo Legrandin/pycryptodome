@@ -7,7 +7,7 @@ from __future__ import annotations
 
 import hmac
 from enum import Enum
-from typing import TYPE_CHECKING, Callable, Literal, NamedTuple, Optional, Union, overload
+from typing import TYPE_CHECKING, Any, Callable, Literal, NamedTuple, Optional, Union, overload
 
 from Crypto.PublicKey import _create_subject_public_key_info, _extract_subject_public_key_info
 from Crypto.Random import get_random_bytes
@@ -233,6 +233,14 @@ class MLDSAKey:
 
     def __repr__(self) -> str:
         return "MLDSAKey(param_set=%s, private=%s)" % (self.param_set, self.has_private())
+
+    def __getstate__(self) -> dict[str, Any]:
+        # A private key must not end up in a pickle (unencrypted, and executable on load)
+        if self.has_private():
+            from pickle import PicklingError
+
+            raise PicklingError("A private ML-DSA key cannot be pickled: use export_key()")
+        return self.__dict__.copy()
 
     def has_private(self) -> bool:
         """``True`` if this key can be used for making signatures."""
