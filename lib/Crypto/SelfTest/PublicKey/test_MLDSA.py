@@ -105,6 +105,15 @@ class TestMLDSAKey:
         key = MLDSA.generate(param_set=ParamSet.ML_DSA_65)
         assert key.param_set is ParamSet.ML_DSA_65
 
+        # The members are also at the module level
+        assert MLDSA.ML_DSA_44 is ParamSet.ML_DSA_44
+        assert MLDSA.ML_DSA_65 is ParamSet.ML_DSA_65
+        assert MLDSA.ML_DSA_87 is ParamSet.ML_DSA_87
+        key = MLDSA.generate(param_set=MLDSA.ML_DSA_87)
+        assert key.param_set is ParamSet.ML_DSA_87
+        assert MLDSA.construct(param_set=MLDSA.ML_DSA_87, sk=key.sk) == key
+        key = MLDSA.generate(param_set=ParamSet.ML_DSA_65)
+
         # Only members of the enum
         for bad in ("ML-DSA-65", "mldsa65", 65, None):
             with pytest.raises(TypeError):

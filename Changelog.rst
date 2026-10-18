@@ -13,9 +13,24 @@ New features
   it is 1.5x to 3.4x faster than ``new()`` followed by ``digest()``.
 * New module ``Crypto.PublicKey.MLDSA``, for ML-DSA keys (FIPS 204):
   ``generate()`` and ``construct()``, for the parameter sets ML-DSA-44, ML-DSA-65 and ML-DSA-87
-  (enum ``Crypto.PublicKey.MLDSA.ParamSet``).
+  (constants ``MLDSA.ML_DSA_44``, ``MLDSA.ML_DSA_65`` and ``MLDSA.ML_DSA_87``).
+  ``import_key()`` and ``MLDSAKey.export_key()`` support the encodings of RFC 9881, in DER or PEM:
+  X.509 ``SubjectPublicKeyInfo`` and certificates (import only) for public keys, and
+  PKCS#8 ``OneAsymmetricKey`` (v1 and v2, in the clear or encrypted) for private keys,
+  with the seed, the expanded private key or both.
   It is based on the portable C code of `mldsa-native <https://github.com/pq-code-package/mldsa-native>`_
   (v2.0.0). The signature schemes will come in a dedicated module of ``Crypto.Signature``.
+* ``Crypto.IO.PKCS8.wrap()`` has a new parameter ``public_key``, to create a ``OneAsymmetricKey``
+  version 2 (RFC 5958) with the field ``publicKey``.
+  ``Crypto.IO.PKCS8.unwrap()`` returns an ``UnwrappedKey``: still a tuple ``(oid, private_key, params)``,
+  with the same items as attributes, plus ``public_key`` (the field ``publicKey``, if present)
+  and ``raw_params`` (the parameters as encoded, without mapping ``NULL`` to ``None``).
+
+Resolved issues
+---------------
+* ``Crypto.PublicKey.ECC.import_key()`` checks that the field ``publicKey`` of a PKCS#8
+  ``OneAsymmetricKey`` version 2 (RFC 5958), if present, matches the private key.
+  Before, it was ignored.
 
 4.0.1(17 October 2026)
 ++++++++++++++++++++++++++

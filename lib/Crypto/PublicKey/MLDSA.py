@@ -7,9 +7,11 @@ from __future__ import annotations
 
 import hmac
 from enum import Enum
-from typing import Callable, NamedTuple, Optional, Union
+from typing import TYPE_CHECKING, Callable, Literal, NamedTuple, Optional, Union, overload
 
+from Crypto.PublicKey import _create_subject_public_key_info, _extract_subject_public_key_info
 from Crypto.Random import get_random_bytes
+from Crypto.Util._bytes import tobytes
 from Crypto.Util._raw_api import (
     c_size_t,
     c_uint8_ptr_len,
@@ -17,8 +19,21 @@ from Crypto.Util._raw_api import (
     get_raw_buffer,
     load_pycryptodome_raw_lib,
 )
+from Crypto.Util.asn1 import DerBitString, DerObjectId, DerOctetString, DerSequence
 
-__all__ = ["ParamSet", "MLDSAKey", "generate", "construct"]
+if TYPE_CHECKING:
+    from Crypto.IO._PBES import ProtParams
+
+__all__ = [
+    "ParamSet",
+    "ML_DSA_44",
+    "ML_DSA_65",
+    "ML_DSA_87",
+    "MLDSAKey",
+    "generate",
+    "construct",
+    "import_key",
+]
 
 Buffer = Union[bytes, bytearray, memoryview]
 RNG = Callable[[int], bytes]
@@ -72,6 +87,16 @@ class ParamSet(Enum):
     """NIST security category 5"""
 
 
+# The members of ParamSet, also at the module level (MLDSA.ML_DSA_65)
+
+#: Same as :attr:`ParamSet.ML_DSA_44`
+ML_DSA_44 = ParamSet.ML_DSA_44
+#: Same as :attr:`ParamSet.ML_DSA_65`
+ML_DSA_65 = ParamSet.ML_DSA_65
+#: Same as :attr:`ParamSet.ML_DSA_87`
+ML_DSA_87 = ParamSet.ML_DSA_87
+
+
 class _Sizes(NamedTuple):
     level: int
     pk_len: int
@@ -85,6 +110,17 @@ _sizes = {
     ParamSet.ML_DSA_65: _Sizes(65, 1952, 4032, 3309),
     ParamSet.ML_DSA_87: _Sizes(87, 2592, 4896, 4627),
 }
+
+
+# id-ml-dsa-* (RFC 9881, Section 2)
+_oids = {
+    ParamSet.ML_DSA_44: "2.16.840.1.101.3.4.3.17",
+    ParamSet.ML_DSA_65: "2.16.840.1.101.3.4.3.18",
+    ParamSet.ML_DSA_87: "2.16.840.1.101.3.4.3.19",
+}
+
+# The formats of the private key in a OneAsymmetricKey (RFC 9881, Section 6)
+_PRIVATE_FORMATS = ("seed", "expanded", "both")
 
 
 def _check_param_set(param_set: ParamSet) -> _Sizes:
@@ -239,6 +275,217 @@ class MLDSAKey:
 
         return MLDSAKey(param_set=self.param_set, pk=self._pk)
 
+    @overload
+    def export_key(
+        self,
+        *,
+        format: Literal["DER"] = "DER",
+        private_format: Optional[str] = None,
+        include_public_key: bool = False,
+        passphrase: Optional[Union[bytes, str]] = None,
+        protection: Optional[str] = None,
+        prot_params: Optional[ProtParams] = None,
+        randfunc: Optional[RNG] = None,
+        threads: int = 1,
+    ) -> bytes: ...
+
+    @overload
+    def export_key(
+        self,
+        *,
+        format: Literal["PEM"],
+        private_format: Optional[str] = None,
+        include_public_key: bool = False,
+        passphrase: Optional[Union[bytes, str]] = None,
+        protection: Optional[str] = None,
+        prot_params: Optional[ProtParams] = None,
+        randfunc: Optional[RNG] = None,
+        threads: int = 1,
+    ) -> str: ...
+
+    def export_key(
+        self,
+        *,
+        format: str = "DER",
+        private_format: Optional[str] = None,
+        include_public_key: bool = False,
+        passphrase: Optional[Union[bytes, str]] = None,
+        protection: Optional[str] = None,
+        prot_params: Optional[ProtParams] = None,
+        randfunc: Optional[RNG] = None,
+        threads: int = 1,
+    ) -> Union[bytes, str]:
+        """Export this ML-DSA key, as defined in `RFC 9881`_.
+
+        A public key is encoded as an X.509 ``SubjectPublicKeyInfo``.
+
+        A private key is encoded as a `PKCS#8`_ ``OneAsymmetricKey``
+        (in the clear, or encrypted if ``passphrase`` is set).
+
+        Args:
+          format (string):
+            - ``'DER'`` (default): binary encoding, as ``bytes``.
+            - ``'PEM'``: textual encoding of `RFC 7468`_, as a string,
+              with the label ``PUBLIC KEY``, ``PRIVATE KEY`` or
+              ``ENCRYPTED PRIVATE KEY``.
+
+          private_format (string):
+            (*Private keys only*) What the private key in the ``OneAsymmetricKey``
+            contains (the ``ML-DSA-PrivateKey`` CHOICE of RFC 9881):
+
+            - ``'seed'``: the 32-byte seed only (recommended by RFC 9881).
+            - ``'expanded'``: the expanded private key only.
+            - ``'both'``: the seed and the expanded private key.
+
+            The default is ``'seed'``, or ``'expanded'`` if the seed of
+            this key is not known (see :attr:`seed`).
+
+          include_public_key (boolean):
+            (*Private keys only*) If ``True``, the public key is also stored
+            in the ``publicKey`` field (``OneAsymmetricKey`` version 2).
+            The default is ``False`` (version 1, also known as ``PrivateKeyInfo``).
+
+          passphrase (bytes or string):
+            (*Private keys only*) The passphrase to protect the private key
+            with PBES2 (`PKCS#8`_ ``EncryptedPrivateKeyInfo``).
+
+          protection (string):
+            (*Private keys only*) The encryption scheme, when ``passphrase`` is set.
+            For all possible protection schemes,
+            refer to :ref:`the encryption parameters of PKCS#8<enc_params>`.
+            The default is ``'PBKDF2WithHMAC-SHA256AndAES256-CBC'``.
+
+          prot_params (dict):
+            (*Private keys only*) The parameters to derive the encryption key
+            from the passphrase, when ``passphrase`` is set.
+            For all possible values,
+            refer to :ref:`the encryption parameters of PKCS#8<enc_params>`.
+            The defaults meet the OWASP recommendations (with the default
+            ``protection``): there is no need to set them.
+
+          randfunc (callable):
+            (*Private keys only*) The RNG for the salt and the IV of the
+            encryption. If ``None``, :func:`Crypto.Random.get_random_bytes` is used.
+
+          threads (integer):
+            (*Private keys only*)
+            The maximum number of threads used to derive the encryption key
+            with scrypt (default: 1, no extra threads; 0 for all CPU cores).
+            Only useful with a scrypt ``protection`` and a
+            ``parallelization`` larger than 1 in ``prot_params``.
+            The output does not depend on the number of threads.
+
+        .. warning::
+            If you don't provide a passphrase, the private key will be
+            exported in the clear!
+
+        Returns:
+            ``bytes`` (for ``'DER'``) or a multi-line string (for ``'PEM'``)
+            with the encoded key.
+
+        .. _`RFC 9881`: https://www.rfc-editor.org/rfc/rfc9881.html
+        .. _`PKCS#8`: https://www.rfc-editor.org/rfc/rfc5958.html
+        .. _`RFC 7468`: https://www.rfc-editor.org/rfc/rfc7468.html
+        """
+
+        from Crypto.IO import PEM
+
+        if format not in ("DER", "PEM"):
+            raise ValueError("Unknown format '%s'" % format)
+
+        der = self._export_der(
+            private_format=private_format,
+            include_public_key=include_public_key,
+            passphrase=passphrase,
+            protection=protection,
+            prot_params=prot_params,
+            randfunc=randfunc,
+            threads=threads,
+        )
+        if format == "DER":
+            return der
+
+        # RFC 7468, Sections 10, 11 and 13
+        if not self.has_private():
+            label = "PUBLIC KEY"
+        elif passphrase is not None:
+            label = "ENCRYPTED PRIVATE KEY"
+        else:
+            label = "PRIVATE KEY"
+        return PEM.encode(der, label) + "\n"
+
+    def _export_der(
+        self,
+        *,
+        private_format: Optional[str] = None,
+        include_public_key: bool = False,
+        passphrase: Optional[Union[bytes, str]] = None,
+        protection: Optional[str] = None,
+        prot_params: Optional[ProtParams] = None,
+        randfunc: Optional[RNG] = None,
+        threads: int = 1,
+    ) -> bytes:
+        from Crypto.IO import PKCS8
+
+        oid = _oids[self.param_set]
+
+        if not self.has_private():
+            if (
+                private_format is not None
+                or include_public_key
+                or passphrase is not None
+                or protection is not None
+                or prot_params is not None
+                or randfunc is not None
+                or threads != 1
+            ):
+                raise ValueError(
+                    "The parameters of export_key() for private keys cannot be used with a public key"
+                )
+            # SubjectPublicKeyInfo, without parameters (RFC 9881, Sections 2 and 4)
+            return _create_subject_public_key_info(oid, self._pk, None)
+
+        PKCS8._check_kdf_params(threads=threads)
+        if passphrase is not None:
+            passphrase = tobytes(passphrase)
+            if not passphrase:
+                raise ValueError("Empty passphrase")
+        elif protection is not None or prot_params is not None:
+            raise ValueError("'protection' and 'prot_params' require a passphrase")
+
+        if private_format is None:
+            private_format = "seed" if self._seed is not None else "expanded"
+        if private_format not in _PRIVATE_FORMATS:
+            raise ValueError("Unknown private_format '%s'" % private_format)
+        if private_format in ("seed", "both") and self._seed is None:
+            raise ValueError("The seed of this private key is not known: use private_format='expanded'")
+
+        # ML-DSA-PrivateKey ::= CHOICE {
+        #   seed [0] OCTET STRING (SIZE (32)),
+        #   expandedKey OCTET STRING,
+        #   both SEQUENCE { seed OCTET STRING, expandedKey OCTET STRING } }
+        assert self._sk is not None
+        if private_format == "seed":
+            assert self._seed is not None
+            private_key = DerOctetString(self._seed, implicit=0).encode()
+        elif private_format == "expanded":
+            private_key = DerOctetString(self._sk).encode()
+        else:
+            assert self._seed is not None
+            private_key = DerSequence([DerOctetString(self._seed), DerOctetString(self._sk)]).encode()
+
+        return PKCS8.wrap(
+            private_key,
+            oid,
+            passphrase,
+            protection,
+            prot_params,
+            key_params=None,
+            randfunc=randfunc,
+            threads=threads,
+            public_key=self._pk if include_public_key else None,
+        )
+
     def _sign(self, msg: Buffer, rnd: Buffer, prefix: Buffer = b"", external_mu: bool = False) -> bytes:
         """ML-DSA.Sign_internal (FIPS 204, Algorithm 7).
 
@@ -325,7 +572,7 @@ def generate(*, param_set: ParamSet, randfunc: Optional[RNG] = None) -> MLDSAKey
 
     Args:
       param_set (:class:`ParamSet`):
-        Mandatory. The parameter set, for instance ``ParamSet.ML_DSA_65``.
+        Mandatory. The parameter set, for instance ``MLDSA.ML_DSA_65``.
 
       randfunc (callable):
         Optional. The RNG to read the 32-byte seed from.
@@ -352,7 +599,7 @@ def construct(
 
     Args:
       param_set (:class:`ParamSet`):
-        Mandatory. The parameter set, for instance ``ParamSet.ML_DSA_65``.
+        Mandatory. The parameter set, for instance ``MLDSA.ML_DSA_65``.
 
       seed (bytes):
         The 32-byte seed of a private key (:math:`\\xi` in FIPS 204).
@@ -372,3 +619,217 @@ def construct(
     """
 
     return MLDSAKey(param_set=param_set, seed=seed, sk=sk, pk=pk)
+
+
+# The PEM labels for a certificate (RFC 7468, Section 5.1)
+_CERTIFICATE_LABELS = ("CERTIFICATE", "X509 CERTIFICATE", "X.509 CERTIFICATE")
+
+
+def _param_set_from_oid(oid: str) -> ParamSet:
+    for param_set, ps_oid in _oids.items():
+        if ps_oid == oid:
+            return param_set
+    raise ValueError("Not an ML-DSA key (OID %s)" % oid)
+
+
+def _import_subject_public_key_info(encoded: bytes) -> MLDSAKey:
+    # SubjectPublicKeyInfo ::= SEQUENCE {
+    #   algorithm         AlgorithmIdentifier,
+    #   subjectPublicKey  BIT STRING }
+    spki = DerSequence().decode(encoded, nr_elements=2, strict=True)
+    algo = DerSequence().decode(spki[0], nr_elements=(1, 2), strict=True)
+    param_set = _param_set_from_oid(DerObjectId().decode(algo[0], strict=True).value)
+    if len(algo) != 1:
+        raise ValueError("The parameters of an ML-DSA AlgorithmIdentifier must be absent")
+    pk = DerBitString().decode(spki[1], strict=True).value
+    return MLDSAKey(param_set=param_set, pk=pk)
+
+
+def _import_der(
+    encoded: bytes,
+    passphrase: Optional[Union[bytes, str]],
+    max_iteration_count: Optional[int],
+    threads: int,
+    max_memory: Optional[int],
+) -> tuple[MLDSAKey, str]:
+    """Import a DER-encoded key. Return the key, and the PEM label (RFC 7468)
+    for that structure."""
+
+    # Tell the formats apart from the first elements of the outer SEQUENCE:
+    #
+    #   SubjectPublicKeyInfo    SEQUENCE { SEQUENCE, BIT STRING }
+    #   Certificate             SEQUENCE { SEQUENCE, SEQUENCE, BIT STRING }
+    #   OneAsymmetricKey        SEQUENCE { INTEGER, ... }
+    #   EncryptedPrivateKeyInfo SEQUENCE { SEQUENCE, OCTET STRING }
+    outer = DerSequence().decode(encoded, nr_elements=(2, 3, 4, 5), strict=True)
+    first, second = outer[0], outer[1]
+
+    if isinstance(first, int):
+        key = _import_pkcs8(encoded, passphrase, max_iteration_count, threads, max_memory)
+        return key, "PRIVATE KEY"
+
+    if isinstance(second, bytes) and len(outer) == 2:
+        if second[:1] == b"\x03":
+            return _import_subject_public_key_info(encoded), "PUBLIC KEY"
+        if second[:1] == b"\x04":
+            key = _import_pkcs8(encoded, passphrase, max_iteration_count, threads, max_memory)
+            return key, "ENCRYPTED PRIVATE KEY"
+
+    if len(outer) == 3:
+        return _import_subject_public_key_info(_extract_subject_public_key_info(encoded)), "CERTIFICATE"
+
+    raise ValueError("Not a DER-encoded ML-DSA key")
+
+
+def _import_pkcs8(
+    encoded: bytes,
+    passphrase: Optional[Union[bytes, str]],
+    max_iteration_count: Optional[int],
+    threads: int,
+    max_memory: Optional[int],
+) -> MLDSAKey:
+    from Crypto.IO import PKCS8
+
+    unwrapped = PKCS8.unwrap(encoded, passphrase, max_iteration_count, threads=threads, max_memory=max_memory)
+    oid, private_key, pk = unwrapped.oid, unwrapped.private_key, unwrapped.public_key
+    param_set = _param_set_from_oid(oid)
+    if unwrapped.raw_params is not None:
+        raise ValueError("The parameters of an ML-DSA AlgorithmIdentifier must be absent")
+    sk_len = _sizes[param_set].sk_len
+
+    # ML-DSA-PrivateKey ::= CHOICE {
+    #   seed [0] OCTET STRING (SIZE (32)),
+    #   expandedKey OCTET STRING,
+    #   both SEQUENCE { seed OCTET STRING, expandedKey OCTET STRING } }
+    #
+    # The tag selects the alternative (RFC 9881, Section 6)
+    seed = sk = None
+    tag = private_key[:1]
+    if tag == b"\x80":
+        seed = DerOctetString(implicit=0).decode(private_key, strict=True).payload
+    elif tag == b"\x04":
+        sk = DerOctetString().decode(private_key, strict=True).payload
+    elif tag == b"\x30":
+        both = DerSequence().decode(private_key, nr_elements=2, strict=True)
+        seed = DerOctetString().decode(both[0], strict=True).payload
+        sk = DerOctetString().decode(both[1], strict=True).payload
+    else:
+        raise ValueError("Invalid ML-DSA private key: unknown format")
+
+    if seed is not None and len(seed) != _SEED_LEN:
+        raise ValueError("Invalid ML-DSA private key: the seed must be %d bytes long" % _SEED_LEN)
+    if sk is not None and len(sk) != sk_len:
+        raise ValueError("Invalid ML-DSA private key: the expanded key must be %d bytes long" % sk_len)
+
+    # MLDSAKey checks that the seed, the expanded key and the public key match
+    # (RFC 9881, Section 8.2)
+    return MLDSAKey(param_set=param_set, seed=seed, sk=sk, pk=pk)
+
+
+def import_key(
+    encoded: Union[Buffer, str],
+    passphrase: Optional[Union[bytes, str]] = None,
+    *,
+    max_iteration_count: Optional[int] = None,
+    threads: int = 1,
+    max_memory: Optional[int] = None,
+) -> MLDSAKey:
+    """Import an ML-DSA key (public or private), as defined in `RFC 9881`_.
+
+    Args:
+      encoded (bytes or string):
+        The ML-DSA key to import, in DER format (``bytes``), or in PEM format
+        (`RFC 7468`_, as a string or as ``bytes``). It can be:
+
+        * For a **public** key: an X.509 ``SubjectPublicKeyInfo``,
+          or an X.509 certificate (the signature of the certificate is not checked).
+        * For a **private** key: a `PKCS#8`_ ``OneAsymmetricKey``
+          (version 1 or 2, in the clear or encrypted).
+          The private key can contain the seed, the expanded private key or both.
+
+        The parameters of the ``AlgorithmIdentifier`` must be absent.
+
+        In PEM format, the label must match the content: ``PUBLIC KEY``,
+        ``CERTIFICATE`` (or ``X509 CERTIFICATE``, ``X.509 CERTIFICATE``),
+        ``PRIVATE KEY`` or ``ENCRYPTED PRIVATE KEY``.
+        The legacy PEM encryption (with the ``Proc-Type`` header) is not supported.
+
+        If the private key contains more than one among the seed,
+        the expanded private key and the public key (in the ``publicKey`` field
+        of a ``OneAsymmetricKey`` version 2), they must match.
+
+      passphrase (bytes or string):
+        The passphrase to decrypt an encrypted private key
+        (`PKCS#8`_ ``EncryptedPrivateKeyInfo``).
+        It is ignored if the key is not encrypted.
+
+      max_iteration_count (integer):
+        The maximum value allowed for the PBKDF2 iteration count or
+        the scrypt cost *N·r·p/8* (that is, *N* for the usual *r=8* and *p=1*)
+        of an encrypted private key.
+        A malicious key could require an extremely high number of
+        iterations, tying up the CPU for hours.
+        The default value is None: a limit for each KDF, which keeps
+        the key derivation to about one minute at most
+        (see :ref:`the limits for decryption<pkcs8_limits>`).
+        Set it to ``0`` to disable the check.
+
+      threads (integer):
+        The maximum number of threads used to derive the decryption key
+        with scrypt (default: 1, no extra threads; 0 for all CPU cores).
+        Only a private key protected with scrypt and a parallelization
+        parameter larger than 1 can use them.
+
+      max_memory (integer):
+        The maximum memory (in bytes) for the key derivation of an encrypted
+        private key, as a limit on the **total** of all threads together.
+        The default value is None (a limit of 256 MiB).
+        Set it to ``0`` to disable the check.
+
+    Returns:
+      :class:`MLDSAKey` : a new ML-DSA key object
+
+    Raises:
+      PassphraseRequiredError:
+        (a ``ValueError``) when the private key is encrypted,
+        but no passphrase was provided.
+      IncorrectPassphraseError:
+        (a ``ValueError``) when the private key cannot be decrypted
+        with the passphrase (most likely, the passphrase is wrong).
+      ValueError: when the key cannot be parsed, it is not an ML-DSA key,
+        or its components do not match.
+
+    .. _`RFC 9881`: https://www.rfc-editor.org/rfc/rfc9881.html
+    .. _`PKCS#8`: https://www.rfc-editor.org/rfc/rfc5958.html
+    .. _`RFC 7468`: https://www.rfc-editor.org/rfc/rfc7468.html
+    """
+
+    from Crypto.IO import PEM, PKCS8
+
+    PKCS8._check_kdf_params(max_iteration_count, threads, max_memory)
+
+    if isinstance(encoded, str):
+        text = encoded
+    else:
+        encoded = bytes(encoded)
+        if not encoded.lstrip().startswith(b"-----BEGIN "):
+            key, _ = _import_der(encoded, passphrase, max_iteration_count, threads, max_memory)
+            return key
+        try:
+            text = encoded.decode("ascii")
+        except UnicodeDecodeError:
+            raise ValueError("Not a valid PEM block") from None
+
+    # PEM (RFC 7468)
+    if "Proc-Type:" in text:
+        raise ValueError("The legacy PEM encryption is not supported: encrypt the key with PKCS#8")
+    der, label, _ = PEM.decode(text)
+    if label in _CERTIFICATE_LABELS:
+        label = "CERTIFICATE"
+    if label not in ("PUBLIC KEY", "PRIVATE KEY", "ENCRYPTED PRIVATE KEY", "CERTIFICATE"):
+        raise ValueError("Unsupported PEM label '%s'" % label)
+
+    key, der_label = _import_der(der, passphrase, max_iteration_count, threads, max_memory)
+    if der_label != label:
+        raise ValueError("The PEM label '%s' does not match its content (%s)" % (label, der_label))
+    return key

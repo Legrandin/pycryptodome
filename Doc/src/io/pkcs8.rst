@@ -107,6 +107,7 @@ for backward compatibility only:
 * ``pbeWithSHA1AndDES-CBC``
 
 .. _`PKCS#8`: http://www.ietf.org/rfc/rfc5208.txt
+.. _`RFC 5958`: https://www.rfc-editor.org/rfc/rfc5958.html
 
 .. automodule:: Crypto.IO.PKCS8
     :members:

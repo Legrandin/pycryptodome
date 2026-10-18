@@ -930,9 +930,8 @@ def _import_rfc5915_der(
 def _import_pkcs8(encoded, passphrase, max_iteration_count=None, threads=1, max_memory=None):
     from Crypto.IO import PKCS8
 
-    algo_oid, private_key, params = PKCS8.unwrap(
-        encoded, passphrase, max_iteration_count, threads=threads, max_memory=max_memory
-    )
+    unwrapped = PKCS8.unwrap(encoded, passphrase, max_iteration_count, threads=threads, max_memory=max_memory)
+    algo_oid, private_key, params = unwrapped
 
     nist_p_oids = (
         "1.2.840.10045.2.1",  # id-ecPublicKey (unrestricted)
@@ -940,32 +939,49 @@ def _import_pkcs8(encoded, passphrase, max_iteration_count=None, threads=1, max_
         "1.3.132.1.13",  # id-ecMQV
     )
     eddsa_oids = {
-        "1.3.101.112": "Ed25519",  # id-Ed25519
-        "1.3.101.113": "Ed448",  # id-Ed448
+        "1.3.101.112": ("Ed25519", _import_ed25519_public_key),  # id-Ed25519
+        "1.3.101.113": ("Ed448", _import_ed448_public_key),  # id-Ed448
     }
     xdh_oids = {
-        "1.3.101.110": "Curve25519",  # id-X25519
-        "1.3.101.111": "Curve448",  # id-X448
+        "1.3.101.110": ("Curve25519", _import_curve25519_public_key),  # id-X25519
+        "1.3.101.111": ("Curve448", _import_curve448_public_key),  # id-X448
     }
+
+    # The optional publicKey of a OneAsymmetricKey (RFC 5958),
+    # which must match the private key
+    public_key = unwrapped.public_key
 
     if algo_oid in nist_p_oids:
         curve_oid = DerObjectId().decode(params).value
-        return _import_rfc5915_der(private_key, passphrase, curve_oid)
+        key = _import_rfc5915_der(private_key, passphrase, curve_oid)
+        if public_key is not None:
+            # ECPoint (RFC 5480), as in the subjectPublicKeyInfo
+            point = _import_public_der(public_key, curve_oid=curve_oid).pointQ
     elif algo_oid in eddsa_oids:
+        curve_name, import_eddsa_public_key = eddsa_oids[algo_oid]
         if params is not None:
             raise ValueError("EdDSA ECC private key must not have parameters")
-        curve_oid = None
         seed = DerOctetString().decode(private_key).payload
-        return construct(curve=eddsa_oids[algo_oid], seed=seed)
+        key = construct(curve=curve_name, seed=seed)
+        if public_key is not None:
+            x, y = import_eddsa_public_key(public_key)
+            point = construct(curve=curve_name, point_x=x, point_y=y).pointQ
     elif algo_oid in xdh_oids:
-        curve_name = xdh_oids[algo_oid]
+        curve_name, import_xdh_public_key = xdh_oids[algo_oid]
         if params is not None:
             raise ValueError("%s ECC private key must not have parameters" % curve_name)
-        curve_oid = None
         seed = DerOctetString().decode(private_key).payload
-        return construct(curve=xdh_oids[algo_oid], seed=seed)
+        key = construct(curve=curve_name, seed=seed)
+        if public_key is not None:
+            x = import_xdh_public_key(public_key)
+            point = construct(curve=curve_name, point_x=x).pointQ
     else:
         raise UnsupportedEccFeature("Unsupported ECC purpose (OID: %s)" % algo_oid)
+
+    if public_key is not None and point != key.pointQ:
+        raise ValueError("Private and public ECC keys do not match")
+
+    return key
 
 
 def _import_x509_cert(encoded, *kwargs):
