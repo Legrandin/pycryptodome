@@ -72,10 +72,8 @@ It does not contain the public key (the optional ``publicKey`` field of
 (the seed, the expanded private key, or both, with or without the public key),
 and it checks that the seed, the expanded private key and the public key match.
 
-.. note::
-
-    The signature schemes (ML-DSA and HashML-DSA) will be available in a
-    dedicated module in :mod:`Crypto.Signature`.
+To sign messages and verify signatures with these keys,
+use :mod:`Crypto.Signature.mldsa`.
 
 The implementation is based on `mldsa-native`_ (portable C code only).
 

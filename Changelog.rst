@@ -21,7 +21,11 @@ New features
   with or without the public key (version 2); on export, it is the seed or,
   if it is not known, the expanded private key, without the public key.
   It is based on the portable C code of `mldsa-native <https://github.com/pq-code-package/mldsa-native>`_
-  (v2.0.0). The signature schemes will come in a dedicated module of ``Crypto.Signature``.
+  (v2.0.0).
+* New module ``Crypto.Signature.mldsa``, for ML-DSA and HashML-DSA signatures (FIPS 204),
+  hedged (default) or deterministic, with an optional context.
+  The new ``MLDSAMuHash`` computes the message representative mu (external mu),
+  to sign or verify a large message in pieces.
 * ``Crypto.IO.PKCS8.wrap()`` has a new parameter ``public_key``, to create a ``OneAsymmetricKey``
   version 2 (RFC 5958) with the field ``publicKey``.
   ``Crypto.IO.PKCS8.unwrap()`` returns an ``UnwrappedKey``: still a tuple ``(oid, private_key, params)``,

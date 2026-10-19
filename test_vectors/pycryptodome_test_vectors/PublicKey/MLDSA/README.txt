@@ -16,6 +16,18 @@ ML-DSA-sigVer-FIPS204.json
     sigVer:  the same groups, with one valid and up to two invalid signatures
              each (with different reasons).
 
+ML-DSA-sigGen-FIPS204-preHash.json
+ML-DSA-sigVer-FIPS204-preHash.json
+
+    The HashML-DSA groups of the same ACVP files (same commit).
+
+    sigGen:  each hash function or XOF twice (once deterministic, once hedged,
+             with different parameter sets), with the shortest message, plus
+             a test with an empty context and one with a 255-byte context
+             in each group.
+    sigVer:  the valid signatures, and one invalid signature for each reason,
+             in each group.
+
 rfc9881_*.pem
 
     The examples in Appendix C of RFC 9881 (Algorithm Identifiers for the
