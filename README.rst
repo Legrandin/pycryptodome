@@ -49,7 +49,7 @@ Why PyCryptodome
 * **Broad.** Mainstream and specialized algorithms behind one consistent API,
   including many that are hard to find elsewhere in Python: SIV and OCB modes,
   AES key wrap (KW, KWP), HPKE, KMAC, TupleHash, TurboSHAKE, KangarooTwelve,
-  Ed448 and X448, ML-DSA, and Shamir's secret sharing.
+  Ed448 and X448, ML-DSA, ML-KEM, and Shamir's secret sharing.
 * **Easy to use correctly.** Authenticated encryption and verification are a
   single call, nonces and IVs are generated for you, randomness comes straight
   from the operating system, and keys are imported and exported in the
@@ -69,7 +69,8 @@ Features
 
 * AES, RSA (with OAEP and PSS), DSA
 * Authenticated encryption modes (GCM, CCM, EAX, SIV, OCB, KW, KWP)
-* Hybrid Public Key Encryption (HPKE)
+* Hybrid Public Key Encryption (HPKE), also post-quantum with ML-KEM and the hybrid KEMs
+  (ML-KEM + ECDH, such as X-Wing)
 * Elliptic curve cryptography (NIST P-curves; Ed25519, Ed448, Curve25519, Curve448)
 * Post-quantum signatures: ML-DSA and HashML-DSA (FIPS 204), including external mu
 * A compact API (``nonce`` and ``iv`` attributes for ciphers,

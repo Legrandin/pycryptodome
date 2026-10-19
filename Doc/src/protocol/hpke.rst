@@ -5,7 +5,7 @@ Hybrid Public Key Encryption (HPKE)
 
 HPKE (`RFC 9180 <https://www.rfc-editor.org/rfc/rfc9180.html>`_)
 is a cryptographic protocol that enables secure communication
-using a combination of public key (ECC Diffie-Hellman)
+using a combination of public key (a KEM, such as ECC Diffie-Hellman)
 and symmetric encryption (AEAD) techniques.
 
 It allows a sender that knows the public key of the intended recipient,
@@ -52,6 +52,58 @@ Finally, the two authentication modes can also be combined together (*AuthPSK* m
 
    The PSK is only used to authenticate the messages; it is not a replacement
    for the asymmetric key that the receiver must provide to the sender.
+
+Post-quantum HPKE
+~~~~~~~~~~~~~~~~~
+
+With the ECC keys (DHKEM), HPKE is not secure against quantum computers.
+The receiver can instead use a post-quantum key (`draft-ietf-hpke-pq`_):
+
+* an :doc:`ML-KEM key <../public_key/mlkem>`, or
+* a :doc:`hybrid key <../public_key/hybrid>` of a hybrid KEM, which combines ML-KEM and ECDH
+  and stays secure if either of them does.
+
+The KEM (and with it the KDF) is selected by the type of the receiver key:
+
+.. csv-table::
+   :header: Receiver key, KEM, KDF, Size of enc
+   :widths: 40, 20, 20, 20
+
+   "ECC, ``NIST P-256``", "DHKEM(P-256)", "HKDF-SHA256", "65 bytes"
+   "ECC, ``NIST P-384``", "DHKEM(P-384)", "HKDF-SHA384", "97 bytes"
+   "ECC, ``NIST P-521``", "DHKEM(P-521)", "HKDF-SHA512", "133 bytes"
+   "ECC, ``Curve25519``", "DHKEM(X25519)", "HKDF-SHA256", "32 bytes"
+   "ECC, ``Curve448``", "DHKEM(X448)", "HKDF-SHA512", "56 bytes"
+   "ML-KEM, ``MLKEM.ML_KEM_512``", "ML-KEM-512", "HKDF-SHA256", "768 bytes"
+   "ML-KEM, ``MLKEM.ML_KEM_768``", "ML-KEM-768", "HKDF-SHA256", "1088 bytes"
+   "ML-KEM, ``MLKEM.ML_KEM_1024``", "ML-KEM-1024", "HKDF-SHA384", "1568 bytes"
+   "Hybrid, ``Hybrid.MLKEM768_P256``", "MLKEM768-P256", "HKDF-SHA256", "1153 bytes"
+   "Hybrid, ``Hybrid.MLKEM768_X25519``", "MLKEM768-X25519", "HKDF-SHA256", "1120 bytes"
+   "Hybrid, ``Hybrid.MLKEM1024_P384``", "MLKEM1024-P384", "HKDF-SHA384", "1665 bytes"
+
+Only the Base and PSK modes are possible with ML-KEM and the hybrid KEMs:
+they have no *Auth* mode (no ``sender_key``).
+The rest of the API is the same::
+
+        from Crypto.Protocol import HPKE
+        from Crypto.PublicKey import Hybrid
+
+        # The receiver
+        my_key = Hybrid.generate(param_set=Hybrid.MLKEM768_X25519)
+        their_pub_key = my_key.public_key()
+
+        # The sender
+        encryptor = HPKE.new(receiver_key=their_pub_key,
+                             aead_id=HPKE.AEAD.CHACHA20_POLY1305)
+        ct = encryptor.seal(b'Message 1')
+
+        # The receiver again
+        decryptor = HPKE.new(receiver_key=my_key,
+                             aead_id=HPKE.AEAD.CHACHA20_POLY1305,
+                             enc=encryptor.enc)
+        pt = decryptor.unseal(ct)
+
+.. _`draft-ietf-hpke-pq`: https://datatracker.ietf.org/doc/draft-ietf-hpke-pq/
 
 Examples
 ~~~~~~~~~

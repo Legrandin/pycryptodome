@@ -1,12 +1,14 @@
 import struct
 from enum import IntEnum
 from types import ModuleType
-from typing import Optional
+from typing import Optional, Union
 
 from Crypto.Cipher import AES, ChaCha20_Poly1305
 from Crypto.Hash import SHA256, SHA384, SHA512
-from Crypto.PublicKey import ECC
+from Crypto.PublicKey import ECC, MLKEM, Hybrid
 from Crypto.PublicKey.ECC import EccKey
+from Crypto.PublicKey.Hybrid import HybridKey
+from Crypto.PublicKey.MLKEM import MLKEMKey
 from Crypto.Util.strxor import strxor
 
 from .DH import import_x448_public_key, import_x25519_public_key, key_agreement
@@ -39,6 +41,9 @@ class MessageLimitReachedError(ValueError):
     pass
 
 
+# The keys that HPKE can use
+KemKey = Union[EccKey, MLKEMKey, HybridKey]
+
 # CURVE to (KEM ID, KDF ID, HASH)
 _Curve_Config = {
     "NIST P-256": (0x0010, 0x0001, SHA256),
@@ -47,6 +52,30 @@ _Curve_Config = {
     "Curve25519": (0x0020, 0x0001, SHA256),
     "Curve448": (0x0021, 0x0003, SHA512),
 }
+
+# Parameter set of ML-KEM (draft-ietf-hpke-pq, Section 3) or of
+# a hybrid KEM (draft-ietf-hpke-pq, Section 4) to (KEM ID, KDF ID, HASH)
+_PQ_Config = {
+    MLKEM.ML_KEM_512: (0x0040, 0x0001, SHA256),
+    MLKEM.ML_KEM_768: (0x0041, 0x0001, SHA256),
+    MLKEM.ML_KEM_1024: (0x0042, 0x0002, SHA384),
+    Hybrid.MLKEM768_P256: (0x0050, 0x0001, SHA256),
+    Hybrid.MLKEM1024_P384: (0x0051, 0x0002, SHA384),
+    Hybrid.MLKEM768_X25519: (0x647A, 0x0001, SHA256),
+}
+
+
+def _kem_config(key: KemKey) -> tuple[int, int, ModuleType]:
+    """Return the KEM ID, the KDF ID and the hash of the KDF for a key"""
+
+    if isinstance(key, (MLKEMKey, HybridKey)):
+        return _PQ_Config[key.param_set]
+    if not isinstance(key, EccKey):
+        raise TypeError("The HPKE keys must be ECC, ML-KEM or hybrid keys")
+    try:
+        return _Curve_Config[key.curve]
+    except KeyError as ke:
+        raise ValueError(f"Curve {key.curve} is not supported by HPKE") from ke
 
 
 def _labeled_extract(salt: bytes, label: bytes, ikm: bytes, suite_id: bytes, hashmod: ModuleType):
@@ -71,7 +100,7 @@ def _extract_and_expand(dh: bytes, kem_context: bytes, suite_id: bytes, hashmod:
 class HPKE_Cipher:
     def __init__(
         self,
-        receiver_key: EccKey,
+        receiver_key: KemKey,
         enc: Optional[bytes],
         sender_key: Optional[EccKey],
         psk_pair: tuple[bytes, bytes],
@@ -84,14 +113,10 @@ class HPKE_Cipher:
 
         self._verify_psk_inputs(mode, psk_pair)
 
-        self._curve = receiver_key.curve
         self._aead_id = aead_id
         self._mode = mode
 
-        try:
-            self._kem_id, self._kdf_id, self._hashmod = _Curve_Config[self._curve]
-        except KeyError as ke:
-            raise ValueError(f"Curve {self._curve} is not supported by HPKE") from ke
+        self._kem_id, self._kdf_id, self._hashmod = _kem_config(receiver_key)
 
         self._suite_id = b"HPKE" + struct.pack(">HHH", self._kem_id, self._kdf_id, self._aead_id)
         self._Nk = 16 if self._aead_id == AEAD.AES128_GCM else 32
@@ -105,12 +130,18 @@ class HPKE_Cipher:
             # SetupBaseS (encryption)
             if enc is not None:
                 raise ValueError("Parameter 'enc' cannot be an input  when sealing")
-            shared_secret, self.enc = self._encap(receiver_key, self._kem_id, self._hashmod, sender_key)
+            if isinstance(receiver_key, EccKey):
+                shared_secret, self.enc = self._encap(receiver_key, self._kem_id, self._hashmod, sender_key)
+            else:
+                shared_secret, self.enc = self._encap_pq(receiver_key)
         else:
             # SetupBaseR (decryption)
             if enc is None:
                 raise ValueError("Parameter 'enc' required when unsealing")
-            shared_secret = self._decap(enc, receiver_key, self._kem_id, self._hashmod, sender_key)
+            if isinstance(receiver_key, EccKey):
+                shared_secret = self._decap(enc, receiver_key, self._kem_id, self._hashmod, sender_key)
+            else:
+                shared_secret = self._decap_pq(enc, receiver_key)
 
         self._sequence = 0
         self._max_sequence = (1 << (8 * self._Nn)) - 1
@@ -181,6 +212,24 @@ class HPKE_Cipher:
 
         shared_secret = key_agreement(eph_pub=pkE, static_priv=receiver_key, kdf=kdf, **extra_param)
         return shared_secret
+
+    @staticmethod
+    def _encap_pq(
+        receiver_key: Union[MLKEMKey, HybridKey],
+        randomness: Optional[bytes] = None,
+    ):
+        # Encap of ML-KEM and of the hybrid KEMs (draft-ietf-hpke-pq, Sections 3 and 4):
+        # the shared secret of the KEM is used directly
+        return receiver_key._encaps(randomness)
+
+    @staticmethod
+    def _decap_pq(enc: bytes, receiver_key: Union[MLKEMKey, HybridKey]):
+        assert receiver_key.has_private()
+
+        try:
+            return receiver_key._decaps(enc)
+        except ValueError as ve:
+            raise DeserializeError("'enc' is not a valid encapsulated HPKE key") from ve
 
     @staticmethod
     def _verify_psk_inputs(mode: MODE, psk_pair: tuple[bytes, bytes]):
@@ -319,7 +368,7 @@ class HPKE_Cipher:
           length: int
             The desired length of the secret, in bytes.
             It must not be larger than 255 times the digest size
-            of the hash for the curve (e.g., 8160 bytes for ``NIST P-256``).
+            of the hash of the KDF (e.g., 8160 bytes for ``NIST P-256``).
 
         Returns:
            The exported secret.
@@ -341,7 +390,7 @@ class HPKE_Cipher:
 
 def new(
     *,
-    receiver_key: EccKey,
+    receiver_key: KemKey,
     aead_id: AEAD,
     enc: Optional[bytes] = None,
     sender_key: Optional[EccKey] = None,
@@ -365,9 +414,15 @@ def new(
 
     Args:
       receiver_key:
-        The ECC key of the receiver.
-        It must be on one of the following curves: ``NIST P-256``,
-        ``NIST P-384``, ``NIST P-521``, ``X25519`` or ``X448``.
+        The key of the receiver, which determines the KEM. One of:
+
+        * an ECC key (:class:`Crypto.PublicKey.ECC.EccKey`), for DHKEM,
+          on one of the following curves: ``NIST P-256``,
+          ``NIST P-384``, ``NIST P-521``, ``X25519`` or ``X448``;
+        * an ML-KEM key (:class:`Crypto.PublicKey.MLKEM.MLKEMKey`),
+          of any parameter set (*post-quantum*);
+        * a hybrid key (:class:`Crypto.PublicKey.Hybrid.HybridKey`)
+          of a hybrid KEM, which combines ML-KEM and ECDH (*post-quantum/traditional hybrid*).
 
         If this is a **public** key, the HPKE context can only be used to
         **seal** (**encrypt**) or **export** a secret.
@@ -396,6 +451,8 @@ def new(
         It must be on the same curve as the ``receiver_key``.
         If the ``receiver_key`` is a public key, ``sender_key`` must be a
         private key, and vice versa.
+        It cannot be used with ML-KEM or hybrid keys
+        (they have no authenticated mode).
 
       psk:
         A Pre-Shared Key (PSK) as a 2-tuple of non-empty
@@ -429,11 +486,18 @@ def new(
     except ValueError as ve:
         raise ValueError(f"Unknown AEAD cipher ID {aead_id:#x}") from ve
 
-    curve = receiver_key.curve
-    if curve not in ("NIST P-256", "NIST P-384", "NIST P-521", "Curve25519", "Curve448"):
-        raise ValueError(f"Unsupported curve {curve}")
+    if isinstance(receiver_key, EccKey):
+        curve = receiver_key.curve
+        if curve not in ("NIST P-256", "NIST P-384", "NIST P-521", "Curve25519", "Curve448"):
+            raise ValueError(f"Unsupported curve {curve}")
+    elif not isinstance(receiver_key, (MLKEMKey, HybridKey)):
+        raise TypeError("The receiver key must be an ECC, ML-KEM or hybrid key")
 
     if sender_key:
+        if not isinstance(receiver_key, EccKey):
+            raise ValueError("The authenticated modes of HPKE require ECC keys")
+        if not isinstance(sender_key, EccKey):
+            raise TypeError("The sender key must be an ECC key")
         count_private_keys = int(receiver_key.has_private()) + int(sender_key.has_private())
         if count_private_keys != 1:
             raise ValueError("Exactly 1 private key required")

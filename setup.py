@@ -220,6 +220,18 @@ ext_modules = [
         sources=["src/mldsa_avx2_bmi2.c"],
         py_limited_api=True,
     ),
+    Extension(
+        "Crypto.PublicKey._mlkem",
+        include_dirs=["src/"],
+        sources=["src/mlkem.c"],
+        py_limited_api=True,
+    ),
+    Extension(
+        "Crypto.PublicKey._mlkem_avx2_bmi2",
+        include_dirs=["src/"],
+        sources=["src/mlkem_avx2_bmi2.c"],
+        py_limited_api=True,
+    ),
     # Math
     Extension(
         "Crypto.Math._nat",

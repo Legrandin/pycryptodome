@@ -213,7 +213,7 @@ def load_test_vectors_wycheproof(dir_comps, file_name, description, root_tag={},
                 setattr(tv, k, v)
 
             tv.id = test["tcId"]
-            tv.comment = test["comment"]
+            tv.comment = test.get("comment", "")
             for attr in unit_attr_hex:
                 if attr in test:
                     try:

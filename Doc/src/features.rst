@@ -77,6 +77,8 @@ only to enable backward compatibility where required by the applications.
   - ECC: NIST P-curves (P-192, P-224, P-256, P-384, P-521), Ed25519 and Ed448,
     Curve25519 (X25519) and Curve448 (X448)
   - ML-DSA (FIPS 204): ML-DSA-44, ML-DSA-65 and ML-DSA-87
+  - ML-KEM (FIPS 203): ML-KEM-512, ML-KEM-768 and ML-KEM-1024
+  - Hybrid KEMs: MLKEM768-P256, MLKEM768-X25519 (X-Wing) and MLKEM1024-P384
   - DSA
   - ElGamal (legacy)
 
@@ -117,7 +119,7 @@ only to enable backward compatibility where required by the applications.
 
 * Other cryptographic protocols:
 
-  - HPKE (RFC 9180)
+  - HPKE (RFC 9180), also post-quantum with ML-KEM or the hybrid KEMs (draft-ietf-hpke-pq)
   - Shamir's secret sharing
   - Padding
 
