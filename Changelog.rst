@@ -6,20 +6,11 @@ Changelog
 
 New features
 ------------
-* New function ``digest()`` in the modules of the SHA-2 and SHA-3 hashes
-  (``Crypto.Hash.SHA224``, ``SHA256``, ``SHA384``, ``SHA512``, ``SHA3_224``, ``SHA3_256``,
-  ``SHA3_384`` and ``SHA3_512``), to hash a whole message with a single call,
+* New function ``digest()`` in the modules of the SHA-2 and SHA-3 hashes,
+  to hash a whole message with a single call,
   like ``Crypto.Hash.KangarooTwelve.digest()``. For messages up to 1 KiB,
   it is 1.5x to 3.4x faster than ``new()`` followed by ``digest()``.
-* New module ``Crypto.PublicKey.MLDSA``, for ML-DSA keys (FIPS 204):
-  ``generate()`` and ``construct()``, for the parameter sets ML-DSA-44, ML-DSA-65 and ML-DSA-87
-  (constants ``MLDSA.ML_DSA_44``, ``MLDSA.ML_DSA_65`` and ``MLDSA.ML_DSA_87``).
-  ``import_key()`` and ``MLDSAKey.export_key()`` support the encodings of RFC 9881, in DER or PEM:
-  X.509 ``SubjectPublicKeyInfo`` and certificates (import only) for public keys, and
-  PKCS#8 ``OneAsymmetricKey`` (in the clear or encrypted) for private keys.
-  On import, the private key can be the seed, the expanded private key or both,
-  with or without the public key (version 2); on export, it is the seed or,
-  if it is not known, the expanded private key, without the public key.
+* New module ``Crypto.PublicKey.MLDSA``, for ML-DSA keys (FIPS 204).
   It is based on the portable C code of `mldsa-native <https://github.com/pq-code-package/mldsa-native>`_
   (v2.0.0).
 * New module ``Crypto.Signature.mldsa``, for ML-DSA and HashML-DSA signatures (FIPS 204),
