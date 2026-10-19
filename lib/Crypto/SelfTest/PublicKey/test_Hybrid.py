@@ -11,7 +11,7 @@ import pytest
 
 from Crypto.Hash import SHA3_256, SHAKE256
 from Crypto.Protocol.DH import import_x25519_private_key
-from Crypto.PublicKey import ECC, MLKEM, Hybrid
+from Crypto.PublicKey import MLKEM, Hybrid
 from Crypto.PublicKey.Hybrid import HybridKey, ParamSet
 from Crypto.SelfTest.loader import warn_skipped_tests
 
@@ -28,16 +28,12 @@ PARAM_SETS = list(ParamSet)
 # ML-KEM parameter set, length of the ECDH point (Nelem),
 # and length of the randomness for the encapsulation (Nrandom)
 CONFIGS = {
-    ParamSet.MLKEM768_P256: (MLKEM.ML_KEM_768, 65, 32 + 128),
     ParamSet.MLKEM768_X25519: (MLKEM.ML_KEM_768, 32, 32 + 32),
-    ParamSet.MLKEM1024_P384: (MLKEM.ML_KEM_1024, 97, 32 + 48),
 }
 
 # Sizes of the public key and of the ciphertext (draft-irtf-cfrg-concrete-hybrid-kems, Section 4)
 SIZES = {
-    ParamSet.MLKEM768_P256: (1249, 1153),
     ParamSet.MLKEM768_X25519: (1216, 1120),
-    ParamSet.MLKEM1024_P384: (1665, 1665),
 }
 
 
@@ -80,16 +76,14 @@ class TestHybridKey:
             seeds.append(b"\xaa" * n)
             return seeds[-1]
 
-        key = Hybrid.generate(param_set=ParamSet.MLKEM768_P256, randfunc=randfunc)
+        key = Hybrid.generate(param_set=ParamSet.MLKEM768_X25519, randfunc=randfunc)
         assert seeds == [b"\xaa" * 32]
         assert key.seed == seeds[0]
-        assert key == Hybrid.construct(param_set=ParamSet.MLKEM768_P256, seed=seeds[0])
+        assert key == Hybrid.construct(param_set=ParamSet.MLKEM768_X25519, seed=seeds[0])
 
     def test_param_set_enum(self):
-        assert [ps.value for ps in ParamSet] == ["MLKEM768-P256", "MLKEM768-X25519", "MLKEM1024-P384"]
-        assert Hybrid.MLKEM768_P256 is ParamSet.MLKEM768_P256
+        assert [ps.value for ps in ParamSet] == ["MLKEM768-X25519"]
         assert Hybrid.MLKEM768_X25519 is ParamSet.MLKEM768_X25519
-        assert Hybrid.MLKEM1024_P384 is ParamSet.MLKEM1024_P384
 
         for bad in ("MLKEM768-X25519", MLKEM.ML_KEM_768, None):
             with pytest.raises(TypeError):
@@ -234,28 +228,6 @@ class TestHybridKey:
         expected = SHA3_256.new(ss_pq + ss_t + ct_t + pk_t + b"\\.//^\\").digest()
         assert ss == expected
 
-    def test_p256_rejection_sampling(self):
-        """The P-256 scalar comes from the first 32-byte chunk that is in [1, n-1]"""
-
-        n = 0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551
-        key = Hybrid.generate(param_set=ParamSet.MLKEM768_P256)
-        good = (12345).to_bytes(32, "big")
-        too_big = n.to_bytes(32, "big")
-        zero = bytes(32)
-
-        for chunks, expected in (
-            ([good, zero, zero, zero], 12345),
-            ([zero, good, zero, zero], 12345),
-            ([too_big, zero, b"\xff" * 32, good], 12345),
-        ):
-            rnd = bytes(32) + b"".join(chunks)
-            ss, ct = key._encaps(rnd)
-            assert ct[-65:] == ECC.construct(curve="p256", d=expected).public_key().export_key(format="raw")
-            assert key._decaps(ct) == ss
-
-        with pytest.raises(ValueError):
-            key._encaps(bytes(32) + zero * 3 + too_big)
-
 
 def _load_cfrg_vectors():
     try:
@@ -270,14 +242,14 @@ def _load_cfrg_vectors():
             pytest.param(None, None, id="missing", marks=pytest.mark.skip(reason="Missing test-vectors.json"))
         ]
 
+    # Only X-Wing: MLKEM768-P256 and MLKEM1024-P384 are not supported
     names = {
-        "mlkem768_p256": ParamSet.MLKEM768_P256,
         "mlkem768_x25519": ParamSet.MLKEM768_X25519,
-        "mlkem1024_p384": ParamSet.MLKEM1024_P384,
     }
     return [
         pytest.param(names[name], test, id="%s-%d" % (name, idx))
         for name, tests in vectors.items()
+        if name in names
         for idx, test in enumerate(tests)
     ]
 
@@ -296,11 +268,7 @@ class TestCFRGVectors:
         # The keys of the components
         pq = MLKEM.construct(param_set=mlkem_ps, seed=unhexlify(test["decapsulation_key_pq"]))
         assert key.pk.startswith(pq.pk)
-        dk_t = unhexlify(test["decapsulation_key_t"])
-        if param_set == ParamSet.MLKEM768_X25519:
-            t = import_x25519_private_key(dk_t)
-        else:
-            t = ECC.construct(curve=key._key_t.curve, d=int.from_bytes(dk_t, "big"))
+        t = import_x25519_private_key(unhexlify(test["decapsulation_key_t"]))
         assert key.pk.endswith(t.public_key().export_key(format="raw"))
 
         shared_secret, ct = key.public_key()._encaps(unhexlify(test["randomness"]))

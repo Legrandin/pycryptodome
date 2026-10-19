@@ -59,8 +59,6 @@ _PQ_Config = {
     MLKEM.ML_KEM_512: (0x0040, 0x0001, SHA256),
     MLKEM.ML_KEM_768: (0x0041, 0x0001, SHA256),
     MLKEM.ML_KEM_1024: (0x0042, 0x0002, SHA384),
-    Hybrid.MLKEM768_P256: (0x0050, 0x0001, SHA256),
-    Hybrid.MLKEM1024_P384: (0x0051, 0x0002, SHA384),
     Hybrid.MLKEM768_X25519: (0x647A, 0x0001, SHA256),
 }
 
@@ -422,7 +420,8 @@ def new(
         * an ML-KEM key (:class:`Crypto.PublicKey.MLKEM.MLKEMKey`),
           of any parameter set (*post-quantum*);
         * a hybrid key (:class:`Crypto.PublicKey.Hybrid.HybridKey`)
-          of a hybrid KEM, which combines ML-KEM and ECDH (*post-quantum/traditional hybrid*).
+          of the hybrid KEM X-Wing, which combines ML-KEM and X25519
+          (*post-quantum/traditional hybrid*).
 
         If this is a **public** key, the HPKE context can only be used to
         **seal** (**encrypt**) or **export** a secret.

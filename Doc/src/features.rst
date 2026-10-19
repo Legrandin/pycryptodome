@@ -78,7 +78,7 @@ only to enable backward compatibility where required by the applications.
     Curve25519 (X25519) and Curve448 (X448)
   - ML-DSA (FIPS 204): ML-DSA-44, ML-DSA-65 and ML-DSA-87
   - ML-KEM (FIPS 203): ML-KEM-512, ML-KEM-768 and ML-KEM-1024
-  - Hybrid KEMs: MLKEM768-P256, MLKEM768-X25519 (X-Wing) and MLKEM1024-P384
+  - Hybrid KEMs: MLKEM768-X25519 (X-Wing)
   - DSA
   - ElGamal (legacy)
 

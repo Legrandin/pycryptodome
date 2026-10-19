@@ -60,7 +60,7 @@ With the ECC keys (DHKEM), HPKE is not secure against quantum computers.
 The receiver can instead use a post-quantum key (`draft-ietf-hpke-pq`_):
 
 * an :doc:`ML-KEM key <../public_key/mlkem>`, or
-* a :doc:`hybrid key <../public_key/hybrid>` of a hybrid KEM, which combines ML-KEM and ECDH
+* a :doc:`hybrid key <../public_key/hybrid>` of the hybrid KEM X-Wing, which combines ML-KEM and X25519
   and stays secure if either of them does.
 
 The KEM (and with it the KDF) is selected by the type of the receiver key:
@@ -77,11 +77,11 @@ The KEM (and with it the KDF) is selected by the type of the receiver key:
    "ML-KEM, ``MLKEM.ML_KEM_512``", "ML-KEM-512", "HKDF-SHA256", "768 bytes"
    "ML-KEM, ``MLKEM.ML_KEM_768``", "ML-KEM-768", "HKDF-SHA256", "1088 bytes"
    "ML-KEM, ``MLKEM.ML_KEM_1024``", "ML-KEM-1024", "HKDF-SHA384", "1568 bytes"
-   "Hybrid, ``Hybrid.MLKEM768_P256``", "MLKEM768-P256", "HKDF-SHA256", "1153 bytes"
    "Hybrid, ``Hybrid.MLKEM768_X25519``", "MLKEM768-X25519", "HKDF-SHA256", "1120 bytes"
-   "Hybrid, ``Hybrid.MLKEM1024_P384``", "MLKEM1024-P384", "HKDF-SHA384", "1665 bytes"
 
-Only the Base and PSK modes are possible with ML-KEM and the hybrid KEMs:
+The hybrid KEMs MLKEM768-P256 and MLKEM1024-P384 of `draft-ietf-hpke-pq`_ are not supported yet.
+
+Only the Base and PSK modes are possible with ML-KEM and X-Wing:
 they have no *Auth* mode (no ``sender_key``).
 The rest of the API is the same::
 

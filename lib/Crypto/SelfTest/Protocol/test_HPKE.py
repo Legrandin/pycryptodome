@@ -467,8 +467,6 @@ _PQ_KEMS = {
     0x0040: (MLKEM, MLKEM.ML_KEM_512, 768),
     0x0041: (MLKEM, MLKEM.ML_KEM_768, 1088),
     0x0042: (MLKEM, MLKEM.ML_KEM_1024, 1568),
-    0x0050: (Hybrid, Hybrid.MLKEM768_P256, 1153),
-    0x0051: (Hybrid, Hybrid.MLKEM1024_P384, 1665),
     0x647A: (Hybrid, Hybrid.MLKEM768_X25519, 1120),
 }
 
@@ -477,8 +475,6 @@ _PQ_KDF = {
     0x0040: 0x0001,
     0x0041: 0x0001,
     0x0042: 0x0002,
-    0x0050: 0x0001,
-    0x0051: 0x0002,
     0x647A: 0x0001,
 }
 
@@ -550,8 +546,7 @@ class TestHPKE_PQ:
 
         # An invalid ECDH point
         if _PQ_KEMS[kem_id][0] is Hybrid:
-            elem_len = {0x0050: 65, 0x0051: 97, 0x647A: 32}[kem_id]
-            bad_enc = enc[:-elem_len] + bytes(elem_len)
+            bad_enc = enc[:-32] + bytes(32)
             with pytest.raises(DeserializeError):
                 HPKE.new(receiver_key=key, aead_id=HPKE.AEAD.AES128_GCM, enc=bad_enc)
 
@@ -597,7 +592,8 @@ def _load_pq_test_vectors():
             )
         ]
 
-    # Only the KEMs of draft-ietf-hpke-pq, and the KDF that HPKE uses for them:
+    # Only the KEMs of draft-ietf-hpke-pq that we support (not MLKEM768-P256 and
+    # MLKEM1024-P384), and the KDF that HPKE uses for them:
     # the one-stage KDFs (SHAKE and TurboSHAKE) are not supported
     return [
         pytest.param(

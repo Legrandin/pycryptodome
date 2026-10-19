@@ -3,8 +3,7 @@
 
 """Hybrid keys: a post-quantum key combined with a traditional one.
 
-Currently, the keys of the hybrid KEMs of draft-irtf-cfrg-concrete-hybrid-kems
-(ML-KEM combined with ECDH).
+Currently, only the keys of the hybrid KEM X-Wing (ML-KEM-768 combined with X25519).
 """
 
 from __future__ import annotations
@@ -13,15 +12,14 @@ from enum import Enum
 from typing import Any, Callable, NamedTuple, Optional, Union
 
 from Crypto.Hash import SHA3_256, SHAKE256
+from Crypto.Protocol.DH import import_x25519_public_key, key_agreement
 from Crypto.PublicKey import ECC, MLKEM
 from Crypto.PublicKey.ECC import EccKey
 from Crypto.Random import get_random_bytes
 
 __all__ = [
     "ParamSet",
-    "MLKEM768_P256",
     "MLKEM768_X25519",
-    "MLKEM1024_P384",
     "HybridKey",
     "generate",
     "construct",
@@ -42,54 +40,29 @@ class ParamSet(Enum):
     """The combinations of a post-quantum and a traditional algorithm.
     The value of each member is the name of the combination.
 
-    Currently, all members are hybrid KEMs (draft-irtf-cfrg-concrete-hybrid-kems, Section 4)."""
-
-    MLKEM768_P256 = "MLKEM768-P256"
-    """ML-KEM-768 and ECDH on NIST P-256"""
+    Currently, the only member is a hybrid KEM (draft-irtf-cfrg-concrete-hybrid-kems, Section 4)."""
 
     MLKEM768_X25519 = "MLKEM768-X25519"
     """ML-KEM-768 and X25519 (same as X-Wing)"""
 
-    MLKEM1024_P384 = "MLKEM1024-P384"
-    """ML-KEM-1024 and ECDH on NIST P-384"""
-
 
 # The members of ParamSet, also at the module level (Hybrid.MLKEM768_X25519)
 
-#: Same as :attr:`ParamSet.MLKEM768_P256`
-MLKEM768_P256 = ParamSet.MLKEM768_P256
 #: Same as :attr:`ParamSet.MLKEM768_X25519`
 MLKEM768_X25519 = ParamSet.MLKEM768_X25519
-#: Same as :attr:`ParamSet.MLKEM1024_P384`
-MLKEM1024_P384 = ParamSet.MLKEM1024_P384
 
 
 class _Config(NamedTuple):
     pq: MLKEM.ParamSet
     # The traditional component (a nominal group)
-    curve: str
     seed_len: int  # Nseed: the input of RandomScalar
-    scalar_len: int  # Nscalar
     elem_len: int  # Nelem: the encoding of a point
-    order: int  # 0 for Curve25519 (no rejection sampling)
     label: bytes
 
 
-_P256_ORDER = 0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551
-_P384_ORDER = int(
-    "ffffffffffffffffffffffffffffffffffffffffffffffffc7634d81f4372ddf581a0db248b0a77aecec196accc52973",
-    16,
-)
-
-# Sections 3.1.1, 3.1.2 and 4 of draft-irtf-cfrg-concrete-hybrid-kems
+# Sections 3.1.2 and 4 of draft-irtf-cfrg-concrete-hybrid-kems
 _configs = {
-    ParamSet.MLKEM768_P256: _Config(
-        MLKEM.ML_KEM_768, "NIST P-256", 128, 32, 65, _P256_ORDER, b"MLKEM768-P256"
-    ),
-    ParamSet.MLKEM768_X25519: _Config(MLKEM.ML_KEM_768, "Curve25519", 32, 32, 32, 0, b"\\.//^\\"),
-    ParamSet.MLKEM1024_P384: _Config(
-        MLKEM.ML_KEM_1024, "NIST P-384", 48, 48, 97, _P384_ORDER, b"MLKEM1024-P384"
-    ),
+    ParamSet.MLKEM768_X25519: _Config(MLKEM.ML_KEM_768, 32, 32, b"\\.//^\\"),
 }
 
 
@@ -101,36 +74,22 @@ def _check_param_set(param_set: ParamSet) -> _Config:
 
 def _random_scalar(cfg: _Config, seed: bytes) -> EccKey:
     """RandomScalar of the nominal group: return the private ECC key for a seed
-    of Nseed bytes (rejection sampling for the NIST curves)."""
+    of Nseed bytes."""
 
     assert len(seed) == cfg.seed_len
-
-    if cfg.curve == "Curve25519":
-        return ECC.construct(curve="Curve25519", seed=seed)
-
-    for start in range(0, cfg.seed_len, cfg.scalar_len):
-        d = int.from_bytes(seed[start : start + cfg.scalar_len], "big")
-        if 0 < d < cfg.order:
-            return ECC.construct(curve=cfg.curve, d=d)
-    raise ValueError("Rejection sampling failed")
+    return ECC.construct(curve="Curve25519", seed=seed)
 
 
 def _import_point(cfg: _Config, encoded: bytes) -> EccKey:
-    """Decode a point (Nelem bytes, uncompressed for the NIST curves)."""
+    """Decode a point (Nelem bytes)."""
 
     if len(encoded) != cfg.elem_len:
         raise ValueError("Incorrect length of the ECDH point")
-    if cfg.curve == "Curve25519":
-        from Crypto.Protocol.DH import import_x25519_public_key
-
-        return import_x25519_public_key(encoded)
-    return ECC.import_key(encoded, curve_name=cfg.curve)
+    return import_x25519_public_key(encoded)
 
 
 def _element_to_shared_secret(priv: EccKey, pub: EccKey) -> bytes:
     """The shared secret of the nominal group, for Exp(pub, priv)"""
-
-    from Crypto.Protocol.DH import key_agreement
 
     return key_agreement(static_priv=priv, eph_pub=pub, kdf=bytes)
 
@@ -351,8 +310,7 @@ def construct(
       pk (bytes):
         The public key: the post-quantum public key, followed by the traditional one.
         For the hybrid KEMs, it is the encapsulation key: the ML-KEM public key,
-        followed by the ECDH public key (32 bytes for X25519,
-        an uncompressed point for P-256 and P-384).
+        followed by the X25519 public key (32 bytes).
 
     At least one of ``seed`` and ``pk`` must be present.
     If both are present, they must match, otherwise :class:`ValueError` is raised.

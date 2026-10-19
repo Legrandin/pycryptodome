@@ -69,8 +69,8 @@ Features
 
 * AES, RSA (with OAEP and PSS), DSA
 * Authenticated encryption modes (GCM, CCM, EAX, SIV, OCB, KW, KWP)
-* Hybrid Public Key Encryption (HPKE), also post-quantum with ML-KEM and the hybrid KEMs
-  (ML-KEM + ECDH, such as X-Wing)
+* Hybrid Public Key Encryption (HPKE), also post-quantum with ML-KEM and the hybrid KEM
+  X-Wing (ML-KEM + X25519)
 * Elliptic curve cryptography (NIST P-curves; Ed25519, Ed448, Curve25519, Curve448)
 * Post-quantum signatures: ML-DSA and HashML-DSA (FIPS 204), including external mu
 * A compact API (``nonce`` and ``iv`` attributes for ciphers,

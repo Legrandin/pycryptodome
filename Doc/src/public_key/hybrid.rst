@@ -18,24 +18,23 @@ Hybrid KEMs (ML-KEM + ECDH)
 
 A hybrid KEM combines a post-quantum KEM (:doc:`ML-KEM <mlkem>`) with
 a traditional one (ECDH), to agree on a shared secret.
-This module implements the hybrid KEMs of `draft-irtf-cfrg-concrete-hybrid-kems`_,
-which are the ones used by HPKE (`draft-ietf-hpke-pq`_):
+This module implements the hybrid KEM MLKEM768-X25519 of `draft-irtf-cfrg-concrete-hybrid-kems`_,
+also used by HPKE (`draft-ietf-hpke-pq`_):
 
 .. csv-table::
    :header: Hybrid KEM, Constant, Components, Public key, Ciphertext
    :widths: 20, 30, 20, 15, 15
 
-   "MLKEM768-P256", "``Hybrid.MLKEM768_P256``", "ML-KEM-768 and NIST P-256", "1249 bytes", "1153 bytes"
    "MLKEM768-X25519", "``Hybrid.MLKEM768_X25519``", "ML-KEM-768 and X25519", "1216 bytes", "1120 bytes"
-   "MLKEM1024-P384", "``Hybrid.MLKEM1024_P384``", "ML-KEM-1024 and NIST P-384", "1665 bytes", "1665 bytes"
 
 MLKEM768-X25519 is the same as X-Wing.
+The other hybrid KEMs of the draft (MLKEM768-P256 and MLKEM1024-P384)
+are not supported yet, as their definition may still change.
 
 A private key is a **seed** of 32 random bytes:
 the ML-KEM key and the ECDH key are both derived from it.
 The two private keys are never used on their own, or with another algorithm.
-The public key is the ML-KEM public key, followed by the ECDH public key
-(32 bytes for X25519, an uncompressed point for P-256 and P-384).
+The public key is the ML-KEM public key, followed by the X25519 public key (32 bytes).
 The shared secret is always 32 bytes long.
 
 With this module you can generate a new hybrid KEM key::
