@@ -6,10 +6,6 @@ Changelog
 
 New features
 ------------
-* New function ``digest()`` in the modules of the SHA-2 and SHA-3 hashes,
-  to hash a whole message with a single call,
-  like ``Crypto.Hash.KangarooTwelve.digest()``. For messages up to 1 KiB,
-  it is 1.5x to 3.4x faster than ``new()`` followed by ``digest()``.
 * New module ``Crypto.PublicKey.MLDSA``, for ML-DSA keys (FIPS 204).
   It is based on the portable C code of `mldsa-native <https://github.com/pq-code-package/mldsa-native>`_
   (v2.0.0), with the Keccak code of PyCryptodome. On CPUs with AVX2 and BMI2, a version
@@ -19,6 +15,10 @@ New features
   hedged (default) or deterministic, with an optional context.
   The new ``MLDSAMuHash`` computes the message representative mu (external mu),
   to sign or verify a large message in pieces.
+* New function ``digest()`` in the modules of the SHA-2 and SHA-3 hashes,
+  to hash a whole message with a single call,
+  like ``Crypto.Hash.KangarooTwelve.digest()``. For messages up to 1 KiB,
+  it is 1.5x to 3.4x faster than ``new()`` followed by ``digest()``.
 * ``Crypto.IO.PKCS8.wrap()`` has a new parameter ``public_key``, to create a ``OneAsymmetricKey``
   version 2 (RFC 5958) with the field ``publicKey``.
   ``Crypto.IO.PKCS8.unwrap()`` returns an ``UnwrappedKey``: still a tuple ``(oid, private_key, params)``,
