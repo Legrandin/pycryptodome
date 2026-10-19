@@ -24,6 +24,7 @@ from Crypto.Hash import (
 )
 from Crypto.PublicKey import ECC, MLDSA
 from Crypto.PublicKey.MLDSA import ParamSet
+from Crypto.SelfTest.loader import load_test_vectors_wycheproof, wycheproof_id
 from Crypto.SelfTest.PublicKey.test_MLDSA import ZERO_RND, _load_acvp, load_file, pure_prefix
 from Crypto.Signature import mldsa
 from Crypto.Util.asn1 import DerObjectId
@@ -414,3 +415,124 @@ class TestMLDSAMuHash:
         # A public key cannot sign
         with pytest.raises(TypeError):
             mldsa.new(self.key.public_key()).sign(mldsa.MLDSAMuHash(self.key, data=b"message"))
+
+
+def _load_wycheproof(filename):
+    def param_set(group):
+        return ParamSet("ML-DSA-" + filename.split("_")[1])
+
+    def optional_hex(name):
+        def convert(test):
+            return unhexlify(test[name]) if name in test else None
+
+        return convert
+
+    def group_hex(name):
+        def convert(group):
+            return unhexlify(group[name]) if group.get(name) is not None else None
+
+        return convert
+
+    return load_test_vectors_wycheproof(
+        ("Signature", "wycheproof"),
+        filename,
+        "Wycheproof ML-DSA (%s)" % filename,
+        group_tag={
+            "param_set": param_set,
+            "seed": group_hex("privateSeed"),
+            "sk": group_hex("privateKey"),
+            "pk": group_hex("publicKey"),
+            "pkcs8": group_hex("privateKeyPkcs8"),
+            "pk_der": group_hex("publicKeyDer"),
+        },
+        unit_tag={"ctx": optional_hex("ctx"), "mu": optional_hex("mu"), "rnd": optional_hex("rnd")},
+    )
+
+
+def load_wycheproof_sign():
+    vectors = []
+    for level in (44, 65, 87):
+        vectors += _load_wycheproof("mldsa_%d_sign_seed_test.json" % level)
+        vectors += _load_wycheproof("mldsa_%d_sign_noseed_test.json" % level)
+    return vectors
+
+
+def load_wycheproof_verify():
+    vectors = []
+    for level in (44, 65, 87):
+        vectors += _load_wycheproof("mldsa_%d_verify_test.json" % level)
+    return vectors
+
+
+class TestWycheproof:
+    @pytest.mark.parametrize("tv", load_wycheproof_sign(), ids=wycheproof_id)
+    def test_sign(self, tv):
+        try:
+            if tv.seed is not None:
+                key = MLDSA.construct(param_set=tv.param_set, seed=tv.seed)
+            else:
+                key = MLDSA.construct(param_set=tv.param_set, sk=tv.sk)
+        except ValueError:
+            assert not tv.valid
+            assert {"IncorrectPrivateKeyLength", "InvalidPrivateKey"} & set(tv.flags)
+            return
+        if tv.pk is not None:
+            assert key.pk == tv.pk
+        if tv.pkcs8 is not None:
+            # RFC 9881, with the seed
+            assert MLDSA.import_key(tv.pkcs8) == key
+            assert key.export_key() == tv.pkcs8
+
+        rnd = tv.rnd if tv.rnd is not None else ZERO_RND
+        if not hasattr(tv, "msg"):
+            # Sign_internal, with mu only
+            assert "Internal" in tv.flags
+            signature = key._sign(tv.mu, rnd, external_mu=True)
+            assert signature == tv.sig
+            assert key._verify(tv.mu, signature, external_mu=True)
+            return
+
+        try:
+            if tv.rnd is None:
+                signer = mldsa.new(key, tv.ctx, deterministic=True)
+            else:
+                signer = mldsa.new(key, tv.ctx, randfunc=fixed_rng(tv.rnd))
+        except ValueError:
+            assert not tv.valid
+            assert "InvalidContext" in tv.flags
+            return
+        assert tv.valid
+
+        signature = signer.sign(tv.msg)
+        assert signature == tv.sig
+        mldsa.new(key.public_key(), tv.ctx).verify(tv.msg, signature)
+
+        # The message representative mu
+        if tv.mu is not None:
+            mu_hash = mldsa.MLDSAMuHash(key, data=tv.msg, context=tv.ctx)
+            assert mu_hash.digest() == tv.mu
+            assert key._sign(tv.mu, rnd, external_mu=True) == tv.sig
+
+    @pytest.mark.parametrize("tv", load_wycheproof_verify(), ids=wycheproof_id)
+    def test_verify(self, tv):
+        try:
+            key = MLDSA.construct(param_set=tv.param_set, pk=tv.pk)
+        except ValueError:
+            assert not tv.valid
+            assert "IncorrectPublicKeyLength" in tv.flags
+            return
+        assert MLDSA.import_key(tv.pk_der) == key
+
+        try:
+            verifier = mldsa.new(key, tv.ctx)
+        except ValueError:
+            assert not tv.valid
+            assert "InvalidContext" in tv.flags
+            return
+
+        try:
+            verifier.verify(tv.msg, tv.sig)
+        except ValueError:
+            assert not tv.valid
+        else:
+            assert tv.valid

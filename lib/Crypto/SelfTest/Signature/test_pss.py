@@ -255,14 +255,18 @@ def get_hash_module(hash_name):
 
 def _load_tests(filename):
     def filter_rsa(group):
-        return RSA.import_key(group["keyPem"])
+        # RSA.import_key() does not accept a public key with the
+        # RSASSA-PSS OID and parameters (RsassaPssWithParametersVerify)
+        n = int(group["publicKey"]["modulus"], 16)
+        e = int(group["publicKey"]["publicExponent"], 16)
+        return RSA.construct((n, e))
 
     def filter_sha(group):
         return get_hash_module(group["sha"])
 
     def filter_type(group):
         type_name = group["type"]
-        if type_name not in ("RsassaPssVerify",):
+        if type_name not in ("RsassaPssVerify", "RsassaPssWithParametersVerify"):
             raise ValueError("Unknown type name " + type_name)
 
     def filter_slen(group):
@@ -296,15 +300,34 @@ def _load_tests(filename):
 
 def load_wycheproof_vectors():
     vectors = []
-    vectors += _load_tests("rsa_pss_2048_sha1_mgf1_20_test.json")
-    vectors += _load_tests("rsa_pss_2048_sha256_mgf1_0_test.json")
-    vectors += _load_tests("rsa_pss_2048_sha256_mgf1_32_test.json")
-    vectors += _load_tests("rsa_pss_2048_sha512_256_mgf1_28_test.json")
-    vectors += _load_tests("rsa_pss_2048_sha512_256_mgf1_32_test.json")
-    vectors += _load_tests("rsa_pss_3072_sha256_mgf1_32_test.json")
-    vectors += _load_tests("rsa_pss_4096_sha256_mgf1_32_test.json")
-    vectors += _load_tests("rsa_pss_4096_sha512_mgf1_32_test.json")
-    vectors += _load_tests("rsa_pss_misc_test.json")
+    for name in (
+        "2048_sha1_mgf1_20",
+        "2048_sha256_mgf1_0",
+        "2048_sha256_mgf1_32",
+        "2048_sha256_mgf1sha1_20",
+        "2048_sha384_mgf1_48",
+        "2048_sha512_224_mgf1_28",
+        "2048_sha512_256_mgf1_32",
+        "3072_sha256_mgf1_32",
+        "4096_sha256_mgf1_32",
+        "4096_sha384_mgf1_48",
+        "4096_sha512_mgf1_32",
+        "4096_sha512_mgf1_64",
+        "misc",
+    ):
+        vectors += _load_tests("rsa_pss_%s_test.json" % name)
+    # The same, with the parameters in the public key
+    for name in (
+        "2048_sha1_mgf1_20",
+        "2048_sha256_mgf1_0",
+        "2048_sha256_mgf1_32",
+        "2048_sha512_mgf1sha256_32",
+        "3072_sha256_mgf1_32",
+        "4096_sha512_mgf1_32",
+        "4096_sha512_mgf1_64",
+        "misc",
+    ):
+        vectors += _load_tests("rsa_pss_%s_params_test.json" % name)
     return vectors
 
 

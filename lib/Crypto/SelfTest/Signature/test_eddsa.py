@@ -500,39 +500,27 @@ class TestImport_Ed448:
 
 def _load_tests(filename):
     def pk(group):
-        elem = group["key"]["pk"]
-        return unhexlify(elem)
-
-    def sk(group):
-        elem = group["key"]["sk"]
+        elem = group["publicKey"]["pk"]
         return unhexlify(elem)
 
     result = load_test_vectors_wycheproof(
         ("Signature", "wycheproof"),
         filename,
-        "Wycheproof ECDSA signature (%s)" % filename,
-        group_tag={"pk": pk, "sk": sk},
+        "Wycheproof EdDSA signature (%s)" % filename,
+        group_tag={"pk": pk},
     )
     return result
 
 
 def load_wycheproof_vectors():
     vectors = []
-    vectors += _load_tests("eddsa_test.json")
+    vectors += _load_tests("ed25519_test.json")
     vectors += _load_tests("ed448_test.json")
     return vectors
 
 
 class TestVectorsEdDSAWycheproof:
-    def check_sign(self, tv):
-        if not tv.valid:
-            return
-
-        self._id = "Wycheproof EdDSA Sign Test #%d (%s, %s)" % (tv.id, tv.comment, tv.filename)
-        key = eddsa.import_private_key(tv.sk)
-        signer = eddsa.new(key, "rfc8032")
-        signature = signer.sign(tv.msg)
-        assert signature == tv.sig
+    # The test vectors only have the public keys (for verification)
 
     def check_verify(self, tv):
         self._id = "Wycheproof EdDSA Verify Test #%d (%s, %s)" % (tv.id, tv.comment, tv.filename)
@@ -547,7 +535,6 @@ class TestVectorsEdDSAWycheproof:
 
     @pytest.mark.parametrize("tv", load_wycheproof_vectors(), ids=wycheproof_id)
     def test(self, tv):
-        self.check_sign(tv)
         self.check_verify(tv)
 
 

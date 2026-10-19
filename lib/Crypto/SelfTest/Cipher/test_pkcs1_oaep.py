@@ -426,33 +426,26 @@ def _load_tests(filename):
     def filter_rsa(group):
         return RSA.import_key(group["privateKeyPem"])
 
+    hashes = {
+        "SHA-1": SHA1,
+        "SHA-224": SHA224,
+        "SHA-256": SHA256,
+        "SHA-384": SHA384,
+        "SHA-512": SHA512,
+        "SHA-512/224": SHA512.new(truncate="224"),
+        "SHA-512/256": SHA512.new(truncate="256"),
+    }
+
     def filter_sha(group):
-        if group["sha"] == "SHA-1":
-            return SHA1
-        elif group["sha"] == "SHA-224":
-            return SHA224
-        elif group["sha"] == "SHA-256":
-            return SHA256
-        elif group["sha"] == "SHA-384":
-            return SHA384
-        elif group["sha"] == "SHA-512":
-            return SHA512
-        else:
+        if group["sha"] not in hashes:
             raise ValueError("Unknown sha " + group["sha"])
+        return hashes[group["sha"]]
 
     def filter_mgf(group):
-        if group["mgfSha"] == "SHA-1":
-            return lambda x, y: MGF1(x, y, SHA1)
-        elif group["mgfSha"] == "SHA-224":
-            return lambda x, y: MGF1(x, y, SHA224)
-        elif group["mgfSha"] == "SHA-256":
-            return lambda x, y: MGF1(x, y, SHA256)
-        elif group["mgfSha"] == "SHA-384":
-            return lambda x, y: MGF1(x, y, SHA384)
-        elif group["mgfSha"] == "SHA-512":
-            return lambda x, y: MGF1(x, y, SHA512)
-        else:
+        if group["mgfSha"] not in hashes:
             raise ValueError("Unknown mgf/sha " + group["mgfSha"])
+        mgf_hash = hashes[group["mgfSha"]]
+        return lambda x, y: MGF1(x, y, mgf_hash)
 
     def filter_algo(group):
         return "%s with MGF1/%s" % (group["sha"], group["mgfSha"])
@@ -477,10 +470,14 @@ def load_wycheproof_vectors():
     vectors += _load_tests("rsa_oaep_2048_sha384_mgf1sha384_test.json")
     vectors += _load_tests("rsa_oaep_2048_sha512_mgf1sha1_test.json")
     vectors += _load_tests("rsa_oaep_2048_sha512_mgf1sha512_test.json")
+    vectors += mark_slow(_load_tests("rsa_oaep_2048_sha512_224_mgf1sha1_test.json"))
+    vectors += mark_slow(_load_tests("rsa_oaep_2048_sha512_224_mgf1sha512_224_test.json"))
     vectors += mark_slow(_load_tests("rsa_oaep_3072_sha256_mgf1sha1_test.json"))
     vectors += mark_slow(_load_tests("rsa_oaep_3072_sha256_mgf1sha256_test.json"))
     vectors += mark_slow(_load_tests("rsa_oaep_3072_sha512_mgf1sha1_test.json"))
     vectors += mark_slow(_load_tests("rsa_oaep_3072_sha512_mgf1sha512_test.json"))
+    vectors += mark_slow(_load_tests("rsa_oaep_3072_sha512_256_mgf1sha1_test.json"))
+    vectors += mark_slow(_load_tests("rsa_oaep_3072_sha512_256_mgf1sha512_256_test.json"))
     vectors += mark_slow(_load_tests("rsa_oaep_4096_sha256_mgf1sha1_test.json"))
     vectors += mark_slow(_load_tests("rsa_oaep_4096_sha256_mgf1sha256_test.json"))
     vectors += mark_slow(_load_tests("rsa_oaep_4096_sha512_mgf1sha1_test.json"))

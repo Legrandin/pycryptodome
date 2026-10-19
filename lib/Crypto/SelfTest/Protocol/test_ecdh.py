@@ -159,6 +159,81 @@ class TestVectorsECDHWycheproof:
         self.check_verify(tv)
 
 
+def _load_tests_ecdh_keys(filename):
+    """ECDH tests where the keys are in PEM or JWK (WebCrypto)"""
+
+    def curve(g):
+        return g["curve"]
+
+    result = load_test_vectors_wycheproof(
+        ("Protocol", "wycheproof"),
+        filename,
+        "Wycheproof ECDH (%s)" % filename,
+        group_tag={"curve": curve},
+        unit_tag={"public": lambda u: u["public"], "private": lambda u: u["private"]},
+    )
+    return result
+
+
+def load_wycheproof_vectors_ecdh_keys():
+    vectors = []
+    for curve in ("secp224r1", "secp256r1", "secp384r1", "secp521r1"):
+        vectors += _load_tests_ecdh_keys("ecdh_%s_pem_test.json" % curve)
+    for curve in ("secp256r1", "secp384r1", "secp521r1"):
+        vectors += _load_tests_ecdh_keys("ecdh_%s_webcrypto_test.json" % curve)
+    return vectors
+
+
+def _base64url_int(value):
+    padding = "=" * (-len(value) % 4)
+    return int.from_bytes(base64.urlsafe_b64decode(value + padding), "big")
+
+
+def _import_jwk(jwk, curve):
+    """An EC key from a JWK (RFC 7518, Section 6.2)"""
+
+    curves = {"P-256": "p256", "P-384": "p384", "P-521": "p521"}
+    if jwk.get("kty") != "EC" or jwk.get("crv") != curve:
+        raise ValueError("Wrong type of JWK")
+    if "d" in jwk:
+        return ECC.construct(curve=curves[curve], d=_base64url_int(jwk["d"]))
+    return ECC.construct(
+        curve=curves[curve], point_x=_base64url_int(jwk["x"]), point_y=_base64url_int(jwk["y"])
+    )
+
+
+class TestVectorsECDHKeysWycheproof:
+    desc = "Wycheproof ECDH tests (PEM and WebCrypto keys)"
+
+    def check_verify(self, tv):
+        try:
+            if tv.filename.endswith("_pem_test.json"):
+                public_key = ECC.import_key(tv.public)
+                private_key = ECC.import_key(tv.private)
+            else:
+                public_key = _import_jwk(tv.public, tv.curve)
+                private_key = _import_jwk(tv.private, tv.curve)
+        except (ValueError, KeyError):
+            # Invalid keys, or acceptable ones (like PEM with extra data)
+            assert tv.warning or not tv.valid
+            return
+
+        try:
+            z = key_agreement(static_pub=public_key, static_priv=private_key, kdf=lambda x: x)
+        except ValueError:
+            assert not tv.valid
+        except TypeError as e:
+            assert not tv.valid
+            assert "incompatible curve" in str(e)
+        else:
+            assert z == tv.shared
+            assert tv.valid or tv.warning
+
+    @pytest.mark.parametrize("tv", load_wycheproof_vectors_ecdh_keys(), ids=wycheproof_id)
+    def test(self, tv):
+        self.check_verify(tv)
+
+
 class TestECDH:
     static_priv = ECC.import_key(
         "-----BEGIN PRIVATE KEY-----\nMIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQg9VHFVKh2a1aVFifH\n+BiyNaRa2kttEg3165Ye/dJxJ7KhRANCAARImIEXro5ZOcyWU2mq/+d79FEZXtTA\nbKkz1aICQXihQdCMzRNbeNtC9LFLzhu1slRKJ2xsDAlw9r6w6vwtkRzr\n-----END PRIVATE KEY-----"
@@ -466,7 +541,9 @@ class TestVectorsX25519Wycheproof:
                 assert "Unsupported ECC" in str(e)
                 return
             except ValueError:
-                assert tv.valid
+                if not tv.valid:
+                    # For instance, MissingOctetString
+                    return
                 assert tv.warning
                 assert "LowOrderPublic" in tv.flags
                 return
@@ -544,13 +621,13 @@ class TestVectorsX448Wycheproof:
             try:
                 public_key = import_x448_public_key(tv.public)
             except ValueError as e:
-                assert tv.valid
-                assert tv.warning
-                if len(tv.public) == 56:
-                    assert "LowOrderPublic" in tv.flags
-                    assert "Invalid Curve448" in str(e)
-                else:
+                if not tv.valid:
+                    assert "PublicKeyTooLong" in tv.flags
                     assert "Incorrect Curve448" in str(e)
+                    return
+                assert tv.warning
+                assert "LowOrderPublic" in tv.flags
+                assert "Invalid Curve448" in str(e)
                 return
             private_key = import_x448_private_key(tv.private)
         elif tv.encoding in ("XdhAsnComp", "XdhPemComp"):
@@ -562,7 +639,9 @@ class TestVectorsX448Wycheproof:
                 assert "Unsupported ECC" in str(e)
                 return
             except ValueError:
-                assert tv.valid
+                if not tv.valid:
+                    # For instance, PublicKeyTooLong or MissingOctetString
+                    return
                 assert tv.warning
                 assert "LowOrderPublic" in tv.flags or "NonCanonicalPublic" in tv.flags
                 return
@@ -597,14 +676,11 @@ class TestVectorsX448Wycheproof:
             except ValueError as e:
                 if tv.valid:
                     assert tv.warning
-                    if len(tv.public["x"]) == 75:
-                        assert "LowOrderPublic" in tv.flags or "NonCanonicalPublic" in tv.flags
-                        assert "Invalid Curve448" in str(e)
-                    else:
-                        assert "Incorrect Curve448" in str(e)
+                    assert "LowOrderPublic" in tv.flags or "NonCanonicalPublic" in tv.flags
+                    assert "Invalid Curve448" in str(e)
                     return
                 else:
-                    assert "Incorrect length" in str(e)
+                    assert "Incorrect length" in str(e) or "Incorrect Curve448 key length" in str(e)
                     return
         else:
             raise ValueError("Unknown encoding", tv.encoding)
