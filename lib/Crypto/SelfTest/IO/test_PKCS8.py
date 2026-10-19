@@ -6,7 +6,8 @@
 
 """Self-tests for Crypto.IO.PKCS8 module"""
 
-from binascii import unhexlify
+import pickle
+from binascii import a2b_base64, unhexlify
 
 import pytest
 
@@ -14,7 +15,7 @@ from Crypto import KdfIterationLimitError, KdfLimitError, KdfMemoryLimitError
 from Crypto.IO import _PBES, PKCS8
 from Crypto.Protocol.KDF import scrypt
 from Crypto.Util._cpu_features import available_cores
-from Crypto.Util.asn1 import DerNull, DerObject, DerObjectId, DerSequence
+from Crypto.Util.asn1 import DerBitString, DerNull, DerObject, DerObjectId, DerOctetString, DerSequence
 
 oid_key = "1.2.840.113549.1.1.1"
 
@@ -709,3 +710,103 @@ class TestKeyKdfParams:
                 module.import_key(clear, max_iteration_count=limit)
             with pytest.raises(exc):
                 PKCS8.unwrap(clear, None, limit)
+
+
+class TestOneAsymmetricKey:
+    """PKCS#8 version 2 (RFC 5958), with the field ``publicKey``,
+    and the result of unwrap()"""
+
+    oid = "1.3.101.112"  # Ed25519
+    private_key = DerOctetString(bytes(range(32))).encode()
+    public_key = bytes(range(100, 132))
+    prot = {"protection": "PBKDF2WithHMAC-SHA256AndAES128-CBC", "prot_params": {"iteration_count": 10}}
+
+    # RFC 8410, Section 10.3 (version 2, with attributes and publicKey)
+    rfc8410 = """
+        MHICAQEwBQYDK2VwBCIEINTuctv5E1hK1bbY8fdp+K06/nwoy/HU++CXqI9EdVhC
+        oB8wHQYKKoZIhvcNAQkJFDEPDA1DdXJkbGUgQ2hhaXJzgSEAGb9ECWmEzf6FQbrB
+        Z9w7lshQhqowtrbLDFw4rXAxZuE="""
+    rfc8410_public_key = unhexlify("19bf44096984cdfe8541bac167dc3b96c85086aa30b6b6cb0c5c38ad703166e1")
+
+    def test_wrap_v1(self):
+        wrapped = PKCS8.wrap(self.private_key, self.oid, key_params=None)
+        pk_info = DerSequence().decode(wrapped)
+        assert len(pk_info) == 3
+        assert pk_info[0] == 0
+        assert PKCS8.unwrap(wrapped).public_key is None
+
+    def test_wrap_v2(self):
+        wrapped = PKCS8.wrap(self.private_key, self.oid, key_params=None, public_key=self.public_key)
+        pk_info = DerSequence().decode(wrapped)
+        assert len(pk_info) == 4
+        assert pk_info[0] == 1
+        # publicKey [1] IMPLICIT BIT STRING, with no unused bits
+        assert pk_info[3] == b"\x81\x21\x00" + self.public_key
+
+        unwrapped = PKCS8.unwrap(wrapped)
+        assert unwrapped.oid == self.oid
+        assert unwrapped.private_key == self.private_key
+        assert unwrapped.public_key == self.public_key
+
+    def test_wrap_v2_encrypted(self):
+        wrapped = PKCS8.wrap(
+            self.private_key, self.oid, "pw", key_params=None, public_key=self.public_key, **self.prot
+        )
+        unwrapped = PKCS8.unwrap(wrapped, "pw")
+        assert unwrapped.private_key == self.private_key
+        assert unwrapped.public_key == self.public_key
+
+    def test_unwrap_rfc8410(self):
+        unwrapped = PKCS8.unwrap(a2b_base64(self.rfc8410))
+        assert unwrapped.oid == self.oid
+        assert unwrapped.public_key == self.rfc8410_public_key
+        assert unwrapped.params is None
+
+    def test_unwrap_v1_with_public_key(self):
+        # Not allowed by RFC 5958, but returned so that the caller can check it
+        algorithm = DerSequence([DerObjectId(self.oid)])
+        pk_info = DerSequence(
+            [0, algorithm, DerOctetString(self.private_key), DerBitString(self.public_key, implicit=1)]
+        )
+        assert PKCS8.unwrap(pk_info.encode()).public_key == self.public_key
+
+    def test_tuple(self):
+        wrapped = PKCS8.wrap(self.private_key, self.oid)
+        unwrapped = PKCS8.unwrap(wrapped)
+        assert isinstance(unwrapped, PKCS8.UnwrappedKey)
+        assert isinstance(unwrapped, tuple)
+        assert len(unwrapped) == 3
+        oid, private_key, params = unwrapped
+        assert (oid, private_key, params) == (self.oid, self.private_key, None)
+        assert unwrapped == (self.oid, self.private_key, None)
+        assert unwrapped[0] == unwrapped.oid
+        assert unwrapped[1] == unwrapped.private_key
+        assert unwrapped[2] == unwrapped.params
+
+    @pytest.mark.parametrize(
+        "key_params, params",
+        [
+            (None, None),
+            (DerNull(), None),
+            (DerObjectId("1.2.3"), b"\x06\x02\x2a\x03"),
+        ],
+    )
+    def test_params(self, key_params, params):
+        wrapped = PKCS8.wrap(self.private_key, self.oid, key_params=key_params)
+        unwrapped = PKCS8.unwrap(wrapped)
+        assert unwrapped.params == params
+
+    def test_pickle(self):
+        wrapped = PKCS8.wrap(self.private_key, self.oid, public_key=self.public_key)
+        unwrapped = PKCS8.unwrap(wrapped)
+        copy = pickle.loads(pickle.dumps(unwrapped))
+        assert copy == unwrapped
+        assert copy.public_key == self.public_key
+
+    def test_repr(self):
+        wrapped = PKCS8.wrap(self.private_key, self.oid, public_key=self.public_key)
+        text = repr(PKCS8.unwrap(wrapped))
+        assert self.oid in text
+        # The private key is not shown
+        assert self.private_key.hex() not in text
+        assert repr(self.private_key) not in text

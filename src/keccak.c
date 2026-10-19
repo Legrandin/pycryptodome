@@ -451,31 +451,6 @@ KECCAK_API int keccak_pbkdf2_hmac_assist(const keccak_state *inner, const keccak
 
 #define KECCAK_ROUNDS 24
 
-#define ROT_01 36
-#define ROT_02 3
-#define ROT_03 41
-#define ROT_04 18
-#define ROT_05 1
-#define ROT_06 44
-#define ROT_07 10
-#define ROT_08 45
-#define ROT_09 2
-#define ROT_10 62
-#define ROT_11 6
-#define ROT_12 43
-#define ROT_13 15
-#define ROT_14 61
-#define ROT_15 28
-#define ROT_16 55
-#define ROT_17 25
-#define ROT_18 21
-#define ROT_19 56
-#define ROT_20 27
-#define ROT_21 20
-#define ROT_22 39
-#define ROT_23 8
-#define ROT_24 14
-
 static const uint64_t roundconstants[KECCAK_ROUNDS] = {
     0x0000000000000001ULL,
     0x0000000000008082ULL,
@@ -503,19 +478,28 @@ static const uint64_t roundconstants[KECCAK_ROUNDS] = {
     0x8000000080008008ULL
 };
 
+/*
+ * The Keccak-p[1600, rounds] permutation, for 24 rounds (Keccak-f[1600])
+ * or 12 rounds (KangarooTwelve and TurboSHAKE).
+ *
+ * Lane (x, y) of the state is state[x + 5*y]. In each round, the lanes of
+ * one output plane are computed and passed through Chi before the next
+ * plane: only 5 intermediate values (b0..b4) are live at a time,
+ * instead of 25. With 16 general-purpose registers (x86-64), that saves
+ * many spills to the stack. Two rounds are computed per iteration,
+ * from a0..a24 into e0..e24 and back, so that no copy is needed.
+ */
 static void keccak_function (uint64_t *state, unsigned rounds)
 {
     unsigned i;
-    unsigned start_round;
 
-    /* Temporary variables to avoid indexing overhead */
     uint64_t a0, a1, a2, a3, a4, a5, a6, a7, a8, a9, a10, a11, a12;
     uint64_t a13, a14, a15, a16, a17, a18, a19, a20, a21, a22, a23, a24;
-
-    uint64_t b0, b1, b2, b3, b4, b5, b6, b7, b8, b9, b10, b11, b12;
-    uint64_t b13, b14, b15, b16, b17, b18, b19, b20, b21, b22, b23, b24;
-
-    uint64_t c0, c1, c2, c3, c4, d;
+    uint64_t e0, e1, e2, e3, e4, e5, e6, e7, e8, e9, e10, e11, e12;
+    uint64_t e13, e14, e15, e16, e17, e18, e19, e20, e21, e22, e23, e24;
+    uint64_t b0, b1, b2, b3, b4;
+    uint64_t c0, c1, c2, c3, c4;
+    uint64_t d0, d1, d2, d3, d4;
 
     a0  = state[0];
     a1  = state[1];
@@ -543,90 +527,151 @@ static void keccak_function (uint64_t *state, unsigned rounds)
     a23 = state[23];
     a24 = state[24];
 
-    if (rounds == 24)
-        start_round = 0;
-    else /* rounds == 12 */
-        start_round = 12;
-
-    for (i = start_round; i < KECCAK_ROUNDS; ++i) {
-        /*
-           Uses temporary variables and loop unrolling to
-           avoid array indexing and inner loops overhead
-        */
-
-        /* Prepare column parity for Theta step */
+    /* 24 rounds, or the last 12 of them (always an even number) */
+    for (i = KECCAK_ROUNDS - rounds; i < KECCAK_ROUNDS; i += 2) {
+        /* Theta: the parities of the columns */
         c0 = a0 ^ a5 ^ a10 ^ a15 ^ a20;
         c1 = a1 ^ a6 ^ a11 ^ a16 ^ a21;
         c2 = a2 ^ a7 ^ a12 ^ a17 ^ a22;
         c3 = a3 ^ a8 ^ a13 ^ a18 ^ a23;
         c4 = a4 ^ a9 ^ a14 ^ a19 ^ a24;
+        d0 = c4 ^ ROL64(c1, 1);
+        d1 = c0 ^ ROL64(c2, 1);
+        d2 = c1 ^ ROL64(c3, 1);
+        d3 = c2 ^ ROL64(c4, 1);
+        d4 = c3 ^ ROL64(c0, 1);
 
-        /* Theta + Rho + Pi steps */
-        d   = c4 ^ ROL64(c1, 1);
-        b0  = d ^ a0;
-        b16 = ROL64(d ^ a5,  ROT_01);
-        b7  = ROL64(d ^ a10, ROT_02);
-        b23 = ROL64(d ^ a15, ROT_03);
-        b14 = ROL64(d ^ a20, ROT_04);
+        /* Theta, Rho and Pi for the lanes of plane 0, then Chi and Iota */
+        b0 = a0 ^ d0;
+        b1 = ROL64(a6 ^ d1, 44);
+        b2 = ROL64(a12 ^ d2, 43);
+        b3 = ROL64(a18 ^ d3, 21);
+        b4 = ROL64(a24 ^ d4, 14);
+        e0 = b0 ^ (~b1 & b2) ^ roundconstants[i];
+        e1 = b1 ^ (~b2 & b3);
+        e2 = b2 ^ (~b3 & b4);
+        e3 = b3 ^ (~b4 & b0);
+        e4 = b4 ^ (~b0 & b1);
 
-        d   = c0 ^ ROL64(c2, 1);
-        b10 = ROL64(d ^ a1,  ROT_05);
-        b1  = ROL64(d ^ a6,  ROT_06);
-        b17 = ROL64(d ^ a11, ROT_07);
-        b8  = ROL64(d ^ a16, ROT_08);
-        b24 = ROL64(d ^ a21, ROT_09);
+        /* Theta, Rho and Pi for the lanes of plane 1, then Chi */
+        b0 = ROL64(a3 ^ d3, 28);
+        b1 = ROL64(a9 ^ d4, 20);
+        b2 = ROL64(a10 ^ d0, 3);
+        b3 = ROL64(a16 ^ d1, 45);
+        b4 = ROL64(a22 ^ d2, 61);
+        e5 = b0 ^ (~b1 & b2);
+        e6 = b1 ^ (~b2 & b3);
+        e7 = b2 ^ (~b3 & b4);
+        e8 = b3 ^ (~b4 & b0);
+        e9 = b4 ^ (~b0 & b1);
 
-        d   = c1 ^ ROL64(c3, 1);
-        b20 = ROL64(d ^ a2,  ROT_10);
-        b11 = ROL64(d ^ a7,  ROT_11);
-        b2  = ROL64(d ^ a12, ROT_12);
-        b18 = ROL64(d ^ a17, ROT_13);
-        b9  = ROL64(d ^ a22, ROT_14);
+        /* Theta, Rho and Pi for the lanes of plane 2, then Chi */
+        b0 = ROL64(a1 ^ d1, 1);
+        b1 = ROL64(a7 ^ d2, 6);
+        b2 = ROL64(a13 ^ d3, 25);
+        b3 = ROL64(a19 ^ d4, 8);
+        b4 = ROL64(a20 ^ d0, 18);
+        e10 = b0 ^ (~b1 & b2);
+        e11 = b1 ^ (~b2 & b3);
+        e12 = b2 ^ (~b3 & b4);
+        e13 = b3 ^ (~b4 & b0);
+        e14 = b4 ^ (~b0 & b1);
 
-        d   = c2 ^ ROL64(c4, 1);
-        b5  = ROL64(d ^ a3,  ROT_15);
-        b21 = ROL64(d ^ a8,  ROT_16);
-        b12 = ROL64(d ^ a13, ROT_17);
-        b3  = ROL64(d ^ a18, ROT_18);
-        b19 = ROL64(d ^ a23, ROT_19);
+        /* Theta, Rho and Pi for the lanes of plane 3, then Chi */
+        b0 = ROL64(a4 ^ d4, 27);
+        b1 = ROL64(a5 ^ d0, 36);
+        b2 = ROL64(a11 ^ d1, 10);
+        b3 = ROL64(a17 ^ d2, 15);
+        b4 = ROL64(a23 ^ d3, 56);
+        e15 = b0 ^ (~b1 & b2);
+        e16 = b1 ^ (~b2 & b3);
+        e17 = b2 ^ (~b3 & b4);
+        e18 = b3 ^ (~b4 & b0);
+        e19 = b4 ^ (~b0 & b1);
 
-        d   = c3 ^ ROL64(c0, 1);
-        b15 = ROL64(d ^ a4,  ROT_20);
-        b6  = ROL64(d ^ a9,  ROT_21);
-        b22 = ROL64(d ^ a14, ROT_22);
-        b13 = ROL64(d ^ a19, ROT_23);
-        b4  = ROL64(d ^ a24, ROT_24);
+        /* Theta, Rho and Pi for the lanes of plane 4, then Chi */
+        b0 = ROL64(a2 ^ d2, 62);
+        b1 = ROL64(a8 ^ d3, 55);
+        b2 = ROL64(a14 ^ d4, 39);
+        b3 = ROL64(a15 ^ d0, 41);
+        b4 = ROL64(a21 ^ d1, 2);
+        e20 = b0 ^ (~b1 & b2);
+        e21 = b1 ^ (~b2 & b3);
+        e22 = b2 ^ (~b3 & b4);
+        e23 = b3 ^ (~b4 & b0);
+        e24 = b4 ^ (~b0 & b1);
 
-        /* Chi + Iota steps */
-        a0  = b0  ^ (~b1  & b2) ^ roundconstants[i];
-        a1  = b1  ^ (~b2  & b3);
-        a2  = b2  ^ (~b3  & b4);
-        a3  = b3  ^ (~b4  & b0);
-        a4  = b4  ^ (~b0  & b1);
+        /* Theta: the parities of the columns */
+        c0 = e0 ^ e5 ^ e10 ^ e15 ^ e20;
+        c1 = e1 ^ e6 ^ e11 ^ e16 ^ e21;
+        c2 = e2 ^ e7 ^ e12 ^ e17 ^ e22;
+        c3 = e3 ^ e8 ^ e13 ^ e18 ^ e23;
+        c4 = e4 ^ e9 ^ e14 ^ e19 ^ e24;
+        d0 = c4 ^ ROL64(c1, 1);
+        d1 = c0 ^ ROL64(c2, 1);
+        d2 = c1 ^ ROL64(c3, 1);
+        d3 = c2 ^ ROL64(c4, 1);
+        d4 = c3 ^ ROL64(c0, 1);
 
-        a5  = b5  ^ (~b6  & b7);
-        a6  = b6  ^ (~b7  & b8);
-        a7  = b7  ^ (~b8  & b9);
-        a8  = b8  ^ (~b9  & b5);
-        a9  = b9  ^ (~b5  & b6);
+        /* Theta, Rho and Pi for the lanes of plane 0, then Chi and Iota */
+        b0 = e0 ^ d0;
+        b1 = ROL64(e6 ^ d1, 44);
+        b2 = ROL64(e12 ^ d2, 43);
+        b3 = ROL64(e18 ^ d3, 21);
+        b4 = ROL64(e24 ^ d4, 14);
+        a0 = b0 ^ (~b1 & b2) ^ roundconstants[i + 1];
+        a1 = b1 ^ (~b2 & b3);
+        a2 = b2 ^ (~b3 & b4);
+        a3 = b3 ^ (~b4 & b0);
+        a4 = b4 ^ (~b0 & b1);
 
-        a10 = b10 ^ (~b11 & b12);
-        a11 = b11 ^ (~b12 & b13);
-        a12 = b12 ^ (~b13 & b14);
-        a13 = b13 ^ (~b14 & b10);
-        a14 = b14 ^ (~b10 & b11);
+        /* Theta, Rho and Pi for the lanes of plane 1, then Chi */
+        b0 = ROL64(e3 ^ d3, 28);
+        b1 = ROL64(e9 ^ d4, 20);
+        b2 = ROL64(e10 ^ d0, 3);
+        b3 = ROL64(e16 ^ d1, 45);
+        b4 = ROL64(e22 ^ d2, 61);
+        a5 = b0 ^ (~b1 & b2);
+        a6 = b1 ^ (~b2 & b3);
+        a7 = b2 ^ (~b3 & b4);
+        a8 = b3 ^ (~b4 & b0);
+        a9 = b4 ^ (~b0 & b1);
 
-        a15 = b15 ^ (~b16 & b17);
-        a16 = b16 ^ (~b17 & b18);
-        a17 = b17 ^ (~b18 & b19);
-        a18 = b18 ^ (~b19 & b15);
-        a19 = b19 ^ (~b15 & b16);
+        /* Theta, Rho and Pi for the lanes of plane 2, then Chi */
+        b0 = ROL64(e1 ^ d1, 1);
+        b1 = ROL64(e7 ^ d2, 6);
+        b2 = ROL64(e13 ^ d3, 25);
+        b3 = ROL64(e19 ^ d4, 8);
+        b4 = ROL64(e20 ^ d0, 18);
+        a10 = b0 ^ (~b1 & b2);
+        a11 = b1 ^ (~b2 & b3);
+        a12 = b2 ^ (~b3 & b4);
+        a13 = b3 ^ (~b4 & b0);
+        a14 = b4 ^ (~b0 & b1);
 
-        a20 = b20 ^ (~b21 & b22);
-        a21 = b21 ^ (~b22 & b23);
-        a22 = b22 ^ (~b23 & b24);
-        a23 = b23 ^ (~b24 & b20);
-        a24 = b24 ^ (~b20 & b21);
+        /* Theta, Rho and Pi for the lanes of plane 3, then Chi */
+        b0 = ROL64(e4 ^ d4, 27);
+        b1 = ROL64(e5 ^ d0, 36);
+        b2 = ROL64(e11 ^ d1, 10);
+        b3 = ROL64(e17 ^ d2, 15);
+        b4 = ROL64(e23 ^ d3, 56);
+        a15 = b0 ^ (~b1 & b2);
+        a16 = b1 ^ (~b2 & b3);
+        a17 = b2 ^ (~b3 & b4);
+        a18 = b3 ^ (~b4 & b0);
+        a19 = b4 ^ (~b0 & b1);
+
+        /* Theta, Rho and Pi for the lanes of plane 4, then Chi */
+        b0 = ROL64(e2 ^ d2, 62);
+        b1 = ROL64(e8 ^ d3, 55);
+        b2 = ROL64(e14 ^ d4, 39);
+        b3 = ROL64(e15 ^ d0, 41);
+        b4 = ROL64(e21 ^ d1, 2);
+        a20 = b0 ^ (~b1 & b2);
+        a21 = b1 ^ (~b2 & b3);
+        a22 = b2 ^ (~b3 & b4);
+        a23 = b3 ^ (~b4 & b0);
+        a24 = b4 ^ (~b0 & b1);
     }
 
     state[0]  = a0;

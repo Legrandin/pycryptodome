@@ -6,11 +6,32 @@ Changelog
 
 New features
 ------------
-* New function ``digest()`` in the modules of the SHA-2 and SHA-3 hashes
-  (``Crypto.Hash.SHA224``, ``SHA256``, ``SHA384``, ``SHA512``, ``SHA3_224``, ``SHA3_256``,
-  ``SHA3_384`` and ``SHA3_512``), to hash a whole message with a single call,
+* New module ``Crypto.PublicKey.MLDSA``, for ML-DSA keys (FIPS 204).
+  It is based on the portable C code of `mldsa-native <https://github.com/pq-code-package/mldsa-native>`_
+  (v2.0.0), with the Keccak code of PyCryptodome. On CPUs with AVX2 and BMI2, a version
+  compiled for them and with 4-way SHA-3 is used: compared to the portable version,
+  key generation and verification are 30-45% faster, signing 15-30%.
+* New module ``Crypto.Signature.mldsa``, for ML-DSA and HashML-DSA signatures (FIPS 204),
+  hedged (default) or deterministic, with an optional context.
+  The new ``MLDSAMuHash`` computes the message representative mu (external mu),
+  to sign or verify a large message in pieces.
+* New function ``digest()`` in the modules of the SHA-2 and SHA-3 hashes,
+  to hash a whole message with a single call,
   like ``Crypto.Hash.KangarooTwelve.digest()``. For messages up to 1 KiB,
   it is 1.5x to 3.4x faster than ``new()`` followed by ``digest()``.
+* ``Crypto.IO.PKCS8.wrap()`` has a new parameter ``public_key``, to create a ``OneAsymmetricKey``
+  version 2 (RFC 5958) with the field ``publicKey``.
+  ``Crypto.IO.PKCS8.unwrap()`` returns an ``UnwrappedKey``: still a tuple ``(oid, private_key, params)``,
+  with the same items as attributes, plus ``public_key`` (the field ``publicKey``, if present).
+* The scalar Keccak permutation (used by SHA-3, SHAKE, cSHAKE, KMAC, TupleHash, TurboSHAKE
+  and KangarooTwelve) processes the state one plane at a time, two rounds per iteration,
+  which needs fewer registers: SHA-3 and SHAKE are 5-10% faster.
+
+Resolved issues
+---------------
+* ``Crypto.PublicKey.ECC.import_key()`` checks that the field ``publicKey`` of a PKCS#8
+  ``OneAsymmetricKey`` version 2 (RFC 5958), if present, matches the private key.
+  Before, it was ignored.
 
 4.0.1(17 October 2026)
 ++++++++++++++++++++++++++

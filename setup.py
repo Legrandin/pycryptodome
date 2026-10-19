@@ -208,6 +208,18 @@ ext_modules = [
         sources=["src/ed25519.c"],
         py_limited_api=True,
     ),
+    Extension(
+        "Crypto.PublicKey._mldsa",
+        include_dirs=["src/"],
+        sources=["src/mldsa.c"],
+        py_limited_api=True,
+    ),
+    Extension(
+        "Crypto.PublicKey._mldsa_avx2_bmi2",
+        include_dirs=["src/"],
+        sources=["src/mldsa_avx2_bmi2.c"],
+        py_limited_api=True,
+    ),
     # Math
     Extension(
         "Crypto.Math._nat",

@@ -9,6 +9,7 @@
 import pytest
 
 from Crypto.Util.asn1 import (
+    ContextTag,
     DerBitString,
     DerBoolean,
     DerInteger,
@@ -565,6 +566,67 @@ class TestDerSequence:
         DerSequence().decode(der_bin2, only_ints_expected=False)
         with pytest.raises(ValueError):
             DerSequence().decode(der_bin2, only_ints_expected=True)
+
+    def test_item_types(self):
+        items = [
+            -5,
+            DerBoolean(True),
+            DerBitString(b"x"),
+            DerOctetString(b"abc"),
+            DerNull(),
+            DerObjectId("1.2.3"),
+            DerSequence([1]),
+            DerSetOf([1]),
+            DerInteger(7, explicit=0),
+            DerBitString(b"x", implicit=1),
+            DerSequence([1], implicit=2),
+        ]
+        expected = [
+            DerInteger,
+            DerBoolean,
+            DerBitString,
+            DerOctetString,
+            DerNull,
+            DerObjectId,
+            DerSequence,
+            DerSetOf,
+            ContextTag(0),
+            ContextTag(1),
+            ContextTag(2),
+        ]
+        # Decoded sequence
+        assert DerSequence().decode(DerSequence(items).encode()).item_types() == expected
+        # Not yet encoded: DER objects and raw DER elements
+        assert DerSequence(items).item_types() == expected
+        assert DerSequence([b"\x04\x00", 2**100]).item_types() == [DerOctetString, DerInteger]
+        assert DerSequence().item_types() == []
+
+    def test_item_types_other(self):
+        # UTF8String (universal, no class), application and private tags,
+        # and a SEQUENCE tag without the constructed bit
+        seq = DerSequence([b"\x0c\x00", b"\x41\x00", b"\xc1\x00", b"\x10\x00"])
+        assert seq.item_types() == [DerObject] * 4
+
+    def test_item_types_invalid(self):
+        for item in (b"", "abc", None, DerObject()):
+            with pytest.raises(ValueError):
+                DerSequence([item]).item_types()
+
+
+class TestContextTag:
+    def test_eq(self):
+        assert ContextTag(1) == ContextTag(1)
+        assert ContextTag(1) != ContextTag(2)
+        assert ContextTag(1) != 1
+        assert ContextTag(1) != DerBitString
+        assert hash(ContextTag(3)) == hash(ContextTag(3))
+        assert ContextTag(3) in {ContextTag(3)}
+        assert repr(ContextTag(30)) == "ContextTag(30)"
+
+    def test_invalid(self):
+        for number in (-1, 31, 1.0, "1", None):
+            with pytest.raises(ValueError):
+                ContextTag(number)
 
 
 class TestDerOctetString:

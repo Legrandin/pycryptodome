@@ -25,6 +25,8 @@ from Crypto.IO._PBES import (
 from Crypto.Util._bytes import tobytes
 from Crypto.Util._threads import threads_param
 from Crypto.Util.asn1 import (
+    ContextTag,
+    DerBitString,
     DerNull,
     DerObject,
     DerObjectId,
@@ -32,11 +34,63 @@ from Crypto.Util.asn1 import (
     DerSequence,
 )
 
-__all__ = ["wrap", "unwrap"]
+__all__ = ["wrap", "unwrap", "UnwrappedKey"]
 
 
 #: Encryption scheme of a private key, when the ``protection`` is not specified
 DEFAULT_PROTECTION = "PBKDF2WithHMAC-SHA256AndAES256-CBC"
+
+
+class UnwrappedKey(tuple[str, bytes, Optional[bytes]]):
+    """The result of :func:`unwrap`.
+
+    It is a tuple ``(oid, private_key, params)``, so that it can be
+    indexed or unpacked into three variables, and it has the attributes
+    listed below.
+    """
+
+    #: The ``publicKey`` field of a ``OneAsymmetricKey`` version 2 (`RFC 5958`_),
+    #: as bytes (the content of the BIT STRING), or ``None`` if it is absent.
+    #: It is returned also if the version of the structure is 1,
+    #: where the field is not allowed: it is up to the caller to reject it
+    #: or to check that it matches the private key.
+    public_key: Optional[bytes]
+
+    @classmethod
+    def _create(
+        cls,
+        oid: str,
+        private_key: bytes,
+        params: Optional[bytes],
+        public_key: Optional[bytes],
+    ) -> UnwrappedKey:
+        result = cls((oid, private_key, params))
+        result.public_key = public_key
+        return result
+
+    @property
+    def oid(self) -> str:
+        """The algorithm identifier of the wrapped key (OID, dotted string)."""
+        return self[0]
+
+    @property
+    def private_key(self) -> bytes:
+        """The private key (bytes, DER encoded)."""
+        return self[1]
+
+    @property
+    def params(self) -> Optional[bytes]:
+        """The ``parameters`` of the ``AlgorithmIdentifier`` (bytes, DER encoded),
+        or ``None`` if they are absent or ``NULL``."""
+        return self[2]
+
+    def __repr__(self) -> str:
+        return "UnwrappedKey(oid=%r, private_key=<%d bytes>, params=%r, public_key=%s)" % (
+            self.oid,
+            len(self.private_key),
+            self.params,
+            None if self.public_key is None else "<%d bytes>" % len(self.public_key),
+        )
 
 
 def _check_kdf_params(
@@ -68,6 +122,7 @@ def wrap(
     randfunc: Optional[Callable[[int], bytes]] = None,
     *,
     threads: int = 1,
+    public_key: Optional[bytes] = None,
 ) -> bytes:
     """Wrap a private key into a PKCS#8 blob (clear or encrypted).
 
@@ -114,6 +169,12 @@ def wrap(
         Only scrypt with a ``parallelization`` larger than 1 can use them.
         See :func:`Crypto.Protocol.KDF.scrypt`.
 
+      public_key (bytes):
+        The public key, to store in the field ``publicKey``.
+        The actual encoding is algorithm specific.
+        If set, the result is a ``OneAsymmetricKey`` version 2 (`RFC 5958`_),
+        otherwise it is a ``PrivateKeyInfo`` (version 1, the default).
+
     Returns:
       bytes: The PKCS#8-wrapped private key (possibly encrypted).
     """
@@ -121,11 +182,14 @@ def wrap(
     _check_kdf_params(threads=threads)
 
     #
-    #   PrivateKeyInfo ::= SEQUENCE {
-    #       version                 Version,
-    #       privateKeyAlgorithm     PrivateKeyAlgorithmIdentifier,
-    #       privateKey              PrivateKey,
-    #       attributes              [0]  IMPLICIT Attributes OPTIONAL
+    #   OneAsymmetricKey ::= SEQUENCE {
+    #       version                   Version,  -- v1(0) or v2(1)
+    #       privateKeyAlgorithm       PrivateKeyAlgorithmIdentifier,
+    #       privateKey                PrivateKey,
+    #       attributes            [0] IMPLICIT Attributes OPTIONAL,
+    #       ...,
+    #       [[2: publicKey        [1] IMPLICIT PublicKey OPTIONAL ]],
+    #       ...
     #   }
     #
     if key_params is None:
@@ -133,7 +197,12 @@ def wrap(
     else:
         algorithm = DerSequence([DerObjectId(key_oid), key_params])
 
-    pk_info = DerSequence([0, algorithm, DerOctetString(private_key)])
+    if public_key is None:
+        pk_info = DerSequence([0, algorithm, DerOctetString(private_key)])
+    else:
+        pk_info = DerSequence(
+            [1, algorithm, DerOctetString(private_key), DerBitString(public_key, implicit=1)]
+        )
     pk_info_der = pk_info.encode()
 
     if passphrase is None:
@@ -156,7 +225,7 @@ def unwrap(
     *,
     threads: int = 1,
     max_memory: Optional[int] = None,
-) -> tuple[str, bytes, Optional[bytes]]:
+) -> UnwrappedKey:
     """Unwrap a private key from a PKCS#8 blob (clear or encrypted).
 
     Args:
@@ -192,11 +261,14 @@ def unwrap(
         Set it to ``0`` to disable the check.
 
     Return:
-      A tuple containing
+      :class:`UnwrappedKey`: a tuple containing
 
        #. the algorithm identifier of the wrapped key (OID, dotted string)
        #. the private key (bytes, DER encoded)
        #. the associated parameters (bytes, DER encoded) or ``None``
+          (also if they are ``NULL``)
+
+      with the same items as attributes, plus the attribute ``public_key``.
 
     Raises:
       PassphraseRequiredError : (a ``ValueError``) if the blob is encrypted
@@ -217,15 +289,9 @@ def unwrap(
     #     encryptedData        OCTET STRING
     # }
     #
-    # (a PrivateKeyInfo starts with an INTEGER instead)
+    # (a PrivateKeyInfo/OneAsymmetricKey starts with an INTEGER instead)
     pk_info = DerSequence().decode(p8_private_key, nr_elements=(2, 3, 4, 5))
-    encrypted = (
-        len(pk_info) == 2
-        and isinstance(pk_info[0], bytes)
-        and pk_info[0][:1] == b"\x30"
-        and isinstance(pk_info[1], bytes)
-        and pk_info[1][:1] == b"\x04"
-    )
+    encrypted = pk_info.item_types() == [DerSequence, DerOctetString]
 
     if encrypted:
         if passphrase is None:
@@ -283,15 +349,15 @@ def unwrap(
     #       attributes              [0]  IMPLICIT Attributes OPTIONAL
     #   }
     #
-    # RFC5915, Asymmetric Key Package, version is v2(1)
+    # RFC 5958, Asymmetric Key Package, version is v2(1)
     #
     #   OneAsymmetricKey ::= SEQUENCE {
     #       version                   Version,
     #       privateKeyAlgorithm       PrivateKeyAlgorithmIdentifier,
     #       privateKey                PrivateKey,
-    #       attributes            [0] Attributes OPTIONAL,
+    #       attributes            [0] IMPLICIT Attributes OPTIONAL,
     #       ...,
-    #       [[2: publicKey        [1] PublicKey OPTIONAL ]],
+    #       [[2: publicKey        [1] IMPLICIT PublicKey OPTIONAL ]],
     #       ...
     #   }
 
@@ -306,18 +372,25 @@ def unwrap(
 
     algo = DerSequence().decode(pk_info[1], nr_elements=(1, 2))
     algo_oid = DerObjectId().decode(algo[0]).value
-    if len(algo) == 1:
-        algo_params = None
-    else:
+    algo_params = None if len(algo) == 1 else algo[1]
+
+    # NULL parameters are treated as absent
+    if algo_params is not None:
         try:
-            DerNull().decode(algo[1])
+            DerNull().decode(algo_params)
             algo_params = None
         except Exception:
-            algo_params = algo[1]
+            pass
 
     # PrivateKey ::= OCTET STRING
     private_key = DerOctetString().decode(pk_info[2]).payload
 
-    # We ignore attributes and (for v2 only) publickey
+    # We ignore attributes [0]
+    # publicKey [1] IMPLICIT BIT STRING is only valid in v2,
+    # but we return it in any case, so that the caller can check it
+    public_key = None
+    for item_type, item in zip(pk_info.item_types()[3:], pk_info[3:]):
+        if item_type == ContextTag(1):
+            public_key = DerBitString(implicit=1).decode(item, strict=True).value
 
-    return (algo_oid, private_key, algo_params)
+    return UnwrappedKey._create(algo_oid, private_key, algo_params, public_key)

@@ -1194,26 +1194,36 @@ def get_hash_module(hash_name):
     return hash_module
 
 
-def load_wycheproof_vectors_dsa():
+def _load_tests_dsa(filename):
     def filter_dsa(group):
-        return DSA.import_key(group["keyPem"])
+        return DSA.import_key(group["publicKeyPem"])
 
     def filter_sha(group):
         return get_hash_module(group["sha"])
 
-    def filter_type(group):
+    def filter_encoding(group):
         sig_type = group["type"]
-        if sig_type != "DsaVerify":
-            raise ValueError("Unknown signature type " + sig_type)
-        return sig_type
+        if sig_type == "DsaVerify":
+            return "der"
+        elif sig_type == "DsaP1363Verify":
+            return "binary"
+        raise ValueError("Unknown signature type " + sig_type)
 
     result = load_test_vectors_wycheproof(
         ("Signature", "wycheproof"),
-        "dsa_test.json",
-        "Wycheproof DSA signature",
-        group_tag={"key": filter_dsa, "hash_module": filter_sha, "sig_type": filter_type},
+        filename,
+        "Wycheproof DSA signature (%s)" % filename,
+        group_tag={"key": filter_dsa, "hash_module": filter_sha, "encoding": filter_encoding},
     )
     return result
+
+
+def load_wycheproof_vectors_dsa():
+    vectors = []
+    for params in ("2048_224_sha224", "2048_224_sha256", "2048_256_sha256", "3072_256_sha256"):
+        vectors += _load_tests_dsa("dsa_%s_test.json" % params)
+        vectors += _load_tests_dsa("dsa_%s_p1363_test.json" % params)
+    return vectors
 
 
 class TestVectorsDSAWycheproof:
@@ -1229,7 +1239,7 @@ class TestVectorsDSAWycheproof:
         self._id = "Wycheproof DSA Test #" + str(tv.id)
 
         hashed_msg = tv.hash_module.new(tv.msg)
-        signer = DSS.new(tv.key, "fips-186-3", encoding="der")
+        signer = DSS.new(tv.key, "fips-186-3", encoding=tv.encoding)
         try:
             signer.verify(hashed_msg, tv.sig)
         except ValueError:
@@ -1248,7 +1258,7 @@ class TestVectorsDSAWycheproof:
 def _load_tests_ecdsa(filename):
     def filter_ecc(group):
         # These are the only curves we accept to skip
-        if group["key"]["curve"] in (
+        if group["publicKey"]["curve"] in (
             "secp224k1",
             "secp256k1",
             "brainpoolP224r1",
@@ -1263,7 +1273,7 @@ def _load_tests_ecdsa(filename):
             "brainpoolP512t1",
         ):
             return None
-        return ECC.import_key(group["keyPem"])
+        return ECC.import_key(group["publicKeyPem"])
 
     def filter_sha(group):
         return get_hash_module(group["sha"])
@@ -1316,8 +1326,9 @@ def load_wycheproof_vectors_ecdsa():
     vectors += mark_slow(_load_tests_ecdsa("ecdsa_secp521r1_sha3_512_test.json"))
     vectors += mark_slow(_load_tests_ecdsa("ecdsa_secp521r1_sha512_p1363_test.json"))
     vectors += _load_tests_ecdsa("ecdsa_secp521r1_sha512_test.json")
-    vectors += _load_tests_ecdsa("ecdsa_test.json")
-    vectors += _load_tests_ecdsa("ecdsa_webcrypto_test.json")
+    vectors += mark_slow(_load_tests_ecdsa("ecdsa_secp192r1_sha256_p1363_test.json"))
+    vectors += _load_tests_ecdsa("ecdsa_secp192r1_sha256_test.json")
+    vectors += mark_slow(_load_tests_ecdsa("ecdsa_secp384r1_sha256_test.json"))
     return vectors
 
 

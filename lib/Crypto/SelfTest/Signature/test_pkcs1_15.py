@@ -204,7 +204,10 @@ class TestPKCS1_All_Hashes:
 
 def _load_tests(filename):
     def filter_rsa(group):
-        return RSA.import_key(group["keyPem"])
+        # Verification tests have the public key, generation tests the private key too
+        if "privateKeyPem" in group:
+            return RSA.import_key(group["privateKeyPem"])
+        return RSA.import_key(group["publicKeyPem"])
 
     def filter_sha(group):
         hash_name = group["sha"]
@@ -237,6 +240,7 @@ def _load_tests(filename):
         type_name = group["type"]
         if type_name not in ("RsassaPkcs1Verify", "RsassaPkcs1Generate"):
             raise ValueError("Unknown type name " + type_name)
+        return type_name
 
     result = load_test_vectors_wycheproof(
         ("Signature", "wycheproof"),
@@ -249,7 +253,8 @@ def _load_tests(filename):
 
 def load_wycheproof_vectors():
     vectors = []
-    vectors += _load_tests("rsa_sig_gen_misc_test.json")
+    for bits in (1024, 1536, 2048, 3072, 4096):
+        vectors += _load_tests("rsa_pkcs1_%d_sig_gen_test.json" % bits)
     vectors += _load_tests("rsa_signature_2048_sha224_test.json")
     vectors += _load_tests("rsa_signature_2048_sha256_test.json")
     vectors += _load_tests("rsa_signature_2048_sha384_test.json")
@@ -267,10 +272,13 @@ def load_wycheproof_vectors():
     vectors += _load_tests("rsa_signature_3072_sha3_512_test.json")
     vectors += _load_tests("rsa_signature_3072_sha512_test.json")
     vectors += _load_tests("rsa_signature_3072_sha512_256_test.json")
+    vectors += _load_tests("rsa_signature_4096_sha256_test.json")
     vectors += _load_tests("rsa_signature_4096_sha384_test.json")
     vectors += _load_tests("rsa_signature_4096_sha512_test.json")
     vectors += _load_tests("rsa_signature_4096_sha512_256_test.json")
-    vectors += _load_tests("rsa_signature_test.json")
+    vectors += _load_tests("rsa_signature_8192_sha256_test.json")
+    vectors += _load_tests("rsa_signature_8192_sha384_test.json")
+    vectors += _load_tests("rsa_signature_8192_sha512_test.json")
     return vectors
 
 
@@ -283,11 +291,18 @@ class TestVectorsWycheproof:
 
             warnings.warn("Wycheproof warning: %s (%s)" % (self._id, tv.comment))
 
+    def check_sign(self, tv):
+        # The signature is deterministic
+        if tv.type != "RsassaPkcs1Generate" or not tv.valid:
+            return
+        signature = pkcs1_15.new(tv.rsa_key).sign(tv.hash_mod.new(tv.msg))
+        assert signature == tv.sig
+
     def check_verify(self, tv):
         self._id = "Wycheproof RSA PKCS$#1 Test #" + str(tv.id)
 
         hashed_msg = tv.hash_mod.new(tv.msg)
-        signer = pkcs1_15.new(tv.rsa_key)
+        signer = pkcs1_15.new(tv.rsa_key.public_key())
         try:
             signer.verify(hashed_msg, tv.sig)
         except ValueError:
@@ -300,4 +315,5 @@ class TestVectorsWycheproof:
 
     @pytest.mark.parametrize("tv", load_wycheproof_vectors(), ids=wycheproof_id)
     def test(self, tv):
+        self.check_sign(tv)
         self.check_verify(tv)

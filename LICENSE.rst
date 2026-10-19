@@ -63,3 +63,11 @@ SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
 CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
+Third-party code
+================
+
+The directory ``src/mldsa-native`` contains code from mldsa-native
+(https://github.com/pq-code-package/mldsa-native), available under
+the Apache-2.0 license OR the ISC license OR the MIT license.
+See ``src/mldsa-native/LICENSE`` for the full text of the licenses.

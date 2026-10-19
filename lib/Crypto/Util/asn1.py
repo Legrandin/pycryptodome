@@ -32,6 +32,7 @@ _DerObjectT = TypeVar("_DerObjectT", bound="DerObject")
 DerSetElement = Union[bytes, int]
 
 __all__ = [
+    "ContextTag",
     "DerObject",
     "DerInteger",
     "DerBoolean",
@@ -94,6 +95,36 @@ class BytesIO_EOF:
 
     def read_byte(self) -> int:
         return self.read(1)[0]
+
+
+class ContextTag:
+    """The type of a DER element with a context-specific tag ``[number]``,
+    as returned by :meth:`DerSequence.item_types`.
+
+    The tag can be IMPLICIT or EXPLICIT: the encoding does not tell them apart,
+    nor the actual type of the element.
+    Two objects are equal if they have the same number.
+
+    Args:
+      number (integer):
+        The number of the tag (0 to 30).
+    """
+
+    def __init__(self, number: int) -> None:
+        if not (isinstance(number, int) and 0 <= number < 0x1F):
+            raise ValueError("Wrong DER tag number")
+        self.number = number
+
+    def __eq__(self, other: object) -> bool:
+        if not isinstance(other, ContextTag):
+            return NotImplemented
+        return self.number == other.number
+
+    def __hash__(self) -> int:
+        return hash((ContextTag, self.number))
+
+    def __repr__(self) -> str:
+        return "ContextTag(%d)" % self.number
 
 
 class DerObject:
@@ -595,6 +626,48 @@ class DerSequence(DerObject):
             If ``True``, the presence of negative integers
             causes the method to return ``False``."""
         return bool(self._seq) and self.hasInts(only_non_negative) == len(self._seq)
+
+    def item_types(self) -> list[Union[type[DerObject], ContextTag]]:
+        """Return the type of each item in this sequence, from its tag.
+
+        The type of an item is:
+
+        * the class for the universal types of this module:
+          :class:`DerBoolean`, :class:`DerInteger`, :class:`DerBitString`,
+          :class:`DerOctetString`, :class:`DerNull`, :class:`DerObjectId`,
+          :class:`DerSequence` and :class:`DerSetOf`;
+        * a :class:`ContextTag` for an item with a context-specific tag
+          (IMPLICIT or EXPLICIT), since the tag hides the actual type;
+        * :class:`DerObject` for anything else.
+
+        Use it to tell apart the items after a decoding, without decoding them:
+
+        >>> from Crypto.Util.asn1 import DerSequence, DerInteger, DerOctetString, ContextTag
+        >>> from binascii import unhexlify
+        >>> seq_der = DerSequence().decode(unhexlify('30080201040401028100'))
+        >>> seq_der.item_types() == [DerInteger, DerOctetString, ContextTag(1)]
+        True
+        """
+
+        result: list[Union[type[DerObject], ContextTag]] = []
+        for item in self._seq:
+            if _is_number(item):
+                tag_octet = 0x02
+            elif isinstance(item, DerObject) and item._tag_octet is not None:
+                tag_octet = item._tag_octet
+            elif isinstance(item, (bytes, bytearray)) and len(item) > 0:
+                tag_octet = item[0]
+            else:
+                raise ValueError("Item %r is not a DER element" % (item,))
+
+            tag_class, number = tag_octet & 0xC0, tag_octet & 0x1F
+            if tag_class == 0x00:
+                result.append(_UNIVERSAL_TYPES.get(tag_octet, DerObject))
+            elif tag_class == 0x80 and number != 0x1F:
+                result.append(ContextTag(number))
+            else:
+                result.append(DerObject)
+        return result
 
     def encode(self) -> bytes:
         """Return this DER SEQUENCE, fully encoded as a
@@ -1109,3 +1182,16 @@ class DerSetOf(DerObject):
         ordered.sort()
         self.payload = b"".join(ordered)
         return DerObject.encode(self)
+
+
+# The classes for the universal types, by tag (identifier octet)
+_UNIVERSAL_TYPES: dict[int, type[DerObject]] = {
+    0x01: DerBoolean,
+    0x02: DerInteger,
+    0x03: DerBitString,
+    0x04: DerOctetString,
+    0x05: DerNull,
+    0x06: DerObjectId,
+    0x30: DerSequence,
+    0x31: DerSetOf,
+}

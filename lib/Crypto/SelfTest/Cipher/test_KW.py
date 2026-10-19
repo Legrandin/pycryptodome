@@ -77,7 +77,9 @@ class TestKW:
 class TestKW_Wycheproof:
     @pytest.mark.parametrize(
         "vector",
-        load_test_vectors_wycheproof(("Cipher", "wycheproof"), "kw_test.json", "Wycheproof tests for KW"),
+        load_test_vectors_wycheproof(
+            ("Cipher", "wycheproof"), "aes_wrap_test.json", "Wycheproof tests for KW"
+        ),
         ids=wycheproof_id,
     )
     def test_wycheproof(self, vector):
@@ -86,7 +88,9 @@ class TestKW_Wycheproof:
         try:
             cipher.seal(vector.msg)
         except ValueError:
-            if vector.valid:
+            # 8-byte keys are acceptable (RFC 3394), but we follow
+            # NIST SP 800-38F, which does not define their wrapping
+            if vector.valid and "ShortKey" not in vector.flags:
                 raise
             return
 
@@ -132,7 +136,9 @@ class TestKWP:
 class TestKWP_Wycheproof:
     @pytest.mark.parametrize(
         "vector",
-        load_test_vectors_wycheproof(("Cipher", "wycheproof"), "kwp_test.json", "Wycheproof tests for KWP"),
+        load_test_vectors_wycheproof(
+            ("Cipher", "wycheproof"), "aes_kwp_test.json", "Wycheproof tests for KWP"
+        ),
         ids=wycheproof_id,
     )
     def test_wycheproof(self, vector):

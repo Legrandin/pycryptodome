@@ -2873,3 +2873,106 @@ class TestExportPassphrase:
                 key.export_key(format=fmt, protection="PBKDF2WithHMAC-SHA256AndAES256-CBC")
             with pytest.raises(ValueError, match="require a passphrase"):
                 key.export_key(format=fmt, prot_params={"iteration_count": 2000})
+
+
+ALL_CURVES = ["p192", "p224", "p256", "p384", "p521", "ed25519", "ed448", "curve25519", "curve448"]
+
+
+def _pkcs8_v2(key, public_key):
+    """Wrap again a private ECC key as a OneAsymmetricKey v2 (RFC 5958),
+    with the given publicKey"""
+
+    from Crypto.IO import PKCS8
+    from Crypto.Util.asn1 import DerObject
+
+    oid, private_key, params = PKCS8.unwrap(key.export_key(format="DER"))
+    key_params = DerObject().decode(params) if params else None
+    return PKCS8.wrap(private_key, oid, key_params=key_params, public_key=public_key)
+
+
+def _public_key_bytes(key):
+    """The public key as in the subjectPublicKeyInfo"""
+
+    from Crypto.PublicKey import _expand_subject_public_key_info
+
+    return _expand_subject_public_key_info(key.public_key().export_key(format="DER"))[1]
+
+
+@pytest.mark.parametrize("curve", ALL_CURVES)
+class TestImportPKCS8PublicKey:
+    """The publicKey of a OneAsymmetricKey v2 (RFC 5958) must match the private key"""
+
+    def test_match(self, curve):
+        key = ECC.generate(curve=curve)
+        encoded = _pkcs8_v2(key, _public_key_bytes(key))
+        assert ECC.import_key(encoded) == key
+
+    def test_mismatch(self, curve):
+        key = ECC.generate(curve=curve)
+        other = ECC.generate(curve=curve)
+        encoded = _pkcs8_v2(key, _public_key_bytes(other))
+        with pytest.raises(ValueError, match="do not match"):
+            ECC._import_pkcs8(encoded, None)
+        with pytest.raises(ValueError):
+            ECC.import_key(encoded)
+
+    def test_invalid(self, curve):
+        key = ECC.generate(curve=curve)
+        encoded = _pkcs8_v2(key, _public_key_bytes(key)[:-1])
+        with pytest.raises(ValueError):
+            ECC._import_pkcs8(encoded, None)
+
+
+@pytest.mark.parametrize("curve", ["p192", "p256", "p521"])
+def test_import_pkcs8_compressed_public_key(curve):
+    # The publicKey of a NIST curve can be a compressed ECPoint too
+    key = ECC.generate(curve=curve)
+    compressed = key.public_key().export_key(format="SEC1", compress=True)
+    assert ECC.import_key(_pkcs8_v2(key, compressed)) == key
+
+
+def test_import_pkcs8_v2_rfc8410():
+    # RFC 8410, Section 10.3 (with attributes and publicKey)
+    encoded = """-----BEGIN PRIVATE KEY-----
+MHICAQEwBQYDK2VwBCIEINTuctv5E1hK1bbY8fdp+K06/nwoy/HU++CXqI9EdVhC
+oB8wHQYKKoZIhvcNAQkJFDEPDA1DdXJkbGUgQ2hhaXJzgSEAGb9ECWmEzf6FQbrB
+Z9w7lshQhqowtrbLDFw4rXAxZuE=
+-----END PRIVATE KEY-----"""
+    key = ECC.import_key(encoded)
+    assert key.seed == unhexlify("d4ee72dbf913584ad5b6d8f1f769f8ad3afe7c28cbf1d4fbe097a88f44755842")
+    assert _public_key_bytes(key) == unhexlify(
+        "19bf44096984cdfe8541bac167dc3b96c85086aa30b6b6cb0c5c38ad703166e1"
+    )
+
+
+@pytest.mark.parametrize("curve", ["p256", "ed25519", "curve25519"])
+class TestExportKeyParameters:
+    """The keyword parameters of EccKey.export_key()"""
+
+    def test_randfunc(self, curve):
+        # randfunc reaches the PKCS#8 encryption (salt and IV)
+        key = ECC.generate(curve=curve)
+        prot = {"passphrase": "pw", "prot_params": {"iteration_count": 1000}}
+        for fmt in ("PEM", "DER"):
+            out1 = key.export_key(format=fmt, randfunc=lambda n: b"\x01" * n, **prot)
+            out2 = key.export_key(format=fmt, randfunc=lambda n: b"\x01" * n, **prot)
+            assert out1 == out2
+            assert ECC.import_key(out1, "pw") == key
+
+    def test_public_key_defaults(self, curve):
+        # Private-only parameters with their default values are accepted for a public key
+        key = ECC.generate(curve=curve).public_key()
+        out = key.export_key(format="DER", passphrase=None, use_pkcs8=True, protection=None, threads=1)
+        assert out == key.export_key(format="DER")
+        with pytest.raises(ValueError, match="Unexpected parameters"):
+            key.export_key(format="DER", passphrase="pw")
+        with pytest.raises(ValueError, match="Unexpected parameters"):
+            key.export_key(format="DER", randfunc=lambda n: b"\x01" * n)
+
+    def test_unknown_parameter(self, curve):
+        key = ECC.generate(curve=curve)
+        for k in (key, key.public_key()):
+            with pytest.raises(TypeError):
+                k.export_key(format="PEM", unknown=1)
+            with pytest.raises(TypeError):
+                k.export_key()
