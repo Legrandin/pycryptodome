@@ -75,7 +75,11 @@ and it checks that the seed, the expanded private key and the public key match.
 To sign messages and verify signatures with these keys,
 use :mod:`Crypto.Signature.mldsa`.
 
-The implementation is based on `mldsa-native`_ (portable C code only).
+The implementation is based on the portable C code of `mldsa-native`_,
+with the SHA-3 code of PyCryptodome. On CPUs with AVX2 and BMI2,
+it uses a version compiled for those instructions, which computes
+4 SHA-3 states at once: key generation and verification are 30-45% faster,
+signing 15-30%.
 
 .. _`FIPS 204`: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.204.pdf
 .. _`RFC 9881`: https://www.rfc-editor.org/rfc/rfc9881.html

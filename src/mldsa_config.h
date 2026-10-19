@@ -13,7 +13,9 @@
  * (https://github.com/pq-code-package/mldsa-native,
  * commit 834a90d5e846ffa1e1611bd24e160bb2e9b86d35), plus its LICENSE,
  * without any change, except that the native backends were left out:
- * mldsa_native_asm.S, src/native/ and src/fips202/native/.
+ * mldsa_native_asm.S, src/native/ and src/fips202/native/
+ * (but for the 4 files under src/fips202/native that mldsa_native.c includes
+ * when a FIPS 202 backend is used: they are empty without the upstream backends).
  */
 
 #ifndef MLDSA_CONFIG_H
@@ -44,26 +46,20 @@
 #define MLD_CONFIG_NO_RANDOMIZED_API
 
 /*
- * Only the portable C code: the native backends (AVX2, Neon, ...)
- * of mldsa-native are not part of src/mldsa-native.
- * In other words, MLD_CONFIG_USE_NATIVE_BACKEND_ARITH and
- * MLD_CONFIG_USE_NATIVE_BACKEND_FIPS202 must not be set.
+ * Arithmetic: only the portable C code. The native backends of mldsa-native
+ * (AVX2, Neon, ...) are not part of src/mldsa-native, so
+ * MLD_CONFIG_USE_NATIVE_BACKEND_ARITH must not be set.
+ * In the module _mldsa_avx2_bmi2, the same C code is just compiled
+ * for AVX2 and BMI2.
  */
 
 /*
- * SHA-3 / SHAKE
- *
- * For now, we use the FIPS 202 code that comes with mldsa-native
- * (src/mldsa-native/src/fips202).
- *
- * To use the Keccak code of pycryptodome instead (src/keccak.c),
- * define MLD_CONFIG_FIPS202_CUSTOM_HEADER and MLD_CONFIG_FIPS202X4_CUSTOM_HEADER
- * to point to two headers that implement the API in
- * src/mldsa-native/src/fips202/fips202.h and fips202x4.h on top of it
- * (see FIPS202.md in the mldsa-native repository).
- * mldsa-native/mldsa_native.c will then stop including its own FIPS 202 code.
+ * SHA-3 / SHAKE: the sponge of mldsa-native (src/mldsa-native/src/fips202),
+ * on top of the Keccak-f[1600] permutation of pycryptodome (src/keccak.c,
+ * and src/keccak_x4_avx2.c for 4 states at once in _mldsa_avx2_bmi2),
+ * through the FIPS 202 backend interface of mldsa-native.
  */
-/* #define MLD_CONFIG_FIPS202_CUSTOM_HEADER "mldsa_fips202.h" */
-/* #define MLD_CONFIG_FIPS202X4_CUSTOM_HEADER "mldsa_fips202x4.h" */
+#define MLD_CONFIG_USE_NATIVE_BACKEND_FIPS202
+#define MLD_CONFIG_FIPS202_BACKEND_FILE "mldsa_fips202.h"
 
 #endif /* MLDSA_CONFIG_H */

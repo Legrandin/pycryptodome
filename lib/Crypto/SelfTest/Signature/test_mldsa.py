@@ -31,6 +31,17 @@ from Crypto.Util.asn1 import DerObjectId
 
 PARAM_SETS = list(ParamSet)
 
+# Run every test with each C implementation available on this machine
+_implementations = [pytest.param(MLDSA._raw_mldsa_portable_lib, id="portable")]
+if MLDSA._raw_mldsa_avx2_bmi2_lib is not None:
+    _implementations.append(pytest.param(MLDSA._raw_mldsa_avx2_bmi2_lib, id="avx2_bmi2"))
+
+
+@pytest.fixture(autouse=True, params=_implementations)
+def mldsa_implementation(request, monkeypatch):
+    monkeypatch.setattr(MLDSA, "_raw_mldsa_lib", request.param)
+
+
 # The hash functions of the ACVP vectors
 HASHES = {
     "SHA2-224": SHA224.new,

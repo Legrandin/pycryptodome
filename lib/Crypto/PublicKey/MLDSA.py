@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, NamedTuple, Optional, 
 from Crypto.PublicKey import _create_subject_public_key_info, _extract_subject_public_key_info
 from Crypto.Random import get_random_bytes
 from Crypto.Util._bytes import tobytes
+from Crypto.Util._cpu_features import load_avx2_bmi2_lib
 from Crypto.Util._raw_api import (
     c_size_t,
     c_uint8_ptr_len,
@@ -38,9 +39,7 @@ __all__ = [
 Buffer = Union[bytes, bytearray, memoryview]
 RNG = Callable[[int], bytes]
 
-_raw_mldsa_lib = load_pycryptodome_raw_lib(
-    "Crypto.PublicKey._mldsa",
-    """
+_mldsa_cdecl = """
     int mldsa_keypair(unsigned level,
                       uint8_t *pk, size_t pk_len,
                       uint8_t *sk, size_t sk_len,
@@ -61,8 +60,18 @@ _raw_mldsa_lib = load_pycryptodome_raw_lib(
                      const uint8_t *pre, size_t pre_len,
                      const uint8_t *pk, size_t pk_len,
                      int external_mu);
-    """,
-)
+    """
+
+_raw_mldsa_portable_lib = load_pycryptodome_raw_lib("Crypto.PublicKey._mldsa", _mldsa_cdecl)
+
+# The same code compiled for AVX2 and BMI2, with a faster SHA-3 (4 Keccak states at once)
+_raw_mldsa_avx2_bmi2_lib = load_avx2_bmi2_lib("Crypto.PublicKey._mldsa_avx2_bmi2", _mldsa_cdecl)
+
+# The implementation used by all ML-DSA keys
+if _raw_mldsa_avx2_bmi2_lib is not None:
+    _raw_mldsa_lib = _raw_mldsa_avx2_bmi2_lib
+else:
+    _raw_mldsa_lib = _raw_mldsa_portable_lib
 
 # Error code returned by the C functions for an invalid private key or signature
 _ERR_VALUE = 14

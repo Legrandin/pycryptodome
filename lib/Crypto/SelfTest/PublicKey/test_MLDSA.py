@@ -6,6 +6,7 @@ import errno
 import json
 import os
 import pickle
+import random
 from binascii import unhexlify
 
 import pytest
@@ -26,6 +27,17 @@ except ImportError:
 
 
 PARAM_SETS = list(ParamSet)
+
+# Run every test with each C implementation available on this machine
+_implementations = [pytest.param(MLDSA._raw_mldsa_portable_lib, id="portable")]
+if MLDSA._raw_mldsa_avx2_bmi2_lib is not None:
+    _implementations.append(pytest.param(MLDSA._raw_mldsa_avx2_bmi2_lib, id="avx2_bmi2"))
+
+
+@pytest.fixture(autouse=True, params=_implementations)
+def mldsa_implementation(request, monkeypatch):
+    monkeypatch.setattr(MLDSA, "_raw_mldsa_lib", request.param)
+
 
 # Sizes of the public key, of the expanded private key and of the signature
 SIZES = {
@@ -519,3 +531,40 @@ class TestACVP:
         signature = unhexlify(test["signature"])
         result = key._verify(msg, signature, prefix=prefix, external_mu=external_mu)
         assert result == test["testPassed"], test["reason"]
+
+
+@pytest.mark.skipif(MLDSA._raw_mldsa_avx2_bmi2_lib is None, reason="AVX2 and BMI2 not available")
+class TestImplementations:
+    """The test vectors exercise the implementations one at a time.
+    Check that both (portable C, and AVX2/BMI2) return the same output on random inputs."""
+
+    def _run(self, param_set, seed):
+        rng = random.Random(seed)
+
+        def rand(n):
+            return bytes(rng.getrandbits(8) for _ in range(n))
+
+        out = []
+        for i in range(10):
+            key = MLDSA.construct(param_set=param_set, seed=rand(32))
+            out += [key.pk, key.sk, MLDSA.construct(param_set=param_set, sk=key.sk).pk]
+            msg = rand(rng.choice([0, 1, 135, 136, 137, 1000]))
+            prefix = pure_prefix(rand(rng.randint(0, 255)))
+            rnd = rand(32) if i % 2 else ZERO_RND
+            sig = key._sign(msg, rnd, prefix=prefix)
+            out.append(sig)
+            out.append(key._verify(msg, sig, prefix=prefix))
+            bad = bytearray(sig)
+            bad[rng.randrange(len(bad))] ^= 1
+            out.append(key._verify(msg, bad, prefix=prefix))
+            mu = rand(64)
+            out.append(key._sign(mu, rnd, external_mu=True))
+        return out
+
+    @pytest.mark.parametrize("param_set", PARAM_SETS)
+    def test_same_output(self, param_set, monkeypatch):
+        results = []
+        for lib in (MLDSA._raw_mldsa_portable_lib, MLDSA._raw_mldsa_avx2_bmi2_lib):
+            monkeypatch.setattr(MLDSA, "_raw_mldsa_lib", lib)
+            results.append(self._run(param_set, param_set.value))
+        assert results[0] == results[1]

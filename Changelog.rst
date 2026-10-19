@@ -12,7 +12,9 @@ New features
   it is 1.5x to 3.4x faster than ``new()`` followed by ``digest()``.
 * New module ``Crypto.PublicKey.MLDSA``, for ML-DSA keys (FIPS 204).
   It is based on the portable C code of `mldsa-native <https://github.com/pq-code-package/mldsa-native>`_
-  (v2.0.0).
+  (v2.0.0), with the Keccak code of PyCryptodome. On CPUs with AVX2 and BMI2, a version
+  compiled for them and with 4-way SHA-3 is used: compared to the portable version,
+  key generation and verification are 30-45% faster, signing 15-30%.
 * New module ``Crypto.Signature.mldsa``, for ML-DSA and HashML-DSA signatures (FIPS 204),
   hedged (default) or deterministic, with an optional context.
   The new ``MLDSAMuHash`` computes the message representative mu (external mu),

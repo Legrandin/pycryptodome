@@ -12,6 +12,10 @@
  *
  * Each function takes the parameter set (44, 65 or 87) as first argument.
  * The randomness (key seed and signing nonce) is always provided by the caller.
+ *
+ * SHA-3 and SHAKE use the Keccak permutation of pycryptodome (mldsa_fips202.h).
+ * mldsa_avx2_bmi2.c compiles this file again for AVX2 and BMI2
+ * (module _mldsa_avx2_bmi2), with the 4-way AVX2 Keccak.
  */
 
 #define MLD_CONFIG_FILE "mldsa_config.h"
@@ -41,11 +45,15 @@
 #define MLD_CONFIG_CONSTANTS_ONLY
 #include "mldsa-native/mldsa_native.h"
 
-/* After mldsa-native, so that its macros don't leak into it */
+/* (common.h was already included by keccak.c, via mldsa_fips202.h) */
 #include "common.h"
 #include "errors.h"
 
-FAKE_INIT(mldsa)
+/* mldsa_avx2_bmi2.c includes this file with another module name */
+#ifndef MLDSA_MODULE
+#define MLDSA_MODULE mldsa
+#endif
+FAKE_INIT(MLDSA_MODULE)
 
 typedef struct {
     size_t pk_len;
