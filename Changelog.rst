@@ -33,7 +33,7 @@ Resolved issues
   ``OneAsymmetricKey`` version 2 (RFC 5958), if present, matches the private key.
   Before, it was ignored.
 
-4.0.1(17 October 2026)
+4.0.1 (17 October 2026)
 ++++++++++++++++++++++++++
 
 New features
