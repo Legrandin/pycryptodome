@@ -21,6 +21,9 @@ New features
   version 2 (RFC 5958) with the field ``publicKey``.
   ``Crypto.IO.PKCS8.unwrap()`` returns an ``UnwrappedKey``: still a tuple ``(oid, private_key, params)``,
   with the same items as attributes, plus ``public_key`` (the field ``publicKey``, if present).
+* The scalar Keccak permutation (used by SHA-3, SHAKE, cSHAKE, KMAC, TupleHash, TurboSHAKE
+  and KangarooTwelve) processes the state one plane at a time, two rounds per iteration,
+  which needs fewer registers: SHA-3 and SHAKE are 5-10% faster.
 
 Resolved issues
 ---------------
