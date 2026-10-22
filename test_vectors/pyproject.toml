@@ -1,0 +1,35 @@
+[build-system]
+# 77: license as an SPDX expression (PEP 639)
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pycryptodome-test-vectors"
+dynamic = ["version"]
+description = "Test vectors for PyCryptodome"
+readme = {content-type = "text/x-rst", text = """
+This package contains an extensive set of test vectors
+to verify the PyCryptodome cryptographic library.
+
+PyCryptodome can be installed with the ``pycryptodome``
+package (``Crypto`` namespace).
+
+For more information, see the `homepage`_.
+
+.. _`homepage`: https://www.pycryptodome.org
+"""}
+authors = [{name = "Helder Eijs", email = "helderijs@gmail.com"}]
+# See LICENSE.rst: the Wycheproof test vectors are under Apache-2.0
+license = "BSD-2-Clause AND Apache-2.0"
+license-files = ["LICENSE.rst"]
+
+[project.urls]
+Homepage = "https://www.pycryptodome.org"
+Source = "https://github.com/Legrandin/pycryptodome/"
+
+[tool.setuptools.packages.find]
+# The subdirectories with the test vectors are found as namespace packages
+include = ["pycryptodome_test_vectors*"]
+
+[tool.setuptools.dynamic]
+version = {attr = "pycryptodome_test_vectors.__version__"}

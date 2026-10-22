@@ -1,5 +1,4 @@
 include MANIFEST.in
-include setup.py
 include LICENSE.rst
 recursive-include src *.h *.c *.cpp
 graft pycryptodome_test_vectors
