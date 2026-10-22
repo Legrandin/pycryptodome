@@ -10,7 +10,6 @@ without relying only on an algorithm that is still relatively new
 The combination is selected by the ``param_set`` argument, one of the members of
 the enum :class:`Crypto.PublicKey.Hybrid.ParamSet`
 (also available as constants at the module level, for instance ``Hybrid.MLKEM768_X25519``).
-The value of each member is the name of its combination (for instance, ``'MLKEM768-X25519'``).
 The parameter set also decides what the key can be used for.
 
 Hybrid KEMs (ML-KEM + ECDH)
@@ -34,8 +33,9 @@ are not supported yet, as their definition may still change.
 A private key is a **seed** of 32 random bytes:
 the ML-KEM key and the ECDH key are both derived from it.
 The two private keys are never used on their own, or with another algorithm.
-The public key is the ML-KEM public key, followed by the X25519 public key (32 bytes).
-The shared secret is always 32 bytes long.
+The public key is the ML-KEM public key, concatenated to the X25519 public key (32 bytes).
+
+The shared secret, result of the key agreeemnt, is always 32 bytes long.
 
 With this module you can generate a new hybrid KEM key::
 
