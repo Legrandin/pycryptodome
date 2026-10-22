@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import struct
 from enum import IntEnum
 from types import ModuleType
-from typing import Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 from Crypto.Cipher import AES, ChaCha20_Poly1305
 from Crypto.Hash import SHA256, SHA384, SHA512
@@ -13,6 +15,10 @@ from Crypto.Util.strxor import strxor
 
 from .DH import import_x448_public_key, import_x25519_public_key, key_agreement
 from .KDF import _HKDF_expand, _HKDF_extract
+
+if TYPE_CHECKING:
+    from Crypto.Cipher._mode_gcm import GcmMode
+    from Crypto.Cipher.ChaCha20_Poly1305 import ChaCha20Poly1305Cipher
 
 
 class MODE(IntEnum):
@@ -76,17 +82,19 @@ def _kem_config(key: KemKey) -> tuple[int, int, ModuleType]:
         raise ValueError(f"Curve {key.curve} is not supported by HPKE") from ke
 
 
-def _labeled_extract(salt: bytes, label: bytes, ikm: bytes, suite_id: bytes, hashmod: ModuleType):
+def _labeled_extract(salt: bytes, label: bytes, ikm: bytes, suite_id: bytes, hashmod: ModuleType) -> bytes:
     labeled_ikm = b"HPKE-v1" + suite_id + label + ikm
     return _HKDF_extract(salt, labeled_ikm, hashmod)
 
 
-def _labeled_expand(prk: bytes, label: bytes, info: bytes, L: int, suite_id: bytes, hashmod: ModuleType):
+def _labeled_expand(
+    prk: bytes, label: bytes, info: bytes, L: int, suite_id: bytes, hashmod: ModuleType
+) -> bytes:
     labeled_info = struct.pack(">H", L) + b"HPKE-v1" + suite_id + label + info
     return _HKDF_expand(prk, labeled_info, L, hashmod)
 
 
-def _extract_and_expand(dh: bytes, kem_context: bytes, suite_id: bytes, hashmod: ModuleType):
+def _extract_and_expand(dh: bytes, kem_context: bytes, suite_id: bytes, hashmod: ModuleType) -> bytes:
     Nsecret = hashmod.digest_size
 
     eae_prk = _labeled_extract(b"", b"eae_prk", dh, suite_id, hashmod)
@@ -105,7 +113,7 @@ class HPKE_Cipher:
         info: bytes,
         aead_id: AEAD,
         mode: MODE,
-    ):
+    ) -> None:
         self.enc: bytes = b"" if enc is None else enc
         """The encapsulated session key."""
 
@@ -153,7 +161,7 @@ class HPKE_Cipher:
         hashmod: ModuleType,
         sender_key: Optional[EccKey] = None,
         eph_key: Optional[EccKey] = None,
-    ):
+    ) -> tuple[bytes, bytes]:
         assert (sender_key is None) or sender_key.has_private()
         assert (eph_key is None) or eph_key.has_private()
 
@@ -170,7 +178,12 @@ class HPKE_Cipher:
 
         suite_id = b"KEM" + struct.pack(">H", kem_id)
 
-        def kdf(dh, kem_context=kem_context, suite_id=suite_id, hashmod=hashmod):
+        def kdf(
+            dh: bytes,
+            kem_context: bytes = kem_context,
+            suite_id: bytes = suite_id,
+            hashmod: ModuleType = hashmod,
+        ) -> bytes:
             return _extract_and_expand(dh, kem_context, suite_id, hashmod)
 
         shared_secret = key_agreement(eph_priv=eph_key, static_pub=receiver_key, kdf=kdf, **extra_param)
@@ -183,7 +196,7 @@ class HPKE_Cipher:
         kem_id: int,
         hashmod: ModuleType,
         sender_key: Optional[EccKey] = None,
-    ):
+    ) -> bytes:
         assert receiver_key.has_private()
 
         try:
@@ -205,7 +218,12 @@ class HPKE_Cipher:
 
         suite_id = b"KEM" + struct.pack(">H", kem_id)
 
-        def kdf(dh, kem_context=kem_context, suite_id=suite_id, hashmod=hashmod):
+        def kdf(
+            dh: bytes,
+            kem_context: bytes = kem_context,
+            suite_id: bytes = suite_id,
+            hashmod: ModuleType = hashmod,
+        ) -> bytes:
             return _extract_and_expand(dh, kem_context, suite_id, hashmod)
 
         shared_secret = key_agreement(eph_pub=pkE, static_priv=receiver_key, kdf=kdf, **extra_param)
@@ -215,13 +233,13 @@ class HPKE_Cipher:
     def _encap_pq(
         receiver_key: Union[MLKEMKey, HybridKey],
         randomness: Optional[bytes] = None,
-    ):
+    ) -> tuple[bytes, bytes]:
         # Encap of ML-KEM and of the hybrid KEMs (draft-ietf-hpke-pq, Sections 3 and 4):
         # the shared secret of the KEM is used directly
         return receiver_key._encaps(randomness)
 
     @staticmethod
-    def _decap_pq(enc: bytes, receiver_key: Union[MLKEMKey, HybridKey]):
+    def _decap_pq(enc: bytes, receiver_key: Union[MLKEMKey, HybridKey]) -> bytes:
         assert receiver_key.has_private()
 
         try:
@@ -230,7 +248,7 @@ class HPKE_Cipher:
             raise DeserializeError("'enc' is not a valid encapsulated HPKE key") from ve
 
     @staticmethod
-    def _verify_psk_inputs(mode: MODE, psk_pair: tuple[bytes, bytes]):
+    def _verify_psk_inputs(mode: MODE, psk_pair: tuple[bytes, bytes]) -> None:
         psk_id, psk = psk_pair
 
         if (psk == b"") ^ (psk_id == b""):
@@ -245,7 +263,9 @@ class HPKE_Cipher:
             if mode in (MODE.BASE, MODE.AUTH):
                 raise ValueError("PSK is not compatible with this mode")
 
-    def _key_schedule(self, shared_secret: bytes, info: bytes, psk_id: bytes, psk: bytes):
+    def _key_schedule(
+        self, shared_secret: bytes, info: bytes, psk_id: bytes, psk: bytes
+    ) -> tuple[bytes, bytes, bytes]:
         psk_id_hash = _labeled_extract(b"", b"psk_id_hash", psk_id, self._suite_id, self._hashmod)
 
         info_hash = _labeled_extract(b"", b"info_hash", info, self._suite_id, self._hashmod)
@@ -272,8 +292,9 @@ class HPKE_Cipher:
 
         return key, base_nonce, exporter_secret
 
-    def _new_cipher(self):
+    def _new_cipher(self) -> Union[GcmMode, ChaCha20Poly1305Cipher]:
         nonce = strxor(self._base_nonce, self._sequence.to_bytes(self._Nn, "big"))
+        cipher: Union[GcmMode, ChaCha20Poly1305Cipher]
         if self._aead_id in (AEAD.AES128_GCM, AEAD.AES256_GCM):
             cipher = AES.new(self._key, AES.MODE_GCM, nonce=nonce, mac_len=self._Nt)
         elif self._aead_id == AEAD.CHACHA20_POLY1305:
@@ -285,7 +306,7 @@ class HPKE_Cipher:
         self._sequence += 1
         return cipher
 
-    def seal(self, plaintext: bytes, auth_data: Optional[bytes] = None):
+    def seal(self, plaintext: bytes, auth_data: Optional[bytes] = None) -> bytes:
         """Encrypt and authenticate a message.
 
         This method can be invoked multiple times
@@ -312,7 +333,7 @@ class HPKE_Cipher:
         ct, tag = cipher.encrypt_and_digest(plaintext)
         return ct + tag
 
-    def unseal(self, ciphertext: bytes, auth_data: Optional[bytes] = None):
+    def unseal(self, ciphertext: bytes, auth_data: Optional[bytes] = None) -> bytes:
         """Decrypt a message and validate its authenticity.
 
         This method can be invoked multiple times
