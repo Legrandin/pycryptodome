@@ -37,10 +37,10 @@ class TestMLKEMKey:
     @pytest.mark.parametrize("protocol", range(pickle.HIGHEST_PROTOCOL + 1))
     def test_pickle(self, protocol):
         key = MLKEM.generate(param_set=MLKEM.ML_KEM_512)
-        key_sk = MLKEM.construct(param_set=MLKEM.ML_KEM_512, sk=key.sk)
+        key_dk = MLKEM.construct(param_set=MLKEM.ML_KEM_512, expanded_dk=key.expanded_dk)
 
         # Private keys cannot be pickled (nor copied)
-        for private_key in (key, key_sk):
+        for private_key in (key, key_dk):
             with pytest.raises(pickle.PicklingError):
                 pickle.dumps(private_key, protocol)
             with pytest.raises(pickle.PicklingError):
@@ -58,18 +58,18 @@ class TestMLKEMKey:
     @pytest.mark.parametrize("param_set", PARAM_SETS)
     def test_generate(self, param_set):
         key = MLKEM.generate(param_set=param_set)
-        pk_len, sk_len, _ = SIZES[param_set]
+        ek_len, dk_len, _ = SIZES[param_set]
 
         assert isinstance(key, MLKEMKey)
         assert key.param_set == param_set
         assert key.has_private()
         assert len(key.seed) == 64
-        assert len(key.sk) == sk_len
-        assert len(key.pk) == pk_len
+        assert len(key.expanded_dk) == dk_len
+        assert len(key.ek) == ek_len
 
         key2 = MLKEM.generate(param_set=param_set)
         assert key2.seed != key.seed
-        assert key2.pk != key.pk
+        assert key2.ek != key.ek
 
     def test_generate_randfunc(self):
         seeds = []
@@ -103,37 +103,37 @@ class TestMLKEMKey:
         # From the seed
         key2 = MLKEM.construct(param_set=param_set, seed=key.seed)
         assert key2 == key
-        assert key2.sk == key.sk
+        assert key2.expanded_dk == key.expanded_dk
         assert key2.seed == key.seed
 
         # From the expanded private key: no seed
-        key3 = MLKEM.construct(param_set=param_set, sk=key.sk)
+        key3 = MLKEM.construct(param_set=param_set, expanded_dk=key.expanded_dk)
         assert key3 == key
-        assert key3.pk == key.pk
+        assert key3.ek == key.ek
         with pytest.raises(ValueError):
             _ = key3.seed
 
         # Buffers other than bytes
         assert MLKEM.construct(param_set=param_set, seed=bytearray(key.seed)) == key
-        assert MLKEM.construct(param_set=param_set, sk=memoryview(key.sk)) == key
+        assert MLKEM.construct(param_set=param_set, expanded_dk=memoryview(key.expanded_dk)) == key
 
         # All together
-        key4 = MLKEM.construct(param_set=param_set, seed=key.seed, sk=key.sk, pk=key.pk)
+        key4 = MLKEM.construct(param_set=param_set, seed=key.seed, expanded_dk=key.expanded_dk, ek=key.ek)
         assert key4 == key
 
         # Public key
-        pub = MLKEM.construct(param_set=param_set, pk=key.pk)
+        pub = MLKEM.construct(param_set=param_set, ek=key.ek)
         assert pub == key.public_key()
         assert not pub.has_private()
         assert pub != key
         with pytest.raises(ValueError):
-            _ = pub.sk
+            _ = pub.expanded_dk
         with pytest.raises(ValueError):
             _ = pub.seed
 
     def test_construct_errors(self):
         ps = ParamSet.ML_KEM_768
-        _, sk_len, _ = SIZES[ps]
+        _, dk_len, _ = SIZES[ps]
         key = MLKEM.generate(param_set=ps)
         other = MLKEM.generate(param_set=ps)
 
@@ -144,38 +144,38 @@ class TestMLKEMKey:
         for bad_seed in (bytes(63), bytes(65), bytes(32)):
             with pytest.raises(ValueError):
                 MLKEM.construct(param_set=ps, seed=bad_seed)
-        for bad_sk in (key.sk[:-1], key.sk + b"\x00"):
+        for bad_dk in (key.expanded_dk[:-1], key.expanded_dk + b"\x00"):
             with pytest.raises(ValueError):
-                MLKEM.construct(param_set=ps, sk=bad_sk)
-        for bad_pk in (key.pk[:-1], key.pk + b"\x00"):
+                MLKEM.construct(param_set=ps, expanded_dk=bad_dk)
+        for bad_ek in (key.ek[:-1], key.ek + b"\x00"):
             with pytest.raises(ValueError):
-                MLKEM.construct(param_set=ps, pk=bad_pk)
+                MLKEM.construct(param_set=ps, ek=bad_ek)
 
         # Of another parameter set
         with pytest.raises(ValueError):
-            MLKEM.construct(param_set=ParamSet.ML_KEM_1024, pk=key.pk)
+            MLKEM.construct(param_set=ParamSet.ML_KEM_1024, ek=key.ek)
 
         # Mismatching components
         with pytest.raises(ValueError):
-            MLKEM.construct(param_set=ps, seed=key.seed, sk=other.sk)
+            MLKEM.construct(param_set=ps, seed=key.seed, expanded_dk=other.expanded_dk)
         with pytest.raises(ValueError):
-            MLKEM.construct(param_set=ps, seed=key.seed, pk=other.pk)
+            MLKEM.construct(param_set=ps, seed=key.seed, ek=other.ek)
         with pytest.raises(ValueError):
-            MLKEM.construct(param_set=ps, sk=key.sk, pk=other.pk)
+            MLKEM.construct(param_set=ps, expanded_dk=key.expanded_dk, ek=other.ek)
 
         # The public key fails the modulus check (a coefficient equal to q = 3329)
-        bad_pk = bytearray(key.pk)
-        bad_pk[0] = 0x01
-        bad_pk[1] = (bad_pk[1] & 0xF0) | 0x0D
+        bad_ek = bytearray(key.ek)
+        bad_ek[0] = 0x01
+        bad_ek[1] = (bad_ek[1] & 0xF0) | 0x0D
         with pytest.raises(ValueError):
-            MLKEM.construct(param_set=ps, pk=bad_pk)
+            MLKEM.construct(param_set=ps, ek=bad_ek)
 
         # The expanded private key fails the hash check
-        for offset in (384 * 3, sk_len - 64):
-            bad_sk = bytearray(key.sk)
-            bad_sk[offset] ^= 1
+        for offset in (384 * 3, dk_len - 64):
+            bad_dk = bytearray(key.expanded_dk)
+            bad_dk[offset] ^= 1
             with pytest.raises(ValueError):
-                MLKEM.construct(param_set=ps, sk=bad_sk)
+                MLKEM.construct(param_set=ps, expanded_dk=bad_dk)
 
     def test_eq_repr(self):
         key = MLKEM.generate(param_set=ParamSet.ML_KEM_512)
@@ -185,7 +185,7 @@ class TestMLKEMKey:
         assert key != other
         assert key != key.public_key()
         assert key.public_key() == key.public_key()
-        assert key != key.pk
+        assert key != key.ek
         assert repr(key) == "MLKEMKey(param_set=ParamSet.ML_KEM_512, private=True)"
         assert repr(key.public_key()) == "MLKEMKey(param_set=ParamSet.ML_KEM_512, private=False)"
 
@@ -199,7 +199,7 @@ class TestMLKEMKey:
         assert len(ct) == ct_len
         assert key._decaps(ct) == ss
         # Also from the expanded private key
-        assert MLKEM.construct(param_set=param_set, sk=key.sk)._decaps(ct) == ss
+        assert MLKEM.construct(param_set=param_set, expanded_dk=key.expanded_dk)._decaps(ct) == ss
 
         # The randomness is new each time
         ss2, ct2 = key.public_key()._encaps()
@@ -269,14 +269,14 @@ class TestWycheproof:
     def test_keygen(self, tv):
         assert tv.valid
         key = MLKEM.construct(param_set=tv.param_set, seed=tv.key)
-        assert key.pk == tv.ek
-        assert key.sk == tv.dk
+        assert key.ek == tv.ek
+        assert key.expanded_dk == tv.dk
 
     @pytest.mark.parametrize("tv", load_wycheproof("", "seed"), ids=wycheproof_id)
     def test_decaps(self, tv):
         try:
             key = MLKEM.construct(param_set=tv.param_set, seed=tv.key)
-            assert key.pk == tv.ek
+            assert key.ek == tv.ek
             shared_secret = key._decaps(tv.c)
         except ValueError:
             assert not tv.valid
@@ -287,19 +287,19 @@ class TestWycheproof:
     @pytest.mark.parametrize("tv", load_wycheproof("semi_expanded_decaps_", "dk"), ids=wycheproof_id)
     def test_decaps_expanded(self, tv):
         try:
-            key = MLKEM.construct(param_set=tv.param_set, sk=tv.key)
+            key = MLKEM.construct(param_set=tv.param_set, expanded_dk=tv.key)
             shared_secret = key._decaps(tv.c)
         except ValueError:
             assert not tv.valid
             return
         assert tv.valid
-        assert key.pk == tv.ek
+        assert key.ek == tv.ek
         assert shared_secret == tv.K
 
     @pytest.mark.parametrize("tv", load_wycheproof("encaps_", "ek"), ids=wycheproof_id)
     def test_encaps(self, tv):
         try:
-            key = MLKEM.construct(param_set=tv.param_set, pk=tv.key)
+            key = MLKEM.construct(param_set=tv.param_set, ek=tv.key)
         except ValueError:
             assert not tv.valid
             return
@@ -324,7 +324,7 @@ class TestImplementations:
         out = []
         for _ in range(10):
             key = MLKEM.construct(param_set=param_set, seed=rand(64))
-            out += [key.pk, key.sk]
+            out += [key.ek, key.expanded_dk]
             ss, ct = key._encaps(rand(32))
             out += [ss, ct, key._decaps(ct), key._decaps(rand(ct_len))]
         return out

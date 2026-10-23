@@ -13,7 +13,8 @@ New features
   that version is 20-40% faster.
 * New module ``Crypto.PublicKey.Hybrid``, for hybrid keys (post-quantum + traditional).
   It supports the hybrid KEM MLKEM768-X25519 (X-Wing), which combines ML-KEM-768 and X25519
-  (draft-irtf-cfrg-concrete-hybrid-kems).
+  (draft-irtf-cfrg-concrete-hybrid-kems). For now, hybrid keys can only be generated
+  and used with HPKE: they cannot be exported or imported.
 * ``Crypto.Protocol.HPKE`` accepts ML-KEM keys and X-Wing keys,
   for post-quantum HPKE (draft-ietf-hpke-pq), in the Base and PSK modes.
 

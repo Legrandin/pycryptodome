@@ -31,19 +31,30 @@ A private key can be represented in two ways:
 * the **expanded private key**: the decapsulation key defined in FIPS 203
   (Algorithm 16). It cannot be converted back to the seed.
 
+The names used in this module follow the specifications,
+but avoid *dk* on its own, because the specifications disagree on its meaning:
+
+.. csv-table::
+   :header: This module, FIPS 203, `draft-ietf-hpke-pq`_
+   :widths: 30, 35, 35
+
+   "``seed``", ":math:`d \| z`", "``dk``"
+   "``expanded_dk``", "``dk``", "``expanded_dk``"
+   "``ek``", "``ek``", "``ek``"
+
 With this module you can generate a new ML-KEM key::
 
     >>> from Crypto.PublicKey import MLKEM
     >>>
     >>> key = MLKEM.generate(param_set=MLKEM.ML_KEM_768)
     >>> seed = key.seed       # 64 bytes, keep it secret
-    >>> pk = key.pk           # 1184 bytes
+    >>> ek = key.ek           # 1184 bytes, the public key
 
 and rebuild it later from its seed (or from the expanded private key),
 or get the public key::
 
     >>> key = MLKEM.construct(param_set=MLKEM.ML_KEM_768, seed=seed)
-    >>> pub_key = MLKEM.construct(param_set=MLKEM.ML_KEM_768, pk=pk)
+    >>> pub_key = MLKEM.construct(param_set=MLKEM.ML_KEM_768, ek=ek)
     >>> pub_key == key.public_key()
     True
 
@@ -59,6 +70,7 @@ The implementation is based on `mlkem-native`_.
 
 .. _`FIPS 203`: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.pdf
 .. _mlkem-native: https://github.com/pq-code-package/mlkem-native
+.. _`draft-ietf-hpke-pq`: https://datatracker.ietf.org/doc/draft-ietf-hpke-pq/
 
 .. automodule:: Crypto.PublicKey.MLKEM
     :members:

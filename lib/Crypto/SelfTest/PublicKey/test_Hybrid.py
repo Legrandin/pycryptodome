@@ -62,12 +62,12 @@ class TestHybridKey:
         assert isinstance(key, HybridKey)
         assert key.param_set == param_set
         assert key.has_private()
-        assert len(key.seed) == 32
-        assert len(key.pk) == pk_len
+        assert len(key._seed) == 32
+        assert len(key._pk) == pk_len
 
         key2 = Hybrid.generate(param_set=param_set)
-        assert key2.seed != key.seed
-        assert key2.pk != key.pk
+        assert key2._seed != key._seed
+        assert key2._pk != key._pk
 
     def test_generate_randfunc(self):
         seeds = []
@@ -78,8 +78,8 @@ class TestHybridKey:
 
         key = Hybrid.generate(param_set=ParamSet.MLKEM768_X25519, randfunc=randfunc)
         assert seeds == [b"\xaa" * 32]
-        assert key.seed == seeds[0]
-        assert key == Hybrid.construct(param_set=ParamSet.MLKEM768_X25519, seed=seeds[0])
+        assert key._seed == seeds[0]
+        assert key == Hybrid._construct(param_set=ParamSet.MLKEM768_X25519, seed=seeds[0])
 
     def test_param_set_enum(self):
         assert [ps.value for ps in ParamSet] == ["MLKEM768-X25519"]
@@ -89,25 +89,24 @@ class TestHybridKey:
             with pytest.raises(TypeError):
                 Hybrid.generate(param_set=bad)
             with pytest.raises(TypeError):
-                Hybrid.construct(param_set=bad, seed=bytes(32))
+                Hybrid._construct(param_set=bad, seed=bytes(32))
 
     @pytest.mark.parametrize("param_set", PARAM_SETS)
     def test_construct(self, param_set):
         key = Hybrid.generate(param_set=param_set)
 
-        key2 = Hybrid.construct(param_set=param_set, seed=key.seed)
+        key2 = Hybrid._construct(param_set=param_set, seed=key._seed)
         assert key2 == key
-        assert key2.pk == key.pk
-        assert Hybrid.construct(param_set=param_set, seed=bytearray(key.seed)) == key
-        assert Hybrid.construct(param_set=param_set, seed=key.seed, pk=key.pk) == key
+        assert key2._pk == key._pk
+        assert Hybrid._construct(param_set=param_set, seed=bytearray(key._seed)) == key
+        assert Hybrid._construct(param_set=param_set, seed=key._seed, pk=key._pk) == key
 
-        pub = Hybrid.construct(param_set=param_set, pk=key.pk)
+        pub = Hybrid._construct(param_set=param_set, pk=key._pk)
         assert pub == key.public_key()
         assert not pub.has_private()
         assert pub != key
-        assert Hybrid.construct(param_set=param_set, pk=memoryview(key.pk)) == pub
-        with pytest.raises(ValueError):
-            _ = pub.seed
+        assert Hybrid._construct(param_set=param_set, pk=memoryview(key._pk)) == pub
+        assert pub._seed is None
 
     @pytest.mark.parametrize("param_set", PARAM_SETS)
     def test_construct_errors(self, param_set):
@@ -116,44 +115,44 @@ class TestHybridKey:
         other = Hybrid.generate(param_set=param_set)
 
         with pytest.raises(ValueError):
-            Hybrid.construct(param_set=param_set)
+            Hybrid._construct(param_set=param_set)
         for bad_seed in (bytes(31), bytes(33), bytes(64)):
             with pytest.raises(ValueError):
-                Hybrid.construct(param_set=param_set, seed=bad_seed)
-        for bad_pk in (key.pk[:-1], key.pk + b"\x00"):
+                Hybrid._construct(param_set=param_set, seed=bad_seed)
+        for bad_pk in (key._pk[:-1], key._pk + b"\x00"):
             with pytest.raises(ValueError):
-                Hybrid.construct(param_set=param_set, pk=bad_pk)
+                Hybrid._construct(param_set=param_set, pk=bad_pk)
         with pytest.raises(ValueError):
-            Hybrid.construct(param_set=param_set, seed=key.seed, pk=other.pk)
+            Hybrid._construct(param_set=param_set, seed=key._seed, pk=other._pk)
 
         # The ML-KEM public key fails the modulus check
-        bad_pk = bytearray(key.pk)
+        bad_pk = bytearray(key._pk)
         bad_pk[0] = 0x01
         bad_pk[1] = (bad_pk[1] & 0xF0) | 0x0D
         with pytest.raises(ValueError):
-            Hybrid.construct(param_set=param_set, pk=bad_pk)
+            Hybrid._construct(param_set=param_set, pk=bad_pk)
 
         # The ECDH public key is not valid
-        ek_pq = key.pk[:-elem_len]
+        ek_pq = key._pk[:-elem_len]
         if param_set == ParamSet.MLKEM768_X25519:
             bad_points = [bytes(32), b"\x01" + bytes(31)]  # low order
         else:
             # Not on the curve, and not an uncompressed point
-            point = bytearray(key.pk[-elem_len:])
+            point = bytearray(key._pk[-elem_len:])
             point[-1] ^= 1
-            bad_points = [bytes(point), b"\x05" + key.pk[-elem_len + 1 :], bytes(elem_len)]
+            bad_points = [bytes(point), b"\x05" + key._pk[-elem_len + 1 :], bytes(elem_len)]
         for bad_point in bad_points:
             with pytest.raises(ValueError):
-                Hybrid.construct(param_set=param_set, pk=ek_pq + bad_point)
+                Hybrid._construct(param_set=param_set, pk=ek_pq + bad_point)
 
     def test_eq_repr(self):
         key = Hybrid.generate(param_set=ParamSet.MLKEM768_X25519)
         other = Hybrid.generate(param_set=ParamSet.MLKEM768_X25519)
 
-        assert key == Hybrid.construct(param_set=ParamSet.MLKEM768_X25519, seed=key.seed)
+        assert key == Hybrid._construct(param_set=ParamSet.MLKEM768_X25519, seed=key._seed)
         assert key != other
         assert key != key.public_key()
-        assert key != key.pk
+        assert key != key._pk
         assert repr(key) == "HybridKey(param_set=ParamSet.MLKEM768_X25519, private=True)"
         assert repr(key.public_key()) == "HybridKey(param_set=ParamSet.MLKEM768_X25519, private=False)"
 
@@ -211,11 +210,11 @@ class TestHybridKey:
 
         key = Hybrid.generate(param_set=ParamSet.MLKEM768_X25519)
 
-        expanded = SHAKE256.new(key.seed).read(96)
+        expanded = SHAKE256.new(key._seed).read(96)
         pq = MLKEM.construct(param_set=MLKEM.ML_KEM_768, seed=expanded[:64])
         t = import_x25519_private_key(expanded[64:])
         pk_t = t.public_key().export_key(format="raw")
-        assert key.pk == pq.pk + pk_t
+        assert key._pk == pq.ek + pk_t
 
         rnd = bytes(range(64))
         ss, ct = key._encaps(rnd)
@@ -261,15 +260,15 @@ class TestCFRGVectors:
     def test_vector(self, param_set, test):
         mlkem_ps, _, _ = CONFIGS[param_set]
 
-        key = Hybrid.construct(param_set=param_set, seed=unhexlify(test["seed"]))
-        assert key.seed == unhexlify(test["decapsulation_key"])
-        assert key.pk == unhexlify(test["encapsulation_key"])
+        key = Hybrid._construct(param_set=param_set, seed=unhexlify(test["seed"]))
+        assert key._seed == unhexlify(test["decapsulation_key"])
+        assert key._pk == unhexlify(test["encapsulation_key"])
 
         # The keys of the components
         pq = MLKEM.construct(param_set=mlkem_ps, seed=unhexlify(test["decapsulation_key_pq"]))
-        assert key.pk.startswith(pq.pk)
+        assert key._pk.startswith(pq.ek)
         t = import_x25519_private_key(unhexlify(test["decapsulation_key_t"]))
-        assert key.pk.endswith(t.public_key().export_key(format="raw"))
+        assert key._pk.endswith(t.public_key().export_key(format="raw"))
 
         shared_secret, ct = key.public_key()._encaps(unhexlify(test["randomness"]))
         assert ct == unhexlify(test["ciphertext"])

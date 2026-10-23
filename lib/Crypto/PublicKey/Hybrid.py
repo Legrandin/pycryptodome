@@ -22,7 +22,6 @@ __all__ = [
     "MLKEM768_X25519",
     "HybridKey",
     "generate",
-    "construct",
 ]
 
 Buffer = Union[bytes, bytearray, memoryview]
@@ -101,7 +100,7 @@ class HybridKey:
     For the hybrid KEMs, an ML-KEM key and an ECDH key,
     as in draft-irtf-cfrg-concrete-hybrid-kems.
     Do not instantiate directly.
-    Use :func:`generate` or :func:`construct` instead.
+    Use :func:`generate` instead.
 
     :ivar param_set: The combination of algorithms.
     :vartype param_set: :class:`ParamSet`
@@ -145,15 +144,15 @@ class HybridKey:
             self._key_pq = MLKEM.construct(param_set=self._cfg.pq, seed=seed_full[:64])
             self._key_t = _random_scalar(self._cfg, seed_full[64:])
             self._ek_t = self._key_t.public_key().export_key(format="raw")
-            if pk is not None and bytes(pk) != self.pk:
+            if pk is not None and bytes(pk) != self._pk:
                 raise ValueError("The private and the public keys do not match")
         elif pk is not None:
             pk = bytes(pk)
-            pk_len = MLKEM._sizes[self._cfg.pq].pk_len + self._cfg.elem_len
+            pk_len = MLKEM._sizes[self._cfg.pq].ek_len + self._cfg.elem_len
             if len(pk) != pk_len:
                 raise ValueError("The public key must be %d bytes long" % pk_len)
             ek_pq, self._ek_t = pk[: -self._cfg.elem_len], pk[-self._cfg.elem_len :]
-            self._key_pq = MLKEM.construct(param_set=self._cfg.pq, pk=ek_pq)
+            self._key_pq = MLKEM.construct(param_set=self._cfg.pq, ek=ek_pq)
             try:
                 self._key_t = _import_point(self._cfg, self._ek_t)
             except ValueError as ve:
@@ -168,7 +167,7 @@ class HybridKey:
         if other.has_private() != self.has_private():
             return False
 
-        return other.param_set == self.param_set and other.pk == self.pk
+        return other.param_set == self.param_set and other._pk == self._pk
 
     def __repr__(self) -> str:
         return "HybridKey(param_set=%s, private=%s)" % (self.param_set, self.has_private())
@@ -180,7 +179,7 @@ class HybridKey:
 
             raise PicklingError("A private hybrid key cannot be pickled")
         # The ECC key cannot be pickled: only keep the encoding
-        return {"param_set": self.param_set, "pk": self.pk}
+        return {"param_set": self.param_set, "pk": self._pk}
 
     def __setstate__(self, state: dict[str, Any]) -> None:
         self.__init__(param_set=state["param_set"], pk=state["pk"])  # type: ignore[misc]
@@ -191,24 +190,11 @@ class HybridKey:
         return self._seed is not None
 
     @property
-    def seed(self) -> bytes:
-        """The seed of the private key.
-
-        For the hybrid KEMs, it is the 32-byte decapsulation key:
-        the ML-KEM and the ECDH private keys are both derived from it."""
-
-        if self._seed is None:
-            raise ValueError("This is not a private hybrid key")
-        return self._seed
-
-    @property
-    def pk(self) -> bytes:
-        """The public key: the post-quantum public key, followed by the traditional one.
-
-        For the hybrid KEMs, it is the encapsulation key: the ML-KEM public key,
-        followed by the ECDH public key."""
-
-        return self._key_pq.pk + self._ek_t
+    def _pk(self) -> bytes:
+        # The public key: the post-quantum public key, followed by the traditional one.
+        # For the hybrid KEMs, it is the encapsulation key: the ML-KEM public key,
+        # followed by the ECDH public key.
+        return self._key_pq.ek + self._ek_t
 
     def public_key(self) -> HybridKey:
         """A matching hybrid public key.
@@ -217,7 +203,7 @@ class HybridKey:
             a new :class:`HybridKey` object
         """
 
-        return HybridKey(param_set=self.param_set, pk=self.pk)
+        return HybridKey(param_set=self.param_set, pk=self._pk)
 
     def _combine(self, ss_pq: bytes, ss_t: bytes, ct_t: bytes) -> bytes:
         # C2PRICombiner, with SHA3-256 as KDF
@@ -290,33 +276,17 @@ def generate(*, param_set: ParamSet, randfunc: Optional[RNG] = None) -> HybridKe
     return HybridKey(param_set=param_set, seed=randfunc(_SEED_LEN))
 
 
-def construct(
+def _construct(
     *,
     param_set: ParamSet,
     seed: Optional[Buffer] = None,
     pk: Optional[Buffer] = None,
 ) -> HybridKey:
-    """Build a hybrid key (private or public) from its components.
+    """Build a hybrid key (private or public) from its seed and/or its public key.
 
-    Args:
-      param_set (:class:`ParamSet`):
-        Mandatory. The combination of algorithms, for instance ``Hybrid.MLKEM768_X25519``.
+    For the hybrid KEMs, the seed is the 32-byte decapsulation key, and the public key
+    is the encapsulation key: the ML-KEM public key, followed by the X25519 public key.
 
-      seed (bytes):
-        The seed of a private key.
-        For the hybrid KEMs, it is the 32-byte decapsulation key:
-        the ML-KEM and the ECDH private keys are both derived from it.
-
-      pk (bytes):
-        The public key: the post-quantum public key, followed by the traditional one.
-        For the hybrid KEMs, it is the encapsulation key: the ML-KEM public key,
-        followed by the X25519 public key (32 bytes).
-
-    At least one of ``seed`` and ``pk`` must be present.
-    If both are present, they must match, otherwise :class:`ValueError` is raised.
-
-    Returns:
-      :class:`HybridKey` : a new hybrid key object
-    """
+    Not public yet: hybrid keys can only be generated and used with HPKE."""
 
     return HybridKey(param_set=param_set, seed=seed, pk=pk)

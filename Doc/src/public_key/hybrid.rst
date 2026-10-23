@@ -37,23 +37,15 @@ The public key is the ML-KEM public key, concatenated to the X25519 public key (
 
 The shared secret, result of the key agreeemnt, is always 32 bytes long.
 
-With this module you can generate a new hybrid KEM key::
+With this module you can generate a new hybrid KEM key, and get its public key::
 
     >>> from Crypto.PublicKey import Hybrid
     >>>
     >>> key = Hybrid.generate(param_set=Hybrid.MLKEM768_X25519)
-    >>> seed = key.seed       # 32 bytes, keep it secret
-    >>> pk = key.pk           # 1216 bytes
-
-and rebuild it later from its seed, or get the public key::
-
-    >>> key = Hybrid.construct(param_set=Hybrid.MLKEM768_X25519, seed=seed)
-    >>> pub_key = Hybrid.construct(param_set=Hybrid.MLKEM768_X25519, pk=pk)
-    >>> pub_key == key.public_key()
-    True
+    >>> pub_key = key.public_key()
 
 Currently, the keys of the hybrid KEMs can only be used with :ref:`HPKE <hpke>`
-(:mod:`Crypto.Protocol.HPKE`).
+(:mod:`Crypto.Protocol.HPKE`), and they cannot be exported or imported.
 
 .. _`draft-irtf-cfrg-concrete-hybrid-kems`: https://datatracker.ietf.org/doc/draft-irtf-cfrg-concrete-hybrid-kems/
 .. _`draft-ietf-hpke-pq`: https://datatracker.ietf.org/doc/draft-ietf-hpke-pq/

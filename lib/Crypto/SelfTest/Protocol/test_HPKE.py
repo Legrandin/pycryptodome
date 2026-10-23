@@ -470,6 +470,15 @@ _PQ_KEMS = {
     0x647A: (Hybrid, Hybrid.MLKEM768_X25519, 1120),
 }
 
+
+def _import_pq_key(kem_id, seed=None, pub=None):
+    """A PQ private key (from its seed) or public key (from its encoding)"""
+    module, param_set, _ = _PQ_KEMS[kem_id]
+    if module is MLKEM:
+        return MLKEM.construct(param_set=param_set, seed=seed, ek=pub)
+    return Hybrid._construct(param_set=param_set, seed=seed, pk=pub)
+
+
 # The KDF implied by each KEM
 _PQ_KDF = {
     0x0040: 0x0001,
@@ -611,13 +620,11 @@ class TestHPKE_PQ_TestVectors:
 
     @pytest.mark.parametrize("vector", test_vectors)
     def test_hpke_encap(self, vector):
-        module, param_set, _ = _PQ_KEMS[vector["kem_id"]]
-
         # skRm is the seed format of the private key; ikmR is not used
         # because DeriveKeyPair (draft-ietf-hpke-pq, Sections 3 and 4) is not implemented
-        receiver_priv = module.construct(param_set=param_set, seed=unhexlify(vector["skRm"]))
-        assert receiver_priv.pk == unhexlify(vector["pkRm"])
-        receiver_pub = module.construct(param_set=param_set, pk=unhexlify(vector["pkRm"]))
+        receiver_priv = _import_pq_key(vector["kem_id"], seed=unhexlify(vector["skRm"]))
+        receiver_pub = _import_pq_key(vector["kem_id"], pub=unhexlify(vector["pkRm"]))
+        assert receiver_priv.public_key() == receiver_pub
 
         # ikmE is the randomness of the encapsulation
         shared_secret, enc = HPKE.HPKE_Cipher._encap_pq(receiver_pub, unhexlify(vector["ikmE"]))
@@ -626,8 +633,7 @@ class TestHPKE_PQ_TestVectors:
 
     @pytest.mark.parametrize("vector", test_vectors)
     def test_hpke_unseal(self, vector):
-        module, param_set, _ = _PQ_KEMS[vector["kem_id"]]
-        receiver_priv = module.construct(param_set=param_set, seed=unhexlify(vector["skRm"]))
+        receiver_priv = _import_pq_key(vector["kem_id"], seed=unhexlify(vector["skRm"]))
 
         assert vector["mode"] == HPKE.MODE.BASE
         receiver_hpke = HPKE.new(

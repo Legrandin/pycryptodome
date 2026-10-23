@@ -98,8 +98,8 @@ ML_KEM_1024 = ParamSet.ML_KEM_1024
 class _Sizes(NamedTuple):
     level: int
     k: int
-    pk_len: int
-    sk_len: int
+    ek_len: int
+    expanded_dk_len: int
     ct_len: int
 
 
@@ -131,8 +131,8 @@ class MLKEMKey:
         *,
         param_set: ParamSet,
         seed: Optional[Buffer] = None,
-        sk: Optional[Buffer] = None,
-        pk: Optional[Buffer] = None,
+        expanded_dk: Optional[Buffer] = None,
+        ek: Optional[Buffer] = None,
     ) -> None:
         """Create a new ML-KEM key.
 
@@ -141,12 +141,12 @@ class MLKEMKey:
             The parameter set.
           seed : bytes
             The 64-byte seed of the private key (d || z).
-          sk : bytes
-            The expanded private key (decapsulation key).
-          pk : bytes
-            The public key (encapsulation key).
+          expanded_dk : bytes
+            The expanded decapsulation key (the private key).
+          ek : bytes
+            The encapsulation key (the public key).
 
-        At least one of ``seed``, ``sk`` and ``pk`` must be present.
+        At least one of ``seed``, ``expanded_dk`` and ``ek`` must be present.
         If more than one is present, they must match.
         """
 
@@ -154,55 +154,55 @@ class MLKEMKey:
         self.param_set = param_set
 
         self._seed: Optional[bytes] = None
-        self._sk: Optional[bytes] = None
+        self._expanded_dk: Optional[bytes] = None
 
         if seed is not None:
             seed = bytes(seed)
             if len(seed) != _SEED_LEN:
                 raise ValueError("The seed must be %d bytes long" % _SEED_LEN)
             self._seed = seed
-            self._pk, self._sk = self._keypair(seed)
-            if sk is not None and not hmac.compare_digest(bytes(sk), self._sk):
+            self._ek, self._expanded_dk = self._keypair(seed)
+            if expanded_dk is not None and not hmac.compare_digest(bytes(expanded_dk), self._expanded_dk):
                 raise ValueError("The seed and the expanded private key do not match")
-        elif sk is not None:
-            sk = bytes(sk)
-            if len(sk) != self._ps.sk_len:
-                raise ValueError("The expanded private key must be %d bytes long" % self._ps.sk_len)
-            self._check(_raw_mlkem_lib.mlkem_check_sk, sk, "private")
-            self._sk = sk
+        elif expanded_dk is not None:
+            expanded_dk = bytes(expanded_dk)
+            if len(expanded_dk) != self._ps.expanded_dk_len:
+                raise ValueError("The expanded private key must be %d bytes long" % self._ps.expanded_dk_len)
+            self._check(_raw_mlkem_lib.mlkem_check_sk, expanded_dk, "private")
+            self._expanded_dk = expanded_dk
             # dk = dk_PKE || ek || H(ek) || z (FIPS 203, Algorithm 16)
-            self._pk = sk[384 * self._ps.k : 768 * self._ps.k + 32]
-        elif pk is not None:
-            pk = bytes(pk)
-            if len(pk) != self._ps.pk_len:
-                raise ValueError("The public key must be %d bytes long" % self._ps.pk_len)
-            self._check(_raw_mlkem_lib.mlkem_check_pk, pk, "public")
-            self._pk = pk
+            self._ek = expanded_dk[384 * self._ps.k : 768 * self._ps.k + 32]
+        elif ek is not None:
+            ek = bytes(ek)
+            if len(ek) != self._ps.ek_len:
+                raise ValueError("The public key must be %d bytes long" % self._ps.ek_len)
+            self._check(_raw_mlkem_lib.mlkem_check_pk, ek, "public")
+            self._ek = ek
             return
         else:
-            raise ValueError("At least one of 'seed', 'sk' and 'pk' must be specified")
+            raise ValueError("At least one of 'seed', 'expanded_dk' and 'ek' must be specified")
 
-        if pk is not None and bytes(pk) != self._pk:
+        if ek is not None and bytes(ek) != self._ek:
             raise ValueError("The private and the public keys do not match")
 
     def _keypair(self, seed: bytes) -> tuple[bytes, bytes]:
         """ML-KEM.KeyGen_internal (FIPS 203, Algorithm 16): return (ek, expanded dk) for the seed d || z"""
 
-        pk = create_string_buffer(self._ps.pk_len)
-        sk = create_string_buffer(self._ps.sk_len)
+        ek = create_string_buffer(self._ps.ek_len)
+        expanded_dk = create_string_buffer(self._ps.expanded_dk_len)
         seed_ptr, seed_len = c_uint8_ptr_len(seed)
         result = _raw_mlkem_lib.mlkem_keypair(
             self._ps.level,
-            pk,
-            c_size_t(self._ps.pk_len),
-            sk,
-            c_size_t(self._ps.sk_len),
+            ek,
+            c_size_t(self._ps.ek_len),
+            expanded_dk,
+            c_size_t(self._ps.expanded_dk_len),
             seed_ptr,
             c_size_t(seed_len),
         )
         if result:
             raise ValueError("Error %d while generating an ML-KEM key" % result)
-        return get_raw_buffer(pk), get_raw_buffer(sk)
+        return get_raw_buffer(ek), get_raw_buffer(expanded_dk)
 
     def _check(self, func: Callable[..., int], key: bytes, kind: str) -> None:
         # The modulus check (public key) or the hash check (private key) of FIPS 203
@@ -220,7 +220,7 @@ class MLKEMKey:
         if other.has_private() != self.has_private():
             return False
 
-        return other.param_set == self.param_set and other._pk == self._pk
+        return other.param_set == self.param_set and other._ek == self._ek
 
     def __repr__(self) -> str:
         return "MLKEMKey(param_set=%s, private=%s)" % (self.param_set, self.has_private())
@@ -236,7 +236,7 @@ class MLKEMKey:
     def has_private(self) -> bool:
         """``True`` if this key can be used for decapsulation."""
 
-        return self._sk is not None
+        return self._expanded_dk is not None
 
     @property
     def seed(self) -> bytes:
@@ -251,18 +251,18 @@ class MLKEMKey:
         return self._seed
 
     @property
-    def sk(self) -> bytes:
-        """The expanded private key (the decapsulation key *dk* of FIPS 203, Algorithm 16)."""
+    def expanded_dk(self) -> bytes:
+        """The expanded decapsulation key (*dk* in FIPS 203, Algorithm 16)."""
 
-        if self._sk is None:
+        if self._expanded_dk is None:
             raise ValueError("This is not a private ML-KEM key")
-        return self._sk
+        return self._expanded_dk
 
     @property
-    def pk(self) -> bytes:
-        """The public key (the encapsulation key *ek* of FIPS 203, Algorithm 16)."""
+    def ek(self) -> bytes:
+        """The encapsulation key, that is, the public key (*ek* in FIPS 203, Algorithm 16)."""
 
-        return self._pk
+        return self._ek
 
     def public_key(self) -> MLKEMKey:
         """A matching ML-KEM public key.
@@ -271,7 +271,7 @@ class MLKEMKey:
             a new :class:`MLKEMKey` object
         """
 
-        return MLKEMKey(param_set=self.param_set, pk=self._pk)
+        return MLKEMKey(param_set=self.param_set, ek=self._ek)
 
     def _encaps(self, coins: Optional[bytes] = None) -> tuple[bytes, bytes]:
         """Generate a shared secret and encapsulate it (FIPS 203, Algorithm 17).
@@ -287,7 +287,7 @@ class MLKEMKey:
 
         ct = create_string_buffer(self._ps.ct_len)
         ss = create_string_buffer(_SS_LEN)
-        pk_ptr, pk_len = c_uint8_ptr_len(self._pk)
+        ek_ptr, ek_len = c_uint8_ptr_len(self._ek)
         coins_ptr, coins_len = c_uint8_ptr_len(coins)
         result = _raw_mlkem_lib.mlkem_encaps(
             self._ps.level,
@@ -295,8 +295,8 @@ class MLKEMKey:
             c_size_t(self._ps.ct_len),
             ss,
             c_size_t(_SS_LEN),
-            pk_ptr,
-            c_size_t(pk_len),
+            ek_ptr,
+            c_size_t(ek_len),
             coins_ptr,
             c_size_t(coins_len),
         )
@@ -310,22 +310,22 @@ class MLKEMKey:
         An invalid ciphertext (of the right length) gives a pseudorandom
         shared secret (implicit rejection)."""
 
-        if self._sk is None:
+        if self._expanded_dk is None:
             raise TypeError("This is not a private ML-KEM key")
         if len(ct) != self._ps.ct_len:
             raise ValueError("The ML-KEM ciphertext must be %d bytes long" % self._ps.ct_len)
 
         ss = create_string_buffer(_SS_LEN)
         ct_ptr, ct_len = c_uint8_ptr_len(ct)
-        sk_ptr, sk_len = c_uint8_ptr_len(self._sk)
+        dk_ptr, dk_len = c_uint8_ptr_len(self._expanded_dk)
         result = _raw_mlkem_lib.mlkem_decaps(
             self._ps.level,
             ss,
             c_size_t(_SS_LEN),
             ct_ptr,
             c_size_t(ct_len),
-            sk_ptr,
-            c_size_t(sk_len),
+            dk_ptr,
+            c_size_t(dk_len),
         )
         if result:
             raise ValueError("Error %d during the ML-KEM decapsulation" % result)
@@ -357,8 +357,8 @@ def construct(
     *,
     param_set: ParamSet,
     seed: Optional[Buffer] = None,
-    sk: Optional[Buffer] = None,
-    pk: Optional[Buffer] = None,
+    expanded_dk: Optional[Buffer] = None,
+    ek: Optional[Buffer] = None,
 ) -> MLKEMKey:
     """Build an ML-KEM key (private or public) from its components.
 
@@ -370,19 +370,19 @@ def construct(
         The 64-byte seed of a private key: :math:`d \\| z` in FIPS 203
         (the input of ``ML-KEM.KeyGen_internal``, Algorithm 16).
 
-      sk (bytes):
-        The expanded private key (the decapsulation key *dk*, FIPS 203).
+      expanded_dk (bytes):
+        The expanded decapsulation key (*dk* in FIPS 203).
         It must pass the hash check of FIPS 203 (Section 7.3).
 
-      pk (bytes):
-        The public key (the encapsulation key *ek*, FIPS 203).
+      ek (bytes):
+        The encapsulation key, that is, the public key (*ek* in FIPS 203).
         It must pass the modulus check of FIPS 203 (Section 7.2).
 
-    At least one of ``seed``, ``sk`` and ``pk`` must be present.
+    At least one of ``seed``, ``expanded_dk`` and ``ek`` must be present.
     If more than one is present, they must match, otherwise :class:`ValueError` is raised.
 
     Returns:
       :class:`MLKEMKey` : a new ML-KEM key object
     """
 
-    return MLKEMKey(param_set=param_set, seed=seed, sk=sk, pk=pk)
+    return MLKEMKey(param_set=param_set, seed=seed, expanded_dk=expanded_dk, ek=ek)
