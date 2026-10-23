@@ -1,6 +1,8 @@
 Hybrid keys
 ===========
 
+.. currentmodule:: Crypto.PublicKey.Hybrid
+
 A hybrid key combines a post-quantum key with a traditional one:
 the result stays secure as long as at least one of the two algorithms is secure.
 It protects against quantum computers (thanks to the post-quantum algorithm)
@@ -11,6 +13,9 @@ The combination is selected by the ``param_set`` argument, one of the members of
 the enum :class:`Crypto.PublicKey.Hybrid.ParamSet`
 (also available as constants at the module level, for instance ``Hybrid.MLKEM768_X25519``).
 The parameter set also decides what the key can be used for.
+
+Currently, hybrid keys can only be generated, and used with :ref:`HPKE <hpke>`:
+they cannot be exported or imported.
 
 Hybrid KEMs (ML-KEM + ECDH)
 ---------------------------
@@ -33,9 +38,7 @@ are not supported yet, as their definition may still change.
 A private key is a **seed** of 32 random bytes:
 the ML-KEM key and the ECDH key are both derived from it.
 The two private keys are never used on their own, or with another algorithm.
-The public key is the ML-KEM public key, concatenated to the X25519 public key (32 bytes).
-
-The shared secret, result of the key agreeemnt, is always 32 bytes long.
+The public key is the ML-KEM public key, followed by the X25519 public key (32 bytes).
 
 With this module you can generate a new hybrid KEM key, and get its public key::
 
@@ -44,8 +47,7 @@ With this module you can generate a new hybrid KEM key, and get its public key::
     >>> key = Hybrid.generate(param_set=Hybrid.MLKEM768_X25519)
     >>> pub_key = key.public_key()
 
-Currently, the keys of the hybrid KEMs can only be used with :ref:`HPKE <hpke>`
-(:mod:`Crypto.Protocol.HPKE`), and they cannot be exported or imported.
+To encrypt data with these keys, use :ref:`HPKE <hpke>` (:mod:`Crypto.Protocol.HPKE`).
 
 .. _`draft-irtf-cfrg-concrete-hybrid-kems`: https://datatracker.ietf.org/doc/draft-irtf-cfrg-concrete-hybrid-kems/
 .. _`draft-ietf-hpke-pq`: https://datatracker.ietf.org/doc/draft-ietf-hpke-pq/
@@ -55,3 +57,4 @@ API
 
 .. automodule:: Crypto.PublicKey.Hybrid
     :members:
+    :member-order: bysource

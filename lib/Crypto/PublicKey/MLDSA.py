@@ -1,7 +1,8 @@
 # SPDX-FileCopyrightText: 2026 Helder Eijs <helderijs@gmail.com>
 # SPDX-License-Identifier: BSD-2-Clause
 
-"""ML-DSA keys (FIPS 204)"""
+"""ML-DSA keys (FIPS 204): the parameter sets, the key class,
+and the functions to generate, build and import keys."""
 
 from __future__ import annotations
 

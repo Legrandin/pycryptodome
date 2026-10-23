@@ -1,9 +1,15 @@
 ML-DSA
 ======
 
+.. currentmodule:: Crypto.PublicKey.MLDSA
+
 ML-DSA (Module-Lattice-Based Digital Signature Algorithm) is the post-quantum
 signature algorithm standardized by NIST in `FIPS 204`_.
 It is derived from CRYSTALS-Dilithium.
+
+This module generates, imports and exports ML-DSA keys.
+To sign messages and verify signatures with them, use :mod:`Crypto.Signature.mldsa`
+(see `Usage`_).
 
 Its security is based on the hardness of lattice problems (Module-LWE and Module-SIS),
 which are believed to be hard even for quantum computers.
@@ -21,24 +27,33 @@ FIPS 204 defines three parameter sets:
    "ML-DSA-87", "``MLDSA.ML_DSA_87``", "5", "2592 bytes", "4896 bytes", "4627 bytes"
 
 Pass one of these constants as the ``param_set`` argument.
-They are the members of the enum :class:`Crypto.PublicKey.MLDSA.ParamSet`,
+They are the members of the enum :class:`ParamSet`,
 and the value of each member is the name of its parameter set (for instance, ``'ML-DSA-65'``).
+If unsure, use ML-DSA-65 (NIST security category 3, like ML-KEM-768).
+Some policies require ML-DSA-87 (for instance, NSA's CNSA 2.0).
 
 A private key can be represented in two ways:
 
-* the **seed**: the 32 random bytes the key is generated from
+* the **seed** (:attr:`MLDSAKey.seed`): the 32 random bytes the key is generated from
   (:math:`\xi` in FIPS 204). It is the most compact form,
   and the one recommended by `RFC 9881`_.
-* the **expanded private key**: the encoding defined in FIPS 204
+* the **expanded private key** (:attr:`MLDSAKey.sk`): the encoding defined in FIPS 204
   (Algorithm 24). It cannot be converted back to the seed.
 
-With this module you can generate a new ML-DSA key::
+The public key is :attr:`MLDSAKey.pk`.
+
+The implementation is based on `mldsa-native`_.
+
+Generation
+----------
+
+You can generate a new ML-DSA key::
 
     >>> from Crypto.PublicKey import MLDSA
     >>>
     >>> key = MLDSA.generate(param_set=MLDSA.ML_DSA_65)
     >>> seed = key.seed       # 32 bytes, keep it secret
-    >>> pk = key.pk           # 1952 bytes
+    >>> pk = key.pk           # 1952 bytes, the public key
 
 and rebuild it later from its seed (or from the expanded private key),
 or get the public key::
@@ -48,39 +63,48 @@ or get the public key::
     >>> pub_key == key.public_key()
     True
 
+To store a private key, prefer :meth:`MLDSAKey.export_key` with a passphrase
+(see the next section): the seed on its own is not protected.
+
+Import and Export
+-----------------
+
 You can export an ML-DSA key as defined in `RFC 9881`_:
 a public key as an X.509 ``SubjectPublicKeyInfo``, a private key as a
 PKCS#8 ``OneAsymmetricKey``, optionally protected with a passphrase.
+These are the usual formats for public and private keys,
+also used by OpenSSL (the keys of this module were tested with OpenSSL 4.0.3).
 The encoding is DER (binary, the default) or PEM (text, `RFC 7468`_)::
 
-    >>> with open("myprivatekey.pem", "wt") as f:
-    ...     f.write(key.export_key(format="PEM", passphrase="secret"))
-    >>>
-    >>> with open("mypublickey.der", "wb") as f:
-    ...     f.write(key.public_key().export_key())
+    with open("myprivatekey.pem", "wt") as f:
+        f.write(key.export_key(format="PEM", passphrase="secret"))
+
+    with open("mypublickey.der", "wb") as f:
+        f.write(key.public_key().export_key())
 
 and import it later (the format is detected automatically)::
 
-    >>> with open("myprivatekey.pem", "rt") as f:
-    ...     key = MLDSA.import_key(f.read(), "secret")
+    with open("myprivatekey.pem", "rt") as f:
+        key = MLDSA.import_key(f.read(), "secret")
 
-The private key in the ``OneAsymmetricKey`` is the seed
-or, if the seed is not known, the expanded private key.
-It does not contain the public key (the optional ``publicKey`` field of
-``OneAsymmetricKey`` version 2), which can always be computed again.
-:func:`import_key` accepts all the variants of RFC 9881
-(the seed, the expanded private key, or both, with or without the public key),
-and it checks that the seed, the expanded private key and the public key match.
+A private key is exported as its seed (or as the expanded private key, if the seed is not known).
+:func:`import_key` also accepts the other forms of RFC 9881 and X.509 certificates,
+and it checks that all the parts of the key match.
 
-To sign messages and verify signatures with these keys,
+Usage
+-----
+
+To sign messages and verify signatures with ML-DSA keys,
 use :mod:`Crypto.Signature.mldsa`.
-
-The implementation is based on `mldsa-native`_,
 
 .. _`FIPS 204`: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.204.pdf
 .. _`RFC 9881`: https://www.rfc-editor.org/rfc/rfc9881.html
 .. _mldsa-native: https://github.com/pq-code-package/mldsa-native
 .. _`RFC 7468`: https://www.rfc-editor.org/rfc/rfc7468.html
 
+API
+---
+
 .. automodule:: Crypto.PublicKey.MLDSA
     :members:
+    :member-order: bysource
