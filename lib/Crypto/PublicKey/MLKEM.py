@@ -1,7 +1,8 @@
 # SPDX-FileCopyrightText: 2026 Helder Eijs <helderijs@gmail.com>
 # SPDX-License-Identifier: BSD-2-Clause
 
-"""ML-KEM keys (FIPS 203)"""
+"""ML-KEM keys (FIPS 203): the parameter sets, the key class,
+and the functions to generate, build and import keys."""
 
 from __future__ import annotations
 
@@ -256,7 +257,7 @@ class MLKEMKey:
         return self.__dict__.copy()
 
     def has_private(self) -> bool:
-        """``True`` if this key can be used for decapsulation."""
+        """``True`` if this is a private key."""
 
         return self._expanded_dk is not None
 

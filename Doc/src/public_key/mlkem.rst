@@ -1,9 +1,15 @@
 ML-KEM
 ======
 
+.. currentmodule:: Crypto.PublicKey.MLKEM
+
 ML-KEM (Module-Lattice-Based Key-Encapsulation Mechanism) is the post-quantum
 key encapsulation mechanism standardized by NIST in `FIPS 203`_.
 It is derived from CRYSTALS-Kyber.
+
+This module generates, imports and exports ML-KEM keys.
+It does not offer encapsulation or decapsulation on their own:
+to encrypt data with an ML-KEM key, use :ref:`HPKE <hpke>` (see `Usage`_).
 
 Its security is based on the hardness of the Module Learning With Errors problem
 (Module-LWE), which is believed to be hard even for quantum computers.
@@ -22,26 +28,18 @@ FIPS 203 defines three parameter sets:
 Pass one of these constants as the ``param_set`` argument.
 They are the members of the enum :class:`Crypto.PublicKey.MLKEM.ParamSet`,
 and the value of each member is the name of its parameter set (for instance, ``'ML-KEM-768'``).
-The shared secret is always 32 bytes long.
+If unsure, use ML-KEM-768, the most widely deployed.
+Some policies require ML-KEM-1024 (for instance, NSA's CNSA 2.0).
 
 A private key can be represented in two ways:
 
-* the **seed**: the 64 random bytes the key is generated from
-  (:math:`d \| z` in FIPS 203). It is the most compact form,
-  and the one recommended by `RFC 9935`_.
-* the **expanded private key**: the decapsulation key defined in FIPS 203
-  (Algorithm 16). It cannot be converted back to the seed.
+* the **seed** (:attr:`MLKEMKey.seed`): the 64 random bytes the key is generated from.
+  It is the most compact form, and the one recommended by `RFC 9935`_.
+* the **expanded private key** (:attr:`MLKEMKey.expanded_dk`): the decapsulation key
+  defined in FIPS 203. It cannot be converted back to the seed.
 
-The names used in this module follow the specifications,
-but avoid *dk* on its own, because the specifications disagree on its meaning:
-
-.. csv-table::
-   :header: This module, FIPS 203, `draft-ietf-hpke-pq`_, `RFC 9935`_
-   :widths: 25, 25, 25, 25
-
-   "``seed``", ":math:`d \| z`", "``dk``", "``seed``"
-   "``expanded_dk``", "``dk``", "``expanded_dk``", "``expandedKey``"
-   "``ek``", "``ek``", "``ek``", "public key"
+The public key is :attr:`MLKEMKey.ek` (the *encapsulation key*).
+The names follow the specifications (see `Names in the specifications`_).
 
 The implementation is based on `mlkem-native`_.
 
@@ -64,12 +62,10 @@ or get the public key::
     >>> pub_key == key.public_key()
     True
 
-:func:`construct` performs the input checks of FIPS 203:
-the *modulus check* on a public key (Section 7.2)
-and the *hash check* on an expanded private key (Section 7.3).
-Since the hash check does not detect all corrupted expanded private keys,
-it also performs a *pairwise consistency check* on an expanded private key
-without a seed (an encapsulation with the public key, followed by a decapsulation).
+:func:`construct` checks that the key is valid (see the checks in its description).
+
+To store a private key, prefer :meth:`MLKEMKey.export_key` with a passphrase
+(see the next section): the seed on its own is not protected.
 
 Import and Export
 -----------------
@@ -77,27 +73,24 @@ Import and Export
 You can export an ML-KEM key as defined in `RFC 9935`_:
 a public key as an X.509 ``SubjectPublicKeyInfo``, a private key as a
 PKCS#8 ``OneAsymmetricKey``, optionally protected with a passphrase.
+These are the usual formats for public and private keys,
+also used by OpenSSL (the keys of this module were tested with OpenSSL 4.0.3).
 The encoding is DER (binary, the default) or PEM (text, `RFC 7468`_)::
 
-    >>> with open("myprivatekey.pem", "wt") as f:
-    ...     f.write(key.export_key(format="PEM", passphrase="secret"))
-    >>>
-    >>> with open("mypublickey.der", "wb") as f:
-    ...     f.write(key.public_key().export_key())
+    with open("myprivatekey.pem", "wt") as f:
+        f.write(key.export_key(format="PEM", passphrase="secret"))
+
+    with open("mypublickey.der", "wb") as f:
+        f.write(key.public_key().export_key())
 
 and import it later (the format is detected automatically)::
 
-    >>> with open("myprivatekey.pem", "rt") as f:
-    ...     key = MLKEM.import_key(f.read(), "secret")
+    with open("myprivatekey.pem", "rt") as f:
+        key = MLKEM.import_key(f.read(), "secret")
 
-The private key in the ``OneAsymmetricKey`` is the seed
-or, if the seed is not known, the expanded private key.
-It does not contain the public key (the optional ``publicKey`` field of
-``OneAsymmetricKey`` version 2), which can always be computed again.
-:func:`import_key` accepts all the variants of RFC 9935
-(the seed, the expanded private key, or both, with or without the public key),
-and it checks that the seed, the expanded private key and the public key match.
-It also accepts an X.509 certificate, from which it extracts the public key.
+A private key is exported as its seed (or as the expanded private key, if the seed is not known).
+:func:`import_key` also accepts the other forms of RFC 9935 and X.509 certificates,
+and it checks that all the parts of the key match.
 
 Usage
 -----
@@ -105,6 +98,20 @@ Usage
 Currently, ML-KEM keys can only be used with :ref:`HPKE <hpke>`
 (:mod:`Crypto.Protocol.HPKE`), alone or combined with ECDH in a
 :doc:`hybrid KEM <hybrid>`.
+
+Names in the specifications
+---------------------------
+
+The specifications disagree on the meaning of the name *dk*,
+so this module never uses it on its own:
+
+.. csv-table::
+   :header: This module, FIPS 203, `draft-ietf-hpke-pq`_, `RFC 9935`_
+   :widths: 25, 25, 25, 25
+
+   "``seed``", ":math:`d \| z`", "``dk``", "``seed``"
+   "``expanded_dk``", "``dk``", "``expanded_dk``", "``expandedKey``"
+   "``ek``", "``ek``", "``ek``", "public key"
 
 .. _`FIPS 203`: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.pdf
 .. _mlkem-native: https://github.com/pq-code-package/mlkem-native
