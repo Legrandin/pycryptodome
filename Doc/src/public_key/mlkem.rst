@@ -43,7 +43,12 @@ but avoid *dk* on its own, because the specifications disagree on its meaning:
    "``expanded_dk``", "``dk``", "``expanded_dk``", "``expandedKey``"
    "``ek``", "``ek``", "``ek``", "public key"
 
-With this module you can generate a new ML-KEM key::
+The implementation is based on `mlkem-native`_.
+
+Generation
+----------
+
+You can generate a new ML-KEM key::
 
     >>> from Crypto.PublicKey import MLKEM
     >>>
@@ -65,6 +70,9 @@ and the *hash check* on an expanded private key (Section 7.3).
 Since the hash check does not detect all corrupted expanded private keys,
 it also performs a *pairwise consistency check* on an expanded private key
 without a seed (an encapsulation with the public key, followed by a decapsulation).
+
+Import and Export
+-----------------
 
 You can export an ML-KEM key as defined in `RFC 9935`_:
 a public key as an X.509 ``SubjectPublicKeyInfo``, a private key as a
@@ -91,11 +99,12 @@ It does not contain the public key (the optional ``publicKey`` field of
 and it checks that the seed, the expanded private key and the public key match.
 It also accepts an X.509 certificate, from which it extracts the public key.
 
+Usage
+-----
+
 Currently, ML-KEM keys can only be used with :ref:`HPKE <hpke>`
 (:mod:`Crypto.Protocol.HPKE`), alone or combined with ECDH in a
 :doc:`hybrid KEM <hybrid>`.
-
-The implementation is based on `mlkem-native`_.
 
 .. _`FIPS 203`: https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.203.pdf
 .. _mlkem-native: https://github.com/pq-code-package/mlkem-native
@@ -103,5 +112,9 @@ The implementation is based on `mlkem-native`_.
 .. _`RFC 7468`: https://www.rfc-editor.org/rfc/rfc7468.html
 .. _`draft-ietf-hpke-pq`: https://datatracker.ietf.org/doc/draft-ietf-hpke-pq/
 
+API
+---
+
 .. automodule:: Crypto.PublicKey.MLKEM
     :members:
+    :member-order: bysource
