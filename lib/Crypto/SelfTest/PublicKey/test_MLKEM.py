@@ -177,6 +177,17 @@ class TestMLKEMKey:
             with pytest.raises(ValueError):
                 MLKEM.construct(param_set=ps, expanded_dk=bad_dk)
 
+        # The secret vector (dk_PKE) is corrupted: the hash check passes,
+        # but not the pairwise consistency check
+        for offset in (0, 384 * 3 - 1):
+            bad_dk = bytearray(key.expanded_dk)
+            bad_dk[offset] ^= 1
+            with pytest.raises(ValueError, match="pairwise"):
+                MLKEM.construct(param_set=ps, expanded_dk=bad_dk)
+            # With the seed, the expanded key is compared with the one derived from it
+            with pytest.raises(ValueError, match="do not match"):
+                MLKEM.construct(param_set=ps, seed=key.seed, expanded_dk=bad_dk)
+
     def test_eq_repr(self):
         key = MLKEM.generate(param_set=ParamSet.ML_KEM_512)
         other = MLKEM.generate(param_set=ParamSet.ML_KEM_512)

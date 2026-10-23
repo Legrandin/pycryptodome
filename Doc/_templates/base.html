@@ -1,0 +1,10 @@
+{%- extends "!base.html" %}
+
+{#- The favicon: an SVG, which swaps its colors in dark mode, with a PNG fallback
+    for browsers without SVG favicons. The PNG comes first and declares its size,
+    so that browsers which support both choose the SVG. #}
+{%- block extrahead %}
+  {{- super() }}
+  <link rel="icon" href="{{ pathto('_static/pycryptodome-favicon-32.png', 1) }}" sizes="32x32" type="image/png">
+  <link rel="icon" href="{{ pathto('_static/pycryptodome-favicon.svg', 1) }}" type="image/svg+xml">
+{%- endblock %}

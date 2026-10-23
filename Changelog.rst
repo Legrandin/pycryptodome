@@ -11,6 +11,8 @@ New features
   `mlkem-native <https://github.com/pq-code-package/mlkem-native>`_ (v2.0.0),
   with the Keccak code of PyCryptodome, also compiled for AVX2 and BMI2 (with 4-way SHA-3):
   that version is 20-40% faster.
+  The keys can be exported and imported as defined in RFC 9935
+  (PKCS#8 and ``SubjectPublicKeyInfo``, also from a certificate), in DER or PEM format.
 * New module ``Crypto.PublicKey.Hybrid``, for hybrid keys (post-quantum + traditional).
   It supports the hybrid KEM MLKEM768-X25519 (X-Wing), which combines ML-KEM-768 and X25519
   (draft-irtf-cfrg-concrete-hybrid-kems). For now, hybrid keys can only be generated

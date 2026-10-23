@@ -31,12 +31,21 @@ class MODE(IntEnum):
 
 
 class AEAD(IntEnum):
-    """Authenticated Encryption with Associated Data (AEAD) Functions"""
+    """The symmetric ciphers of HPKE (Authenticated Encryption with Associated Data, AEAD),
+    for the parameter ``aead_id`` of :func:`new`.
+    The value of each member is its HPKE identifier."""
 
     AES128_GCM = 0x0001
+    """AES-128 in GCM mode"""
+
     AES256_GCM = 0x0002
+    """AES-256 in GCM mode"""
+
     CHACHA20_POLY1305 = 0x0003
+    """ChaCha20-Poly1305"""
+
     EXPORT_ONLY = 0xFFFF
+    """No cipher, so the HPKE context can only export secrets (see :meth:`HPKE_Cipher.export`)"""
 
 
 class DeserializeError(ValueError):
@@ -104,6 +113,11 @@ def _extract_and_expand(dh: bytes, kem_context: bytes, suite_id: bytes, hashmod:
 
 
 class HPKE_Cipher:
+    """An HPKE context, to seal or unseal messages, or to export secrets.
+
+    Do not instantiate directly: use :func:`new` instead.
+    """
+
     def __init__(
         self,
         receiver_key: KemKey,
@@ -312,12 +326,12 @@ class HPKE_Cipher:
         This method can be invoked multiple times
         to seal an ordered sequence of messages.
 
-        Arguments:
-          plaintext: bytes
+        Args:
+          plaintext:
             The message to seal.
-          auth_data: bytes
-            Optional. Additional Authenticated data (AAD) that is not encrypted
-            but that will be also covered by the authentication tag.
+          auth_data:
+            Optional. Additional authenticated data (AAD) that is not encrypted,
+            but is also covered by the authentication tag.
 
         Returns:
            The ciphertext concatenated with the authentication tag.
@@ -339,22 +353,20 @@ class HPKE_Cipher:
         This method can be invoked multiple times
         to unseal an ordered sequence of messages.
 
-        Arguments:
-          cipertext: bytes
+        Args:
+          ciphertext:
             The message to unseal.
-          auth_data: bytes
-            Optional. Additional Authenticated data (AAD) that
+          auth_data:
+            Optional. Additional authenticated data (AAD) that
             was also covered by the authentication tag.
 
         Returns:
            The original plaintext.
 
-        Raises: ValueError
-           If the ciphertext (in combination with the AAD) is not valid.
-
-           But if it is the first time you call ``unseal()`` this
-           exception may also mean that any of the parameters or keys
-           used to establish the session is wrong or that one is missing.
+        Raises:
+          ValueError: if the ciphertext (in combination with the AAD) is not valid.
+            At the first call of ``unseal()``, it can also mean that one of the
+            keys or parameters used to set up the context is wrong or missing.
         """
 
         if self._aead_id == AEAD.EXPORT_ONLY:
@@ -381,10 +393,10 @@ class HPKE_Cipher:
         This method can be invoked multiple times,
         with different contexts, to derive independent secrets.
 
-        Arguments:
-          exporter_context: bytes
+        Args:
+          exporter_context:
             Context for the exported secret (it can be empty).
-          length: int
+          length:
             The desired length of the secret, in bytes.
             It must not be larger than 255 times the digest size
             of the hash of the KDF (e.g., 8160 bytes for ``NIST P-256``).
@@ -460,7 +472,8 @@ def new(
         * ``HPKE.AEAD.EXPORT_ONLY``
 
       enc:
-        The encapsulated session key (i.e., the KEM shared secret).
+        The encapsulated key (the KEM ciphertext) that the sender delivered,
+        available to the sender as :attr:`HPKE_Cipher.enc`.
 
         The receiver must always specify this parameter.
 
@@ -480,14 +493,14 @@ def new(
         Sender and receiver must use the same PSK (or none).
 
         The secret value must be at least 32 bytes long,
-        but it  must not be a low-entropy password
+        but it must not be a low-entropy password
         (use a KDF like PBKDF2 or scrypt to derive a secret
         from a password).
 
       info:
         A non-secret parameter that contributes
         to the generation of all session keys.
-        Sender and receive must use the same **info** parameter (or none).
+        Sender and receiver must use the same **info** parameter (or none).
 
     Returns:
         An object that can be used for

@@ -3,7 +3,8 @@
 
 """Hybrid keys: a post-quantum key combined with a traditional one.
 
-Currently, only the keys of the hybrid KEM X-Wing (ML-KEM-768 combined with X25519).
+Currently, the only supported keys are those of the hybrid KEM X-Wing
+(ML-KEM-768 combined with X25519).
 """
 
 from __future__ import annotations
@@ -185,7 +186,7 @@ class HybridKey:
         self.__init__(param_set=state["param_set"], pk=state["pk"])  # type: ignore[misc]
 
     def has_private(self) -> bool:
-        """``True`` if this is a private key (for the hybrid KEMs, one that can decapsulate)."""
+        """``True`` if this is a private key."""
 
         return self._seed is not None
 

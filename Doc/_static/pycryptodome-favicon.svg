@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" width="256" height="256">
+  <style>
+    @media (prefers-color-scheme: dark) {
+      .background, .keyhole { fill: #5D76A9; }
+      .lock { fill: #12173F; }
+      .tongue { stroke: #12173F; }
+    }
+  </style>
+  <rect class="background" width="256" height="256" rx="52" fill="#12173F"/>
+  <g transform="translate(128 128) scale(1.25) translate(-130 -126)">
+    <path d="M72 164 C 86 164, 98 158, 98 146 V94 a30 30 0 0 1 60 0 V140 C 158 154, 168 158, 186 158" fill="none" stroke="#F5B112" stroke-width="16" stroke-linecap="round"/>
+    <path d="M76 156 C 58 156, 44 150, 36 130 C 40 154, 56 172, 76 172 Z" fill="#F5B112"/>
+    <path d="M180 149 C 194 145, 208 149, 212 158 C 208 167, 194 171, 180 167 Z" fill="#F5B112"/>
+    <circle cx="201" cy="154" r="2.8" fill="#12173F"/>
+    <path class="tongue" d="M212 158 H220 M220 158 L225 154 M220 158 L225 162" fill="none" stroke="#5D76A9" stroke-width="2.2" stroke-linecap="round"/>
+    <rect class="lock" x="76" y="110" width="104" height="76" rx="14" fill="#5D76A9"/>
+    <circle class="keyhole" cx="128" cy="140" r="11" fill="#12173F"/>
+    <rect class="keyhole" x="123" y="144" width="10" height="22" rx="4" fill="#12173F"/>
+  </g>
+</svg>
