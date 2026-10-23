@@ -613,6 +613,8 @@ class TestHPKE_PQ_TestVectors:
     def test_hpke_encap(self, vector):
         module, param_set, _ = _PQ_KEMS[vector["kem_id"]]
 
+        # skRm is the seed format of the private key; ikmR is not used
+        # because DeriveKeyPair (draft-ietf-hpke-pq, Sections 3 and 4) is not implemented
         receiver_priv = module.construct(param_set=param_set, seed=unhexlify(vector["skRm"]))
         assert receiver_priv.pk == unhexlify(vector["pkRm"])
         receiver_pub = module.construct(param_set=param_set, pk=unhexlify(vector["pkRm"]))

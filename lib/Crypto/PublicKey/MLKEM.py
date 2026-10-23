@@ -186,6 +186,8 @@ class MLKEMKey:
             raise ValueError("The private and the public keys do not match")
 
     def _keypair(self, seed: bytes) -> tuple[bytes, bytes]:
+        """ML-KEM.KeyGen_internal (FIPS 203, Algorithm 16): return (ek, expanded dk) for the seed d || z"""
+
         pk = create_string_buffer(self._ps.pk_len)
         sk = create_string_buffer(self._ps.sk_len)
         seed_ptr, seed_len = c_uint8_ptr_len(seed)
