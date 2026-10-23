@@ -71,3 +71,8 @@ The directory ``src/mldsa-native`` contains code from mldsa-native
 (https://github.com/pq-code-package/mldsa-native), available under
 the Apache-2.0 license OR the ISC license OR the MIT license.
 See ``src/mldsa-native/LICENSE`` for the full text of the licenses.
+
+The directory ``src/mlkem-native`` contains code from mlkem-native
+(https://github.com/pq-code-package/mlkem-native), available under
+the Apache-2.0 license OR the ISC license OR the MIT license.
+See ``src/mlkem-native/LICENSE`` for the full text of the licenses.

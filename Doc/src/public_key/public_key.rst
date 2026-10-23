@@ -48,11 +48,15 @@ Available key types
     rsa
     ecc
     mldsa
+    mlkem
+    hybrid
     dsa
 
 * :doc:`RSA keys <rsa>`
 * :doc:`Elliptic Curve keys <ecc>`
 * :doc:`ML-DSA keys (post-quantum) <mldsa>`
+* :doc:`ML-KEM keys (post-quantum) <mlkem>`
+* :doc:`Hybrid keys (post-quantum + traditional) <hybrid>`
 * :doc:`DSA keys (obsolete) <dsa>`
 
 Obsolete key type

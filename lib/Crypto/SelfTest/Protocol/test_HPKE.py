@@ -7,7 +7,7 @@ import pytest
 from Crypto.Hash import SHA256, SHA384, SHA512
 from Crypto.Protocol import DH, HPKE
 from Crypto.Protocol.HPKE import DeserializeError
-from Crypto.PublicKey import ECC
+from Crypto.PublicKey import ECC, MLKEM, Hybrid
 
 
 class TestHPKE:
@@ -456,6 +456,199 @@ class TestHPKE_TestVectors:
             # Decrypt (unseal)
             decrypted = receiver_hpke.unseal(ciphertext, aad)
             assert decrypted == plaintext, "Decryption failed"
+
+        for export in vector["exports"]:
+            exported = receiver_hpke.export(unhexlify(export["exporter_context"]), export["L"])
+            assert exported == unhexlify(export["exported_value"])
+
+
+# The KEMs of draft-ietf-hpke-pq: module, parameter set, KEM ID, and length of enc
+_PQ_KEMS = {
+    0x0040: (MLKEM, MLKEM.ML_KEM_512, 768),
+    0x0041: (MLKEM, MLKEM.ML_KEM_768, 1088),
+    0x0042: (MLKEM, MLKEM.ML_KEM_1024, 1568),
+    0x647A: (Hybrid, Hybrid.MLKEM768_X25519, 1120),
+}
+
+
+def _import_pq_key(kem_id, seed=None, pub=None):
+    """A PQ private key (from its seed) or public key (from its encoding)"""
+    module, param_set, _ = _PQ_KEMS[kem_id]
+    if module is MLKEM:
+        return MLKEM.construct(param_set=param_set, seed=seed, ek=pub)
+    return Hybrid._construct(param_set=param_set, seed=seed, pk=pub)
+
+
+# The KDF implied by each KEM
+_PQ_KDF = {
+    0x0040: 0x0001,
+    0x0041: 0x0001,
+    0x0042: 0x0002,
+    0x647A: 0x0001,
+}
+
+
+@pytest.fixture(params=list(_PQ_KEMS), ids=lambda kem_id: "kem%x" % kem_id)
+def pq_key(request):
+    module, param_set, _ = _PQ_KEMS[request.param]
+    return request.param, module.generate(param_set=param_set)
+
+
+class TestHPKE_PQ:
+    """HPKE with ML-KEM and with the hybrid KEMs (draft-ietf-hpke-pq)"""
+
+    @pytest.mark.parametrize("aead_id", [a for a in HPKE.AEAD if a != HPKE.AEAD.EXPORT_ONLY])
+    def test_round_trip(self, pq_key, aead_id):
+        kem_id, key = pq_key
+
+        encryptor = HPKE.new(receiver_key=key.public_key(), aead_id=aead_id)
+        assert len(encryptor.enc) == _PQ_KEMS[kem_id][2]
+        assert encryptor._kem_id == kem_id
+        assert encryptor._kdf_id == _PQ_KDF[kem_id]
+
+        ct = encryptor.seal(b"ABC", auth_data=b"DEF")
+        ct2 = encryptor.seal(b"GHI")
+
+        decryptor = HPKE.new(receiver_key=key, aead_id=aead_id, enc=encryptor.enc)
+        assert decryptor.unseal(ct, auth_data=b"DEF") == b"ABC"
+        assert decryptor.unseal(ct2) == b"GHI"
+
+        # A new encapsulation each time
+        assert HPKE.new(receiver_key=key.public_key(), aead_id=aead_id).enc != encryptor.enc
+
+    def test_psk_info_export(self, pq_key):
+        _, key = pq_key
+        psk = (b"id", b"s" * 32)
+
+        encryptor = HPKE.new(
+            receiver_key=key.public_key(), aead_id=HPKE.AEAD.EXPORT_ONLY, psk=psk, info=b"info"
+        )
+        decryptor = HPKE.new(
+            receiver_key=key, aead_id=HPKE.AEAD.EXPORT_ONLY, enc=encryptor.enc, psk=psk, info=b"info"
+        )
+        assert encryptor.export(b"ctx", 40) == decryptor.export(b"ctx", 40)
+
+        # Another info: another secret
+        decryptor2 = HPKE.new(receiver_key=key, aead_id=HPKE.AEAD.EXPORT_ONLY, enc=encryptor.enc, psk=psk)
+        assert encryptor.export(b"ctx", 40) != decryptor2.export(b"ctx", 40)
+
+    def test_neg_auth_mode(self, pq_key):
+        _, key = pq_key
+        sender = ECC.generate(curve="p256")
+
+        # The PQ and hybrid KEMs have no AuthEncap/AuthDecap
+        with pytest.raises(ValueError) as cm:
+            HPKE.new(receiver_key=key.public_key(), sender_key=sender, aead_id=HPKE.AEAD.AES128_GCM)
+        assert "authenticated modes" in str(cm.value)
+
+        # Nor can the receiver be ECC and the sender ML-KEM
+        with pytest.raises(TypeError):
+            HPKE.new(receiver_key=sender.public_key(), sender_key=key, aead_id=HPKE.AEAD.AES128_GCM)
+
+    def test_neg_wrong_enc(self, pq_key):
+        kem_id, key = pq_key
+        enc = HPKE.new(receiver_key=key.public_key(), aead_id=HPKE.AEAD.AES128_GCM).enc
+
+        for bad_enc in (enc[:-1], enc + b"\x00", b""):
+            with pytest.raises(DeserializeError):
+                HPKE.new(receiver_key=key, aead_id=HPKE.AEAD.AES128_GCM, enc=bad_enc)
+
+        # An invalid ECDH point
+        if _PQ_KEMS[kem_id][0] is Hybrid:
+            bad_enc = enc[:-32] + bytes(32)
+            with pytest.raises(DeserializeError):
+                HPKE.new(receiver_key=key, aead_id=HPKE.AEAD.AES128_GCM, enc=bad_enc)
+
+    def test_neg_wrong_key(self, pq_key):
+        kem_id, key = pq_key
+        module, param_set, _ = _PQ_KEMS[kem_id]
+        encryptor = HPKE.new(receiver_key=key.public_key(), aead_id=HPKE.AEAD.AES128_GCM)
+        ct = encryptor.seal(b"ABC")
+
+        # Another key: implicit rejection of ML-KEM, then the tag is wrong
+        other = module.generate(param_set=param_set)
+        decryptor = HPKE.new(receiver_key=other, aead_id=HPKE.AEAD.AES128_GCM, enc=encryptor.enc)
+        with pytest.raises(ValueError):
+            decryptor.unseal(ct)
+
+        # A modified enc (ML-KEM part)
+        bad_enc = bytearray(encryptor.enc)
+        bad_enc[0] ^= 1
+        decryptor = HPKE.new(receiver_key=key, aead_id=HPKE.AEAD.AES128_GCM, enc=bytes(bad_enc))
+        with pytest.raises(ValueError):
+            decryptor.unseal(ct)
+
+    def test_neg_key_type(self):
+        with pytest.raises(TypeError):
+            HPKE.new(receiver_key=b"key", aead_id=HPKE.AEAD.AES128_GCM)
+
+
+def _load_pq_test_vectors():
+    try:
+        import pycryptodome_test_vectors  # type: ignore
+    except ImportError:
+        return [pytest.param(None, id="missing", marks=pytest.mark.skip(reason="Missing test vectors"))]
+
+    init_dir = os.path.dirname(pycryptodome_test_vectors.__file__)
+    full_file_name = os.path.join(init_dir, "Protocol", "wycheproof", "HPKE-PQ-test-vectors.json")
+    try:
+        with open(full_file_name) as f:
+            vectors = json.load(f)
+    except FileNotFoundError:
+        return [
+            pytest.param(
+                None, id="missing", marks=pytest.mark.skip(reason="Missing HPKE-PQ-test-vectors.json")
+            )
+        ]
+
+    # Only the KEMs of draft-ietf-hpke-pq that we support (not MLKEM768-P256 and
+    # MLKEM1024-P384), and the KDF that HPKE uses for them:
+    # the one-stage KDFs (SHAKE and TurboSHAKE) are not supported
+    return [
+        pytest.param(
+            vector, id="%d-kem%x-kdf%x-aead%x" % (idx, vector["kem_id"], vector["kdf_id"], vector["aead_id"])
+        )
+        for idx, vector in enumerate(vectors)
+        if _PQ_KDF.get(vector["kem_id"]) == vector["kdf_id"]
+    ]
+
+
+class TestHPKE_PQ_TestVectors:
+    """The test vectors of draft-ietf-hpke-pq"""
+
+    test_vectors = _load_pq_test_vectors()
+
+    @pytest.mark.parametrize("vector", test_vectors)
+    def test_hpke_encap(self, vector):
+        # skRm is the seed format of the private key; ikmR is not used
+        # because DeriveKeyPair (draft-ietf-hpke-pq, Sections 3 and 4) is not implemented
+        receiver_priv = _import_pq_key(vector["kem_id"], seed=unhexlify(vector["skRm"]))
+        receiver_pub = _import_pq_key(vector["kem_id"], pub=unhexlify(vector["pkRm"]))
+        assert receiver_priv.public_key() == receiver_pub
+
+        # ikmE is the randomness of the encapsulation
+        shared_secret, enc = HPKE.HPKE_Cipher._encap_pq(receiver_pub, unhexlify(vector["ikmE"]))
+        assert enc == unhexlify(vector["enc"])
+        assert shared_secret == unhexlify(vector["shared_secret"])
+
+    @pytest.mark.parametrize("vector", test_vectors)
+    def test_hpke_unseal(self, vector):
+        receiver_priv = _import_pq_key(vector["kem_id"], seed=unhexlify(vector["skRm"]))
+
+        assert vector["mode"] == HPKE.MODE.BASE
+        receiver_hpke = HPKE.new(
+            receiver_key=receiver_priv,
+            aead_id=HPKE.AEAD(vector["aead_id"]),
+            enc=unhexlify(vector["enc"]),
+            info=unhexlify(vector["info"]),
+        )
+        assert receiver_hpke._key == unhexlify(vector["key"])
+        assert receiver_hpke._base_nonce == unhexlify(vector["base_nonce"])
+        assert receiver_hpke._export_secret == unhexlify(vector["exporter_secret"])
+
+        for encryption in vector["encryptions"]:
+            decrypted = receiver_hpke.unseal(unhexlify(encryption["ct"]), unhexlify(encryption["aad"]))
+            assert decrypted == unhexlify(encryption["pt"])
 
         for export in vector["exports"]:
             exported = receiver_hpke.export(unhexlify(export["exporter_context"]), export["L"])

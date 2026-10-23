@@ -10,10 +10,10 @@ description = "Cryptographic library for Python"
 readme = "README.rst"
 authors = [{name = "Helder Eijs", email = "helderijs@gmail.com"}]
 # See LICENSE.rst: the code from PyCrypto is in the public domain (Unlicense),
-# mldsa-native is under Apache-2.0 OR ISC OR MIT,
+# mldsa-native and mlkem-native are under Apache-2.0 OR ISC OR MIT,
 # the rest is under the BSD 2-Clause license
 license = "BSD-2-Clause AND Unlicense AND MIT"
-license-files = ["LICENSE.rst", "src/mldsa-native/LICENSE"]
+license-files = ["LICENSE.rst", "src/mldsa-native/LICENSE", "src/mlkem-native/LICENSE"]
 requires-python = ">=3.9"
 classifiers = [
     "Development Status :: 5 - Production/Stable",

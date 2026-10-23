@@ -565,6 +565,7 @@ def set_compiler_options(extensions):
         "Crypto.Cipher._Salsa20_avx2_bmi2",
         "Crypto.Cipher._chacha20_avx2_bmi2",
         "Crypto.PublicKey._mldsa_avx2_bmi2",
+        "Crypto.PublicKey._mlkem_avx2_bmi2",
     ]
     if avx2_bmi2_result:
         print("Compiling support for AVX2 and BMI2 instructions")

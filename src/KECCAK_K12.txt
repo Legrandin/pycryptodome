@@ -43,10 +43,15 @@ the other arrows are #include.
                       -> k12.c -> keccak.c
                                + keccak_x4_avx2.c
   _mldsa              mldsa.c                  mldsa_*     (none)                 no
-                      -> mldsa_fips202.h -> keccak.c
+                      -> mldsa_fips202.h -> pq_fips202.h -> keccak.c
   _mldsa_avx2_bmi2    mldsa_avx2_bmi2.c        mldsa_*     -mavx2 -mbmi -mbmi2    yes
-                      -> mldsa.c -> mldsa_fips202.h -> keccak.c
-                                                   + keccak_x4_avx2.c
+                      -> mldsa.c -> mldsa_fips202.h -> pq_fips202.h -> keccak.c
+                                                                  + keccak_x4_avx2.c
+  _mlkem              mlkem.c                  mlkem_*     (none)                 no
+                      -> mlkem_fips202.h -> pq_fips202.h -> keccak.c
+  _mlkem_avx2_bmi2    mlkem_avx2_bmi2.c        mlkem_*     -mavx2 -mbmi -mbmi2    yes
+                      -> mlkem.c -> mlkem_fips202.h -> pq_fips202.h -> keccak.c
+                                                                  + keccak_x4_avx2.c
 
 Notes:
   - keccak.c names its module after KECCAK_MODULE (default: keccak), and
@@ -54,10 +59,12 @@ Notes:
     one FAKE_INIT. Inside k12.c, keccak.c is always private (KECCAK_EMBEDDED).
   - keccak_x4_avx2.c is included after keccak.c, because it uses the round
     constants defined there.
-  - In the ML-DSA modules, mldsa-native keeps its own sponge, and only calls
-    our permutations (mldsa_fips202.h is its FIPS 202 "native backend").
-    Its 4 Keccak states are in the interleaved layout of keccak_x4_avx2.c.
+  - In the ML-DSA and ML-KEM modules, mldsa-native and mlkem-native keep their
+    own sponge, and only call our permutations (mldsa_fips202.h and
+    mlkem_fips202.h are their FIPS 202 "native backends", both on top of
+    pq_fips202.h). Their 4 Keccak states are in the interleaved layout of
+    keccak_x4_avx2.c.
   - The *_avx2_bmi2 modules are only compiled if the compiler supports AVX2,
     BMI1 and BMI2, and only loaded if the CPU supports all three
     (lib/Crypto/Hash/keccak.py, lib/Crypto/Hash/KangarooTwelve.py and
-    lib/Crypto/PublicKey/MLDSA.py).
+    lib/Crypto/PublicKey/MLDSA.py and lib/Crypto/PublicKey/MLKEM.py).
