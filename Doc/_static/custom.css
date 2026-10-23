@@ -7,3 +7,9 @@
     border: none;
     padding: 0;
 }
+
+/* The logo at the top of the sidebar is square: keep it from taking the full
+   width of the sidebar, which would push the navigation down */
+.sidebar-logo {
+    width: 160px;
+}

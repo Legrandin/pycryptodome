@@ -157,6 +157,8 @@ html_theme_options = {
     "top_of_page_buttons": ["view", "edit"],
     # Left and right arrows go to the previous and next page
     "navigation_with_keys": True,
+    # The logo already contains the name
+    "sidebar_hide_name": True,
     # Teal, to tell this documentation apart from the many blue ones
     "light_css_variables": {
         "color-brand-primary": "#0f766e",
@@ -183,9 +185,9 @@ html_title = "PyCryptodome"
 # A shorter title for the navigation bar.  Default is the same as html_title.
 # html_short_title = None
 
-# The name of an image file (relative to this directory) to place at the top
-# of the sidebar.
-# html_logo = None
+# The image at the top of the sidebar (the same in light and dark mode,
+# since it has its own background)
+html_logo = "_static/pycryptodome-logo.svg"
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
