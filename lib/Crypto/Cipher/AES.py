@@ -86,16 +86,28 @@ _cproto = """
 # Load portable AES
 _raw_aes_lib = load_pycryptodome_raw_lib("Crypto.Cipher._raw_aes", _cproto)
 
-# Try to load AES with AES NI instructions
-try:
-    _raw_aesni_lib = None
+
+def _load_aes_hw():
+    """Return the (start, stop) functions of the AES implementation
+    with the AES instructions of the CPU (AES-NI on x86,
+    the ARMv8 Cryptography Extensions on AArch64),
+    or None if the CPU does not have them."""
+
     if _cpu_features.have_aes_ni():
-        _raw_aesni_lib = load_pycryptodome_raw_lib(
-            "Crypto.Cipher._raw_aesni", _cproto.replace("AES", "AESNI")
-        )
-# _raw_aesni may not have been compiled in
-except OSError:
-    pass
+        name, prefix = "Crypto.Cipher._raw_aesni", "AESNI"
+    elif _cpu_features.have_aes_armv8():
+        name, prefix = "Crypto.Cipher._raw_aes_armv8", "AES_ARMV8"
+    else:
+        return None
+    try:
+        lib = load_pycryptodome_raw_lib(name, _cproto.replace("AES", prefix))
+    # The module may not have been compiled in
+    except OSError:
+        return None
+    return (getattr(lib, prefix + "_start_operation"), getattr(lib, prefix + "_stop_operation"))
+
+
+_raw_aes_hw = _load_aes_hw()
 
 
 def _create_base_cipher(dict_parameters):
@@ -112,9 +124,8 @@ def _create_base_cipher(dict_parameters):
     if len(key) not in key_size:
         raise ValueError("Incorrect AES key length (%d bytes)" % len(key))
 
-    if use_aesni and _raw_aesni_lib:
-        start_operation = _raw_aesni_lib.AESNI_start_operation
-        stop_operation = _raw_aesni_lib.AESNI_stop_operation
+    if use_aesni and _raw_aes_hw:
+        start_operation, stop_operation = _raw_aes_hw
     else:
         start_operation = _raw_aes_lib.AES_start_operation
         stop_operation = _raw_aes_lib.AES_stop_operation
@@ -342,7 +353,8 @@ def new(key: Buffer, mode: int, *args: Any, **kwargs: Any) -> Any:
         and ``initial_value``.
 
       use_aesni: (boolean):
-        Use Intel AES-NI hardware extensions (default: use if available).
+        Use the AES instructions of the CPU (default: use if available):
+        AES-NI on x86, or the Cryptography Extensions on 64-bit ARM.
 
       threads (integer):
         (Only ``MODE_CTR``, ``MODE_GCM`` and ``MODE_OCB``).

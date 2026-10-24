@@ -40,6 +40,12 @@ FAKE_INIT(cpuid_c)
 #include <intrin.h>
 #endif
 
+#if defined(__aarch64__) && defined(__linux__)
+#include <sys/auxv.h>
+#elif defined(_M_ARM64)
+#include <windows.h>
+#endif
+
 /** Call X86 CPUID for Leaf 1: return CX **/
 static uint32_t leaf1_ecx(void)
 {
@@ -192,3 +198,37 @@ EXPORT_SYM int have_adx(void)
 }
 
 #endif
+
+/** Return non-zero if the CPU supports the AES instructions of the ARMv8
+ * Cryptography Extensions (AESE, AESD, AESMC and AESIMC), in AArch64 state. **/
+EXPORT_SYM int have_aes_armv8(void)
+{
+#if defined(__aarch64__) && defined(__linux__)
+    /* HWCAP_AES in asm/hwcap.h */
+    return (getauxval(AT_HWCAP) & (1UL<<3)) ? 1 : 0;
+#elif defined(__aarch64__) && defined(__APPLE__)
+    /* All Apple CPUs for arm64 have them */
+    return 1;
+#elif defined(_M_ARM64)
+    return IsProcessorFeaturePresent(PF_ARM_V8_CRYPTO_INSTRUCTIONS_AVAILABLE) ? 1 : 0;
+#else
+    return 0;
+#endif
+}
+
+/** Return non-zero if the CPU supports the 64-bit carry-less multiplication
+ * of the ARMv8 Cryptography Extensions (PMULL and PMULL2), in AArch64 state. **/
+EXPORT_SYM int have_pmull(void)
+{
+#if defined(__aarch64__) && defined(__linux__)
+    /* HWCAP_PMULL in asm/hwcap.h */
+    return (getauxval(AT_HWCAP) & (1UL<<4)) ? 1 : 0;
+#elif defined(__aarch64__) && defined(__APPLE__)
+    return 1;
+#elif defined(_M_ARM64)
+    /* Windows reports AES and PMULL together */
+    return IsProcessorFeaturePresent(PF_ARM_V8_CRYPTO_INSTRUCTIONS_AVAILABLE) ? 1 : 0;
+#else
+    return 0;
+#endif
+}

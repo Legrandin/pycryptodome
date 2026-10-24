@@ -97,6 +97,9 @@ ext_modules = [
     Extension(
         "Crypto.Hash._ghash_clmul", include_dirs=["src/"], sources=["src/ghash_clmul.c"], py_limited_api=True
     ),
+    Extension(
+        "Crypto.Hash._ghash_pmull", include_dirs=["src/"], sources=["src/ghash_pmull.c"], py_limited_api=True
+    ),
     # MACs
     Extension(
         "Crypto.Hash._poly1305", include_dirs=["src/"], sources=["src/poly1305.c"], py_limited_api=True
@@ -105,6 +108,12 @@ ext_modules = [
     Extension("Crypto.Cipher._raw_aes", include_dirs=["src/"], sources=["src/AES.c"], py_limited_api=True),
     Extension(
         "Crypto.Cipher._raw_aesni", include_dirs=["src/"], sources=["src/AESNI.c"], py_limited_api=True
+    ),
+    Extension(
+        "Crypto.Cipher._raw_aes_armv8",
+        include_dirs=["src/"],
+        sources=["src/AES_armv8.c"],
+        py_limited_api=True,
     ),
     Extension("Crypto.Cipher._raw_arc2", include_dirs=["src/"], sources=["src/ARC2.c"], py_limited_api=True),
     Extension(

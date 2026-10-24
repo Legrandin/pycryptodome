@@ -16,6 +16,8 @@ New features
   For now, hybrid keys can only be generated and used with HPKE: they cannot be exported or imported.
 * ``Crypto.Protocol.HPKE`` accepts ML-KEM keys and X-Wing keys,
   for post-quantum HPKE (draft-ietf-hpke-pq), in the Base and PSK modes.
+* On 64-bit ARM CPUs (Linux, macOS and Windows), AES and GCM use the instructions
+  of the ARMv8 Cryptography Extensions (AES and PMULL), when available.
 
 4.1.0 (19 October 2026)
 ++++++++++++++++++++++++++
