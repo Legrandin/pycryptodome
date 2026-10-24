@@ -258,6 +258,15 @@ setup_options = {}
 if not sysconfig.get_config_var("Py_GIL_DISABLED"):
     setup_options["options"] = {"bdist_wheel": {"py_limited_api": "cp39"}}
 
+# PyPy has no stable ABI: name its extensions with its own suffix.
+# Since setuptools 84.2, a py_limited_api extension built on PyPy for Windows
+# gets the suffix .pyd, which PyPy does not accept (only, for instance,
+# .pypy310-pp73-win_amd64.pyd), so the modules would not be found.
+# See https://github.com/pypa/setuptools/issues/5367
+if sys.implementation.name == "pypy":
+    for ext in ext_modules:
+        ext.py_limited_api = False
+
 # Set PYCRYPTODOME_NO_EC_TABLES to build the elliptic curves without the
 # precomputed tables of the generator (Ed25519: 36 KB in the binary;
 # Ed448 and the NIST curves: 39-266 KB of memory per curve, at runtime).
