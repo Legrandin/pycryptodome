@@ -62,9 +62,9 @@ jobs:
 
     # The same tests with the portable build of the big integer code (and
     # of the NIST curves)
-    # (once per Python API: ctypes and cffi)
+    # (once, with ctypes: the Python API does not matter here)
     - name: Test the portable build of the big integer code
-      if: runner.arch == 'X64' && matrix.python-version == '3.15'
+      if: runner.arch == 'X64' && matrix.python-version == '3.15' && matrix.cffi == 'no'
       shell: bash
       env:
         PYCRYPTODOME_DISABLE_BMI2_ADX: 1
