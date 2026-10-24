@@ -7,16 +7,13 @@ Changelog
 New features
 ------------
 * New module ``Crypto.PublicKey.MLKEM``, for ML-KEM keys (FIPS 203).
-  Like ``Crypto.PublicKey.MLDSA``, it is based on the portable C code of
+  It is based on the portable C code of
   `mlkem-native <https://github.com/pq-code-package/mlkem-native>`_ (v2.0.0),
-  with the Keccak code of PyCryptodome, also compiled for AVX2 and BMI2 (with 4-way SHA-3):
-  that version is 20-40% faster.
-  The keys can be exported and imported as defined in RFC 9935
-  (PKCS#8 and ``SubjectPublicKeyInfo``, also from a certificate), in DER or PEM format.
-* New module ``Crypto.PublicKey.Hybrid``, for hybrid keys (post-quantum + traditional).
-  It supports the hybrid KEM MLKEM768-X25519 (X-Wing), which combines ML-KEM-768 and X25519
-  (draft-irtf-cfrg-concrete-hybrid-kems). For now, hybrid keys can only be generated
-  and used with HPKE: they cannot be exported or imported.
+  with the Keccak code of PyCryptodome, also compiled for AVX2 and BMI2 (with 4-way SHA-3).
+  The keys can be exported and imported as PKCS#8 DER or PEM files.
+* New module ``Crypto.PublicKey.Hybrid``, to model hybrid keys (post-quantum + traditional).
+  It supports the hybrid KEM MLKEM768-X25519 (X-Wing), which combines ML-KEM-768 and X25519.
+  For now, hybrid keys can only be generated and used with HPKE: they cannot be exported or imported.
 * ``Crypto.Protocol.HPKE`` accepts ML-KEM keys and X-Wing keys,
   for post-quantum HPKE (draft-ietf-hpke-pq), in the Base and PSK modes.
 
