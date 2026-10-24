@@ -472,6 +472,8 @@ EXPORT_SYM int ed25519_new_point(Point **out,
     uint32_t A[10], B[10], C[10];
     uint8_t bb[32], cb[32];
 
+    (void)context;
+
     if ((NULL == out) || (NULL == x) || (NULL == y))
         return ERR_NULL;
 
