@@ -19,7 +19,7 @@ __all__ = [
     "KdfMemoryLimitError",
 ]
 
-version_info: tuple[int, int, Union[int, str]] = (4, 1, "0")
+version_info: tuple[int, int, Union[int, str]] = (4, 2, "0")
 
 __version__: str = ".".join([str(x) for x in version_info])
 
