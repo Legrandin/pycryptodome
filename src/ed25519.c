@@ -318,7 +318,6 @@ static size_t ed25519_digits(size_t nbits)
 STATIC void ed25519_mul_base(Point *Pout, const uint64_t *kw, size_t nw, size_t nd, const Point *R0)
 {
     int8_t e[2*ED25519_TABLE_POSITIONS];
-    volatile int8_t *wipe;
     Niels t;
     Point acc;
     size_t i;
@@ -339,10 +338,7 @@ STATIC void ed25519_mul_base(Point *Pout, const uint64_t *kw, size_t nw, size_t 
     }
     *Pout = acc;
 
-    wipe = e;
-    for (i=0; i<nd; i++) {
-        wipe[i] = 0;
-    }
+    ct_wipe(e, nd*sizeof e[0]);
 }
 
 #endif /* !EC_NO_TABLES */
@@ -371,7 +367,6 @@ STATIC int ed25519_scalar_internal(Point *Pout,
     uint32_t lambda[10];
     uint64_t *kb, r, carry;
     BlindPrf prf;
-    volatile uint64_t *wipe;
     size_t nbits, nw, i;
 
     if (len > (SIZE_MAX - 64) / 8)
@@ -415,10 +410,7 @@ STATIC int ed25519_scalar_internal(Point *Pout,
         *Pout = R0;
     }
 
-    wipe = kb;
-    for (i=0; i<nw; i++) {
-        wipe[i] = 0;
-    }
+    ct_wipe(kb, nw*sizeof kb[0]);
     free(kb);
     return 0;
 }

@@ -23,6 +23,10 @@
 #include <valgrind/memcheck.h>
 #endif
 
+#if defined(_MSC_VER) && !defined(__clang__) && (defined(_M_ARM64) || defined(_M_ARM))
+#include <intrin.h>
+#endif
+
 /*
  * On 32-bit targets, the CPU multiplies 32x32 -> 64 bits, and 64-bit
  * additions take two instructions. Some functions have versions written
@@ -50,9 +54,38 @@ static inline uint64_t ct_barrier(uint64_t x)
 #if defined(__GNUC__) || defined(__clang__)
     __asm__ ("" : "+r" (x));
     return x;
+#elif defined(_MSC_VER) && (defined(_M_ARM64) || defined(_M_ARM))
+    /*
+     * On ARM, what MSVC does for volatile depends on /volatile:iso|ms
+     * (with ms, each access is also a memory barrier, warning C4746):
+     * these intrinsics are always plain loads and stores.
+     */
+    volatile __int64 y;
+    __iso_volatile_store64(&y, (__int64)x);
+    return (uint64_t)__iso_volatile_load64(&y);
 #else
     volatile uint64_t y = x;
     return y;
+#endif
+}
+
+/**
+ * Set len bytes to zero, with stores that the compiler cannot remove
+ * (for secrets in memory about to be freed or go out of scope).
+ */
+static inline void ct_wipe(void *p, size_t len)
+{
+#if defined(_MSC_VER) && !defined(__clang__) && (defined(_M_ARM64) || defined(_M_ARM))
+    /* Plain stores, whatever /volatile:iso|ms says (see ct_barrier) */
+    volatile __int8 *v = (volatile __int8*)p;
+
+    while (len--)
+        __iso_volatile_store8(v++, 0);
+#else
+    volatile uint8_t *v = (volatile uint8_t*)p;
+
+    while (len--)
+        *v++ = 0;
 #endif
 }
 

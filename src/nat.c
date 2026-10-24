@@ -30,10 +30,7 @@ FAKE_INIT(NAT_MODULE)
 
 STATIC void wipe(void *p, size_t len)
 {
-    volatile uint8_t *v = (volatile uint8_t*)p;
-
-    while (len--)
-        *v++ = 0;
+    ct_wipe(p, len);
 }
 
 uint64_t *nat_words_alloc(size_t nw)
