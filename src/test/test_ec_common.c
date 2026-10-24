@@ -589,8 +589,8 @@ static void test_special_reductions(void)
             } else {
                 size_t k = (it - 32) * (64*nw - 1) / 31;    /* a bit position below p */
 
-                if (k >= (nw == 7 ? 448 : 521))
-                    k = (nw == 7 ? 447 : 520);
+                if (k >= (nw == 7 ? 448U : 521U))
+                    k = (nw == 7 ? 447U : 520U);
                 x[k/64] = (uint64_t)1 << (k % 64);
                 memcpy(y, x, nw*8);
                 y[0] -= 1;
@@ -636,7 +636,7 @@ static void test_special_fields(void)
         assert(ec_field_new(&field, n) == 0);
         assert(field->kind == (nw == 7 ? EC_FIELD_P448 : EC_FIELD_P521));
         assert(nat_cmp(field->p_minus_2, p_minus_2) == 0);
-        assert(field->p_bits == (nw == 7 ? 448 : 521));
+        assert(field->p_bits == (nw == 7 ? 448U : 521U));
         assert(field->one[0] == 1);
         for (i=1; i<nw; i++)
             assert(field->one[i] == 0);

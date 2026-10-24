@@ -311,7 +311,7 @@ EXPORT_SYM int oaep_decode(const uint8_t *em,
     memset(eq_mask, 0xFF, hLen);
 
     for (i=0; i<search_len; i++) {
-        eq_mask[hLen + i] = propagate_ones(i < one_pos);
+        eq_mask[hLen + i] = (uint8_t)propagate_ones(i < one_pos);
     }
 
     wrong_padding = em[0];

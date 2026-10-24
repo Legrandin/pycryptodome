@@ -45,7 +45,7 @@ static uint32_t le32(const uint8_t *p)
 
 static void ref_block(uint8_t out[64], const uint8_t key[32], const uint8_t *nonce, size_t nonce_len, uint64_t counter)
 {
-    static const uint8_t c[16] = "expand 32-byte k";
+    static const uint8_t c[] = "expand 32-byte k";
     uint32_t in[16], x[16];
     unsigned i;
 

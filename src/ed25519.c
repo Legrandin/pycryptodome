@@ -581,7 +581,7 @@ EXPORT_SYM int ed25519_decode_point(Point **out, const uint8_t *encoded, size_t 
     convert_le25p5_to_le8(check, x);
     if (is_le25p5_zero(x) && x_0)
         return ERR_EC_POINT;
-    if ((check[0] & 1) != x_0)
+    if ((check[0] & 1U) != x_0)
         sub_25519(x, zero, x);
 
     *out = calloc(1, sizeof(Point));

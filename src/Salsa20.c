@@ -73,8 +73,9 @@ FAKE_INIT(SALSA20_MODULE)
 #define UNROLL(n)
 #endif
 
-static const uint8_t sigma[16] = "expand 32-byte k";
-static const uint8_t tau[16]   = "expand 16-byte k";
+/* With the terminating null character, which is not used */
+static const uint8_t sigma[] = "expand 32-byte k";
+static const uint8_t tau[]   = "expand 16-byte k";
 
 typedef struct  {
     uint32_t input[16];             /* Words in the natural order (counter of the block after keystream[]) */
