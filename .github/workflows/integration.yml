@@ -218,6 +218,23 @@ jobs:
         cmake -B build -DSSE=${{ matrix.sse }} $EXTRA
         make -C build all test
 
+  test_c_linux_arm:
+    runs-on: ubuntu-24.04-arm
+    steps:
+    - uses: actions/checkout@v7
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install libubsan1
+    - name: Test Linux ARM64
+      env:
+        PYTHON: python3
+      run: |
+        cd src/test
+        mkdir build
+        cmake -B build
+        make -C build all test
+
   test_c_windows:
     runs-on: ${{ matrix.os }}
     strategy:

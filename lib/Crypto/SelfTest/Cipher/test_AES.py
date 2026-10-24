@@ -1242,6 +1242,12 @@ for td in test_data:
 test_data += test_data_8_lanes
 
 
+@pytest.mark.skipif(not _cpu_features.have_aes_armv8(), reason="ARMv8 AES instructions not available")
+def test_armv8_module_loaded():
+    # The module must have been compiled in, on ARM CPUs with the AES instructions
+    assert AES._raw_aes_hw is not None
+
+
 class TestMultipleBlocks:
     use_aesni = False
 
@@ -1265,7 +1271,7 @@ class TestMultipleBlocks:
             assert SHA256.new(ct).hexdigest() == expected
 
 
-@pytest.mark.skipif(not _cpu_features.have_aes_ni(), reason="AES-NI not available")
+@pytest.mark.skipif(AES._raw_aes_hw is None, reason="AES instructions not available")
 class TestMultipleBlocksAESNI(TestMultipleBlocks):
     use_aesni = True
 
@@ -1292,12 +1298,12 @@ class TestIncompleteBlocks:
         assert cipher.decrypt(b"") == b""
 
 
-@pytest.mark.skipif(not _cpu_features.have_aes_ni(), reason="AES-NI not available")
+@pytest.mark.skipif(AES._raw_aes_hw is None, reason="AES instructions not available")
 class TestIncompleteBlocksAESNI(TestIncompleteBlocks):
     use_aesni = True
 
 
-@pytest.mark.skipif(not _cpu_features.have_aes_ni(), reason="AES-NI not available")
+@pytest.mark.skipif(AES._raw_aes_hw is None, reason="AES instructions not available")
 class TestOutput:
     use_aesni = True
 
@@ -1338,6 +1344,6 @@ class TestOutput:
 
 
 TestVectors = make_block_tests(AES, "AES", test_data, {"use_aesni": False})
-TestVectorsAESNI = pytest.mark.skipif(not _cpu_features.have_aes_ni(), reason="AES-NI not available")(
+TestVectorsAESNI = pytest.mark.skipif(AES._raw_aes_hw is None, reason="AES instructions not available")(
     make_block_tests(AES, "AESNI", test_data, {"use_aesni": True})
 )
