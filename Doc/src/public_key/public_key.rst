@@ -48,6 +48,7 @@ Available key types
     rsa
     ecc
     mldsa
+    slhdsa
     mlkem
     hybrid
     dsa
@@ -55,6 +56,7 @@ Available key types
 * :doc:`RSA keys <rsa>`
 * :doc:`Elliptic Curve keys <ecc>`
 * :doc:`ML-DSA keys (post-quantum) <mldsa>`
+* :doc:`SLH-DSA keys (post-quantum) <slhdsa>`
 * :doc:`ML-KEM keys (post-quantum) <mlkem>`
 * :doc:`Hybrid keys (post-quantum + traditional) <hybrid>`
 * :doc:`DSA keys (obsolete) <dsa>`
@@ -69,3 +71,29 @@ Obsolete key type
 
 * :doc:`ElGamal keys <elgamal>`
 
+
+.. _nist_security_categories:
+
+NIST security categories
+------------------------
+
+Instead of a number of bits, NIST rates the strength of post-quantum
+algorithms (ML-KEM, ML-DSA, SLH-DSA) with a *security category* from 1 to 5.
+A category means that any attack, by a classical or a quantum computer,
+costs at least as much as a reference attack on a symmetric primitive:
+
+.. csv-table::
+   :header: Category, "At least as hard as...", "Comparable classical security"
+   :widths: 10, 45, 45
+
+   1, "Finding the key of AES-128", "128 bits (P-256, Ed25519, RSA-3072)"
+   2, "Finding a collision in SHA-256", "Between 1 and 3"
+   3, "Finding the key of AES-192", "192 bits (P-384, RSA-7680)"
+   4, "Finding a collision in SHA-384", "Between 3 and 5"
+   5, "Finding the key of AES-256", "256 bits (P-521, RSA-15360)"
+
+The comparison with RSA and ECC only holds for classical computers:
+a large quantum computer would break RSA and ECC at any key size.
+
+The categories are defined in Section 4.A.5 of the
+`NIST PQC Call for Proposals <https://csrc.nist.gov/CSRC/media/Projects/Post-Quantum-Cryptography/documents/call-for-proposals-final-dec-2016.pdf>`_.

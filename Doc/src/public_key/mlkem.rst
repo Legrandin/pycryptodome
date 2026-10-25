@@ -15,7 +15,7 @@ Its security is based on the hardness of the Module Learning With Errors problem
 (Module-LWE), which is believed to be hard even for quantum computers.
 Compared to ECC, keys and ciphertexts are much larger.
 
-FIPS 203 defines three parameter sets:
+FIPS 203 defines three parameter sets (see :ref:`nist_security_categories`):
 
 .. csv-table::
    :header: Parameter set, Constant, NIST security category, Public key, Expanded private key, Ciphertext

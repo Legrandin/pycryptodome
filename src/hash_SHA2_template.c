@@ -30,12 +30,21 @@
  *   only loads the module after checking that the CPU has the instructions.
  *
  * - hash_SHA2_compress_portable.c, otherwise.
+ *
+ * Another module can reuse this code by including SHA256.c or SHA512.c
+ * with SHA2_EMBEDDED defined: the module init function is not defined and
+ * no symbol is exported. The functions are inline so that unused ones raise
+ * no warnings (see slhdsa_sha2.h).
  */
+#ifdef SHA2_EMBEDDED
+#define SHA2_API static inline
+#else
 #ifndef SHA2_MODULE
 #define SHA2_MODULE MODULE_NAME
 #endif
-
 FAKE_INIT(SHA2_MODULE)
+#define SHA2_API EXPORT_SYM
+#endif
 
 #define FUNC_NAME(pf) PASTE2(MODULE_NAME, pf)
 
@@ -203,7 +212,7 @@ static void sha_init_state(hash_state *hs, size_t digest_size)
 #endif
 }
 
-EXPORT_SYM int FUNC_NAME(_init)(hash_state **shaState
+SHA2_API int FUNC_NAME(_init)(hash_state **shaState
 #if DIGEST_SIZE == (512/8)
         , size_t digest_size
 #endif
@@ -228,13 +237,13 @@ EXPORT_SYM int FUNC_NAME(_init)(hash_state **shaState
     return 0;
 }
 
-EXPORT_SYM int FUNC_NAME(_destroy)(hash_state *shaState)
+SHA2_API int FUNC_NAME(_destroy)(hash_state *shaState)
 {
     free(shaState);
     return 0;
 }
 
-EXPORT_SYM int FUNC_NAME(_update)(hash_state *hs, const uint8_t *buf, size_t len)
+SHA2_API int FUNC_NAME(_update)(hash_state *hs, const uint8_t *buf, size_t len)
 {
     unsigned curlen;
 
@@ -340,7 +349,7 @@ static int sha_finalize(hash_state *hs, uint8_t *hash, size_t digest_size)
     return 0;
 }
 
-EXPORT_SYM int FUNC_NAME(_digest)(const hash_state *shaState, uint8_t *digest, size_t digest_size)
+SHA2_API int FUNC_NAME(_digest)(const hash_state *shaState, uint8_t *digest, size_t digest_size)
 {
     hash_state temp;
 
@@ -361,7 +370,7 @@ EXPORT_SYM int FUNC_NAME(_digest)(const hash_state *shaState, uint8_t *digest, s
  * For SHA-512, digest_size selects the variant (28, 32 or 64 bytes);
  * for the other hashes, it must be the size of their digest.
  */
-EXPORT_SYM int FUNC_NAME(_oneshot)(const uint8_t *in, size_t len, uint8_t *digest, size_t digest_size)
+SHA2_API int FUNC_NAME(_oneshot)(const uint8_t *in, size_t len, uint8_t *digest, size_t digest_size)
 {
     hash_state hs;
     int result;
@@ -390,7 +399,7 @@ EXPORT_SYM int FUNC_NAME(_oneshot)(const uint8_t *in, size_t len, uint8_t *diges
     return sha_finalize(&hs, digest, digest_size);
 }
 
-EXPORT_SYM int FUNC_NAME(_copy)(const hash_state *src, hash_state *dst)
+SHA2_API int FUNC_NAME(_copy)(const hash_state *src, hash_state *dst)
 {
     if (NULL == src || NULL == dst) {
         return ERR_NULL;
@@ -411,7 +420,7 @@ EXPORT_SYM int FUNC_NAME(_copy)(const hash_state *src, hash_state *dst)
  *
  * This function does not change the state of either hash.
  */
-EXPORT_SYM int FUNC_NAME(_pbkdf2_hmac_assist)(const hash_state *inner, const hash_state *outer,
+SHA2_API int FUNC_NAME(_pbkdf2_hmac_assist)(const hash_state *inner, const hash_state *outer,
                                              const uint8_t *first_hmac,
                                              uint8_t *result,
                                              size_t iterations,

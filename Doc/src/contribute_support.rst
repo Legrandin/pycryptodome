@@ -31,6 +31,10 @@ Contribute and support
   as the CI does, before submitting your change. If you add a test that takes
   long to run, mark it with ``@pytest.mark.slow``.
 
+  A few tests take minutes each (for instance, key generation and signing with the
+  SLH-DSA parameter sets of SP 800-230): they are marked with ``@pytest.mark.very_slow``,
+  and they only run with the option ``--include-very-slow-tests``.
+
   Any other argument is passed on to pytest, for instance ``-k AES`` to only run the AES tests.
 - If your change breaks backward compatibility, highlight it and include
   a justification.

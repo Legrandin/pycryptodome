@@ -14,3 +14,7 @@ Buffer = Union[bytes, bytearray, memoryview]
 
 # A function that returns the requested number of random bytes
 RNG = Callable[[int], bytes]
+
+# A message as pieces to concatenate, so that a long piece is never copied
+# (for instance, the message M' of ML-DSA and SLH-DSA: a short prefix and M)
+Message = tuple[Buffer, ...]

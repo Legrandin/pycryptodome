@@ -499,6 +499,26 @@ if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64" AND CMAKE_SIZEOF_VOID_P 
     add_test(NAME test_chacha20_avx2 COMMAND test_chacha20_avx2)
 endif()
 
+# SLH-DSA, for each build of slhdsa.c
+add_executable(test_slhdsa test_slhdsa.c ../slhdsa.c)
+add_test(NAME test_slhdsa COMMAND test_slhdsa)
+
+# The build with the SHA extensions (gcc and clang only). The test does nothing on a CPU without them.
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64|i386|i686|X86|x86" AND NOT MSVC)
+    add_executable(test_slhdsa_shani test_slhdsa.c ../slhdsa_shani.c)
+    target_compile_definitions(test_slhdsa_shani PRIVATE TEST_SLHDSA_SHA_NI)
+    target_compile_options(test_slhdsa_shani PRIVATE -msha -msse4.1)
+    add_test(NAME test_slhdsa_shani COMMAND test_slhdsa_shani)
+endif()
+
+# The AVX2 build (gcc and clang only). The test does nothing on a CPU without AVX2, BMI1 and BMI2.
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64" AND CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT MSVC)
+    add_executable(test_slhdsa_avx2 test_slhdsa.c ../slhdsa_avx2_bmi2.c)
+    target_compile_definitions(test_slhdsa_avx2 PRIVATE TEST_SLHDSA_AVX2)
+    target_compile_options(test_slhdsa_avx2 PRIVATE -mavx2 -mbmi -mbmi2)
+    add_test(NAME test_slhdsa_avx2 COMMAND test_slhdsa_avx2)
+endif()
+
 # curve25519
 add_library(mod25519 OBJECT ../mod25519.c)
 add_library(curve25519 OBJECT ../curve25519.c)

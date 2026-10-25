@@ -258,6 +258,24 @@ ext_modules = [
         py_limited_api=True,
     ),
     Extension(
+        "Crypto.PublicKey._slhdsa",
+        include_dirs=["src/"],
+        sources=["src/slhdsa.c"],
+        py_limited_api=True,
+    ),
+    Extension(
+        "Crypto.PublicKey._slhdsa_shani",
+        include_dirs=["src/"],
+        sources=["src/slhdsa_shani.c"],
+        py_limited_api=True,
+    ),
+    Extension(
+        "Crypto.PublicKey._slhdsa_avx2_bmi2",
+        include_dirs=["src/"],
+        sources=["src/slhdsa_avx2_bmi2.c"],
+        py_limited_api=True,
+    ),
+    Extension(
         "Crypto.PublicKey._mlkem",
         include_dirs=["src/"],
         sources=["src/mlkem.c"],

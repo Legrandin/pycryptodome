@@ -1,6 +1,36 @@
 Changelog
 =========
 
+4.6.0 (under development)
++++++++++++++++++++++++++++
+
+New features
+------------
+* New module ``Crypto.PublicKey.SLHDSA``, for SLH-DSA keys (FIPS 205), with all
+  twelve parameter sets (SHA2 and SHAKE, categories 1, 3 and 5, small or fast).
+  The algorithms of FIPS 205 are in Python; the functions that compute most of the hashes
+  (WOTS+ chains, XMSS and FORS tree nodes) are in C, on top of the SHA-2 and Keccak code
+  of PyCryptodome. On CPUs with the Intel SHA extensions, SHA-256 uses them.
+  On CPUs with AVX2 and BMI2, the SHAKE parameter sets compute 4 WOTS+ chains
+  and 4 FORS subtrees at once (4-way Keccak): key generation is about 2x faster,
+  and the FORS part of signing about 1.7x faster.
+* SLH-DSA keys can be exported and imported as defined in RFC 9909 (pure SLH-DSA):
+  public keys as X.509 ``SubjectPublicKeyInfo`` (also from certificates),
+  private keys as PKCS#8 ``OneAsymmetricKey`` (also encrypted), in DER or PEM.
+* New module ``Crypto.Signature.slhdsa``, for SLH-DSA and HashSLH-DSA signatures (FIPS 205),
+  hedged (default) or deterministic, with an optional context.
+* SLH-DSA signing, key generation and ``construct()`` (which checks the private key)
+  accept a parameter ``threads``, to compute the XMSS and FORS trees on several threads.
+  With 8 threads, signing with the ``s`` parameter sets is 3.5x to 5x faster.
+* ``Crypto.PublicKey.SLHDSA`` also supports the six parameter sets of the initial public
+  draft of NIST SP 800-230 (April 2026), such as ``SLH_DSA_SHA2_128_24``: smaller signatures
+  and faster verification, but each key must sign at most 2^24 messages, and key generation
+  and signing take minutes (use ``threads``). The draft may still change: their support is
+  experimental, and they must not be used in production.
+* New self-test option ``--include-very-slow-tests``, for the tests marked ``very_slow``
+  (like key generation and signing with the SP 800-230 parameter sets, which take about
+  half an hour): they do not run otherwise.
+
 4.5.0 (15 November 2026)
 +++++++++++++++++++++++++++
 

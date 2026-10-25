@@ -46,6 +46,7 @@ Available mechanisms
     pkcs1_pss
     eddsa
     mldsa
+    slhdsa
     dsa
 
 * :doc:`pkcs1_v1_5`
@@ -55,6 +56,8 @@ Available mechanisms
 * :doc:`eddsa`
 
 * :doc:`mldsa`
+
+* :doc:`slhdsa`
 
 * :doc:`dsa`
 

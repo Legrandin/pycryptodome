@@ -19,12 +19,20 @@ def pytest_addoption(parser):
     group = parser.getgroup("pycryptodome")
     group.addoption("--skip-slow-tests", action="store_true", help="Skip slow tests")
     group.addoption(
+        "--include-very-slow-tests",
+        action="store_true",
+        help="Also run the very slow tests (they can take more than half an hour)",
+    )
+    group.addoption(
         "--wycheproof-warnings", action="store_true", help="Report Wycheproof test vectors with warnings"
     )
 
 
 def pytest_configure(config):
     config.addinivalue_line("markers", "slow: slow test, deselected with --skip-slow-tests")
+    config.addinivalue_line(
+        "markers", "very_slow: very slow test (minutes), only selected with --include-very-slow-tests"
+    )
     st_common.options["wycheproof_warnings"] = config.getoption("wycheproof_warnings")
 
 
@@ -46,9 +54,16 @@ def pytest_terminal_summary(terminalreporter):
 
 
 def pytest_collection_modifyitems(config, items):
-    if not config.getoption("skip_slow_tests"):
-        return
-    deselected = [item for item in items if item.get_closest_marker("slow")]
+    skipped_markers = []
+    if config.getoption("skip_slow_tests"):
+        skipped_markers.append("slow")
+    if not config.getoption("include_very_slow_tests"):
+        skipped_markers.append("very_slow")
+
+    def skipped(item):
+        return any(item.get_closest_marker(marker) for marker in skipped_markers)
+
+    deselected = [item for item in items if skipped(item)]
     if deselected:
         config.hook.pytest_deselected(items=deselected)
-        items[:] = [item for item in items if not item.get_closest_marker("slow")]
+        items[:] = [item for item in items if not skipped(item)]

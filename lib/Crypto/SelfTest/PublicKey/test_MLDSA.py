@@ -102,7 +102,7 @@ class TestMLDSAKey:
         assert pub_key2 == pub_key
         assert not pub_key2.has_private()
         assert pub_key2.param_set is MLDSA.ML_DSA_44
-        assert pub_key2._verify(b"msg", key._sign(b"msg", bytes(32)))
+        assert pub_key2._verify((b"msg",), key._sign((b"msg",), bytes(32)))
 
     @pytest.mark.parametrize("param_set", PARAM_SETS)
     def test_generate(self, param_set):
@@ -249,59 +249,72 @@ class TestMLDSAKey:
 
         msg = b"Test message"
         prefix = pure_prefix(b"context")
-        sig = key._sign(msg, ZERO_RND, prefix=prefix)
+        sig = key._sign((prefix, msg), ZERO_RND)
         assert len(sig) == sig_len
-        assert pub_key._verify(msg, sig, prefix=prefix)
-        assert key._verify(msg, sig, prefix=prefix)
+        assert pub_key._verify((prefix, msg), sig)
+        assert key._verify((prefix, msg), sig)
 
         # Deterministic
-        assert key._sign(msg, ZERO_RND, prefix=prefix) == sig
+        assert key._sign((prefix, msg), ZERO_RND) == sig
 
         # M' is the concatenation of prefix and message
-        assert key._sign(prefix + msg, ZERO_RND) == sig
-        assert key._sign(msg[3:], ZERO_RND, prefix=prefix + msg[:3]) == sig
-        assert pub_key._verify(prefix + msg, sig)
+        assert key._sign((prefix + msg,), ZERO_RND) == sig
+        assert key._sign((prefix + msg[:3], msg[3:]), ZERO_RND) == sig
+        assert pub_key._verify((prefix + msg,), sig)
 
         # Randomized
-        sig2 = key._sign(msg, b"\x01" * 32, prefix=prefix)
+        sig2 = key._sign((prefix, msg), b"\x01" * 32)
         assert sig2 != sig
-        assert pub_key._verify(msg, sig2, prefix=prefix)
+        assert pub_key._verify((prefix, msg), sig2)
 
         # Wrong message, prefix or signature
-        assert not pub_key._verify(msg + b"\x00", sig, prefix=prefix)
-        assert not pub_key._verify(msg, sig, prefix=pure_prefix(b"contexT"))
-        assert not pub_key._verify(msg, sig)
+        assert not pub_key._verify((prefix, msg + b"\x00"), sig)
+        assert not pub_key._verify((pure_prefix(b"contexT"), msg), sig)
+        assert not pub_key._verify((msg,), sig)
         for pos in (0, sig_len // 2, sig_len - 1):
             sig_bad = bytearray(sig)
             sig_bad[pos] ^= 0x01
-            assert not pub_key._verify(msg, sig_bad, prefix=prefix)
-        assert not pub_key._verify(msg, sig[:-1], prefix=prefix)
-        assert not pub_key._verify(msg, sig + b"\x00", prefix=prefix)
-        assert not pub_key._verify(msg, b"", prefix=prefix)
+            assert not pub_key._verify((prefix, msg), sig_bad)
+        assert not pub_key._verify((prefix, msg), sig[:-1])
+        assert not pub_key._verify((prefix, msg), sig + b"\x00")
+        assert not pub_key._verify((prefix, msg), b"")
 
         # Wrong key
         other = MLDSA.generate(param_set=param_set)
-        assert not other._verify(msg, sig, prefix=prefix)
+        assert not other._verify((prefix, msg), sig)
 
         # Empty message, other types of buffers
-        sig = key._sign(b"", ZERO_RND)
-        assert pub_key._verify(b"", sig)
-        assert pub_key._verify(bytearray(), bytearray(sig))
-        assert key._sign(memoryview(b""), bytearray(ZERO_RND), prefix=memoryview(b"")) == sig
+        sig = key._sign((b"",), ZERO_RND)
+        assert pub_key._verify((b"",), sig)
+        assert pub_key._verify((bytearray(),), bytearray(sig))
+        assert key._sign((memoryview(b""), memoryview(b"")), bytearray(ZERO_RND)) == sig
 
     def test_sign_errors(self):
         key = MLDSA.generate(param_set=ParamSet.ML_DSA_44)
 
         with pytest.raises(TypeError):
-            key.public_key()._sign(b"msg", ZERO_RND)
+            key.public_key()._sign((b"msg",), ZERO_RND)
 
         with pytest.raises(ValueError):
-            key._sign(b"msg", ZERO_RND[:-1])
+            key._sign((b"msg",), ZERO_RND[:-1])
         with pytest.raises(ValueError):
-            key._sign(b"msg", ZERO_RND + b"\x00")
+            key._sign((b"msg",), ZERO_RND + b"\x00")
 
         with pytest.raises(TypeError):
-            key._sign("msg", ZERO_RND)
+            key._sign(("msg",), ZERO_RND)
+
+        # The message must be a tuple of pieces
+        for bad_msg in (b"msg", [b"msg"]):
+            with pytest.raises(TypeError):
+                key._sign(bad_msg, ZERO_RND)
+            with pytest.raises(TypeError):
+                key.public_key()._verify(bad_msg, key._sign((b"msg",), ZERO_RND))
+
+        # Any number of pieces
+        sig = key._sign((b"m", b"", b"s", bytearray(b"g")), ZERO_RND)
+        assert sig == key._sign((b"msg",), ZERO_RND)
+        assert key._verify((memoryview(b"ms"), b"g"), sig)
+        assert key._sign((), ZERO_RND) == key._sign((b"",), ZERO_RND)
 
     def test_external_mu(self):
         key = MLDSA.generate(param_set=ParamSet.ML_DSA_65)
@@ -312,20 +325,20 @@ class TestMLDSAKey:
         prefix = pure_prefix()
         mu = SHAKE256.new(tr + prefix + msg).read(64)
 
-        sig = key._sign(mu, ZERO_RND, external_mu=True)
-        assert sig == key._sign(msg, ZERO_RND, prefix=prefix)
-        assert key._verify(mu, sig, external_mu=True)
-        assert key._verify(msg, sig, prefix=prefix)
+        sig = key._sign((mu,), ZERO_RND, external_mu=True)
+        assert sig == key._sign((prefix, msg), ZERO_RND)
+        assert key._verify((mu,), sig, external_mu=True)
+        assert key._verify((prefix, msg), sig)
 
-        # The prefix is ignored
-        assert key._sign(mu, ZERO_RND, prefix=b"xyz", external_mu=True) == sig
-        assert key._verify(mu, sig, prefix=b"xyz", external_mu=True)
+        # mu can be given in pieces
+        assert key._sign((mu[:10], mu[10:]), ZERO_RND, external_mu=True) == sig
+        assert key._verify((mu[:10], mu[10:]), sig, external_mu=True)
 
         for bad_mu in (mu[:-1], mu + b"\x00", b""):
             with pytest.raises(ValueError):
-                key._sign(bad_mu, ZERO_RND, external_mu=True)
+                key._sign((bad_mu,), ZERO_RND, external_mu=True)
             with pytest.raises(ValueError):
-                key._verify(bad_mu, sig, external_mu=True)
+                key._verify((bad_mu,), sig, external_mu=True)
 
 
 class TestCCTVAccumulated:
@@ -353,9 +366,9 @@ class TestCCTVAccumulated:
         for _ in range(iterations):
             key = MLDSA.construct(param_set=param_set, seed=source.read(32))
             acc.update(key.pk)
-            sig = key._sign(b"", ZERO_RND, prefix=prefix)
+            sig = key._sign((prefix, b""), ZERO_RND)
             acc.update(sig)
-            assert key._verify(b"", sig, prefix=prefix)
+            assert key._verify((prefix, b""), sig)
         return acc.read(32).hex()
 
     @pytest.mark.parametrize("param_set", PARAM_SETS)
@@ -449,8 +462,8 @@ class TestRFC9881:
 
         # Pure ML-DSA, empty context
         prefix = pure_prefix()
-        assert key._verify(tbs_certificate, signature, prefix=prefix)
-        assert not key._verify(tbs_certificate + b"\x00", signature, prefix=prefix)
+        assert key._verify((prefix, tbs_certificate), signature)
+        assert not key._verify((prefix, tbs_certificate + b"\x00"), signature)
 
     def test_inconsistent_1(self):
         # The seed and the expanded key don't match
@@ -520,7 +533,7 @@ class TestACVP:
 
         msg, prefix, external_mu = _acvp_message(group, test)
         rnd = ZERO_RND if group["deterministic"] else unhexlify(test["rnd"])
-        sig = key._sign(msg, rnd, prefix=prefix, external_mu=external_mu)
+        sig = key._sign((prefix, msg), rnd, external_mu=external_mu)
         assert sig == unhexlify(test["signature"])
 
     @pytest.mark.parametrize("group,test", _load_acvp("ML-DSA-sigVer-FIPS204.json"))
@@ -529,7 +542,7 @@ class TestACVP:
 
         msg, prefix, external_mu = _acvp_message(group, test)
         signature = unhexlify(test["signature"])
-        result = key._verify(msg, signature, prefix=prefix, external_mu=external_mu)
+        result = key._verify((prefix, msg), signature, external_mu=external_mu)
         assert result == test["testPassed"], test["reason"]
 
 
@@ -551,14 +564,14 @@ class TestImplementations:
             msg = rand(rng.choice([0, 1, 135, 136, 137, 1000]))
             prefix = pure_prefix(rand(rng.randint(0, 255)))
             rnd = rand(32) if i % 2 else ZERO_RND
-            sig = key._sign(msg, rnd, prefix=prefix)
+            sig = key._sign((prefix, msg), rnd)
             out.append(sig)
-            out.append(key._verify(msg, sig, prefix=prefix))
+            out.append(key._verify((prefix, msg), sig))
             bad = bytearray(sig)
             bad[rng.randrange(len(bad))] ^= 1
-            out.append(key._verify(msg, bad, prefix=prefix))
+            out.append(key._verify((prefix, msg), bad))
             mu = rand(64)
-            out.append(key._sign(mu, rnd, external_mu=True))
+            out.append(key._sign((mu,), rnd, external_mu=True))
         return out
 
     @pytest.mark.parametrize("param_set", PARAM_SETS)

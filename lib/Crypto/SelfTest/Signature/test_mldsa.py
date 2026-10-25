@@ -169,7 +169,7 @@ class TestMLDSASigScheme:
         # rnd comes from randfunc
         rnd = bytes(range(32))
         signature = mldsa.new(self.key, randfunc=fixed_rng(rnd)).sign(b"message")
-        assert signature == self.key._sign(b"message", rnd, prefix=pure_prefix())
+        assert signature == self.key._sign((pure_prefix(), b"message"), rnd)
 
         with pytest.raises(ValueError):
             mldsa.new(self.key, randfunc=lambda n: b"\x00" * (n - 1)).sign(b"message")
@@ -178,7 +178,7 @@ class TestMLDSASigScheme:
         signer = mldsa.new(self.key, b"ctx", deterministic=True)
         signature = signer.sign(b"message")
         assert signer.sign(b"message") == signature
-        assert signature == self.key._sign(b"message", ZERO_RND, prefix=pure_prefix(b"ctx"))
+        assert signature == self.key._sign((pure_prefix(b"ctx"), b"message"), ZERO_RND)
         mldsa.new(self.key.public_key(), b"ctx").verify(b"message", signature)
 
         with pytest.raises(ValueError):
@@ -247,7 +247,7 @@ class TestHashMLDSA:
         h = HASHES[name](b"message")
         oid = DerObjectId(h.oid).encode()
         ph = h.digest() if hasattr(h, "digest") else h.copy().read(64 if name == "SHAKE-256" else 32)
-        expected = self.key._sign(ph, ZERO_RND, prefix=b"\x01\x03ctx" + oid)
+        expected = self.key._sign((b"\x01\x03ctx" + oid, ph), ZERO_RND)
         assert mldsa.new(self.key, b"ctx", deterministic=True).sign(h) == expected
 
         # The hash object can still be used
@@ -368,7 +368,7 @@ class TestMLDSAMuHash:
         assert signer.sign(mu_hash) != signer.sign(mu_hash)
         rnd = bytes(range(32))
         signature = mldsa.new(self.key, randfunc=fixed_rng(rnd)).sign(mu_hash)
-        assert signature == self.key._sign(b"message", rnd, prefix=pure_prefix())
+        assert signature == self.key._sign((pure_prefix(), b"message"), rnd)
 
     def test_not_authentic(self):
         signature = mldsa.new(self.key).sign(b"message")
@@ -498,9 +498,9 @@ class TestWycheproof:
         if not hasattr(tv, "msg"):
             # Sign_internal, with mu only
             assert "Internal" in tv.flags
-            signature = key._sign(tv.mu, rnd, external_mu=True)
+            signature = key._sign((tv.mu,), rnd, external_mu=True)
             assert signature == tv.sig
-            assert key._verify(tv.mu, signature, external_mu=True)
+            assert key._verify((tv.mu,), signature, external_mu=True)
             return
 
         try:
@@ -522,7 +522,7 @@ class TestWycheproof:
         if tv.mu is not None:
             mu_hash = mldsa.MLDSAMuHash(key, data=tv.msg, context=tv.ctx)
             assert mu_hash.digest() == tv.mu
-            assert key._sign(tv.mu, rnd, external_mu=True) == tv.sig
+            assert key._sign((tv.mu,), rnd, external_mu=True) == tv.sig
 
     @pytest.mark.parametrize("tv", load_wycheproof_verify(), ids=wycheproof_id)
     def test_verify(self, tv):
