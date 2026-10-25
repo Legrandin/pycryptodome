@@ -44,12 +44,12 @@ jobs:
           echo 'CIBW_ARCHS=x86_64 universal2' >> $GITHUB_ENV
         if: runner.os == 'macOS'
 
-      - uses: pypa/cibuildwheel@v4.3.1
+      - uses: pypa/cibuildwheel@v4.3.4
         name: Build wheels
         env:
           # cibuildwheel will build wheel once and test it for each CPython version
           # and for PyPy >= 3.10
-          CIBW_BUILD: "cp39-* cp314-* cp315-* cp315t-* pp310-* pp311-*"
+          CIBW_BUILD: "cp39-* cp314-* cp315-* cp315t-* pp310-* pp311-* pp312*"
           # The manylinux images are set in pyproject.toml ([tool.cibuildwheel])
           CIBW_ENABLE: "pypy pypy-eol"
 
