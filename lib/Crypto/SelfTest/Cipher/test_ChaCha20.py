@@ -7,6 +7,7 @@ import pytest
 
 from Crypto import MessageTooLongError
 from Crypto.Cipher import ChaCha20
+from Crypto.SelfTest.loader import load_test_vectors_wycheproof, wycheproof_id
 from Crypto.Util._cpu_features import available_cores
 
 
@@ -640,3 +641,53 @@ class TestChaCha20Threads:
         assert cipher.encrypt(bytes(1900)) == ks[100:]
         with pytest.raises(MessageTooLongError):
             cipher.encrypt(bytes(1))
+
+
+def load_wycheproof_vectors():
+    def filter_algo(group):
+        return group["algorithm"]
+
+    def filter_counter(test):
+        # The initial block counter, in little-endian order
+        return int.from_bytes(unhexlify(test["initialCounter"]), "little")
+
+    return load_test_vectors_wycheproof(
+        ("Cipher", "wycheproof"),
+        "chacha20_counter_test.json",
+        "Wycheproof ChaCha20 counter",
+        group_tag={"algo": filter_algo},
+        unit_tag={"counter": filter_counter},
+    )
+
+
+class TestVectorsWycheproof:
+    """Messages that start at the last blocks of the key stream: the carry into
+    the high word of a 64-bit counter, and the end of the key stream
+    (64-bit counter for XChaCha20, 32-bit counter for ChaCha20 with a 12-byte nonce)
+
+    Wycheproof follows libsodium, where XChaCha20 has a 64-bit counter.
+    Ours follows draft-irtf-cfrg-xchacha (HChaCha20 + ChaCha20 of RFC 8439),
+    with a 32-bit counter: the key stream ends after 2**32 blocks."""
+
+    @pytest.mark.parametrize("tv", load_wycheproof_vectors(), ids=wycheproof_id)
+    def test(self, tv):
+        assert tv.algo in ("XChaCha20", "ChaCha20-IETF")
+        assert len(tv.iv) == (24 if tv.algo == "XChaCha20" else 12)
+
+        if tv.algo == "XChaCha20" and tv.counter >= 2**32:
+            cipher = ChaCha20.new(key=tv.key, nonce=tv.iv)
+            with pytest.raises(ValueError):
+                cipher.seek(tv.counter * 64)
+            return
+
+        too_long = tv.counter * 64 + len(tv.msg) > 2**32 * 64
+
+        for direction in ("encrypt", "decrypt"):
+            cipher = ChaCha20.new(key=tv.key, nonce=tv.iv)
+            cipher.seek(tv.counter * 64)
+            if tv.valid and not too_long:
+                assert getattr(cipher, direction)(tv.msg) == tv.ct
+            else:
+                # The key stream would be exhausted
+                with pytest.raises(MessageTooLongError):
+                    getattr(cipher, direction)(tv.msg)

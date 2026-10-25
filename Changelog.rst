@@ -1,6 +1,16 @@
 Changelog
 =========
 
+4.3.0 (under development)
+++++++++++++++++++++++++++
+
+Other changes
+-------------
+* Updated the Wycheproof test vectors (new Ed25519 tests and the new ``chacha20_counter_test.json``).
+  XChaCha20 keeps the construction of draft-irtf-cfrg-xchacha (HChaCha20 and the ChaCha20
+  of RFC 8439), with a 32-bit block counter: the key stream ends after 256 GiB,
+  whereas libsodium and Wycheproof use a 64-bit counter.
+
 4.2.0 (24 October 2026)
 ++++++++++++++++++++++++++
 

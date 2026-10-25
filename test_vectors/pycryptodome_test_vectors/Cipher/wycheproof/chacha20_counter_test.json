@@ -1,0 +1,588 @@
+{
+  "algorithm": "CHACHA20",
+  "header": [
+    "Test vectors for raw ChaCha20 counter carry and exhaustion boundaries."
+  ],
+  "notes": {
+    "CounterCarry": {
+      "bugType": "CONFIDENTIALITY",
+      "description": "The vector crosses the low 32-bit counter boundary and requires carry into the high word.",
+      "effect": "Dropping the carry can repeat a keystream block."
+    },
+    "CounterOverflow": {
+      "bugType": "CONFIDENTIALITY",
+      "description": "The vector exercises the final legal counter block or requires rejection before counter wrap.",
+      "effect": "Counter wrap reuses a keystream block."
+    }
+  },
+  "numberOfTests": 42,
+  "schema": "stream_cipher_test_schema.json",
+  "testGroups": [
+    {
+      "type": "StreamCipherTest",
+      "source": {
+        "name": "github/paragonie/sodium_compat/boundary-regressions",
+        "version": "2.5.2"
+      },
+      "algorithm": "XChaCha20",
+      "keySize": 256,
+      "ivSize": 192,
+      "counterSize": 64,
+      "tests": [
+        {
+          "tcId": 1,
+          "comment": "XChaCha20 counter 0x00000000fffffffe with 0-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000000000000000000000000000",
+          "initialCounter": "feffffff00000000",
+          "msg": "",
+          "ct": "",
+          "result": "valid",
+          "flags": [
+            "CounterCarry"
+          ]
+        },
+        {
+          "tcId": 2,
+          "comment": "XChaCha20 counter 0x00000000fffffffe with 1-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000000000000000000000000000",
+          "initialCounter": "feffffff00000000",
+          "msg": "00",
+          "ct": "34",
+          "result": "valid",
+          "flags": [
+            "CounterCarry"
+          ]
+        },
+        {
+          "tcId": 3,
+          "comment": "XChaCha20 counter 0x00000000fffffffe with 63-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000000000000000000000000000",
+          "initialCounter": "feffffff00000000",
+          "msg": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "ct": "347f6b183c05b876222d3f3ddcaea04418d45d11a1d532ffa9954a649885c26e7f4e8c63476193b9be331495aa17b678fd792c616d167d09335674bafe4e91",
+          "result": "valid",
+          "flags": [
+            "CounterCarry"
+          ]
+        },
+        {
+          "tcId": 4,
+          "comment": "XChaCha20 counter 0x00000000fffffffe with 64-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000000000000000000000000000",
+          "initialCounter": "feffffff00000000",
+          "msg": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "ct": "347f6b183c05b876222d3f3ddcaea04418d45d11a1d532ffa9954a649885c26e7f4e8c63476193b9be331495aa17b678fd792c616d167d09335674bafe4e9172",
+          "result": "valid",
+          "flags": [
+            "CounterCarry"
+          ]
+        },
+        {
+          "tcId": 5,
+          "comment": "XChaCha20 counter 0x00000000fffffffe with 65-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000000000000000000000000000",
+          "initialCounter": "feffffff00000000",
+          "msg": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "ct": "347f6b183c05b876222d3f3ddcaea04418d45d11a1d532ffa9954a649885c26e7f4e8c63476193b9be331495aa17b678fd792c616d167d09335674bafe4e9172b9",
+          "result": "valid",
+          "flags": [
+            "CounterCarry"
+          ]
+        },
+        {
+          "tcId": 6,
+          "comment": "XChaCha20 counter 0x00000000fffffffe with 127-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000000000000000000000000000",
+          "initialCounter": "feffffff00000000",
+          "msg": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "ct": "347f6b183c05b876222d3f3ddcaea04418d45d11a1d532ffa9954a649885c26e7f4e8c63476193b9be331495aa17b678fd792c616d167d09335674bafe4e9172b95212612451119424ff54b88064f035a0ef69b53a28c634b679ebf6b319c5483769a7f22742571d18b0e2faebb1df1ca70225752d4f68f24ad58a4d2dc5c3",
+          "result": "valid",
+          "flags": [
+            "CounterCarry"
+          ]
+        },
+        {
+          "tcId": 7,
+          "comment": "XChaCha20 counter 0x00000000fffffffe with 128-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000000000000000000000000000",
+          "initialCounter": "feffffff00000000",
+          "msg": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "ct": "347f6b183c05b876222d3f3ddcaea04418d45d11a1d532ffa9954a649885c26e7f4e8c63476193b9be331495aa17b678fd792c616d167d09335674bafe4e9172b95212612451119424ff54b88064f035a0ef69b53a28c634b679ebf6b319c5483769a7f22742571d18b0e2faebb1df1ca70225752d4f68f24ad58a4d2dc5c32b",
+          "result": "valid",
+          "flags": [
+            "CounterCarry"
+          ]
+        },
+        {
+          "tcId": 8,
+          "comment": "XChaCha20 counter 0x00000000ffffffff with 0-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000000000000000000000000000",
+          "initialCounter": "ffffffff00000000",
+          "msg": "",
+          "ct": "",
+          "result": "valid",
+          "flags": [
+            "CounterCarry"
+          ]
+        },
+        {
+          "tcId": 9,
+          "comment": "XChaCha20 counter 0x00000000ffffffff with 1-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000000000000000000000000000",
+          "initialCounter": "ffffffff00000000",
+          "msg": "00",
+          "ct": "b9",
+          "result": "valid",
+          "flags": [
+            "CounterCarry"
+          ]
+        },
+        {
+          "tcId": 10,
+          "comment": "XChaCha20 counter 0x00000000ffffffff with 63-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000000000000000000000000000",
+          "initialCounter": "ffffffff00000000",
+          "msg": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "ct": "b95212612451119424ff54b88064f035a0ef69b53a28c634b679ebf6b319c5483769a7f22742571d18b0e2faebb1df1ca70225752d4f68f24ad58a4d2dc5c3",
+          "result": "valid",
+          "flags": [
+            "CounterCarry"
+          ]
+        },
+        {
+          "tcId": 11,
+          "comment": "XChaCha20 counter 0x00000000ffffffff with 64-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000000000000000000000000000",
+          "initialCounter": "ffffffff00000000",
+          "msg": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "ct": "b95212612451119424ff54b88064f035a0ef69b53a28c634b679ebf6b319c5483769a7f22742571d18b0e2faebb1df1ca70225752d4f68f24ad58a4d2dc5c32b",
+          "result": "valid",
+          "flags": [
+            "CounterCarry"
+          ]
+        },
+        {
+          "tcId": 12,
+          "comment": "XChaCha20 counter 0x00000000ffffffff with 65-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000000000000000000000000000",
+          "initialCounter": "ffffffff00000000",
+          "msg": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "ct": "b95212612451119424ff54b88064f035a0ef69b53a28c634b679ebf6b319c5483769a7f22742571d18b0e2faebb1df1ca70225752d4f68f24ad58a4d2dc5c32b88",
+          "result": "valid",
+          "flags": [
+            "CounterCarry"
+          ]
+        },
+        {
+          "tcId": 13,
+          "comment": "XChaCha20 counter 0x00000000ffffffff with 127-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000000000000000000000000000",
+          "initialCounter": "ffffffff00000000",
+          "msg": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "ct": "b95212612451119424ff54b88064f035a0ef69b53a28c634b679ebf6b319c5483769a7f22742571d18b0e2faebb1df1ca70225752d4f68f24ad58a4d2dc5c32b8861043ec0724c04837eae0f33750fa790db2548bff4511f1cb4c548297f6a06a4c0ddd43adf8183802b9b0be9a5f743d308dc699c31ef984f610bf0ad56d9",
+          "result": "valid",
+          "flags": [
+            "CounterCarry"
+          ]
+        },
+        {
+          "tcId": 14,
+          "comment": "XChaCha20 counter 0x00000000ffffffff with 128-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000000000000000000000000000",
+          "initialCounter": "ffffffff00000000",
+          "msg": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "ct": "b95212612451119424ff54b88064f035a0ef69b53a28c634b679ebf6b319c5483769a7f22742571d18b0e2faebb1df1ca70225752d4f68f24ad58a4d2dc5c32b8861043ec0724c04837eae0f33750fa790db2548bff4511f1cb4c548297f6a06a4c0ddd43adf8183802b9b0be9a5f743d308dc699c31ef984f610bf0ad56d9d6",
+          "result": "valid",
+          "flags": [
+            "CounterCarry"
+          ]
+        },
+        {
+          "tcId": 15,
+          "comment": "XChaCha20 counter 0xfffffffffffffffe with 0-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000000000000000000000000000",
+          "initialCounter": "feffffffffffffff",
+          "msg": "",
+          "ct": "",
+          "result": "valid",
+          "flags": [
+            "CounterOverflow"
+          ]
+        },
+        {
+          "tcId": 16,
+          "comment": "XChaCha20 counter 0xfffffffffffffffe with 1-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000000000000000000000000000",
+          "initialCounter": "feffffffffffffff",
+          "msg": "00",
+          "ct": "d5",
+          "result": "valid",
+          "flags": [
+            "CounterOverflow"
+          ]
+        },
+        {
+          "tcId": 17,
+          "comment": "XChaCha20 counter 0xfffffffffffffffe with 63-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000000000000000000000000000",
+          "initialCounter": "feffffffffffffff",
+          "msg": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "ct": "d5bb6f1da1ca5acc1b841af1809f0241ac1bb523c70def8480b06f5a19d17589b960f3f15269afdc0f051991930aa59502adc50da2e91a1c1c8adbb10ef6c4",
+          "result": "valid",
+          "flags": [
+            "CounterOverflow"
+          ]
+        },
+        {
+          "tcId": 18,
+          "comment": "XChaCha20 counter 0xfffffffffffffffe with 64-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000000000000000000000000000",
+          "initialCounter": "feffffffffffffff",
+          "msg": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "ct": "d5bb6f1da1ca5acc1b841af1809f0241ac1bb523c70def8480b06f5a19d17589b960f3f15269afdc0f051991930aa59502adc50da2e91a1c1c8adbb10ef6c454",
+          "result": "valid",
+          "flags": [
+            "CounterOverflow"
+          ]
+        },
+        {
+          "tcId": 19,
+          "comment": "XChaCha20 counter 0xfffffffffffffffe with 65-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000000000000000000000000000",
+          "initialCounter": "feffffffffffffff",
+          "msg": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "ct": "d5bb6f1da1ca5acc1b841af1809f0241ac1bb523c70def8480b06f5a19d17589b960f3f15269afdc0f051991930aa59502adc50da2e91a1c1c8adbb10ef6c4540e",
+          "result": "valid",
+          "flags": [
+            "CounterOverflow"
+          ]
+        },
+        {
+          "tcId": 20,
+          "comment": "XChaCha20 counter 0xfffffffffffffffe with 127-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000000000000000000000000000",
+          "initialCounter": "feffffffffffffff",
+          "msg": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "ct": "d5bb6f1da1ca5acc1b841af1809f0241ac1bb523c70def8480b06f5a19d17589b960f3f15269afdc0f051991930aa59502adc50da2e91a1c1c8adbb10ef6c4540edc309d13c5a1acd1698335fb5e24f615d749ebcd7e9d5262835c906442eb5f1eef3d24cd0d63cb02f1df74bd1de2551f8588044545f0212d267431a80990",
+          "result": "valid",
+          "flags": [
+            "CounterOverflow"
+          ]
+        },
+        {
+          "tcId": 21,
+          "comment": "XChaCha20 counter 0xfffffffffffffffe with 128-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000000000000000000000000000",
+          "initialCounter": "feffffffffffffff",
+          "msg": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "ct": "d5bb6f1da1ca5acc1b841af1809f0241ac1bb523c70def8480b06f5a19d17589b960f3f15269afdc0f051991930aa59502adc50da2e91a1c1c8adbb10ef6c4540edc309d13c5a1acd1698335fb5e24f615d749ebcd7e9d5262835c906442eb5f1eef3d24cd0d63cb02f1df74bd1de2551f8588044545f0212d267431a80990f9",
+          "result": "valid",
+          "flags": [
+            "CounterOverflow"
+          ]
+        },
+        {
+          "tcId": 22,
+          "comment": "XChaCha20 counter 0xffffffffffffffff with 0-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000000000000000000000000000",
+          "initialCounter": "ffffffffffffffff",
+          "msg": "",
+          "ct": "",
+          "result": "valid",
+          "flags": [
+            "CounterOverflow"
+          ]
+        },
+        {
+          "tcId": 23,
+          "comment": "XChaCha20 counter 0xffffffffffffffff with 1-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000000000000000000000000000",
+          "initialCounter": "ffffffffffffffff",
+          "msg": "00",
+          "ct": "0e",
+          "result": "valid",
+          "flags": [
+            "CounterOverflow"
+          ]
+        },
+        {
+          "tcId": 24,
+          "comment": "XChaCha20 counter 0xffffffffffffffff with 63-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000000000000000000000000000",
+          "initialCounter": "ffffffffffffffff",
+          "msg": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "ct": "0edc309d13c5a1acd1698335fb5e24f615d749ebcd7e9d5262835c906442eb5f1eef3d24cd0d63cb02f1df74bd1de2551f8588044545f0212d267431a80990",
+          "result": "valid",
+          "flags": [
+            "CounterOverflow"
+          ]
+        },
+        {
+          "tcId": 25,
+          "comment": "XChaCha20 counter 0xffffffffffffffff with 64-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000000000000000000000000000",
+          "initialCounter": "ffffffffffffffff",
+          "msg": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "ct": "0edc309d13c5a1acd1698335fb5e24f615d749ebcd7e9d5262835c906442eb5f1eef3d24cd0d63cb02f1df74bd1de2551f8588044545f0212d267431a80990f9",
+          "result": "valid",
+          "flags": [
+            "CounterOverflow"
+          ]
+        },
+        {
+          "tcId": 26,
+          "comment": "XChaCha20 counter 0xffffffffffffffff with 65-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000000000000000000000000000",
+          "initialCounter": "ffffffffffffffff",
+          "msg": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "result": "invalid",
+          "flags": [
+            "CounterOverflow"
+          ]
+        },
+        {
+          "tcId": 27,
+          "comment": "XChaCha20 counter 0xffffffffffffffff with 127-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000000000000000000000000000",
+          "initialCounter": "ffffffffffffffff",
+          "msg": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "result": "invalid",
+          "flags": [
+            "CounterOverflow"
+          ]
+        },
+        {
+          "tcId": 28,
+          "comment": "XChaCha20 counter 0xffffffffffffffff with 128-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000000000000000000000000000",
+          "initialCounter": "ffffffffffffffff",
+          "msg": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "result": "invalid",
+          "flags": [
+            "CounterOverflow"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "StreamCipherTest",
+      "source": {
+        "name": "github/paragonie/sodium_compat/boundary-regressions",
+        "version": "2.5.2"
+      },
+      "algorithm": "ChaCha20-IETF",
+      "keySize": 256,
+      "ivSize": 96,
+      "counterSize": 32,
+      "tests": [
+        {
+          "tcId": 29,
+          "comment": "ChaCha20-IETF counter 0xfffffffe with 0-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000",
+          "initialCounter": "feffffff",
+          "msg": "",
+          "ct": "",
+          "result": "valid",
+          "flags": [
+            "CounterOverflow"
+          ]
+        },
+        {
+          "tcId": 30,
+          "comment": "ChaCha20-IETF counter 0xfffffffe with 1-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000",
+          "initialCounter": "feffffff",
+          "msg": "00",
+          "ct": "03",
+          "result": "valid",
+          "flags": [
+            "CounterOverflow"
+          ]
+        },
+        {
+          "tcId": 31,
+          "comment": "ChaCha20-IETF counter 0xfffffffe with 63-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000",
+          "initialCounter": "feffffff",
+          "msg": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "ct": "032cc123482c31711f94c941af5ab1f4155784332ed5348fe79aec5ead4c06c3f13c280d8cc49925e4a6a5922ec80e13a4cdfa840c70a1427a3cb699166991",
+          "result": "valid",
+          "flags": [
+            "CounterOverflow"
+          ]
+        },
+        {
+          "tcId": 32,
+          "comment": "ChaCha20-IETF counter 0xfffffffe with 64-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000",
+          "initialCounter": "feffffff",
+          "msg": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "ct": "032cc123482c31711f94c941af5ab1f4155784332ed5348fe79aec5ead4c06c3f13c280d8cc49925e4a6a5922ec80e13a4cdfa840c70a1427a3cb699166991a5",
+          "result": "valid",
+          "flags": [
+            "CounterOverflow"
+          ]
+        },
+        {
+          "tcId": 33,
+          "comment": "ChaCha20-IETF counter 0xfffffffe with 65-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000",
+          "initialCounter": "feffffff",
+          "msg": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "ct": "032cc123482c31711f94c941af5ab1f4155784332ed5348fe79aec5ead4c06c3f13c280d8cc49925e4a6a5922ec80e13a4cdfa840c70a1427a3cb699166991a5ac",
+          "result": "valid",
+          "flags": [
+            "CounterOverflow"
+          ]
+        },
+        {
+          "tcId": 34,
+          "comment": "ChaCha20-IETF counter 0xfffffffe with 127-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000",
+          "initialCounter": "feffffff",
+          "msg": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "ct": "032cc123482c31711f94c941af5ab1f4155784332ed5348fe79aec5ead4c06c3f13c280d8cc49925e4a6a5922ec80e13a4cdfa840c70a1427a3cb699166991a5ace4cd09e294d1912d4ad205d06f95d9c2f2bfcf453e8753f128765b62215f4d92c74f2f626c6a640c0b1284d839ec81f1696281dafc3e684593937023b58b",
+          "result": "valid",
+          "flags": [
+            "CounterOverflow"
+          ]
+        },
+        {
+          "tcId": 35,
+          "comment": "ChaCha20-IETF counter 0xfffffffe with 128-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000",
+          "initialCounter": "feffffff",
+          "msg": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "ct": "032cc123482c31711f94c941af5ab1f4155784332ed5348fe79aec5ead4c06c3f13c280d8cc49925e4a6a5922ec80e13a4cdfa840c70a1427a3cb699166991a5ace4cd09e294d1912d4ad205d06f95d9c2f2bfcf453e8753f128765b62215f4d92c74f2f626c6a640c0b1284d839ec81f1696281dafc3e684593937023b58b1d",
+          "result": "valid",
+          "flags": [
+            "CounterOverflow"
+          ]
+        },
+        {
+          "tcId": 36,
+          "comment": "ChaCha20-IETF counter 0xffffffff with 0-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000",
+          "initialCounter": "ffffffff",
+          "msg": "",
+          "ct": "",
+          "result": "valid",
+          "flags": [
+            "CounterOverflow"
+          ]
+        },
+        {
+          "tcId": 37,
+          "comment": "ChaCha20-IETF counter 0xffffffff with 1-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000",
+          "initialCounter": "ffffffff",
+          "msg": "00",
+          "ct": "ac",
+          "result": "valid",
+          "flags": [
+            "CounterOverflow"
+          ]
+        },
+        {
+          "tcId": 38,
+          "comment": "ChaCha20-IETF counter 0xffffffff with 63-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000",
+          "initialCounter": "ffffffff",
+          "msg": "000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "ct": "ace4cd09e294d1912d4ad205d06f95d9c2f2bfcf453e8753f128765b62215f4d92c74f2f626c6a640c0b1284d839ec81f1696281dafc3e684593937023b58b",
+          "result": "valid",
+          "flags": [
+            "CounterOverflow"
+          ]
+        },
+        {
+          "tcId": 39,
+          "comment": "ChaCha20-IETF counter 0xffffffff with 64-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000",
+          "initialCounter": "ffffffff",
+          "msg": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "ct": "ace4cd09e294d1912d4ad205d06f95d9c2f2bfcf453e8753f128765b62215f4d92c74f2f626c6a640c0b1284d839ec81f1696281dafc3e684593937023b58b1d",
+          "result": "valid",
+          "flags": [
+            "CounterOverflow"
+          ]
+        },
+        {
+          "tcId": 40,
+          "comment": "ChaCha20-IETF counter 0xffffffff with 65-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000",
+          "initialCounter": "ffffffff",
+          "msg": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "result": "invalid",
+          "flags": [
+            "CounterOverflow"
+          ]
+        },
+        {
+          "tcId": 41,
+          "comment": "ChaCha20-IETF counter 0xffffffff with 127-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000",
+          "initialCounter": "ffffffff",
+          "msg": "00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "result": "invalid",
+          "flags": [
+            "CounterOverflow"
+          ]
+        },
+        {
+          "tcId": 42,
+          "comment": "ChaCha20-IETF counter 0xffffffff with 128-byte message",
+          "key": "0000000000000000000000000000000000000000000000000000000000000000",
+          "iv": "000000000000000000000000",
+          "initialCounter": "ffffffff",
+          "msg": "0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
+          "result": "invalid",
+          "flags": [
+            "CounterOverflow"
+          ]
+        }
+      ]
+    }
+  ]
+}
