@@ -21,7 +21,7 @@ and it will return different bytes each time.
 
     Generic state diagram for a XOF object
 
-The TurboSHAKE family is not standardized. However, an RFC_ is being written.
+The TurboSHAKE family is standardized in RFC9861_.
 It comprises of two members:
 
 .. csv-table::
@@ -51,7 +51,7 @@ In the following example, we extract 26 bytes (208 bits) from the TurboSHAKE128 
     >>> print(xof.read(26).hex())
     d9dfade4ff8be344749908073916d3abd185ef88f5401024f029
 
-.. _RFC: https://datatracker.ietf.org/doc/draft-irtf-cfrg-kangarootwelve/
+.. _RFC9861: https://www.rfc-editor.org/info/rfc9861/
 
 .. automodule:: Crypto.Hash.TurboSHAKE128
     :members:
