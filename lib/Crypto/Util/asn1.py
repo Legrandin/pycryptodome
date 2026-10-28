@@ -914,12 +914,20 @@ class DerObjectId(DerObject):
 
         subcomps = []
         v = 0
+        start = True
         while p.remaining_data():
             c = p.read_byte()
+            # The first octet of a subidentifier cannot be 0x80 (X.690, 8.19.2)
+            if start and c == 0x80:
+                raise ValueError("Invalid OID: subidentifier with leading 0x80")
             v = (v << 7) + (c & 0x7F)
-            if not (c & 0x80):
+            start = not (c & 0x80)
+            if start:
                 subcomps.append(v)
                 v = 0
+
+        if not start:
+            raise ValueError("Invalid OID: truncated subidentifier")
 
         if len(subcomps) == 0:
             raise ValueError("Empty payload")

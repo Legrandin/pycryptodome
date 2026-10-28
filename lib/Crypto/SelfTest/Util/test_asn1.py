@@ -726,6 +726,17 @@ class TestDerObjectId:
         der.decode(b"\x06\x04\x88\x37\x89\x52")
         assert der.value == "2.999.1234"
 
+    def testErrDecode1(self):
+        der = DerObjectId()
+        # Last subidentifier is truncated
+        with pytest.raises(ValueError):
+            der.decode(b"\x06\x02\x2a\x86")
+        # Subidentifiers starting with 0x80 (non-minimal encoding)
+        with pytest.raises(ValueError):
+            der.decode(b"\x06\x02\x80\x2a")
+        with pytest.raises(ValueError):
+            der.decode(b"\x06\x04\x2a\x80\x86\x48")
+
 
 class TestDerBitString:
     def testInit1(self):
