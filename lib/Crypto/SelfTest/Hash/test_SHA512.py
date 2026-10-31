@@ -23,11 +23,16 @@
 
 """Self-test suite for Crypto.Hash.SHA512"""
 
+import hashlib
 from binascii import hexlify
 
+import pytest
+
 from Crypto.Hash import SHA512
+from Crypto.Protocol.KDF import PBKDF2
 from Crypto.SelfTest.Hash.common import make_hash_tests
 from Crypto.SelfTest.loader import load_test_vectors
+from Crypto.Util import _cpu_features
 
 # Test vectors from various sources
 # This is a list of (expected_result, input[, description]) tuples.
@@ -141,3 +146,56 @@ def _make_tests_SHA512_256():
 TestSHA512 = _make_tests_SHA512()
 TestSHA512_224 = _make_tests_SHA512_224()
 TestSHA512_256 = _make_tests_SHA512_256()
+
+
+# The implementation selected at import time (the fixture below replaces it)
+_default_lib = SHA512._raw_sha512_lib
+
+# Run every test with each C implementation available on this machine
+_implementations = [pytest.param(SHA512._raw_sha512_portable_lib, id="portable")]
+if SHA512._raw_sha512_armv8_lib is not None:
+    _implementations.append(pytest.param(SHA512._raw_sha512_armv8_lib, id="armv8"))
+
+
+@pytest.fixture(autouse=True, params=_implementations)
+def sha512_implementation(request, monkeypatch):
+    monkeypatch.setattr(SHA512, "_raw_sha512_lib", request.param)
+
+
+class TestImplementations:
+    @pytest.mark.skipif(
+        not _cpu_features.have_sha512_armv8(), reason="ARMv8 SHA-512 instructions not available"
+    )
+    def test_armv8_selected(self):
+        assert SHA512._raw_sha512_armv8_lib is not None, "ARMv8 SHA-512 module not built"
+        assert _default_lib is SHA512._raw_sha512_armv8_lib, "ARMv8 SHA-512 module not selected"
+
+    def test_all_lengths(self):
+        # Every padding case, over one and two blocks
+        data = bytes(range(256)) * 2
+        for length in range(2 * 128 + 20):
+            assert SHA512.new(data[:length]).digest() == hashlib.sha512(data[:length]).digest()
+
+    def test_chunks(self):
+        # Partial and whole blocks, in any order
+        data = bytes(range(256)) * 8
+        for chunk_sizes in ((1, 127, 128, 129, 300), (128, 128, 1, 255, 600), (3, 1000, 7, 257)):
+            h = SHA512.new()
+            pos = 0
+            for size in chunk_sizes:
+                h.update(data[pos : pos + size])
+                pos += size
+            assert h.digest() == hashlib.sha512(data[:pos]).digest()
+
+    def test_pbkdf2(self):
+        expected = hashlib.pbkdf2_hmac("sha512", b"password", b"salt", 1000, 2 * 64 + 1)
+        assert PBKDF2(b"password", b"salt", 2 * 64 + 1, 1000, hmac_hash_module=SHA512) == expected
+
+    def test_truncated_all_lengths(self):
+        data = bytes(range(256)) * 2
+        for truncate, name in (("224", "sha512_224"), ("256", "sha512_256")):
+            if name not in hashlib.algorithms_available:
+                continue
+            for length in range(0, 300, 7):
+                expected = hashlib.new(name, data[:length]).digest()
+                assert SHA512.new(data[:length], truncate=truncate).digest() == expected

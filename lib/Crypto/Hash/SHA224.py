@@ -23,6 +23,7 @@ from __future__ import annotations
 from typing import Optional, Union
 
 from Crypto.Hash.SHA256 import _load_sha_ni_lib
+from Crypto.Util import _cpu_features
 from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
@@ -60,10 +61,15 @@ _sha224_cdecl = """
 
 _raw_sha224_portable_lib = load_pycryptodome_raw_lib("Crypto.Hash._SHA224", _sha224_cdecl)
 _raw_sha224_shani_lib = _load_sha_ni_lib("Crypto.Hash._SHA224_shani", _sha224_cdecl)
+_raw_sha224_armv8_lib = _cpu_features.load_optional_lib(
+    "Crypto.Hash._SHA224_armv8", _sha224_cdecl, _cpu_features.have_sha256_armv8
+)
 
 # The implementation used by SHA224Hash
 if _raw_sha224_shani_lib is not None:
     _raw_sha224_lib = _raw_sha224_shani_lib
+elif _raw_sha224_armv8_lib is not None:
+    _raw_sha224_lib = _raw_sha224_armv8_lib
 else:
     _raw_sha224_lib = _raw_sha224_portable_lib
 

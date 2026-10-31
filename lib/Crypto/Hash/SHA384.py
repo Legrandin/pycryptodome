@@ -22,6 +22,7 @@ from __future__ import annotations
 
 from typing import Optional, Union
 
+from Crypto.Util import _cpu_features
 from Crypto.Util._raw_api import (
     SmartPointer,
     VoidPointer,
@@ -34,9 +35,7 @@ from Crypto.Util._raw_api import (
 
 Buffer = Union[bytes, bytearray, memoryview]
 
-_raw_sha384_lib = load_pycryptodome_raw_lib(
-    "Crypto.Hash._SHA384",
-    """
+_sha384_cdecl = """
                         int SHA384_init(void **shaState);
                         int SHA384_destroy(void *shaState);
                         int SHA384_update(void *hs,
@@ -57,8 +56,18 @@ _raw_sha384_lib = load_pycryptodome_raw_lib(
                                             uint8_t *final_digest,
                                             size_t iterations,
                                             size_t digest_size);
-                        """,
+                        """
+
+_raw_sha384_portable_lib = load_pycryptodome_raw_lib("Crypto.Hash._SHA384", _sha384_cdecl)
+_raw_sha384_armv8_lib = _cpu_features.load_optional_lib(
+    "Crypto.Hash._SHA384_armv8", _sha384_cdecl, _cpu_features.have_sha512_armv8
 )
+
+# The implementation used by SHA384Hash
+if _raw_sha384_armv8_lib is not None:
+    _raw_sha384_lib = _raw_sha384_armv8_lib
+else:
+    _raw_sha384_lib = _raw_sha384_portable_lib
 
 
 class SHA384Hash:

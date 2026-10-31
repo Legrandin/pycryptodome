@@ -23,8 +23,14 @@
 
 """Self-test suite for Crypto.Hash.SHA384"""
 
+import hashlib
+
+import pytest
+
 from Crypto.Hash import SHA384
+from Crypto.Protocol.KDF import PBKDF2
 from Crypto.SelfTest.Hash.common import make_hash_tests
+from Crypto.Util import _cpu_features
 
 # Test vectors from various sources
 # This is a list of (expected_result, input[, description]) tuples.
@@ -56,3 +62,47 @@ test_data = [
 
 
 TestVectors = make_hash_tests(SHA384, "SHA384", test_data, digest_size=48, oid="2.16.840.1.101.3.4.2.2")
+
+
+# The implementation selected at import time (the fixture below replaces it)
+_default_lib = SHA384._raw_sha384_lib
+
+# Run every test with each C implementation available on this machine
+_implementations = [pytest.param(SHA384._raw_sha384_portable_lib, id="portable")]
+if SHA384._raw_sha384_armv8_lib is not None:
+    _implementations.append(pytest.param(SHA384._raw_sha384_armv8_lib, id="armv8"))
+
+
+@pytest.fixture(autouse=True, params=_implementations)
+def sha384_implementation(request, monkeypatch):
+    monkeypatch.setattr(SHA384, "_raw_sha384_lib", request.param)
+
+
+class TestImplementations:
+    @pytest.mark.skipif(
+        not _cpu_features.have_sha512_armv8(), reason="ARMv8 SHA-512 instructions not available"
+    )
+    def test_armv8_selected(self):
+        assert SHA384._raw_sha384_armv8_lib is not None, "ARMv8 SHA-512 module not built"
+        assert _default_lib is SHA384._raw_sha384_armv8_lib, "ARMv8 SHA-512 module not selected"
+
+    def test_all_lengths(self):
+        # Every padding case, over one and two blocks
+        data = bytes(range(256)) * 2
+        for length in range(2 * 128 + 20):
+            assert SHA384.new(data[:length]).digest() == hashlib.sha384(data[:length]).digest()
+
+    def test_chunks(self):
+        # Partial and whole blocks, in any order
+        data = bytes(range(256)) * 8
+        for chunk_sizes in ((1, 127, 128, 129, 300), (128, 128, 1, 255, 600), (3, 1000, 7, 257)):
+            h = SHA384.new()
+            pos = 0
+            for size in chunk_sizes:
+                h.update(data[pos : pos + size])
+                pos += size
+            assert h.digest() == hashlib.sha384(data[:pos]).digest()
+
+    def test_pbkdf2(self):
+        expected = hashlib.pbkdf2_hmac("sha384", b"password", b"salt", 1000, 2 * 48 + 1)
+        assert PBKDF2(b"password", b"salt", 2 * 48 + 1, 1000, hmac_hash_module=SHA384) == expected

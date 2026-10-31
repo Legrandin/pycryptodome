@@ -39,6 +39,8 @@ _default_lib = SHA256._raw_sha256_lib
 _implementations = [pytest.param(SHA256._raw_sha256_portable_lib, id="portable")]
 if SHA256._raw_sha256_shani_lib is not None:
     _implementations.append(pytest.param(SHA256._raw_sha256_shani_lib, id="shani"))
+if SHA256._raw_sha256_armv8_lib is not None:
+    _implementations.append(pytest.param(SHA256._raw_sha256_armv8_lib, id="armv8"))
 
 
 @pytest.fixture(autouse=True, params=_implementations)
@@ -54,6 +56,13 @@ class TestImplementations:
         assert _cpu_features.have_sha_ni(), "SHA-NI not detected on this CPU"
         assert SHA256._raw_sha256_shani_lib is not None, "SHA-NI module not built"
         assert _default_lib is SHA256._raw_sha256_shani_lib, "SHA-NI module not selected"
+
+    @pytest.mark.skipif(
+        not _cpu_features.have_sha256_armv8(), reason="ARMv8 SHA-256 instructions not available"
+    )
+    def test_armv8_selected(self):
+        assert SHA256._raw_sha256_armv8_lib is not None, "ARMv8 SHA-256 module not built"
+        assert _default_lib is SHA256._raw_sha256_armv8_lib, "ARMv8 SHA-256 module not selected"
 
     def test_all_lengths(self):
         # Every padding case, over one and two blocks

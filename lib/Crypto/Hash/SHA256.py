@@ -76,10 +76,15 @@ def _load_sha_ni_lib(name: str, cdecl: str):
 
 
 _raw_sha256_shani_lib = _load_sha_ni_lib("Crypto.Hash._SHA256_shani", _sha256_cdecl)
+_raw_sha256_armv8_lib = _cpu_features.load_optional_lib(
+    "Crypto.Hash._SHA256_armv8", _sha256_cdecl, _cpu_features.have_sha256_armv8
+)
 
 # The implementation used by SHA256Hash
 if _raw_sha256_shani_lib is not None:
     _raw_sha256_lib = _raw_sha256_shani_lib
+elif _raw_sha256_armv8_lib is not None:
+    _raw_sha256_lib = _raw_sha256_armv8_lib
 else:
     _raw_sha256_lib = _raw_sha256_portable_lib
 

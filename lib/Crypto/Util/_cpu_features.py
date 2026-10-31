@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import os
+from typing import Callable
 
 from Crypto.Util._raw_api import load_pycryptodome_raw_lib
 
@@ -19,6 +20,9 @@ _raw_cpuid_lib = load_pycryptodome_raw_lib(
                                            int have_adx(void);
                                            int have_aes_armv8(void);
                                            int have_pmull(void);
+                                           int have_sha256_armv8(void);
+                                           int have_sha512_armv8(void);
+                                           int have_sha3_armv8(void);
                                            """,
 )
 
@@ -57,6 +61,34 @@ def have_aes_armv8() -> int:
 
 def have_pmull() -> int:
     return _raw_cpuid_lib.have_pmull()
+
+
+def have_sha256_armv8() -> int:
+    return _raw_cpuid_lib.have_sha256_armv8()
+
+
+def have_sha512_armv8() -> int:
+    return _raw_cpuid_lib.have_sha512_armv8()
+
+
+def have_sha3_armv8() -> int:
+    return _raw_cpuid_lib.have_sha3_armv8()
+
+
+def load_optional_lib(name: str, cdecl: str, cpu_supported: Callable[[], int]):
+    """Load the functions in ``cdecl`` from the module ``name``,
+    compiled for instructions that the CPU may not have.
+
+    Return None if ``cpu_supported()`` is false (the CPU does not have them),
+    or if the module was not compiled in.
+    """
+
+    if not cpu_supported():
+        return None
+    try:
+        return load_pycryptodome_raw_lib(name, cdecl)
+    except OSError:
+        return None
 
 
 def load_avx2_bmi2_lib(name: str, cdecl: str):

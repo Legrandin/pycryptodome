@@ -27,6 +27,10 @@ New features
   faster: DSA signatures and verification are about 25% faster.
 * ECDSA signatures are 3-6% faster for P-256 and P-384: the field inversion
   uses the faster power for public exponents (the exponent p - 2 is public).
+* On 64-bit ARM CPUs, SHA-224 and SHA-256 use the SHA-256 instructions
+  of the ARMv8 Cryptography Extensions, and SHA-384 and SHA-512 the SHA-512
+  instructions of ARMv8.2, when available.
+  On a Graviton3, SHA-256 is about 3.8x faster, and SHA-512 2x.
 
 Other changes
 -------------

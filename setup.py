@@ -70,6 +70,30 @@ ext_modules = [
     Extension("Crypto.Hash._SHA384", include_dirs=["src/"], sources=["src/SHA384.c"], py_limited_api=True),
     Extension("Crypto.Hash._SHA512", include_dirs=["src/"], sources=["src/SHA512.c"], py_limited_api=True),
     Extension(
+        "Crypto.Hash._SHA224_armv8",
+        include_dirs=["src/"],
+        sources=["src/SHA224_armv8.c"],
+        py_limited_api=True,
+    ),
+    Extension(
+        "Crypto.Hash._SHA256_armv8",
+        include_dirs=["src/"],
+        sources=["src/SHA256_armv8.c"],
+        py_limited_api=True,
+    ),
+    Extension(
+        "Crypto.Hash._SHA384_armv8",
+        include_dirs=["src/"],
+        sources=["src/SHA384_armv8.c"],
+        py_limited_api=True,
+    ),
+    Extension(
+        "Crypto.Hash._SHA512_armv8",
+        include_dirs=["src/"],
+        sources=["src/SHA512_armv8.c"],
+        py_limited_api=True,
+    ),
+    Extension(
         "Crypto.Hash._RIPEMD160", include_dirs=["src/"], sources=["src/RIPEMD160.c"], py_limited_api=True
     ),
     Extension("Crypto.Hash._keccak", include_dirs=["src/"], sources=["src/keccak.c"], py_limited_api=True),
