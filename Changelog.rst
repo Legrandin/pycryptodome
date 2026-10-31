@@ -4,6 +4,13 @@ Changelog
 4.3.0 (under development)
 ++++++++++++++++++++++++++
 
+New features
+------------
+* On 64-bit ARM CPUs (Linux, macOS and Windows), AES and GHASH use the instructions
+  of the ARMv8 Cryptography Extensions (AES and PMULL), when available.
+  On a Graviton3, AES-ECB is about 35x faster, GCM 7x, OCB 10-12x,
+  and CTR, CBC, CFB and OFB 3-6x.
+
 Other changes
 -------------
 * Updated the Wycheproof test vectors (new Ed25519 tests and the new ``chacha20_counter_test.json``).
@@ -26,8 +33,6 @@ New features
   For now, hybrid keys can only be generated and used with HPKE: they cannot be exported or imported.
 * ``Crypto.Protocol.HPKE`` accepts ML-KEM keys and X-Wing keys,
   for post-quantum HPKE (draft-ietf-hpke-pq), in the Base and PSK modes.
-* On 64-bit ARM CPUs (Linux, macOS and Windows), AES and GCM use the instructions
-  of the ARMv8 Cryptography Extensions (AES and PMULL), when available.
 
 4.1.0 (19 October 2026)
 ++++++++++++++++++++++++++

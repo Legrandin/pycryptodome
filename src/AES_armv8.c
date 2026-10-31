@@ -148,6 +148,11 @@ STATIC int expand_key(uint8x16_t *erk, uint8x16_t *drk, const uint8_t *key, unsi
         d[7] = veorq_u8(op(d[7], k), last);         \
     } while (0)
 
+/**
+ * All key sizes have at least 10 rounds: the loops over the rounds
+ * do the first 9 in a loop with a constant count, which the compiler
+ * unrolls, and then the 2 or 4 extra rounds of AES-192 and AES-256.
+ */
 STATIC int internal_AES_ARMV8_encrypt(const uint8x16_t r[], unsigned rounds, const uint8_t *in, uint8_t *out, size_t data_len)
 {
     /** Encrypt 8 blocks (128 bytes) in parallel, when possible **/
@@ -180,7 +185,10 @@ STATIC int internal_AES_ARMV8_encrypt(const uint8x16_t r[], unsigned rounds, con
         unsigned i;
 
         data = vld1q_u8(in);
-        for (i=0; i<rounds-1; i++) {
+        for (i=0; i<9; i++) {
+            data = vaesmcq_u8(vaeseq_u8(data, r[i]));
+        }
+        for (; i<rounds-1; i++) {
             data = vaesmcq_u8(vaeseq_u8(data, r[i]));
         }
         data = veorq_u8(vaeseq_u8(data, r[rounds-1]), r[rounds]);
@@ -196,25 +204,13 @@ STATIC int internal_AES_ARMV8_encrypt(const uint8x16_t r[], unsigned rounds, con
 
 static int AES_ARMV8_encrypt(const BlockBase *bb, const uint8_t *in, uint8_t *out, size_t data_len)
 {
-    unsigned rounds;
-    uint8x16_t r[14+1];
     const struct block_state *state;
-    unsigned k;
 
     if ((bb == NULL) || (in == NULL) || (out == NULL))
         return ERR_NULL;
 
-    state = &((AES_ARMV8_State*)bb)->algo_state;
-    rounds = state->rounds;
-
-    if (rounds > 14)
-        return ERR_NR_ROUNDS;
-
-    for (k=0; k<=rounds; k++) {
-        r[k] = state->erk[k];
-    }
-
-    return internal_AES_ARMV8_encrypt(r, rounds, in, out, data_len);
+    state = &((const AES_ARMV8_State*)bb)->algo_state;
+    return internal_AES_ARMV8_encrypt(state->erk, state->rounds, in, out, data_len);
 }
 
 STATIC int internal_AES_ARMV8_decrypt(const uint8x16_t r[], unsigned rounds, const uint8_t *in, uint8_t *out, size_t data_len)
@@ -249,7 +245,10 @@ STATIC int internal_AES_ARMV8_decrypt(const uint8x16_t r[], unsigned rounds, con
         unsigned i;
 
         data = vld1q_u8(in);
-        for (i=0; i<rounds-1; i++) {
+        for (i=0; i<9; i++) {
+            data = vaesimcq_u8(vaesdq_u8(data, r[i]));
+        }
+        for (; i<rounds-1; i++) {
             data = vaesimcq_u8(vaesdq_u8(data, r[i]));
         }
         data = veorq_u8(vaesdq_u8(data, r[rounds-1]), r[rounds]);
@@ -265,25 +264,13 @@ STATIC int internal_AES_ARMV8_decrypt(const uint8x16_t r[], unsigned rounds, con
 
 static int AES_ARMV8_decrypt(const BlockBase *bb, const uint8_t *in, uint8_t *out, size_t data_len)
 {
-    unsigned rounds;
-    uint8x16_t r[14+1];
     const struct block_state *state;
-    unsigned k;
 
     if ((bb == NULL) || (in == NULL) || (out == NULL))
         return ERR_NULL;
 
-    state = &((AES_ARMV8_State*)bb)->algo_state;
-    rounds = state->rounds;
-
-    if (rounds > 14)
-        return ERR_NR_ROUNDS;
-
-    for (k=0; k<=rounds; k++) {
-        r[k] = state->drk[k];
-    }
-
-    return internal_AES_ARMV8_decrypt(r, rounds, in, out, data_len);
+    state = &((const AES_ARMV8_State*)bb)->algo_state;
+    return internal_AES_ARMV8_decrypt(state->drk, state->rounds, in, out, data_len);
 }
 
 EXPORT_SYM int AES_ARMV8_stop_operation(BlockBase *bb)

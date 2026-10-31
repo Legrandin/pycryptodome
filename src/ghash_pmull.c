@@ -25,16 +25,16 @@ FAKE_INIT(ghash_pmull)
 
 #include <arm_neon.h>
 
+/** Number of blocks authenticated with a single reduction **/
+#define GROUP 8
+
 struct exp_key {
     /**
      *  Powers of H (already swapped in byte endianness, and pre-multiplied by X)
      *
-     *  h[0] is x*H   mod p(x)
-     *  h[1] is x*H^2 mod p(x)
-     *  h[2] is x*H^3 mod p(x)
-     *  h[3] is x*H^4 mod p(x)
+     *  h[i] is x*H^(i+1) mod p(x), for i = 0..GROUP-1
      */
-    uint64x2_t h[4];
+    uint64x2_t h[GROUP];
 };
 
 #if defined(_MSC_VER) && !defined(__clang__)
@@ -100,20 +100,44 @@ STATIC uint64x2_t reduce(uint64x2_t prod_high, uint64x2_t prod_low)
 }
 
 /**
- * Perform the carry-less multiplication of two polynomials of degree 127.
+ * Add the carry-less product of two polynomials of degree 127 to the
+ * three partial sums of a product of degree 255:
+ *
+ *  acc[0] += A0*B0             (bits 0..127)
+ *  acc[1] += A0*B1 + A1*B0     (bits 64..191)
+ *  acc[2] += A1*B1             (bits 128..255)
+ *
+ * The sums of several products are folded and reduced only once,
+ * by fold_reduce().
  */
-STATIC void clmult(uint64x2_t *prod_high, uint64x2_t *prod_low, uint64x2_t a, uint64x2_t b)
+STATIC void clmult_acc(uint64x2_t acc[3], uint64x2_t a, uint64x2_t b)
 {
-    uint64x2_t c, d, e, f, g, zero;
+    uint64x2_t b_swapped = swap_lanes(b);
 
-    zero = vdupq_n_u64(0);
-    c = pmull_lo(a, b);                         /* A0*B0 */
-    d = pmull_hi(a, b);                         /* A1*B1 */
-    e = pmull_lo(a, swap_lanes(b));             /* A0*B1 */
-    f = pmull_hi(a, swap_lanes(b));             /* A1*B0 */
-    g = veorq_u64(e, f);                        /* E1+F1:E0+F0 */
-    *prod_high = veorq_u64(d, vextq_u64(g, zero, 1));   /* 0:E1+F1 */
-    *prod_low  = veorq_u64(c, vextq_u64(zero, g, 1));   /* E0+F0:0 */
+    acc[0] = veorq_u64(acc[0], pmull_lo(a, b));
+    acc[1] = veorq_u64(acc[1], veorq_u64(pmull_lo(a, b_swapped), pmull_hi(a, b_swapped)));
+    acc[2] = veorq_u64(acc[2], pmull_hi(a, b));
+}
+
+/** Fold the three partial sums into a polynomial of degree 255, and reduce it **/
+STATIC uint64x2_t fold_reduce(const uint64x2_t acc[3])
+{
+    uint64x2_t zero = vdupq_n_u64(0);
+    uint64x2_t prod_high, prod_low;
+
+    prod_high = veorq_u64(acc[2], vextq_u64(acc[1], zero, 1));  /* 0:Mid1 */
+    prod_low  = veorq_u64(acc[0], vextq_u64(zero, acc[1], 1));  /* Mid0:0 */
+    return reduce(prod_high, prod_low);
+}
+
+/** Multiply and reduce, for a single product (see clmult_acc() and fold_reduce()) **/
+STATIC uint64x2_t gf_mult(uint64x2_t a, uint64x2_t b)
+{
+    uint64x2_t acc[3];
+
+    acc[0] = acc[1] = acc[2] = vdupq_n_u64(0);
+    clmult_acc(acc, a, b);
+    return fold_reduce(acc);
 }
 
 /**
@@ -166,11 +190,8 @@ EXPORT_SYM int ghash_expand_pmull(const uint8_t h[16], struct exp_key **expanded
 
     (*expanded)->h[0] = multx(load_swap(h));    /** x*H **/
 
-    for (i=1; i<4; i++) {
-        uint64x2_t r0, r1;
-
-        clmult(&r0, &r1, (*expanded)->h[i-1], (*expanded)->h[0]);
-        (*expanded)->h[i] = reduce(r0, r1);
+    for (i=1; i<GROUP; i++) {
+        (*expanded)->h[i] = gf_mult((*expanded)->h[i-1], (*expanded)->h[0]);
     }
 
     return 0;
@@ -190,9 +211,7 @@ EXPORT_SYM int ghash_pmull(
         struct exp_key *expanded
         )
 {
-    size_t i;
-    uint64x2_t y_temp;
-    size_t len16;
+    uint64x2_t y;
 
     if (NULL==y_out || NULL==block_data || NULL==y_in || NULL==expanded)
         return ERR_NULL;
@@ -200,55 +219,30 @@ EXPORT_SYM int ghash_pmull(
     if (len % 16)
         return ERR_NOT_ENOUGH_DATA;
 
-    y_temp = load_swap(y_in);
+    y = load_swap(y_in);
 
-    /** Authenticate 64 bytes per cycle **/
-    len16 = len ^ (len & 0x3F);
-    for (i=0; i<len16; i+=16*4) {
-        uint64x2_t sum0, sum1;
-        uint64x2_t xm3, xm2, xm1, x;
-        uint64x2_t r0, r1, r2, r3, r4, r5, r6;
+    /**
+     * Authenticate up to GROUP blocks X_1..X_n at a time, with one reduction:
+     *
+     *  Y' = (Y + X_1)*H^n + X_2*H^(n-1) + ... + X_n*H
+     */
+    while (len > 0) {
+        uint64x2_t acc[3];
+        size_t n, j;
 
-        xm3 = load_swap(&block_data[i]);
-        xm2 = load_swap(&block_data[i+16]);
-        xm1 = load_swap(&block_data[i+16*2]);
-        x = load_swap(&block_data[i+16*3]);
+        acc[0] = acc[1] = acc[2] = vdupq_n_u64(0);
+        n = MIN(len / 16, GROUP);
+        clmult_acc(acc, veorq_u64(y, load_swap(block_data)), expanded->h[n-1]);
+        for (j=1; j<n; j++) {
+            clmult_acc(acc, load_swap(block_data + 16*j), expanded->h[n-1-j]);
+        }
+        y = fold_reduce(acc);
 
-        /** (X_{i-3} + Y_{i-4}) * H^4 **/
-        r0 = veorq_u64(xm3, y_temp);
-        clmult(&sum0, &sum1, r0, expanded->h[3]);
-
-        /** X_{i-2} * H^3 **/
-        clmult(&r1, &r2, xm2, expanded->h[2]);
-        sum0 = veorq_u64(sum0, r1);
-        sum1 = veorq_u64(sum1, r2);
-
-        /** X_{i-1} * H^2 **/
-        clmult(&r3, &r4, xm1, expanded->h[1]);
-        sum0 = veorq_u64(sum0, r3);
-        sum1 = veorq_u64(sum1, r4);
-
-        /** X_{i} * H **/
-        clmult(&r5, &r6, x, expanded->h[0]);
-        sum0 = veorq_u64(sum0, r5);
-        sum1 = veorq_u64(sum1, r6);
-
-        /** mod P **/
-        y_temp = reduce(sum0, sum1);
+        block_data += 16*n;
+        len -= 16*n;
     }
 
-    /** Y_i = (X_i + Y_{i-1}) * H mod P **/
-    for (; i<len; i+=16) {
-        uint64x2_t z, xi;
-        uint64x2_t prod_hi, prod_lo;
-
-        xi = load_swap(&block_data[i]);
-        z = veorq_u64(y_temp, xi);
-        clmult(&prod_hi, &prod_lo, z, expanded->h[0]);
-        y_temp = reduce(prod_hi, prod_lo);
-    }
-
-    store_swap(y_out, y_temp);
+    store_swap(y_out, y);
     return 0;
 }
 
@@ -290,7 +284,7 @@ EXPORT_SYM int ghash_combine_pmull(
         const struct exp_key *expanded
         )
 {
-    uint64x2_t y, b, prod_hi, prod_lo;
+    uint64x2_t y, b;
 
     if (NULL==y_out || NULL==y_in || NULL==g || NULL==expanded)
         return ERR_NULL;
@@ -301,13 +295,11 @@ EXPORT_SYM int ghash_combine_pmull(
     b = expanded->h[0];     /** x*H **/
     while (n_blocks > 0) {
         if (n_blocks & 1) {
-            clmult(&prod_hi, &prod_lo, y, b);
-            y = reduce(prod_hi, prod_lo);
+            y = gf_mult(y, b);
         }
         n_blocks >>= 1;
         if (n_blocks > 0) {
-            clmult(&prod_hi, &prod_lo, b, b);
-            b = reduce(prod_hi, prod_lo);
+            b = gf_mult(b, b);
         }
     }
 
