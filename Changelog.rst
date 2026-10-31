@@ -13,10 +13,20 @@ New features
 
 Other changes
 -------------
+* CTR mode is 2.5-3.5x faster on large data (and GCM about 2x),
+  on x86 and on 64-bit ARM.
 * Updated the Wycheproof test vectors (new Ed25519 tests and the new ``chacha20_counter_test.json``).
   XChaCha20 keeps the construction of draft-irtf-cfrg-xchacha (HChaCha20 and the ChaCha20
   of RFC 8439), with a 32-bit block counter: the key stream ends after 256 GiB,
   whereas libsodium and Wycheproof use a 64-bit counter.
+
+Resolved issues
+---------------
+* GH#954: ``Crypto.Util.asn1.DerObjectId`` accepted an ASN.1 OBJECT IDENTIFIER where an arc
+  is encoded with the initial octet 0x80 (invalid, as that would violate the minimal
+  encoding rule for BER) or where the last octet encoding the last arc has bit 7 set
+  (invalid, and that arc would also be dropped). In those cases, decoding now fails.
+  Thanks to Zulfareen Shaikh.
 
 4.2.0 (24 October 2026)
 ++++++++++++++++++++++++++

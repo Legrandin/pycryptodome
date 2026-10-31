@@ -912,14 +912,24 @@ class DerObjectId(DerObject):
         # Derive self.value from self.payload
         p = BytesIO_EOF(self.payload)
 
+        # Each subidentifier is a base-128 big-endian number, where all octets
+        # but the last have bit 8 set. As per X.690 8.19.2, the leading octet
+        # cannot be 0x80 (padding) and that holds for BER too.
         subcomps = []
         v = 0
+        in_subcomp = False
         while p.remaining_data():
             c = p.read_byte()
+            if c == 0x80 and not in_subcomp:
+                raise ValueError("Invalid OID: subidentifier with leading 0x80")
             v = (v << 7) + (c & 0x7F)
-            if not (c & 0x80):
+            in_subcomp = bool(c & 0x80)
+            if not in_subcomp:
                 subcomps.append(v)
                 v = 0
+
+        if in_subcomp:
+            raise ValueError("Invalid OID: truncated subidentifier")
 
         if len(subcomps) == 0:
             raise ValueError("Empty payload")
