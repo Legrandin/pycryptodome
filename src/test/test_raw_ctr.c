@@ -110,6 +110,14 @@ static void test_one(size_t L, size_t prefix, size_t clen, unsigned le)
         assert(out[i] == 0);
     CTR_stop_operation(state);
 
+    /** In place **/
+    state = start(L, block0, prefix, clen, le);
+    memcpy(out, ks, total);
+    assert(0 == CTR_decrypt(state, out, out, total));
+    for (i=0; i<total; i++)
+        assert(out[i] == 0);
+    CTR_stop_operation(state);
+
     /** CTR_encrypt_at on three ranges, then CTR_skip and CTR_encrypt again **/
     for (first=1; first<total/2; first+=total/9) {
         /** Ranges [0, x), [x, y) and [y, total/2) after the first bytes, out of order **/

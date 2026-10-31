@@ -18,9 +18,6 @@ FAKE_INIT(raw_ctr)
 /** Memory alignment for counter blocks and key stream (any block size works) **/
 #define KS_ALIGNMENT 64
 
-/** Add an amount to a counter of counter_len bytes, modulo 2^(8*counter_len) **/
-typedef void (*Add)(uint8_t *pCounter, size_t counter_len, uint64_t amount);
-
 typedef struct {
     BlockBase *cipher;
     size_t block_len;
@@ -35,7 +32,7 @@ typedef struct {
     uint8_t *counter_blocks;    /** The NR_BLOCKS counter blocks of the current batch **/
     size_t  counter_offset;     /** Position of the counter in a counter block (prefix length) **/
     size_t  counter_len;
-    Add     add;                /** add_le() or add_be() **/
+    unsigned little_endian;     /** Byte order of the counter **/
 
     uint8_t *keystream;         /** Key stream of the current batch (block_len * NR_BLOCKS bytes) **/
     size_t  used_ks;            /** Bytes already used in the key stream of the current batch **/
@@ -50,7 +47,8 @@ typedef struct {
     uint64_t max_blocks;
 } CtrModeState;
 
-static void add_le(uint8_t *pCounter, size_t counter_len, uint64_t amount) {
+/** Add an amount to a counter of counter_len bytes, modulo 2^(8*counter_len) **/
+STATIC void add_le(uint8_t *pCounter, size_t counter_len, uint64_t amount) {
     size_t i;
     unsigned carry = 0;
 
@@ -62,7 +60,7 @@ static void add_le(uint8_t *pCounter, size_t counter_len, uint64_t amount) {
     }
 }
 
-static void add_be(uint8_t *pCounter, size_t counter_len, uint64_t amount) {
+STATIC void add_be(uint8_t *pCounter, size_t counter_len, uint64_t amount) {
     size_t i;
     unsigned carry = 0;
 
@@ -75,15 +73,60 @@ static void add_be(uint8_t *pCounter, size_t counter_len, uint64_t amount) {
     }
 }
 
+/**
+ * out[i] = in[i] XOR ks[i], for len bytes. out can be the same buffer as in.
+ * The bytes are processed 16 at a time, through memcpy() so that
+ * the buffers need no alignment: compilers turn it into plain loads and stores.
+ */
+static void xor_key_stream(uint8_t *out, const uint8_t *in, const uint8_t *ks, size_t len)
+{
+    size_t i;
+
+    for (i=0; i+16<=len; i+=16) {
+        uint64_t a[2], b[2];
+
+        memcpy(a, in + i, 16);
+        memcpy(b, ks + i, 16);
+        a[0] ^= b[0];
+        a[1] ^= b[1];
+        memcpy(out + i, a, 16);
+    }
+    for (; i<len; i++) {
+        out[i] = in[i] ^ ks[i];
+    }
+}
+
 /** Add amount to the counter of each of the NR_BLOCKS counter blocks in blocks[] **/
 static void advance_counters(const CtrModeState *ctr_state, uint8_t *blocks, uint64_t amount)
 {
+    uint8_t *counter = blocks + ctr_state->counter_offset;
+    size_t lsb;
     unsigned i;
 
-    for (i=0; i<NR_BLOCKS; i++) {
-        ctr_state->add(blocks + i*ctr_state->block_len + ctr_state->counter_offset,
-                       ctr_state->counter_len,
-                       amount);
+    /**
+     * Fast path, for almost all batches: the amount is small, and adding it
+     * changes only the least significant byte of every counter (no carry)
+     **/
+    lsb = ctr_state->little_endian ? 0 : ctr_state->counter_len - 1;
+    if (amount < 256) {
+        for (i=0; i<NR_BLOCKS; i++) {
+            if (counter[i*ctr_state->block_len + lsb] + amount > 255)
+                break;
+        }
+        if (i == NR_BLOCKS) {
+            for (i=0; i<NR_BLOCKS; i++)
+                counter[i*ctr_state->block_len + lsb] += (uint8_t)amount;
+            return;
+        }
+    }
+
+    /** One loop for each byte order, so that the compiler can inline the addition **/
+    if (ctr_state->little_endian) {
+        for (i=0; i<NR_BLOCKS; i++, counter += ctr_state->block_len)
+            add_le(counter, ctr_state->counter_len, amount);
+    } else {
+        for (i=0; i<NR_BLOCKS; i++, counter += ctr_state->block_len)
+            add_be(counter, ctr_state->counter_len, amount);
     }
 }
 
@@ -186,7 +229,7 @@ EXPORT_SYM int CTR_start_operation(BlockBase *cipher,
     ctr_state->block_len = block_len;
     ctr_state->counter_offset = prefix_len;
     ctr_state->counter_len = counter_len;
-    ctr_state->add = little_endian ? add_le : add_be;
+    ctr_state->little_endian = little_endian;
 
     ctr_state->counter_blocks = align_alloc(ks_size, KS_ALIGNMENT);
     ctr_state->keystream = align_alloc(ks_size, KS_ALIGNMENT);
@@ -202,7 +245,10 @@ EXPORT_SYM int CTR_start_operation(BlockBase *cipher,
         uint8_t *block = ctr_state->counter_blocks + i*block_len;
 
         memcpy(block, counter_block0, block_len);
-        ctr_state->add(block + prefix_len, counter_len, i);
+        if (little_endian)
+            add_le(block + prefix_len, counter_len, i);
+        else
+            add_be(block + prefix_len, counter_len, i);
     }
     compute_keystream(ctr_state, ctr_state->counter_blocks, ctr_state->keystream);
     ctr_state->used_ks = 0;
@@ -266,7 +312,7 @@ EXPORT_SYM int CTR_encrypt(CtrModeState *ctr_state,
         return result;
 
     while (data_len > 0) {
-        size_t ks_to_use, j;
+        size_t ks_to_use;
 
         if (used_ks == ks_size) {
             advance_counters(ctr_state, ctr_state->counter_blocks, NR_BLOCKS);
@@ -276,9 +322,9 @@ EXPORT_SYM int CTR_encrypt(CtrModeState *ctr_state,
         }
 
         ks_to_use = MIN(data_len, ks_size - used_ks);
-        for (j=0; j<ks_to_use; j++) {
-            *out++ = *in++ ^ ctr_state->keystream[j + used_ks];
-        }
+        xor_key_stream(out, in, ctr_state->keystream + used_ks, ks_to_use);
+        in += ks_to_use;
+        out += ks_to_use;
 
         data_len -= ks_to_use;
         used_ks += ks_to_use;
@@ -345,14 +391,14 @@ EXPORT_SYM int CTR_encrypt_at(const CtrModeState *ctr_state,
     in += offset;
     out += offset;
     while (data_len > 0) {
-        size_t ks_to_use, j;
+        size_t ks_to_use;
 
         compute_keystream(ctr_state, counter_blocks, keystream);
 
         ks_to_use = MIN(data_len, ks_size - used_ks);
-        for (j=0; j<ks_to_use; j++) {
-            *out++ = *in++ ^ keystream[j + used_ks];
-        }
+        xor_key_stream(out, in, keystream + used_ks, ks_to_use);
+        in += ks_to_use;
+        out += ks_to_use;
         data_len -= ks_to_use;
         used_ks = 0;
 
