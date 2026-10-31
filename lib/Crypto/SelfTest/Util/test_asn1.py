@@ -726,6 +726,33 @@ class TestDerObjectId:
         der.decode(b"\x06\x04\x88\x37\x89\x52")
         assert der.value == "2.999.1234"
 
+    def testDecode5(self):
+        # Zero-valued subidentifiers and 0x80 octets past the leading one
+        der = DerObjectId()
+        der.decode(b"\x06\x03\x00\x81\x00")
+        assert der.value == "0.0.128"
+        der.decode(b"\x06\x04\x2a\x81\x80\x00")
+        assert der.value == "1.2.16384"
+
+    @pytest.mark.parametrize("strict", [False, True])
+    @pytest.mark.parametrize(
+        "payload",
+        [
+            # Last subidentifier is truncated
+            b"\x06\x02\x2a\x86",
+            b"\x06\x01\x80",
+            b"\x06\x03\x2a\x86\xf7",
+            # Subidentifier with a leading 0x80 (not minimally encoded)
+            b"\x06\x02\x80\x2a",
+            b"\x06\x04\x2a\x80\x86\x48",
+            b"\x06\x05\x2a\x86\x48\x80\x01",
+        ],
+    )
+    def testErrDecode1(self, payload, strict):
+        der = DerObjectId()
+        with pytest.raises(ValueError):
+            der.decode(payload, strict)
+
 
 class TestDerBitString:
     def testInit1(self):

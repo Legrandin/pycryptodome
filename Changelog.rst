@@ -11,6 +11,14 @@ Other changes
   of RFC 8439), with a 32-bit block counter: the key stream ends after 256 GiB,
   whereas libsodium and Wycheproof use a 64-bit counter.
 
+Resolved issues
+---------------
+* GH#954: ``Crypto.Util.asn1.DerObjectId`` accepted an ASN.1 OBJECT IDENTIFIER where an arc
+  is encoded with the initial octet 0x80 (invalid, as that would violate the minimal
+  encoding rule for BER) or where the last octet encoding the last arc has bit 7 set
+  (invalid, and that arc would also be dropped). In those cases, decoding now fails.
+  Thanks to Zulfareen Shaikh.
+
 4.2.0 (24 October 2026)
 ++++++++++++++++++++++++++
 
