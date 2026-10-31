@@ -6,6 +6,8 @@ Changelog
 
 New features
 ------------
+* CTR mode is 2.5-3.5x faster on large data (and GCM about 2x),
+  on all platforms.
 * On 64-bit ARM CPUs (Linux, macOS and Windows), AES and GHASH use the instructions
   of the ARMv8 Cryptography Extensions (AES and PMULL), when available.
   On a Graviton3, AES-ECB is about 35x faster, GCM 7x, OCB 10-12x,
@@ -13,8 +15,6 @@ New features
 
 Other changes
 -------------
-* CTR mode is 2.5-3.5x faster on large data (and GCM about 2x),
-  on x86 and on 64-bit ARM.
 * Updated the Wycheproof test vectors (new Ed25519 tests and the new ``chacha20_counter_test.json``).
   XChaCha20 keeps the construction of draft-irtf-cfrg-xchacha (HChaCha20 and the ChaCha20
   of RFC 8439), with a 32-bit block counter: the key stream ends after 256 GiB,
