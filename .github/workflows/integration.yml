@@ -225,7 +225,8 @@ jobs:
     - name: Install dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install libubsan1
+        # Valgrind: without it, the constant-time tests (*_ct) are skipped
+        sudo apt-get install libubsan1 valgrind
     - name: Test Linux ARM64
       env:
         PYTHON: python3
