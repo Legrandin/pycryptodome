@@ -66,7 +66,8 @@ Notes:
   - keccak_x4_avx2.c and keccak_x4_neon.c are included after keccak.c,
     because they use the round constants defined there.
   - keccak_x4_neon.c needs no compiler flags and no CPU check: NEON is part
-    of every 64-bit ARM CPU (and gcc and clang define __ARM_NEON for them).
+    of every 64-bit ARM CPU (gcc and clang define __ARM_NEON for them,
+    MSVC _M_ARM64).
     So the plain modules _k12, _mldsa and _mlkem use it on 64-bit ARM.
   - In the ML-DSA and ML-KEM modules, mldsa-native and mlkem-native keep their
     own sponge, and only call our permutations (mldsa_fips202.h and

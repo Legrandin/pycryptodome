@@ -50,6 +50,21 @@ def sha_ni_required():
     return is_64bit and platform.machine().lower() in ("x86_64", "amd64")
 
 
+def sha512_armv8_required():
+    """Return True if the implementation of SHA-384 and SHA-512 with the
+    SHA-512 instructions of ARMv8.2 must be in use.
+
+    This is the case if the environment variable PYCRYPTODOME_REQUIRE_SHA512_ARMV8
+    is set (in CI, for runners known to support those instructions) and Python
+    runs as a 64-bit ARM process (aarch64, also called arm64).
+    """
+
+    if not os.environ.get("PYCRYPTODOME_REQUIRE_SHA512_ARMV8"):
+        return False
+    is_64bit = struct.calcsize("P") == 8
+    return is_64bit and platform.machine().lower() in ("aarch64", "arm64")
+
+
 def t2b(hex_string):
     shorter = re.sub(rb"\s+", b"", tobytes(hex_string))
     return unhexlify(shorter)

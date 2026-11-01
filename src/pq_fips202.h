@@ -26,8 +26,11 @@
 #ifndef PQ_FIPS202_H
 #define PQ_FIPS202_H
 
-/* NEON is always available on AArch64 (with gcc and clang) */
-#if !defined(PQ_FIPS202_AVX2) && defined(__aarch64__) && defined(__ARM_NEON)
+/*
+ * NEON is always available on AArch64: gcc and clang define __ARM_NEON,
+ * MSVC only _M_ARM64
+ */
+#if !defined(PQ_FIPS202_AVX2) && ((defined(__aarch64__) && defined(__ARM_NEON)) || defined(_M_ARM64))
 #define PQ_FIPS202_NEON
 #endif
 

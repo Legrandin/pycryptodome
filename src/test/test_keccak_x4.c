@@ -12,7 +12,7 @@
 #define KECCAK_EMBEDDED
 #include "keccak.c"
 
-#if defined(__aarch64__) && defined(__ARM_NEON)
+#if (defined(__aarch64__) && defined(__ARM_NEON)) || defined(_M_ARM64)
 
 #include "keccak_x4_neon.c"
 

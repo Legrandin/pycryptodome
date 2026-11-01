@@ -32,8 +32,11 @@ FAKE_INIT(K12_MODULE)
 #define K12_CV_SIZE     32
 #define K12_RATE        (KECCAK_F1600_STATE - 32)
 
-/* NEON is always available on AArch64 (with gcc and clang) */
-#if !defined(K12_AVX2) && defined(__aarch64__) && defined(__ARM_NEON)
+/*
+ * NEON is always available on AArch64: gcc and clang define __ARM_NEON,
+ * MSVC only _M_ARM64
+ */
+#if !defined(K12_AVX2) && ((defined(__aarch64__) && defined(__ARM_NEON)) || defined(_M_ARM64))
 #define K12_NEON
 #endif
 

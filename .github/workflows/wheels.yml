@@ -66,6 +66,10 @@ jobs:
           PYCRYPTODOME_CLANG_CL: ${{ matrix.os == 'windows-2025' && '1' || '' }}
           PYCRYPTODOME_REQUIRE_AVX2_BMI2: ${{ matrix.os == 'windows-2025' && '1' || '' }}
 
+          # The Windows ARM64 runners support the SHA-512 instructions of ARMv8.2:
+          # fail if they are not used (module not built, or CPU feature not detected)
+          PYCRYPTODOME_REQUIRE_SHA512_ARMV8: ${{ matrix.os == 'windows-11-arm' && '1' || '' }}
+
       - name: Delete manylinux1 wheels
         if: runner.os == 'Linux'
         run: |

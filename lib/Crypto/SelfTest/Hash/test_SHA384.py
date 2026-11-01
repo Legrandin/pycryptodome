@@ -29,7 +29,7 @@ import pytest
 
 from Crypto.Hash import SHA384
 from Crypto.Protocol.KDF import PBKDF2
-from Crypto.SelfTest.Hash.common import make_hash_tests
+from Crypto.SelfTest.Hash.common import make_hash_tests, sha512_armv8_required
 from Crypto.Util import _cpu_features
 
 # Test vectors from various sources
@@ -79,6 +79,16 @@ def sha384_implementation(request, monkeypatch):
 
 
 class TestImplementations:
+    # Required in CI on 64-bit ARM runners known to support the SHA-512 instructions,
+    # so that a module that is not built, or a CPU feature that is not detected, fails
+    @pytest.mark.skipif(
+        not sha512_armv8_required(), reason="ARMv8 SHA-512 not required (see sha512_armv8_required)"
+    )
+    def test_sha512_armv8_available(self):
+        assert _cpu_features.have_sha512_armv8(), "ARMv8 SHA-512 instructions not detected on this CPU"
+        assert SHA384._raw_sha384_armv8_lib is not None, "ARMv8 SHA-512 module not built"
+        assert _default_lib is SHA384._raw_sha384_armv8_lib, "ARMv8 SHA-512 module not selected"
+
     @pytest.mark.skipif(
         not _cpu_features.have_sha512_armv8(), reason="ARMv8 SHA-512 instructions not available"
     )

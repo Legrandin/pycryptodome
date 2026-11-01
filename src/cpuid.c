@@ -46,6 +46,17 @@ FAKE_INIT(cpuid_c)
 #include <sys/sysctl.h>
 #elif defined(_M_ARM64)
 #include <windows.h>
+/*
+ * Older Windows SDKs do not define these (the values are those of the
+ * documentation of IsProcessorFeaturePresent). On a Windows version that
+ * does not know them, IsProcessorFeaturePresent() simply returns FALSE.
+ */
+#ifndef PF_ARM_SHA3_INSTRUCTIONS_AVAILABLE
+#define PF_ARM_SHA3_INSTRUCTIONS_AVAILABLE 64
+#endif
+#ifndef PF_ARM_SHA512_INSTRUCTIONS_AVAILABLE
+#define PF_ARM_SHA512_INSTRUCTIONS_AVAILABLE 65
+#endif
 #endif
 
 /** Call X86 CPUID for Leaf 1: return CX **/
@@ -278,7 +289,7 @@ EXPORT_SYM int have_sha512_armv8(void)
     return (getauxval(AT_HWCAP) & (1UL<<21)) ? 1 : 0;
 #elif defined(__aarch64__) && defined(__APPLE__)
     return apple_feature("hw.optional.arm.FEAT_SHA512", "hw.optional.armv8_2_sha512");
-#elif defined(_M_ARM64) && defined(PF_ARM_SHA512_INSTRUCTIONS_AVAILABLE)
+#elif defined(_M_ARM64)
     return IsProcessorFeaturePresent(PF_ARM_SHA512_INSTRUCTIONS_AVAILABLE) ? 1 : 0;
 #else
     return 0;
@@ -294,7 +305,7 @@ EXPORT_SYM int have_sha3_armv8(void)
     return (getauxval(AT_HWCAP) & (1UL<<17)) ? 1 : 0;
 #elif defined(__aarch64__) && defined(__APPLE__)
     return apple_feature("hw.optional.arm.FEAT_SHA3", "hw.optional.armv8_2_sha3");
-#elif defined(_M_ARM64) && defined(PF_ARM_SHA3_INSTRUCTIONS_AVAILABLE)
+#elif defined(_M_ARM64)
     return IsProcessorFeaturePresent(PF_ARM_SHA3_INSTRUCTIONS_AVAILABLE) ? 1 : 0;
 #else
     return 0;
