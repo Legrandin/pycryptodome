@@ -1,7 +1,7 @@
 #include "common.h"
 
 /*
- * Tests of GHASH, for the portable and (if available) the CLMUL implementation:
+ * Tests of GHASH, for the portable and (if available) the CLMUL or PMULL implementation:
  * ghash_*(), ghash_at_*() and ghash_combine_*().
  * The reference is a plain bit-by-bit multiplication in GF(2^128)
  * (NIST SP 800-38D, Algorithm 1), independent of both implementations.
@@ -33,6 +33,16 @@ int ghash_combine_clmul(uint8_t y_out[16], const uint8_t y_in[16], size_t n_bloc
                         const void *exp_key);
 #endif
 
+#ifdef TEST_PMULL
+int ghash_expand_pmull(const uint8_t h[16], void **exp_key);
+int ghash_destroy_pmull(void *exp_key);
+int ghash_pmull(uint8_t y_out[16], const uint8_t data[], size_t len, const uint8_t y_in[16], const void *exp_key);
+int ghash_at_pmull(uint8_t y_out[16], const uint8_t data[], size_t offset, size_t len,
+                   const uint8_t y_in[16], const void *exp_key);
+int ghash_combine_pmull(uint8_t y_out[16], const uint8_t y_in[16], size_t n_blocks, const uint8_t g[16],
+                        const void *exp_key);
+#endif
+
 typedef struct {
     const char *name;
     Expand expand;
@@ -48,6 +58,10 @@ static const Implementation implementations[] = {
 #ifdef TEST_CLMUL
     { "clmul", ghash_expand_clmul, ghash_destroy_clmul, ghash_clmul,
       ghash_at_clmul, ghash_combine_clmul },
+#endif
+#ifdef TEST_PMULL
+    { "pmull", ghash_expand_pmull, ghash_destroy_pmull, ghash_pmull,
+      ghash_at_pmull, ghash_combine_pmull },
 #endif
 };
 
@@ -357,7 +371,7 @@ static void test_split_and_combine(const Implementation *imp)
 /** Both implementations agree **/
 static void test_implementations_agree(void)
 {
-#ifdef TEST_CLMUL
+#if defined(TEST_CLMUL) || defined(TEST_PMULL)
     uint8_t h[16], y_in[16], g[16], data[16*33], y1[16], y2[16];
     void *k1, *k2;
     unsigned trial;

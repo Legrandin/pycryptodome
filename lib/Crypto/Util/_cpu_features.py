@@ -17,6 +17,8 @@ _raw_cpuid_lib = load_pycryptodome_raw_lib(
                                            int have_bmi2(void);
                                            int have_sha_ni(void);
                                            int have_adx(void);
+                                           int have_aes_armv8(void);
+                                           int have_pmull(void);
                                            """,
 )
 
@@ -47,6 +49,14 @@ def have_sha_ni() -> int:
 
 def have_adx() -> int:
     return _raw_cpuid_lib.have_adx()
+
+
+def have_aes_armv8() -> int:
+    return _raw_cpuid_lib.have_aes_armv8()
+
+
+def have_pmull() -> int:
+    return _raw_cpuid_lib.have_pmull()
 
 
 def load_avx2_bmi2_lib(name: str, cdecl: str):

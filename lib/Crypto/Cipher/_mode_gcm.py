@@ -86,14 +86,20 @@ _ghash_portable = _get_ghash_portable()
 
 
 def _get_ghash_clmul():
-    """Return None if CLMUL implementation is not available"""
+    """Return the implementation with the carry-less multiplication
+    of the CPU (PCLMULQDQ on x86, PMULL on AArch64),
+    or None if it is not available"""
 
-    if not _cpu_features.have_clmul():
+    if _cpu_features.have_clmul():
+        name, postfix = "Crypto.Hash._ghash_clmul", "clmul"
+    elif _cpu_features.have_pmull():
+        name, postfix = "Crypto.Hash._ghash_pmull", "pmull"
+    else:
         return None
     try:
-        api = _ghash_api_template.replace("%imp%", "clmul")
-        lib = load_pycryptodome_raw_lib("Crypto.Hash._ghash_clmul", api)
-        result = _build_impl(lib, "clmul")
+        api = _ghash_api_template.replace("%imp%", postfix)
+        lib = load_pycryptodome_raw_lib(name, api)
+        result = _build_impl(lib, postfix)
     except OSError:
         result = None
     return result
@@ -103,7 +109,7 @@ _ghash_clmul = _get_ghash_clmul()
 
 # Minimum amount of data that each thread must authenticate:
 # with less, starting the thread costs more than what it saves.
-# The CLMUL implementation is much faster, so it needs more data.
+# The CLMUL (or PMULL) implementation is much faster, so it needs more data.
 _MIN_BYTES_PER_THREAD_CLMUL = 2 * 1024 * 1024
 _MIN_BYTES_PER_THREAD_PORTABLE = 256 * 1024
 

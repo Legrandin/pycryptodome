@@ -136,6 +136,7 @@ Implementation
   in C. RSA private key operations are blinded, and the scalar multiplications on
   elliptic curves have further countermeasures (scalar blinding, randomized coordinates).
 * The CPU extensions are used when present: AES-NI and CLMUL (AES and GCM),
+  the ARMv8 Cryptography Extensions on 64-bit ARM (AES and GCM),
   the SHA extensions (SHA-224 and SHA-256), AVX2 (SHA-3 and the other Keccak-based functions,
   ChaCha20 and Salsa20), and BMI2 and ADX (big integers and NIST curves).
 * Long messages can be processed on several CPU cores (parameter ``threads``):

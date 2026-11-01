@@ -754,7 +754,7 @@ class TestNISTTestVectorsGCM:
 
 
 @pytest.mark.slow
-@pytest.mark.skipif(not _cpu_features.have_clmul(), reason="PCLMULQDQ not available")
+@pytest.mark.skipif(_mode_gcm._ghash_clmul is None, reason="Carry-less multiplication not available")
 class TestNISTTestVectorsGCM_no_clmul(TestNISTTestVectorsGCM):
     use_clmul = False
 
@@ -835,7 +835,7 @@ class TestVectorsWycheproof:
         self.check_corrupt_decrypt(tv)
 
 
-@pytest.mark.skipif(not _cpu_features.have_clmul(), reason="PCLMULQDQ not available")
+@pytest.mark.skipif(_mode_gcm._ghash_clmul is None, reason="Carry-less multiplication not available")
 class TestVectorsWycheproofNoClmul(TestVectorsWycheproof):
     _extra_params = {"use_clmul": False}
 
@@ -858,7 +858,7 @@ class TestVariableLength:
         assert h.hexdigest() == "7b7eb1ffbe67a2e53a912067c0ec8e62ebc7ce4d83490ea7426941349811bdf4"
 
 
-@pytest.mark.skipif(not _cpu_features.have_clmul(), reason="PCLMULQDQ not available")
+@pytest.mark.skipif(_mode_gcm._ghash_clmul is None, reason="Carry-less multiplication not available")
 class TestVariableLengthNoClmul(TestVariableLength):
     _extra_params = {"use_clmul": False}
 
@@ -889,8 +889,8 @@ class TestGcmThreads:
     @pytest.mark.parametrize("use_clmul", (True, False))
     @pytest.mark.parametrize("nonce", (nonce_96, b"N" * 16))
     def test_range_boundaries(self, tiny_ranges, use_clmul, nonce):
-        if use_clmul and not _cpu_features.have_clmul():
-            pytest.skip("PCLMULQDQ not available")
+        if use_clmul and _mode_gcm._ghash_clmul is None:
+            pytest.skip("Carry-less multiplication not available")
 
         pt = get_tag_random("plaintext", 16 * 8 * 3 + 7)
         header = get_tag_random("header", 16 * 5 + 3)
@@ -934,6 +934,12 @@ class TestGcmThreads:
             cipher = AES.new(self.key_128, AES.MODE_GCM, nonce=self.nonce_96, threads=threads)
             cipher.update(header)
             assert cipher.decrypt_and_verify(ref_ct, ref_tag) == pt
+
+
+@pytest.mark.skipif(not _cpu_features.have_pmull(), reason="PMULL not available")
+def test_pmull_module_loaded():
+    # The module must have been compiled in, on ARM CPUs with PMULL
+    assert _mode_gcm._ghash_clmul is not None
 
 
 def _ghash_implementations():
@@ -984,7 +990,7 @@ class TestGhashThreads:
             assert result == 0
             assert get_raw_buffer(out) == expected
 
-    @pytest.mark.skipif(not _cpu_features.have_clmul(), reason="PCLMULQDQ not available")
+    @pytest.mark.skipif(_mode_gcm._ghash_clmul is None, reason="Carry-less multiplication not available")
     def test_combine_large(self):
         # Both implementations must agree on large powers of H
         h = get_tag_random("h", 16)
