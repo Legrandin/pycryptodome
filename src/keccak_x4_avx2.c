@@ -132,3 +132,9 @@ static void keccak_extract_x4(const __m256i A[25], uint8_t *out[4], unsigned n)
         }
     }
 }
+
+/* XOR the word w into lane i of each of the 4 states */
+static inline void keccak_xor_lane_x4(__m256i A[25], unsigned i, uint64_t w)
+{
+    A[i] = _mm256_xor_si256(A[i], _mm256_set1_epi64x((long long)w));
+}

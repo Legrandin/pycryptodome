@@ -22,34 +22,40 @@ the other arrows are #include.
   │     Keccak sponge and      │◀─────────┤       KangarooTwelve       │
   │   scalar Keccak-p[1600]    │          │   (keccak.c is private)    │
   └────────────────────────────┘          └──────────────┬─────────────┘
-                                                         │ #ifdef K12_AVX2
-                                                         ▼
-                                          ┌────────────────────────────┐
-                                          │      keccak_x4_avx2.c      │
-                                          │                            │
-                                          │  4 Keccak-p[1600] states   │
-                                          │     at once, with AVX2     │
-                                          └────────────────────────────┘
+                                                         │
+                                     #ifdef K12_AVX2     │     64-bit ARM
+                                   ┌─────────────────────┴─────────────────────┐
+                                   ▼                                           ▼
+                    ┌────────────────────────────┐              ┌────────────────────────────┐
+                    │      keccak_x4_avx2.c      │              │      keccak_x4_neon.c      │
+                    │                            │              │                            │
+                    │  4 Keccak-p[1600] states   │              │  4 Keccak-p[1600] states   │
+                    │     at once, with AVX2     │              │  at once: 2 with scalar    │
+                    │                            │              │  code, 2 with NEON         │
+                    └────────────────────────────┘              └────────────────────────────┘
 
 
-  Module              Built from               Exports     Compiler flags         4-way AVX2
-  ------------------  -----------------------  ----------  ---------------------  ----------
+  Module              Built from               Exports     Compiler flags         4 states at once
+  ------------------  -----------------------  ----------  ---------------------  ----------------
   _keccak             keccak.c                 keccak_*    (none)                 no
   _keccak_avx2_bmi2   keccak_avx2_bmi2.c       keccak_*    -mavx2 -mbmi -mbmi2    no
                       -> keccak.c
-  _k12                k12.c                    k12_*       (none)                 no
+  _k12                k12.c                    k12_*       (none)                 on 64-bit ARM
                       -> keccak.c
-  _k12_avx2_bmi2      k12_avx2_bmi2.c          k12_*       -mavx2 -mbmi -mbmi2    yes
+                               + keccak_x4_neon.c (64-bit ARM)
+  _k12_avx2_bmi2      k12_avx2_bmi2.c          k12_*       -mavx2 -mbmi -mbmi2    yes (AVX2)
                       -> k12.c -> keccak.c
                                + keccak_x4_avx2.c
-  _mldsa              mldsa.c                  mldsa_*     (none)                 no
+  _mldsa              mldsa.c                  mldsa_*     (none)                 on 64-bit ARM
                       -> mldsa_fips202.h -> pq_fips202.h -> keccak.c
-  _mldsa_avx2_bmi2    mldsa_avx2_bmi2.c        mldsa_*     -mavx2 -mbmi -mbmi2    yes
+                                                            + keccak_x4_neon.c (64-bit ARM)
+  _mldsa_avx2_bmi2    mldsa_avx2_bmi2.c        mldsa_*     -mavx2 -mbmi -mbmi2    yes (AVX2)
                       -> mldsa.c -> mldsa_fips202.h -> pq_fips202.h -> keccak.c
                                                                   + keccak_x4_avx2.c
-  _mlkem              mlkem.c                  mlkem_*     (none)                 no
+  _mlkem              mlkem.c                  mlkem_*     (none)                 on 64-bit ARM
                       -> mlkem_fips202.h -> pq_fips202.h -> keccak.c
-  _mlkem_avx2_bmi2    mlkem_avx2_bmi2.c        mlkem_*     -mavx2 -mbmi -mbmi2    yes
+                                                            + keccak_x4_neon.c (64-bit ARM)
+  _mlkem_avx2_bmi2    mlkem_avx2_bmi2.c        mlkem_*     -mavx2 -mbmi -mbmi2    yes (AVX2)
                       -> mlkem.c -> mlkem_fips202.h -> pq_fips202.h -> keccak.c
                                                                   + keccak_x4_avx2.c
 
@@ -57,13 +63,17 @@ Notes:
   - keccak.c names its module after KECCAK_MODULE (default: keccak), and
     k12.c after K12_MODULE (default: k12); so each module gets exactly
     one FAKE_INIT. Inside k12.c, keccak.c is always private (KECCAK_EMBEDDED).
-  - keccak_x4_avx2.c is included after keccak.c, because it uses the round
-    constants defined there.
+  - keccak_x4_avx2.c and keccak_x4_neon.c are included after keccak.c,
+    because they use the round constants defined there.
+  - keccak_x4_neon.c needs no compiler flags and no CPU check: NEON is part
+    of every 64-bit ARM CPU (and gcc and clang define __ARM_NEON for them).
+    So the plain modules _k12, _mldsa and _mlkem use it on 64-bit ARM.
   - In the ML-DSA and ML-KEM modules, mldsa-native and mlkem-native keep their
     own sponge, and only call our permutations (mldsa_fips202.h and
     mlkem_fips202.h are their FIPS 202 "native backends", both on top of
-    pq_fips202.h). Their 4 Keccak states are in the interleaved layout of
-    keccak_x4_avx2.c.
+    pq_fips202.h). With AVX2, their 4 Keccak states are in the interleaved
+    layout of keccak_x4_avx2.c; on ARM, in their own layout (4 consecutive
+    states), which is also the one of keccak_x4_neon.c.
   - The *_avx2_bmi2 modules are only compiled if the compiler supports AVX2,
     BMI1 and BMI2, and only loaded if the CPU supports all three
     (lib/Crypto/Hash/keccak.py, lib/Crypto/Hash/KangarooTwelve.py and

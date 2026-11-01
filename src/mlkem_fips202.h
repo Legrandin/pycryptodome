@@ -12,7 +12,9 @@
  *
  *  - always, for one state: keccak_function() of keccak.c;
  *  - if MLKEM_AVX2 is defined (module _mlkem_avx2_bmi2), also for four
- *    states at once: keccak_function_x4() of keccak_x4_avx2.c.
+ *    states at once: keccak_function_x4() of keccak_x4_avx2.c;
+ *  - on 64-bit ARM (module _mlkem), also for four states at once:
+ *    keccak_function_x4() of keccak_x4_neon.c.
  *
  * mlkem-native includes this file once per compilation unit (from its
  * src/common.h), but it may undefine the MLK_USE_NATIVE_* macros at the end
@@ -22,32 +24,39 @@
 #define MLK_NATIVE_FUNC_SUCCESS 0
 #define MLK_NATIVE_FUNC_FALLBACK -1
 
-#define MLK_USE_NATIVE_FIPS202_X1
-#ifdef MLKEM_AVX2
-#define MLK_USE_NATIVE_FIPS202_X4
-#define MLK_USE_NATIVE_FIPS202_X4_XOR_BYTES
-#define MLK_USE_NATIVE_FIPS202_X4_EXTRACT_BYTES
-#endif
-
-#ifndef MLKEM_FIPS202_H
-#define MLKEM_FIPS202_H
-
 #ifdef MLKEM_AVX2
 #define PQ_FIPS202_AVX2
 #endif
 #include "pq_fips202.h"
+
+#define MLK_USE_NATIVE_FIPS202_X1
+#ifdef PQ_FIPS202_AVX2
+#define MLK_USE_NATIVE_FIPS202_X4
+#define MLK_USE_NATIVE_FIPS202_X4_XOR_BYTES
+#define MLK_USE_NATIVE_FIPS202_X4_EXTRACT_BYTES
+#endif
+#ifdef PQ_FIPS202_NEON
+#define MLK_USE_NATIVE_FIPS202_X4
+#endif
+
+#ifndef MLKEM_FIPS202_H
+#define MLKEM_FIPS202_H
 
 static inline int mlk_keccak_f1600_x1_native(uint64_t *state)
 {
     return pq_keccak_f1600_x1(state);
 }
 
-#ifdef MLKEM_AVX2
+#if defined(PQ_FIPS202_AVX2) || defined(PQ_FIPS202_NEON)
 
 static inline int mlk_keccak_f1600_x4_native(uint64_t *state)
 {
     return pq_keccak_f1600_x4(state);
 }
+
+#endif
+
+#ifdef PQ_FIPS202_AVX2
 
 static inline int mlk_keccakf1600_xor_bytes_x4_native(uint64_t *state,
                                                       const unsigned char *d0,
@@ -71,6 +80,6 @@ static inline int mlk_keccakf1600_extract_bytes_x4_native(uint64_t *state,
     return pq_keccakf1600_extract_bytes_x4(state, d0, d1, d2, d3, offset, length);
 }
 
-#endif /* MLKEM_AVX2 */
+#endif /* PQ_FIPS202_AVX2 */
 
 #endif /* MLKEM_FIPS202_H */

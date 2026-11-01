@@ -31,6 +31,9 @@ New features
   of the ARMv8 Cryptography Extensions, and SHA-384 and SHA-512 the SHA-512
   instructions of ARMv8.2, when available.
   On a Graviton3, SHA-256 is about 3.8x faster, and SHA-512 2x.
+* On 64-bit ARM CPUs, KangarooTwelve, ML-KEM and ML-DSA compute 4 Keccak states at once
+  (2 with scalar code and 2 with NEON).
+  On a Graviton3, KangarooTwelve is 1.9x faster, ML-DSA 7-20% and ML-KEM 7-8%.
 
 Other changes
 -------------

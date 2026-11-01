@@ -14,13 +14,22 @@
  *  - always, for one state: keccak_function() of keccak.c;
  *  - if PQ_FIPS202_AVX2 is defined (modules _mldsa_avx2_bmi2 and
  *    _mlkem_avx2_bmi2), also for four states at once: keccak_function_x4()
- *    of keccak_x4_avx2.c.
+ *    of keccak_x4_avx2.c, and the functions to access those states;
+ *  - on 64-bit ARM (then PQ_FIPS202_NEON gets defined), also for four
+ *    states at once: keccak_function_x4() of keccak_x4_neon.c.
+ *    The 4 states have the layout of the libraries, so they access them
+ *    with their own code.
  *
  * Each function returns 0 (the libraries' *_NATIVE_FUNC_SUCCESS).
  */
 
 #ifndef PQ_FIPS202_H
 #define PQ_FIPS202_H
+
+/* NEON is always available on AArch64 (with gcc and clang) */
+#if !defined(PQ_FIPS202_AVX2) && defined(__aarch64__) && defined(__ARM_NEON)
+#define PQ_FIPS202_NEON
+#endif
 
 /*
  * keccak.c, private to this module (KECCAK_EMBEDDED).
@@ -158,5 +167,26 @@ static inline int pq_keccakf1600_extract_bytes_x4(uint64_t *state,
 #undef X4_BYTE
 
 #endif /* PQ_FIPS202_AVX2 */
+
+#ifdef PQ_FIPS202_NEON
+
+/* keccak_absorb_x4(), keccak_extract_x4() and keccak_xor_lane_x4() are not used here */
+#if defined(__GNUC__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wunused-function"
+#endif
+#include "keccak_x4_neon.c"
+#if defined(__GNUC__)
+#pragma GCC diagnostic pop
+#endif
+
+/* State j is state[25*j] to state[25*j + 24], as for keccak_function_x4() */
+static inline int pq_keccak_f1600_x4(uint64_t *state)
+{
+    keccak_function_x4(state, 24);
+    return 0;
+}
+
+#endif /* PQ_FIPS202_NEON */
 
 #endif /* PQ_FIPS202_H */

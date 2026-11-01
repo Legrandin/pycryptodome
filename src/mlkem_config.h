@@ -56,7 +56,8 @@
 /*
  * SHA-3 / SHAKE: the sponge of mlkem-native (src/mlkem-native/src/fips202),
  * on top of the Keccak-f[1600] permutation of pycryptodome (src/keccak.c,
- * and src/keccak_x4_avx2.c for 4 states at once in _mlkem_avx2_bmi2),
+ * and for 4 states at once src/keccak_x4_avx2.c in _mlkem_avx2_bmi2
+ * or src/keccak_x4_neon.c on 64-bit ARM),
  * through the FIPS 202 backend interface of mlkem-native.
  */
 #define MLK_CONFIG_USE_NATIVE_BACKEND_FIPS202
