@@ -135,6 +135,8 @@ class RsaKey:
             raise ValueError("Some RSA components are missing")
         for component, value in kwargs.items():
             setattr(self, "_" + component, value)
+        # The modulus is public: the bounds of random_range() can use it as such
+        self._n = Integer(self._n, public=True)
         if input_set == private_set:
             self._dp = self._d % (self._p - 1)  # = (e⁻¹) mod (p-1)
             self._dq = self._d % (self._q - 1)  # = (e⁻¹) mod (q-1)

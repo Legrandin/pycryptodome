@@ -371,7 +371,7 @@ def new(
         if key.has_private():
             private_key = key._d
     elif isinstance(key, DsaKey):
-        order = Integer(key.q)
+        order = Integer(key.q, public=True)
         if key.has_private():
             private_key = Integer(key._key["x"])
     else:

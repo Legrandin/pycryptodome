@@ -117,6 +117,8 @@ class DsaKey:
         if extra_set and extra_set != {"x"}:
             raise ValueError("Unknown DSA components = %s" % str(extra_set - {"x"}))
         self._key = dict(key_dict)
+        # The order of the subgroup is public: the bounds of random_range() can use it as such
+        self._key["q"] = Integer(self._key["q"], public=True)
 
     def _sign(self, m, k):
         if not self.has_private():

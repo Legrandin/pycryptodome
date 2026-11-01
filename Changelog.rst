@@ -14,7 +14,8 @@ New features
   and CTR, CBC, CFB and OFB 3-6x.
 * ``Integer.random_range()`` is about 2x faster when the bounds are public,
   with the same output: ECDSA signatures are about 13% faster (P-256),
-  and ECC key generation about 35%.
+  DSA signatures about 4%, and ECC key generation about 35%.
+  The RSA modulus and the DSA subgroup order are now public ``Integer`` objects.
 
 Other changes
 -------------
