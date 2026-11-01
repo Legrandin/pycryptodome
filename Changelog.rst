@@ -25,6 +25,8 @@ New features
   and after a fork).
 * The Montgomery multiplication for x86-64 CPUs with BMI2 and ADX is about 20%
   faster: DSA signatures and verification are about 25% faster.
+* ECDSA signatures are 3-6% faster for P-256 and P-384: the field inversion
+  uses the faster power for public exponents (the exponent p - 2 is public).
 
 Other changes
 -------------

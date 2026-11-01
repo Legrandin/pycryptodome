@@ -264,7 +264,14 @@ int fe_inv(EcWs *ws, uint64_t *out, const uint64_t *a)
 {
     const Nat *e = ws->f->p_minus_2;
 
-    if (EC_FIELD_MONT == ws->f->kind)
+    /*
+     * a^(p-2) = 1/a. The exponent p - 2 is public, so fe_pow_public()
+     * is enough: its operations depend on the exponent but never on a,
+     * which may be secret. It is faster than mont_pow(), which also
+     * hides the exponent. Its table only holds fields of up to
+     * FE_POW_MAX_WORDS words; larger ones use mont_pow().
+     */
+    if (ws->nw > FE_POW_MAX_WORDS)
         return mont_pow(out, a, e, (size_t)nat_bit_length(e), ws->m);
     fe_pow_public(ws, out, a, e);
     return 0;
