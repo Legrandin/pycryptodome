@@ -12,6 +12,9 @@ New features
   of the ARMv8 Cryptography Extensions (AES and PMULL), when available.
   On a Graviton3, AES-ECB is about 35x faster, GCM 7x, OCB 10-12x,
   and CTR, CBC, CFB and OFB 3-6x.
+* ``Integer.random_range()`` is about 2x faster when the bounds are public,
+  with the same output: ECDSA signatures are about 13% faster (P-256),
+  and ECC key generation about 35%.
 
 Other changes
 -------------
