@@ -35,6 +35,11 @@ FAKE_INIT(K12_MODULE)
 /*
  * NEON is always available on AArch64: gcc and clang define __ARM_NEON,
  * MSVC only _M_ARM64
+ *
+ * The choice is made at compile time, but the 4-way code is not faster
+ * on every AArch64 core: it is slower on simple in-order cores
+ * (see keccak_x4_neon.c). A future improvement could build both versions
+ * and select one at runtime, from the CPU type.
  */
 #if !defined(K12_AVX2) && ((defined(__aarch64__) && defined(__ARM_NEON)) || defined(_M_ARM64))
 #define K12_NEON

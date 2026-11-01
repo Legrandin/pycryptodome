@@ -15,6 +15,17 @@
  * work in parallel: mixing a scalar and a NEON instruction stream
  * permutes 4 states in about the time of 2 scalar ones (on Graviton3).
  *
+ * This relies on a wide out-of-order core. On a simple in-order core,
+ * the two instruction streams compete for the same issue slots instead
+ * of overlapping, and the 4-way code can be SLOWER than 4 calls to the
+ * scalar keccak_function(). On a Raspberry Pi 3 (Cortex-A53), K12 over
+ * 4 MiB was 10% slower with gcc 10 and 17% slower with clang 21
+ * (5% faster with gcc 15). Cortex-A55 and similar in-order cores
+ * probably behave the same way (not measured).
+ * Today the code is always used on AArch64 (it is chosen at compile time):
+ * a better approach would be to also build the scalar-only version and
+ * select one at runtime from the CPU type (e.g. MIDR_EL1).
+ *
  * Since a NEON round takes about the time of two scalar rounds, the
  * permutation runs in two passes, each one with all the rounds of
  * one scalar state and half the rounds of the two NEON states
