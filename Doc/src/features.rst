@@ -140,4 +140,4 @@ Implementation
   the SHA extensions (SHA-224 and SHA-256), AVX2 (SHA-3 and the other Keccak-based functions,
   ChaCha20 and Salsa20), and BMI2 and ADX (big integers and NIST curves).
 * Long messages can be processed on several CPU cores (parameter ``threads``):
-  CTR, GCM and OCB modes, ChaCha20 and XChaCha20, and scrypt.
+  CTR, GCM and OCB modes, ChaCha20 and XChaCha20, KangarooTwelve, and scrypt.
