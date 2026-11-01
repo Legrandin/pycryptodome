@@ -1028,6 +1028,57 @@ class NatIntegerTests:
         assert self.Integer(96)._sub_mod(0, m) == 96
         assert self.Integer(0)._sub_mod(96, m) == 1
 
+    def test_mul_mod(self):
+        import random
+
+        rnd = random.Random(5)
+        for bits in (1, 7, 64, 65, 200, 1024, 2048):
+            for odd in (1, 0):
+                m = rnd.getrandbits(bits) | odd | (1 << (bits - 1))
+                if m == 0:
+                    continue
+                M = self.Integer(m)
+                for _ in range(10):
+                    a = rnd.getrandbits(rnd.choice([1, bits, bits + 64, 2 * bits]))
+                    b = rnd.getrandbits(rnd.choice([1, bits, bits + 64]))
+                    # twice: the second time with the context of the modulus
+                    assert self.Integer(a)._mul_mod(b, M) == a * b % m
+                    assert self.Integer(a)._mul_mod(self.Integer(b), M) == a * b % m
+        # The result is public only if everything is
+        P = self.Integer(1000003, public=True)
+        assert self.Integer(5, public=True)._mul_mod(self.Integer(7, public=True), P)._public
+        assert not self.Integer(5)._mul_mod(self.Integer(7, public=True), P)._public
+        assert not self.Integer(5, public=True)._mul_mod(self.Integer(7, public=True), 1000003)._public
+        with pytest.raises(ZeroDivisionError):
+            self.Integer(5)._mul_mod(7, 0)
+
+    def test_mont_ctx_threads(self):
+        # Threads that create the Montgomery context of the same modulus at
+        # the same time (each one must keep its own until its C call ends)
+        import threading
+
+        m = (1 << 2047) + 24691
+        errors = []
+        for rnd in range(40):
+            modulus = self.Integer(m + 2 * rnd)
+            barrier = threading.Barrier(8)
+
+            def work(i, modulus=modulus, barrier=barrier, mod=m + 2 * rnd):
+                barrier.wait()
+                try:
+                    r = pow(self.Integer(i + 3), self.Integer(65537, public=True), modulus)
+                    if int(r) != pow(i + 3, 65537, mod):
+                        errors.append(i)
+                except Exception as exc:  # pragma: no cover
+                    errors.append(exc)
+
+            threads = [threading.Thread(target=work, args=(i,)) for i in range(8)]
+            for t in threads:
+                t.start()
+            for t in threads:
+                t.join()
+        assert errors == []
+
     def test_primality_helpers(self):
         p = self.Integer(2**127 - 1)
         c = self.Integer((2**61 - 1) * (2**89 - 1))

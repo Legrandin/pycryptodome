@@ -1508,6 +1508,25 @@ void test_mulmod_submod_random(void)
             assert(nat_divmod(NULL, rem, diff, m) == 0);
             assert(nat_is_zero(rem));
 
+            /* The same with a context (operands of any size, even above m) */
+            if (odd) {
+                MontCtx *ctx;
+                Nat *r2;
+
+                assert(nat_new(&r2, nw) == 0);
+                assert(nat_mont_new(&ctx, m) == 0);
+                assert(nat_mulmod_ctx(r2, a, b, m, ctx) == 0);
+                assert(nat_cmp(r2, r) == 0);
+                assert(nat_mulmod_ctx(r2, b, a, m, ctx) == 0);
+                assert(nat_cmp(r2, r) == 0);
+                assert(nat_mulmod_ctx(r2, a, a, m, ctx) == 0);
+                assert(nat_mulmod(r, a, a, m) == 0);
+                assert(nat_cmp(r2, r) == 0);
+                assert(nat_mulmod(r, a, b, m) == 0);
+                nat_mont_free(ctx);
+                nat_free(r2);
+            }
+
             ar = reduce(a, m);
             br = reduce(b, m);
 
@@ -1604,6 +1623,23 @@ void test_powmod_random(void)
             }
             assert(nat_cmp(out, ref) == 0);
 
+            /* The same with a context, and with the public exponent path */
+            if (m->w[0] & 1) {
+                MontCtx *ctx;
+
+                assert(nat_mont_new(&ctx, m) == 0);
+                memset(out->w, 0, out->nw*sizeof(uint64_t));
+                assert(nat_powmod_ctx(out, a, e, bits, 0, m, ctx) == 0);
+                assert(nat_cmp(out, ref) == 0);
+                memset(out->w, 0, out->nw*sizeof(uint64_t));
+                assert(nat_powmod_ctx(out, a, e, bits, 1, m, ctx) == 0);
+                assert(nat_cmp(out, ref) == 0);
+                /* A larger bound does not change the value of a public exponent */
+                assert(nat_powmod_ctx(out, a, e, 64*e->nw, 1, m, ctx) == 0);
+                assert(nat_cmp(out, ref) == 0);
+                nat_mont_free(ctx);
+            }
+
             nat_free(m);
             nat_free(a);
             nat_free(e);
@@ -1611,6 +1647,76 @@ void test_powmod_random(void)
             nat_free(ref);
         }
     }
+}
+
+/* nat_mont_new() and nat_powmod_ctx(): edge cases and errors */
+void test_powmod_ctx(void)
+{
+    Nat *a, *e, *m, *m2, *me, *big, *out;
+    MontCtx *ctx;
+    unsigned i;
+
+    a = make1(1, 23);
+    e = make1(1, 5);
+    m = make1(1, 17);
+    m2 = make1(1, 19);
+    me = make1(1, 18);
+    big = make1(3, 23);
+    big->w[2] = 1;              /* 2^128 + 23, with more words than m */
+    nat_new(&out, 1);
+
+    assert(nat_mont_new(&ctx, me) == ERR_VALUE);
+    assert(ctx == NULL);
+    assert(nat_mont_new(NULL, m) == ERR_NULL);
+    assert(nat_mont_new(&ctx, NULL) == ERR_NULL);
+    assert(nat_mont_new(&ctx, m) == 0);
+
+    for (i=0; i<2; i++) {
+        assert(nat_powmod_ctx(out, a, e, 64, i, m, ctx) == 0);
+        assert(out->w[0] == 7);
+        assert(nat_powmod_ctx(out, a, e, 3, i, m, ctx) == 0);
+        assert(out->w[0] == 7);
+        assert(nat_powmod_ctx(out, a, e, 0, i, m, ctx) == 0);   /* e is taken as 0 */
+        assert(out->w[0] == 1);
+        /* A base with more words than m: 2^128 = 1 (mod 17), so it is 24 = 7 */
+        assert(nat_powmod_ctx(out, big, e, 64, i, m, ctx) == 0);
+        assert(out->w[0] == 7*7*7*7*7 % 17);
+        e->w[0] = 0;
+        assert(nat_powmod_ctx(out, a, e, 64, i, m, ctx) == 0);
+        assert(out->w[0] == 1);
+        e->w[0] = 5;
+    }
+
+    assert(nat_mulmod_ctx(out, a, e, m, ctx) == 0);
+    assert(out->w[0] == 23*5 % 17);
+    assert(nat_mulmod_ctx(out, big, big, m, ctx) == 0);
+    assert(out->w[0] == 7*7 % 17);
+
+    /* The context must be the one of the modulus */
+    assert(nat_mulmod_ctx(out, a, e, m2, ctx) == ERR_MODULUS);
+    assert(nat_mulmod_ctx(NULL, a, e, m, ctx) == ERR_NULL);
+    assert(nat_mulmod_ctx(out, NULL, e, m, ctx) == ERR_NULL);
+    assert(nat_mulmod_ctx(out, a, NULL, m, ctx) == ERR_NULL);
+    assert(nat_mulmod_ctx(out, a, e, NULL, ctx) == ERR_NULL);
+    assert(nat_mulmod_ctx(out, a, e, m, NULL) == ERR_NULL);
+    assert(nat_powmod_ctx(out, a, e, 64, 0, m2, ctx) == ERR_MODULUS);
+    assert(nat_powmod_ctx(out, a, e, 64, 1, big, ctx) == ERR_MODULUS);
+
+    assert(nat_powmod_ctx(NULL, a, e, 64, 0, m, ctx) == ERR_NULL);
+    assert(nat_powmod_ctx(out, NULL, e, 64, 0, m, ctx) == ERR_NULL);
+    assert(nat_powmod_ctx(out, a, NULL, 64, 0, m, ctx) == ERR_NULL);
+    assert(nat_powmod_ctx(out, a, e, 64, 0, NULL, ctx) == ERR_NULL);
+    assert(nat_powmod_ctx(out, a, e, 64, 0, m, NULL) == ERR_NULL);
+
+    nat_mont_free(ctx);
+    nat_mont_free(NULL);
+    nat_free(a);
+    nat_free(e);
+    nat_free(m);
+    nat_free(m2);
+    nat_free(me);
+    nat_free(big);
+    nat_free(out);
 }
 
 /*
@@ -1721,6 +1827,7 @@ int main(void)
     test_wide_products();
     test_mulmod_submod_random();
     test_powmod_random();
+    test_powmod_ctx();
     test_invmod_random();
     test_lucas_negative_d();
     test_div128();

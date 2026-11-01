@@ -113,7 +113,7 @@ class PSS_SigScheme:
         # Step 2b (RSASP1) and Step 2c (I2OSP)
         signature = self._key._decrypt_to_bytes(em_int)
         # Verify no faults occurred
-        if em_int != pow(bytes_to_long(signature), self._key.e, self._key.n):
+        if em_int != self._key._encrypt(bytes_to_long(signature)):
             raise ValueError("Fault detected in RSA private key operation")
         return signature
 

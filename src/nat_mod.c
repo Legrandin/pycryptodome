@@ -453,54 +453,72 @@ cleanup:
 #define NEWLINE "\n\t"
 
 
-STATIC uint64_t addmul_row(uint64_t *t, const uint64_t *a, uint64_t b, size_t nw)
+/*
+ * Not inlined: the Montgomery multiplication, the squaring and the full
+ * products all run this one copy of the loop. With a copy inlined in each,
+ * the copies evict each other from the micro-op cache when the operations
+ * alternate (as in mont_pow), and the long MULX/ADCX/ADOX instructions go
+ * through the legacy decoders: about 35% slower (measured on Alder Lake).
+ */
+#if defined(NAT_TESTS)
+#define ROW_STATIC              /* the tests call it */
+#else
+#define ROW_STATIC static       /* not STATIC, which is also inline */
+#endif
+__attribute__((noinline)) ROW_STATIC uint64_t addmul_row(uint64_t *t, const uint64_t *a, uint64_t b, size_t nw)
 {
-    uint64_t *t_end = t + nw;
-    const uint64_t *a_end = a + nw;
-    int64_t i = -(int64_t)nw;               /* index from the end, up to 0 */
-    int64_t r = -(int64_t)(nw & 3);
+    size_t r = nw & 3, q = nw - r;
     uint64_t hi;
 
+    /*
+     * The memory operands are a base register and a displacement, and the
+     * pointers move forward: with an index register, Intel cores split
+     * MULX and ADCX with a memory operand into more micro-ops, and the
+     * row is about 30% slower.
+     */
     __asm__ volatile (
         /* high word so far = 0; CF = OF = 0 */
         "xor %%r10d, %%r10d"                NEWLINE
 
-        /* The first nw % 4 words, one at a time (rcx counts up to 0) */
+        /* The first nw % 4 words, one at a time (rcx counts down to 0) */
         "mov %[r], %%rcx"                   NEWLINE
         "jrcxz 3f"                          NEWLINE
         "4:"                                NEWLINE
-        "mulx (%[a],%[i],8), %%r8, %%r9"    NEWLINE
-        "adcx (%[t],%[i],8), %%r8"          NEWLINE
+        "mulx (%[a]), %%r8, %%r9"           NEWLINE
+        "adcx (%[t]), %%r8"                 NEWLINE
         "adox %%r10, %%r8"                  NEWLINE
-        "mov %%r8, (%[t],%[i],8)"           NEWLINE
+        "mov %%r8, (%[t])"                  NEWLINE
         "mov %%r9, %%r10"                   NEWLINE
-        "lea 1(%[i]), %[i]"                 NEWLINE
-        "lea 1(%%rcx), %%rcx"               NEWLINE
+        "lea 8(%[a]), %[a]"                 NEWLINE
+        "lea 8(%[t]), %[t]"                 NEWLINE
+        "lea -1(%%rcx), %%rcx"              NEWLINE
         "jrcxz 3f"                          NEWLINE
         "jmp 4b"                            NEWLINE
 
-        /* The other words, four at a time (rcx counts up to 0) */
+        /* The other words, four at a time (rcx counts down to 0) */
         "3:"                                NEWLINE
-        "mov %[i], %%rcx"                   NEWLINE
+        "mov %[q], %%rcx"                   NEWLINE
         "jrcxz 2f"                          NEWLINE
         "1:"                                NEWLINE
-        "mulx (%[a],%%rcx,8), %%r8, %%r9"   NEWLINE
-        "adcx (%[t],%%rcx,8), %%r8"         NEWLINE
+        "mulx (%[a]), %%r8, %%r9"           NEWLINE
+        "adcx (%[t]), %%r8"                 NEWLINE
         "adox %%r10, %%r8"                  NEWLINE
-        "mov %%r8, (%[t],%%rcx,8)"          NEWLINE
-        "mulx 8(%[a],%%rcx,8), %%r8, %%r10" NEWLINE
-        "adcx 8(%[t],%%rcx,8), %%r8"        NEWLINE
+        "mov %%r8, (%[t])"                  NEWLINE
+        "mulx 8(%[a]), %%r8, %%r10"         NEWLINE
+        "adcx 8(%[t]), %%r8"                NEWLINE
         "adox %%r9, %%r8"                   NEWLINE
-        "mov %%r8, 8(%[t],%%rcx,8)"         NEWLINE
-        "mulx 16(%[a],%%rcx,8), %%r8, %%r9" NEWLINE
-        "adcx 16(%[t],%%rcx,8), %%r8"       NEWLINE
+        "mov %%r8, 8(%[t])"                 NEWLINE
+        "mulx 16(%[a]), %%r8, %%r9"         NEWLINE
+        "adcx 16(%[t]), %%r8"               NEWLINE
         "adox %%r10, %%r8"                  NEWLINE
-        "mov %%r8, 16(%[t],%%rcx,8)"        NEWLINE
-        "mulx 24(%[a],%%rcx,8), %%r8, %%r10" NEWLINE
-        "adcx 24(%[t],%%rcx,8), %%r8"       NEWLINE
+        "mov %%r8, 16(%[t])"                NEWLINE
+        "mulx 24(%[a]), %%r8, %%r10"        NEWLINE
+        "adcx 24(%[t]), %%r8"               NEWLINE
         "adox %%r9, %%r8"                   NEWLINE
-        "mov %%r8, 24(%[t],%%rcx,8)"        NEWLINE
-        "lea 4(%%rcx), %%rcx"               NEWLINE
+        "mov %%r8, 24(%[t])"                NEWLINE
+        "lea 32(%[a]), %[a]"                NEWLINE
+        "lea 32(%[t]), %[t]"                NEWLINE
+        "lea -4(%%rcx), %%rcx"              NEWLINE
         "jrcxz 2f"                          NEWLINE
         "jmp 1b"                            NEWLINE
 
@@ -510,13 +528,14 @@ STATIC uint64_t addmul_row(uint64_t *t, const uint64_t *a, uint64_t b, size_t nw
         "adcx %%r9, %%r10"                  NEWLINE
         "adox %%r9, %%r10"                  NEWLINE
         "mov %%r10, %[hi]"                  NEWLINE
-        : [i] "+r" (i), [hi] "=r" (hi)
-        : [a] "r" (a_end), [t] "r" (t_end), [r] "r" (r), "d" (b)
+        : [a] "+r" (a), [t] "+r" (t), [hi] "=r" (hi)
+        : [r] "r" (r), [q] "r" (q), "d" (b)
         : "rcx", "r8", "r9", "r10", "cc", "memory");
 
     return hi;
 }
 
+#undef ROW_STATIC
 #undef NEWLINE
 
 #elif !defined(NAT_32BIT) || defined(NAT_TESTS)
@@ -572,6 +591,8 @@ void mont_sqr(uint64_t *out, const uint64_t *a, MontCtx *ctx)
     to_words32(ctx->x32, a, ctx->nw);
     mont_sqr32(ctx->x32, ctx->x32, ctx);
     from_words32(out, ctx->x32, ctx->nw);
+#elif defined(SQR_AS_MUL)
+    rows_mont_mul(out, a, a, ctx->n, ctx->m0, ctx->nw, ctx->tmp, addmul_row);
 #else
     rows_mont_sqr(out, a, ctx->n, ctx->m0, ctx->nw, ctx->tmp, addmul_row);
 #endif
@@ -628,7 +649,7 @@ void sqr_wide(uint64_t *out, const uint64_t *a, MontCtx *ctx)
 int mont_pow(uint64_t *out, const uint64_t *base_m, const Nat *e, size_t e_bits, MontCtx *ctx)
 {
     size_t nw = ctx->nw;
-    uint64_t *table, *acc, *sel;
+    uint64_t *table, *acc, *sel, masks[TABLE_SIZE];
     size_t i, j, k, pos;
     int res = ERR_MEMORY;
 
@@ -655,12 +676,22 @@ int mont_pow(uint64_t *out, const uint64_t *base_m, const Nat *e, size_t e_bits,
         for (i=0; i<WINDOW_SIZE; i++)
             mont_sqr(acc, acc, ctx);
 
+        /*
+         * sel = table[idx], reading all the entries. Word by word, so that
+         * the result stays in a register, and the inner loop (with a
+         * constant count) is unrolled: much faster than OR-ing each entry
+         * into sel in turn.
+         */
         idx = (e->w[bitpos / 64] >> (bitpos % 64)) & (TABLE_SIZE - 1);
-        memset(sel, 0, nw*sizeof(uint64_t));
-        for (k=0; k<TABLE_SIZE; k++) {
-            uint64_t m = ct_mask(ct_eq(k, idx));
-            for (j=0; j<nw; j++)
-                sel[j] |= table[k*nw + j] & m;
+        for (k=0; k<TABLE_SIZE; k++)
+            masks[k] = ct_mask(ct_eq(k, idx));
+        for (j=0; j<nw; j++) {
+            uint64_t word = 0;
+
+            ROWS_UNROLL
+            for (k=0; k<TABLE_SIZE; k++)
+                word |= table[k*nw + j] & masks[k];
+            sel[j] = word;
         }
         mont_mul(acc, acc, sel, ctx);
     }
@@ -672,6 +703,77 @@ cleanup:
     nat_words_free(table, TABLE_SIZE*nw);
     nat_words_free(acc, nw);
     nat_words_free(sel, nw);
+    return res;
+}
+
+/*
+ * out = base^e in Montgomery form, for an exponent e that is public:
+ * the sequence of operations depends on the value of e (but not on the
+ * base). Only the low e_bits bits of e are used (capped to 64*e->nw).
+ * Small exponents (up to 64 bits, like the RSA public exponent) use the
+ * binary method; larger ones fixed windows of 4 bits, with the table
+ * read directly at the index of each window, and no multiplication for
+ * a window of zeroes. out may alias base_m.
+ */
+STATIC int mont_pow_public(uint64_t *out, const uint64_t *base_m, const Nat *e, size_t e_bits, MontCtx *ctx)
+{
+    size_t nw = ctx->nw;
+    uint64_t *table = NULL, *acc;
+    size_t bits, i, k, pos;
+    int res = ERR_MEMORY;
+
+#define E_BIT(i) ((e->w[(i) / 64] >> ((i) % 64)) & 1)
+
+    /* The actual length of e */
+    bits = MIN(e_bits, 64*e->nw);
+    while (bits > 0 && !E_BIT(bits - 1))
+        bits--;
+
+    acc = nat_words_alloc(nw);
+    if (NULL == acc)
+        goto cleanup;
+
+    if (bits == 0) {
+        memcpy(acc, ctx->one, nw*sizeof(uint64_t));
+    } else if (bits <= 64) {
+        memcpy(acc, base_m, nw*sizeof(uint64_t));
+        for (i=bits-1; i-- > 0;) {
+            mont_sqr(acc, acc, ctx);
+            if (E_BIT(i))
+                mont_mul(acc, acc, base_m, ctx);
+        }
+    } else {
+        table = nat_words_alloc(TABLE_SIZE*nw);
+        if (NULL == table)
+            goto cleanup;
+        memcpy(table + nw, base_m, nw*sizeof(uint64_t));
+        for (k=2; k<TABLE_SIZE; k++)
+            mont_mul(table + k*nw, table + (k-1)*nw, base_m, ctx);
+
+        bits = (bits + WINDOW_SIZE - 1) / WINDOW_SIZE * WINDOW_SIZE;
+        memcpy(acc, ctx->one, nw*sizeof(uint64_t));
+        for (pos=bits; pos>0; pos-=WINDOW_SIZE) {
+            size_t bitpos = pos - WINDOW_SIZE;
+            uint64_t idx;
+
+            /* No squaring of 1, before the first window */
+            if (pos != bits)
+                for (i=0; i<WINDOW_SIZE; i++)
+                    mont_sqr(acc, acc, ctx);
+            /* bitpos is a multiple of 4, so the window is within a word */
+            idx = (e->w[bitpos / 64] >> (bitpos % 64)) & (TABLE_SIZE - 1);
+            if (idx)
+                mont_mul(acc, acc, table + idx*nw, ctx);
+        }
+    }
+#undef E_BIT
+
+    memcpy(out, acc, nw*sizeof(uint64_t));
+    res = 0;
+
+cleanup:
+    nat_words_free(table, TABLE_SIZE*nw);
+    nat_words_free(acc, nw);
     return res;
 }
 
@@ -741,6 +843,130 @@ cleanup:
     return res;
 }
 
+/*
+ * x (nw words) = a, for a < R = 2^(64*nw): a copy if a has at most nw
+ * words, otherwise a mod m (the Montgomery products accept any operand
+ * below R, as long as the other one is below m).
+ */
+STATIC int mont_operand(uint64_t *x, const Nat *a, const Nat *m)
+{
+    if (a->nw <= m->nw) {
+        words_copy_resized(x, m->nw, a->w, a->nw);
+        return 0;
+    }
+    return nat_divmod_words(NULL, 0, x, a, m);
+}
+
+/* ERR_MODULUS if ctx is not the context of m; only that fact leaks */
+STATIC int check_ctx(const Nat *m, const MontCtx *ctx)
+{
+    if (m->nw != ctx->nw || !ct_declassify(words_eq(m->w, ctx->n, ctx->nw)))
+        return ERR_MODULUS;
+    return 0;
+}
+
+EXPORT_SYM int nat_mont_new(MontCtx **out, const Nat *m)
+{
+    if (NULL == out || NULL == m)
+        return ERR_NULL;
+    *out = NULL;
+    return mont_ctx_new(out, m);
+}
+
+EXPORT_SYM void nat_mont_free(MontCtx *ctx)
+{
+    mont_ctx_free(ctx);
+}
+
+EXPORT_SYM int nat_powmod_ctx(Nat *out, const Nat *a, const Nat *e, size_t e_bits, int e_public,
+                              const Nat *m, const MontCtx *ctx)
+{
+    uint64_t *acc;
+    MontCtx *priv = NULL;
+    size_t nw;
+    int res;
+
+    if (NULL == out || NULL == a || NULL == e || NULL == m || NULL == ctx)
+        return ERR_NULL;
+    nw = ctx->nw;
+    res = check_ctx(m, ctx);
+    if (res)
+        return res;
+
+    acc = nat_words_alloc(nw);
+    if (NULL == acc)
+        return ERR_MEMORY;
+
+    /* The scratchpads of ctx are not shared: ctx stays read-only */
+    res = mont_ctx_new_private(&priv, ctx);
+    if (res)
+        goto cleanup;
+
+    /*
+     * The Montgomery form of a is a*R^2/R mod n: the product is correct
+     * (and reduced) for any a < R, as a*R^2 + mq*n < 2*R*n.
+     */
+    res = mont_operand(acc, a, m);
+    if (res)
+        goto cleanup;
+    mont_to(acc, acc, priv);
+
+    if (e_public)
+        res = mont_pow_public(acc, acc, e, e_bits, priv);
+    else
+        res = mont_pow(acc, acc, e, e_bits, priv);
+    if (res)
+        goto cleanup;
+
+    mont_from(acc, acc, priv);
+    words_copy_resized(out->w, out->nw, acc, nw);
+
+cleanup:
+    mont_ctx_free_private(priv);
+    nat_words_free(acc, nw);
+    return res;
+}
+
+EXPORT_SYM int nat_mulmod_ctx(Nat *out, const Nat *a, const Nat *b, const Nat *m, const MontCtx *ctx)
+{
+    uint64_t *x = NULL, *y = NULL;
+    MontCtx *priv = NULL;
+    size_t nw;
+    int res;
+
+    if (NULL == out || NULL == a || NULL == b || NULL == m || NULL == ctx)
+        return ERR_NULL;
+    res = check_ctx(m, ctx);
+    if (res)
+        return res;
+
+    nw = ctx->nw;
+    res = ERR_MEMORY;
+    x = nat_words_alloc(nw);
+    y = nat_words_alloc(nw);
+    if (NULL == x || NULL == y)
+        goto cleanup;
+    res = mont_ctx_new_private(&priv, ctx);
+    if (res)
+        goto cleanup;
+    res = mont_operand(x, a, m);
+    if (res == 0)
+        res = mont_operand(y, b, m);
+    if (res)
+        goto cleanup;
+
+    /* (a*R^2/R) mod n = a*R mod n < n, then (a*R)*b/R = a*b mod n */
+    mont_to(x, x, priv);
+    mont_mul(x, x, y, priv);
+    words_copy_resized(out->w, out->nw, x, nw);
+
+cleanup:
+    mont_ctx_free_private(priv);
+    nat_words_free(x, nw);
+    nat_words_free(y, nw);
+    return res;
+}
+
 /**
  * out = a^e mod m.
  * e_bits is a public bound on the size of e, and e must be smaller than
@@ -753,7 +979,7 @@ EXPORT_SYM int nat_powmod(Nat *out, const Nat *a, const Nat *e, size_t e_bits, c
     uint64_t *base = NULL, *acc = NULL, *t = NULL;
     MontCtx *ctx = NULL;
     Nat *prod = NULL;
-    size_t nw;
+    size_t i, nw;
     int res;
 
     if (NULL == out || NULL == a || NULL == e || NULL == m)
@@ -761,56 +987,46 @@ EXPORT_SYM int nat_powmod(Nat *out, const Nat *a, const Nat *e, size_t e_bits, c
     if (ct_declassify(words_is_zero(m->w, m->nw)))
         return ERR_VALUE;
 
+    if (ct_declassify(m->w[0] & 1)) {
+        /* Odd modulus: Montgomery form */
+        res = mont_ctx_new(&ctx, m);
+        if (res == 0)
+            res = nat_powmod_ctx(out, a, e, e_bits, 0, m, ctx);
+        mont_ctx_free(ctx);
+        return res;
+    }
+
+    /* Even modulus (>= 2): square-and-multiply with full reductions */
     nw = m->nw;
     res = ERR_MEMORY;
     base = nat_words_alloc(nw);
     acc = nat_words_alloc(nw);
     t = nat_words_alloc(nw);
-    if (NULL == base || NULL == acc || NULL == t)
+    prod = nat_alloc(2*nw);
+    if (NULL == base || NULL == acc || NULL == t || NULL == prod)
         goto cleanup;
 
     res = nat_divmod_words(NULL, 0, base, a, m);
     if (res)
         goto cleanup;
 
-    if (ct_declassify(m->w[0] & 1)) {
-        /* Odd modulus: Montgomery form, only within this block */
-        res = mont_ctx_new(&ctx, m);
+    acc[0] = 1;
+    for (i=MIN(e_bits, 64*e->nw); i-- > 0;) {
+        uint64_t bit = (e->w[i / 64] >> (i % 64)) & 1;
+
+        res = mulmod_words(acc, acc, acc, m, prod);
         if (res)
             goto cleanup;
-        mont_to(t, base, ctx);
-        res = mont_pow(acc, t, e, e_bits, ctx);
+        res = mulmod_words(t, acc, base, m, prod);
         if (res)
             goto cleanup;
-        mont_from(acc, acc, ctx);
-    } else {
-        /* Even modulus (>= 2): square-and-multiply with full reductions */
-        size_t i;
-
-        res = ERR_MEMORY;
-        prod = nat_alloc(2*nw);
-        if (NULL == prod)
-            goto cleanup;
-
-        acc[0] = 1;
-        for (i=MIN(e_bits, 64*e->nw); i-- > 0;) {
-            uint64_t bit = (e->w[i / 64] >> (i % 64)) & 1;
-
-            res = mulmod_words(acc, acc, acc, m, prod);
-            if (res)
-                goto cleanup;
-            res = mulmod_words(t, acc, base, m, prod);
-            if (res)
-                goto cleanup;
-            words_select(acc, ct_mask(bit), t, acc, nw);
-        }
+        words_select(acc, ct_mask(bit), t, acc, nw);
     }
 
     words_copy_resized(out->w, out->nw, acc, nw);
     res = 0;
 
 cleanup:
-    mont_ctx_free(ctx);
     nat_free(prod);
     nat_words_free(base, nw);
     nat_words_free(acc, nw);

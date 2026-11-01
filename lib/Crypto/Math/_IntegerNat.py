@@ -66,6 +66,11 @@ int nat_mod_small(void *out, const void *a, uint64_t d);
 int nat_mulmod(void *out, const void *a, const void *b, const void *m);
 int nat_submod(void *out, const void *a, const void *b, const void *m);
 int nat_powmod(void *out, const void *a, const void *e, size_t e_bits, const void *m);
+int nat_mont_new(void **out, const void *m);
+void nat_mont_free(void *ctx);
+int nat_mulmod_ctx(void *out, const void *a, const void *b, const void *m, const void *ctx);
+int nat_powmod_ctx(void *out, const void *a, const void *e, size_t e_bits, int e_public,
+                   const void *m, const void *ctx);
 int nat_invmod(void *out, const void *a, const void *m);
 int nat_gcd(void *out, const void *a, const void *b);
 int nat_jacobi(void *out, const void *a, const void *n, int negate);
@@ -130,6 +135,8 @@ class IntegerNat(IntegerBase):
 
     _p: SmartPointer
     _bits: int
+    # The Montgomery context of an odd modulus, with the buffer it is for
+    _mont: Optional[tuple[SmartPointer, SmartPointer]] = None
 
     def __init__(self, value: Union[IntegerBase, int], _min_bits: int = 0, *, public: bool = False) -> None:
         # A copy keeps the value public
@@ -210,6 +217,28 @@ class IntegerNat(IntegerBase):
         modulus = self._conv(modulus)
         result = IntegerNat._make(modulus._bits)
         _check(_lib.nat_submod(result._p.get(), self._p.get(), term._p.get(), modulus._p.get()), "nat_submod")
+        return result
+
+    def _mul_mod(self, factor: IntLike, modulus: IntLike) -> IntegerNat:
+        """Return (self * factor) mod modulus; with Montgomery products for an odd modulus"""
+        public = self._is_public_with(factor) and self._is_public_with(modulus)
+        factor = self._conv(factor)
+        modulus = self._check_modulus(modulus)
+        result = IntegerNat._make(modulus._bits)
+        if modulus.is_odd():
+            ctx = modulus._mont_ctx()
+            _check(
+                _lib.nat_mulmod_ctx(
+                    result._p.get(), self._p.get(), factor._p.get(), modulus._p.get(), ctx.get()
+                ),
+                "nat_mulmod_ctx",
+            )
+        else:
+            _check(
+                _lib.nat_mulmod(result._p.get(), self._p.get(), factor._p.get(), modulus._p.get()),
+                "nat_mulmod",
+            )
+        result._public = public
         return result
 
     # Conversions
@@ -405,13 +434,50 @@ class IntegerNat(IntegerBase):
 
         modulus = self._check_modulus(modulus)
         result = IntegerNat._make(modulus._bits)
+        if not modulus.is_odd():
+            _check(
+                _lib.nat_powmod(
+                    result._p.get(),
+                    self._p.get(),
+                    exponent._p.get(),
+                    c_size_t(exponent._bits),
+                    modulus._p.get(),
+                ),
+                "nat_powmod",
+            )
+            return self._adopt(result)
+
+        # A public exponent can be processed faster, with its value
+        ctx = modulus._mont_ctx()
         _check(
-            _lib.nat_powmod(
-                result._p.get(), self._p.get(), exponent._p.get(), c_size_t(exponent._bits), modulus._p.get()
+            _lib.nat_powmod_ctx(
+                result._p.get(),
+                self._p.get(),
+                exponent._p.get(),
+                c_size_t(exponent._bits),
+                int(exponent._public),
+                modulus._p.get(),
+                ctx.get(),
             ),
-            "nat_powmod",
+            "nat_powmod_ctx",
         )
         return self._adopt(result)
+
+    def _mont_ctx(self) -> SmartPointer:
+        """The Montgomery context of this (odd) modulus, created once and kept.
+
+        All the operations replace the buffer of a number (_p) instead of
+        changing it, so the context is valid as long as the buffer is the same.
+        The caller must keep the returned object during the C call: another
+        thread may replace the cached context at the same time, and the
+        previous one is freed when nothing refers to it any more.
+        """
+        cache = self._mont
+        if cache is None or cache[0] is not self._p:
+            raw = VoidPointer()
+            _check(_lib.nat_mont_new(raw.address_of(), self._p.get()), "nat_mont_new")
+            cache = self._mont = (self._p, SmartPointer(raw.get(), _lib.nat_mont_free))
+        return cache[1]
 
     def __pow__(self, exponent: IntLike, modulus: Optional[IntLike] = None) -> IntegerNat:
         result = IntegerNat(self)
@@ -591,11 +657,7 @@ class IntegerNat(IntegerBase):
         term1 = IntegerNat._conv(term1)
         term2 = IntegerNat._conv(term2)
 
-        result = IntegerNat._make(modulus._bits)
-        _check(
-            _lib.nat_mulmod(result._p.get(), term1._p.get(), term2._p.get(), modulus._p.get()), "nat_mulmod"
-        )
-        return result.to_bytes(modulus.size_in_bytes())
+        return term1._mul_mod(term2, modulus).to_bytes(modulus.size_in_bytes())
 
     # Primality tests (the candidate is usually a secret prime)
 

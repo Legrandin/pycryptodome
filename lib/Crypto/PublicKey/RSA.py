@@ -37,7 +37,9 @@ __all__ = ["generate", "construct", "import_key", "RsaKey", "oid"]
 
 import binascii
 import math
+import os
 import struct
+import threading
 
 from Crypto import IncorrectPassphraseError, KdfLimitError, PassphraseRequiredError, Random
 from Crypto.Math.Numbers import Integer
@@ -50,6 +52,23 @@ from Crypto.PublicKey import (
 from Crypto.Util._bytes import tobytes
 from Crypto.Util.asn1 import DerNull, DerSequence
 from Crypto.Util.number import bytes_to_long
+
+# A random blinding factor r is used for this many private operations:
+# in between, it is squared (like in OpenSSL), which is much faster than
+# a new r^e and r^-1.
+_BLINDING_USES = 32
+
+# Increased in a child process after a fork(), so that it does not reuse
+# the blinding factors of the parent
+_fork_generation = [0]
+
+
+def _after_fork_in_child() -> None:
+    _fork_generation[0] += 1
+
+
+if hasattr(os, "register_at_fork"):
+    os.register_at_fork(after_in_child=_after_fork_in_child)
 
 # The largest RSA modulus accepted, in bits. The cost of the operations
 # grows quickly with the size, and a public key may come from anyone.
@@ -108,6 +127,9 @@ class RsaKey:
     _crt_dp: Integer
     _crt_dq: Integer
     _crt_u: Integer
+    # (r^e mod n, r^-1 mod n, uses left, fork generation), see _blinding_pair()
+    _blinding: Optional[tuple[Integer, Integer, int, int]]
+    _blinding_lock: threading.Lock
 
     def __init__(self, **kwargs: Int) -> None:
         """Build an RSA key.
@@ -135,13 +157,17 @@ class RsaKey:
             raise ValueError("Some RSA components are missing")
         for component, value in kwargs.items():
             setattr(self, "_" + component, value)
-        # The modulus is public: the bounds of random_range() can use it as such
+        # The modulus and the public exponent are public: the bounds of
+        # random_range() and the powers with e can use their values
         self._n = Integer(self._n, public=True)
+        self._e = Integer(self._e, public=True)
         if input_set == private_set:
             self._dp = self._d % (self._p - 1)  # = (e⁻¹) mod (p-1)
             self._dq = self._d % (self._q - 1)  # = (e⁻¹) mod (q-1)
             self._invq = None  # will be computed on demand
             self._init_crt()
+            self._blinding = None
+            self._blinding_lock = threading.Lock()
 
     def _init_crt(self) -> None:
         """Prepare the CRT components used for decryption.
@@ -237,21 +263,37 @@ class RsaKey:
             raise TypeError("This is not a private key")
 
         # Blinded RSA decryption (to prevent timing attacks):
-        # Step 1: Generate random secret blinding factor r,
-        # such that 0 < r < n-1
-        r = Integer.random_range(min_inclusive=1, max_exclusive=self._n)
+        # Step 1: Get a secret blinding factor r, with 0 < r < n
+        r_e, r_inv = self._blinding_pair()
         # Step 2: Compute c' = c * r**e mod n
-        cp = Integer(ciphertext) * pow(r, self._e, self._n) % self._n
+        cp = Integer(ciphertext)._mul_mod(r_e, self._n)
         # Step 3: Compute m' = c'**d mod n       (normal RSA decryption)
         m1 = pow(cp, self._crt_dp, self._crt_p)
         m2 = pow(cp, self._crt_dq, self._crt_q)
         # (m2 - m1) mod q, with m1 < p < q
-        h = (m2._sub_mod(m1, self._crt_q) * self._crt_u) % self._crt_q
+        h = m2._sub_mod(m1, self._crt_q)._mul_mod(self._crt_u, self._crt_q)
         mp = h * self._crt_p + m1
         # Step 4: Compute m = m' * (r**(-1)) mod n
         # then encode into a big endian byte string
-        result = Integer._mult_modulo_bytes(r.inverse(self._n), mp, self._n)
+        result = Integer._mult_modulo_bytes(r_inv, mp, self._n)
         return result
+
+    def _blinding_pair(self) -> tuple[Integer, Integer]:
+        """A pair (r^e mod n, r^-1 mod n), for a different secret r at each call.
+
+        Every _BLINDING_USES calls (and after a fork), r is a new random
+        number in [1, n). Otherwise, it is the square of the previous r.
+        """
+        n = self._n
+        with self._blinding_lock:
+            state = self._blinding
+            if state is None or state[2] == 0 or state[3] != _fork_generation[0]:
+                r = Integer.random_range(min_inclusive=1, max_exclusive=n)
+                r_e, r_inv, uses = pow(r, self._e, n), r.inverse(n), _BLINDING_USES
+            else:
+                r_e, r_inv, uses = state[0]._mul_mod(state[0], n), state[1]._mul_mod(state[1], n), state[2]
+            self._blinding = (r_e, r_inv, uses - 1, _fork_generation[0])
+        return r_e, r_inv
 
     def _decrypt(self, ciphertext):
         """Legacy private method"""

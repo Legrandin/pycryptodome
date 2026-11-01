@@ -147,7 +147,7 @@ int nat_divmod_words(uint64_t *q, size_t q_nw, uint64_t *r, const Nat *a, const 
 /*
  * Montgomery arithmetic, for an odd modulus.
  * Numbers in Montgomery form only exist inside a single call
- * to a nat_* function.
+ * to a nat_* function (the context itself can be kept: nat_mont_new()).
  */
 typedef struct {
     size_t nw;
@@ -169,6 +169,23 @@ typedef struct {
     uint32_t *x32;
     uint32_t *y32;
 } MontCtx;
+
+/*
+ * A Montgomery context for an odd modulus m, kept by the caller to compute
+ * several powers with the same modulus (ERR_VALUE if m is even).
+ * nat_powmod_ctx() only reads it, so several threads can use it at once.
+ */
+EXPORT_SYM int nat_mont_new(MontCtx **out, const Nat *m);
+EXPORT_SYM void nat_mont_free(MontCtx *ctx);
+/**
+ * out = a^e mod m, like nat_powmod(), with the context of m
+ * (ERR_MODULUS if ctx is not for m). With e_public set, the exponent is
+ * public, and the running time depends on its value (but not on a).
+ */
+/** out = (a * b) mod m, with the context of m (ERR_MODULUS if it is not for m) **/
+EXPORT_SYM int nat_mulmod_ctx(Nat *out, const Nat *a, const Nat *b, const Nat *m, const MontCtx *ctx);
+EXPORT_SYM int nat_powmod_ctx(Nat *out, const Nat *a, const Nat *e, size_t e_bits, int e_public,
+                              const Nat *m, const MontCtx *ctx);
 
 int mont_ctx_new(MontCtx **out, const Nat *n);
 void mont_ctx_free(MontCtx *ctx);

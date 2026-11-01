@@ -16,6 +16,15 @@ New features
   with the same output: ECDSA signatures are about 13% faster (P-256),
   DSA signatures about 4%, and ECC key generation about 35%.
   The RSA modulus and the DSA subgroup order are now public ``Integer`` objects.
+* Faster RSA: on x86-64, signatures and decryption are 35-40% faster
+  (RSA-2048 to RSA-4096), verification and encryption 2-2.7x.
+  Modular exponentiation with a public exponent (like the RSA public exponent)
+  no longer uses the slower constant-time algorithm, which is only needed for
+  secret exponents, and the Montgomery context of a modulus is kept with it.
+  The RSA blinding factor is squared between uses (a new one every 32 uses,
+  and after a fork).
+* The Montgomery multiplication for x86-64 CPUs with BMI2 and ADX is about 20%
+  faster: DSA signatures and verification are about 25% faster.
 
 Other changes
 -------------

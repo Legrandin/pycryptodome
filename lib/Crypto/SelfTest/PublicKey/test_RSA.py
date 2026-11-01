@@ -269,6 +269,74 @@ class TestRSA:
             assert swapped._decrypt(ciphertext) == key._decrypt(ciphertext)
             assert pow(swapped._decrypt(ciphertext), key.e, key.n) == ciphertext
 
+    def test_blinding_pair(self):
+        # Each pair is (r^e mod n, r^-1 mod n), and r changes at each call:
+        # it is squared, and it is a new random number every _BLINDING_USES calls
+        from Crypto.PublicKey.RSA import _BLINDING_USES
+
+        key = self.rsa.construct((self.n, self.e, self.d, self.p, self.q))
+        seen = set()
+        previous = None
+        for i in range(2 * _BLINDING_USES + 3):
+            r_e, r_inv = (int(x) for x in key._blinding_pair())
+            assert r_e * pow(r_inv, self.e, self.n) % self.n == 1
+            if previous is not None and i % _BLINDING_USES != 0:
+                assert r_e == previous[0] ** 2 % self.n
+                assert r_inv == previous[1] ** 2 % self.n
+            seen.add(r_e)
+            previous = (r_e, r_inv)
+        assert len(seen) == 2 * _BLINDING_USES + 3
+
+        # Decryption stays correct across the refreshes
+        for m in range(2 * _BLINDING_USES + 3):
+            c = pow(m + 2, self.e, self.n)
+            assert key._decrypt(c) == m + 2
+
+    def test_blinding_threads(self):
+        import threading
+
+        key = self.rsa.construct((self.n, self.e, self.d, self.p, self.q))
+        errors = []
+
+        def work(seed):
+            try:
+                for k in range(40):
+                    m = seed * 1000 + k + 2
+                    if key._decrypt(pow(m, self.e, self.n)) != m:
+                        errors.append(m)
+            except Exception as exc:  # pragma: no cover
+                errors.append(exc)
+
+        threads = [threading.Thread(target=work, args=(s,)) for s in range(8)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join()
+        assert errors == []
+
+    @pytest.mark.skipif(not hasattr(__import__("os"), "fork"), reason="no fork()")
+    def test_blinding_after_fork(self):
+        # A child process does not reuse the blinding factors of its parent
+        import os
+
+        key = self.rsa.construct((self.n, self.e, self.d, self.p, self.q))
+        key._blinding_pair()
+        read_fd, write_fd = os.pipe()
+        pid = os.fork()
+        if pid == 0:  # pragma: no cover
+            try:
+                child = int(key._blinding_pair()[0])
+                os.write(write_fd, child.to_bytes(128, "big"))
+            finally:
+                os._exit(0)
+        os.close(write_fd)
+        child = int.from_bytes(os.read(read_fd, 128), "big")
+        os.close(read_fd)
+        os.waitpid(pid, 0)
+        parent = int(key._blinding_pair()[0])
+        # Without the fork check, both would be the square of the same pair
+        assert child != parent
+
     def _check_private_key(self, rsaObj):
         from Crypto.Math.Numbers import Integer
 

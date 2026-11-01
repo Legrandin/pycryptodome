@@ -126,6 +126,19 @@ static void run(size_t nw)
     nat_submod(out, b, c, m_odd);   /* as in the CRT step of RSA */
     nat_powmod(out, a, e, 64*nw, m_odd);
     nat_powmod(out, a, e, 64*nw, m_even);
+    {
+        MontCtx *ctx;
+
+        res = nat_mont_new(&ctx, m_odd);
+        (void)res;
+        nat_powmod_ctx(out, a, e, 64*nw, 0, m_odd, ctx);
+        nat_mulmod_ctx(out, a, b, m_odd, ctx);
+        /* A public exponent (only the base and the modulus are secret) */
+        VALGRIND_MAKE_MEM_DEFINED(e->w, nw*sizeof(uint64_t));
+        nat_powmod_ctx(out, a, e, 64*nw, 1, m_odd, ctx);
+        VALGRIND_MAKE_MEM_UNDEFINED(e->w, nw*sizeof(uint64_t));
+        nat_mont_free(ctx);
+    }
     res = nat_invmod(out, a, m_odd);
     (void)res;
     res = nat_invmod(out, a, m_even);

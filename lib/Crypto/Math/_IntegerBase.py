@@ -311,6 +311,10 @@ class IntegerBase(ABC):
         """Return (self - term) mod modulus, for self and term smaller than the modulus"""
         return (self - term) % modulus
 
+    def _mul_mod(self, factor: Union[IntegerBase, int], modulus: Union[IntegerBase, int]) -> IntegerBase:
+        """Return (self * factor) mod modulus, for a non-negative factor"""
+        return (self * factor) % modulus
+
     def _resize(self, bits: int) -> IntegerBase:
         """Declare that the value is smaller than 2**bits (for IntegerNat, the
         operations then work on that many bits, whatever the value)"""
