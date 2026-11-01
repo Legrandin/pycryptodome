@@ -8,20 +8,28 @@
 #include "endianess.h"
 
 /**
+ * SHA-2 as defined in FIPS 180-4 http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
+ *
+ * This file is included by SHA224.c, SHA256.c, SHA384.c and SHA512.c
+ * (themselves included by their CPU-specific variants, like SHA256_armv8.c),
+ * after they define MODULE_NAME, WORD_SIZE and DIGEST_SIZE.
+ *
  * The extension module is named after SHA2_MODULE (default: MODULE_NAME),
  * while the exported functions are always prefixed by MODULE_NAME.
  *
- * If SHA2_SHA_NI is defined (SHA-224 and SHA-256 only), the compression
- * function uses the Intel SHA extensions: the module can only be loaded
- * on a CPU that supports them (see SHA256_shani.c).
+ * The compression function sha_compress_words() is in a separate file:
  *
- * If SHA2_ARMV8 is defined, the compression function uses the instructions
- * of the ARMv8 Cryptography Extensions: SHA256H, SHA256H2, SHA256SU0 and
- * SHA256SU1 for SHA-224 and SHA-256, or SHA512H, SHA512H2, SHA512SU0 and
- * SHA512SU1 (ARMv8.2) for SHA-384 and SHA-512 (see SHA256_armv8.c).
- * On other targets (such as the x86-64 half of a macOS universal2 build),
- * the portable compression function is used instead: the Python code
- * only loads the module after checking that the CPU has the instructions.
+ * - hash_SHA2_compress_shani.c, if SHA2_SHA_NI is defined (SHA-224 and
+ *   SHA-256 only): it uses the Intel SHA extensions, so the module can only
+ *   be loaded on a CPU that supports them (see SHA256_shani.c).
+ *
+ * - hash_SHA2_compress_armv8.c, if SHA2_ARMV8 is defined: it uses the
+ *   instructions of the ARMv8 Cryptography Extensions (see SHA256_armv8.c).
+ *   On other targets (such as the x86-64 half of a macOS universal2 build),
+ *   the portable compression function is used instead: the Python code
+ *   only loads the module after checking that the CPU has the instructions.
+ *
+ * - hash_SHA2_compress_portable.c, otherwise.
  */
 #ifndef SHA2_MODULE
 #define SHA2_MODULE MODULE_NAME
@@ -29,35 +37,7 @@
 
 FAKE_INIT(SHA2_MODULE)
 
-#ifdef SHA2_SHA_NI
-#if WORD_SIZE != 4
-#error SHA-NI is only available for SHA-224 and SHA-256
-#endif
-#include <immintrin.h>
-#include "sse2_unaligned.h"
-#endif
-
-#if defined(SHA2_ARMV8) && !(defined(__aarch64__) || defined(_M_ARM64))
-#undef SHA2_ARMV8
-#endif
-
-#ifdef SHA2_ARMV8
-#include <arm_neon.h>
-#endif
-
 #define FUNC_NAME(pf) PASTE2(MODULE_NAME, pf)
-
-/**
- * SHA-2 as defined in FIPS 180-4 http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.180-4.pdf
- */
-
-/** Equivalent to the FIPS 180-4 definitions, with fewer operations **/
-#define CH(x,y,z)       ((z) ^ ((x) & ((y) ^ (z))))
-#define MAJ(x,y,z)      (((x) & (y)) | ((z) & ((x) | (y))))
-
-#define ROTR32(n, x)    (((x)>>(n)) | ((x)<<(32-(n))))
-#define ROTR64(n, x)    (((x)>>(n)) | ((x)<<(64-(n))))
-#define SHR(n,x)        ((x)>>(n))
 
 #if WORD_SIZE==4
 
@@ -67,11 +47,6 @@ typedef uint32_t sha2_word_t;
 
 #define SCHEDULE_SIZE 64
 #define BLOCK_SIZE 64
-
-#define SIGMA_0_256(x)    (ROTR32(2,x)  ^ ROTR32(13,x) ^ ROTR32(22,x))
-#define SIGMA_1_256(x)    (ROTR32(6,x)  ^ ROTR32(11,x) ^ ROTR32(25,x))
-#define sigma_0_256(x)    (ROTR32(7,x)  ^ ROTR32(18,x) ^ SHR(3,x))
-#define sigma_1_256(x)    (ROTR32(17,x) ^ ROTR32(19,x) ^ SHR(10,x))
 
 static const sha2_word_t K[SCHEDULE_SIZE] = {
     0x428a2f98, 0x71374491, 0xb5c0fbcf, 0xe9b5dba5, 0x3956c25b,
@@ -89,13 +64,6 @@ static const sha2_word_t K[SCHEDULE_SIZE] = {
     0x90befffa, 0xa4506ceb, 0xbef9a3f7, 0xc67178f2
 };
 
-#define SCHEDULE(t) (W[(t)&15] += sigma_1_256(W[((t)-2)&15]) + W[((t)-7)&15] + sigma_0_256(W[((t)-15)&15]))
-
-#define CYCLE(a,b,c,d,e,f,g,h,t) \
-    h += SIGMA_1_256(e) + CH(e,f,g) + K[t]  + WT(t); \
-    d += h; \
-    h += SIGMA_0_256(a) + MAJ(a,b,c);
-
 #define LOAD_WORD_BIG(p)        LOAD_U32_BIG(p)
 #define STORE_WORD_BIG(p, w)    STORE_U32_BIG(p, w)
 
@@ -107,11 +75,6 @@ typedef uint64_t sha2_word_t;
 
 #define SCHEDULE_SIZE 80
 #define BLOCK_SIZE 128
-
-#define SIGMA_0_512(x)    (ROTR64(28,x) ^ ROTR64(34,x) ^ ROTR64(39,x))
-#define SIGMA_1_512(x)    (ROTR64(14,x) ^ ROTR64(18,x) ^ ROTR64(41,x))
-#define sigma_0_512(x)    (ROTR64(1,x)  ^ ROTR64(8,x)  ^ SHR(7,x))
-#define sigma_1_512(x)    (ROTR64(19,x) ^ ROTR64(61,x) ^ SHR(6,x))
 
 static const sha2_word_t K[SCHEDULE_SIZE] = {
     0x428a2f98d728ae22ULL, 0x7137449123ef65cdULL, 0xb5c0fbcfec4d3b2fULL, 0xe9b5dba58189dbbcULL,
@@ -136,25 +99,12 @@ static const sha2_word_t K[SCHEDULE_SIZE] = {
     0x4cc5d4becb3e42b6ULL, 0x597f299cfc657e2aULL, 0x5fcb6fab3ad6faecULL, 0x6c44198c4a475817ULL
 };
 
-#define SCHEDULE(t) (W[(t)&15] += sigma_1_512(W[((t)-2)&15]) + W[((t)-7)&15] + sigma_0_512(W[((t)-15)&15]))
-
-#define CYCLE(a,b,c,d,e,f,g,h,t) \
-    h += SIGMA_1_512(e) + CH(e,f,g) + K[t]  + WT(t); \
-    d += h; \
-    h += SIGMA_0_512(a) + MAJ(a,b,c);
-
 #define LOAD_WORD_BIG(p)        LOAD_U64_BIG(p)
 #define STORE_WORD_BIG(p, w)    STORE_U64_BIG(p, w)
 
 #else
 #error Invalid WORD_SIZE
 #endif
-
-/**
- * Message word for round t, with the schedule kept in a rolling window of 16 words.
- * t is always a constant, so the test is resolved at compile time.
- **/
-#define WT(t)   ((t) < 16 ? W[(t)&15] : SCHEDULE(t))
 
 static inline void put_be(sha2_word_t number, uint8_t *p)
 {
@@ -189,330 +139,18 @@ static int add_bits(hash_state *hs, sha2_word_t bits)
     return ERR_MAX_DATA;
 }
 
-#ifdef SHA2_SHA_NI
-
-/** Rounds 4g to 4g+3, with message words w = W[4g..4g+3] **/
-#define SHANI_ROUNDS(g, w) do { \
-    wk = _mm_add_epi32(w, LOADU_128(&K[(g)*4])); \
-    cdgh = _mm_sha256rnds2_epu32(cdgh, abef, wk); \
-    wk = _mm_shuffle_epi32(wk, 0x0E); \
-    abef = _mm_sha256rnds2_epu32(abef, cdgh, wk); \
-    } while (0)
-
-/** With m0..m3 = W[t-16..t-1], replace m0 with W[t..t+3] **/
-#define SHANI_SCHEDULE(m0, m1, m2, m3) do { \
-    m0 = _mm_sha256msg1_epu32(m0, m1); \
-    m0 = _mm_add_epi32(m0, _mm_alignr_epi8(m3, m2, 4)); \
-    m0 = _mm_sha256msg2_epu32(m0, m3); \
-    } while (0)
-
-/**
- * Compress one block, already decoded into sixteen words,
- * with the Intel SHA extensions.
- * h_out[] may be the same array as h_in[] or M[].
- */
-static void sha_compress_words(const sha2_word_t h_in[8], sha2_word_t h_out[8], const sha2_word_t M[16])
-{
-    __m128i abef, cdgh, abef_save, cdgh_save;
-    __m128i m0, m1, m2, m3, wk, tmp;
-
-    /** The SHA-NI instructions want the state as {A,B,E,F} and {C,D,G,H} **/
-    tmp  = LOADU_128(&h_in[0]);                         /** D C B A (lane 3..0) **/
-    cdgh = LOADU_128(&h_in[4]);                         /** H G F E **/
-    tmp  = _mm_shuffle_epi32(tmp, 0xB1);                /** C D A B **/
-    cdgh = _mm_shuffle_epi32(cdgh, 0x1B);               /** E F G H **/
-    abef = _mm_alignr_epi8(tmp, cdgh, 8);               /** A B E F **/
-    cdgh = _mm_blend_epi16(cdgh, tmp, 0xF0);            /** C D G H **/
-
-    abef_save = abef;
-    cdgh_save = cdgh;
-
-    /** m0..m3 are a rolling window of the last 16 words of the message schedule **/
-    m0 = LOADU_128(&M[0]);
-    m1 = LOADU_128(&M[4]);
-    m2 = LOADU_128(&M[8]);
-    m3 = LOADU_128(&M[12]);
-
-    SHANI_ROUNDS( 0, m0);
-    SHANI_ROUNDS( 1, m1);
-    SHANI_ROUNDS( 2, m2);
-    SHANI_ROUNDS( 3, m3);
-    SHANI_SCHEDULE(m0, m1, m2, m3); SHANI_ROUNDS( 4, m0);
-    SHANI_SCHEDULE(m1, m2, m3, m0); SHANI_ROUNDS( 5, m1);
-    SHANI_SCHEDULE(m2, m3, m0, m1); SHANI_ROUNDS( 6, m2);
-    SHANI_SCHEDULE(m3, m0, m1, m2); SHANI_ROUNDS( 7, m3);
-    SHANI_SCHEDULE(m0, m1, m2, m3); SHANI_ROUNDS( 8, m0);
-    SHANI_SCHEDULE(m1, m2, m3, m0); SHANI_ROUNDS( 9, m1);
-    SHANI_SCHEDULE(m2, m3, m0, m1); SHANI_ROUNDS(10, m2);
-    SHANI_SCHEDULE(m3, m0, m1, m2); SHANI_ROUNDS(11, m3);
-    SHANI_SCHEDULE(m0, m1, m2, m3); SHANI_ROUNDS(12, m0);
-    SHANI_SCHEDULE(m1, m2, m3, m0); SHANI_ROUNDS(13, m1);
-    SHANI_SCHEDULE(m2, m3, m0, m1); SHANI_ROUNDS(14, m2);
-    SHANI_SCHEDULE(m3, m0, m1, m2); SHANI_ROUNDS(15, m3);
-
-    abef = _mm_add_epi32(abef, abef_save);
-    cdgh = _mm_add_epi32(cdgh, cdgh_save);
-
-    /** Back to {A,B,C,D} and {E,F,G,H} **/
-    tmp  = _mm_shuffle_epi32(abef, 0x1B);               /** F E B A **/
-    cdgh = _mm_shuffle_epi32(cdgh, 0xB1);               /** D C H G **/
-    abef = _mm_blend_epi16(tmp, cdgh, 0xF0);            /** D C B A **/
-    cdgh = _mm_alignr_epi8(cdgh, tmp, 8);               /** H G F E **/
-
-    STOREU_128(&h_out[0], abef);
-    STOREU_128(&h_out[4], cdgh);
-}
-
-#elif defined(SHA2_ARMV8) && WORD_SIZE == 4
-
-/** Rounds 4g to 4g+3, with message words w = W[4g..4g+3] **/
-#define ARMV8_ROUNDS(g, w) do { \
-    uint32x4_t wk = vaddq_u32(w, vld1q_u32(&K[(g)*4])); \
-    uint32x4_t abcd_prev = abcd; \
-    abcd = vsha256hq_u32(abcd, efgh, wk); \
-    efgh = vsha256h2q_u32(efgh, abcd_prev, wk); \
-    } while (0)
-
-/** With m0..m3 = W[t-16..t-1], replace m0 with W[t..t+3] **/
-#define ARMV8_SCHEDULE(m0, m1, m2, m3) do { \
-    m0 = vsha256su1q_u32(vsha256su0q_u32(m0, m1), m2, m3); \
-    } while (0)
-
-/**
- * Compress one block, already decoded into sixteen words,
- * with the SHA-256 instructions of the ARMv8 Cryptography Extensions.
- * h_out[] may be the same array as h_in[] or M[].
- */
-static void sha_compress_words(const sha2_word_t h_in[8], sha2_word_t h_out[8], const sha2_word_t M[16])
-{
-    uint32x4_t abcd, efgh;
-    uint32x4_t m0, m1, m2, m3;
-    unsigned g;
-
-    /** The instructions want the state as {A,B,C,D} and {E,F,G,H}, as in h_in[] **/
-    abcd = vld1q_u32(&h_in[0]);
-    efgh = vld1q_u32(&h_in[4]);
-
-    /** m0..m3 are a rolling window of the last 16 words of the message schedule **/
-    m0 = vld1q_u32(&M[0]);
-    m1 = vld1q_u32(&M[4]);
-    m2 = vld1q_u32(&M[8]);
-    m3 = vld1q_u32(&M[12]);
-
-    ARMV8_ROUNDS(0, m0);
-    ARMV8_ROUNDS(1, m1);
-    ARMV8_ROUNDS(2, m2);
-    ARMV8_ROUNDS(3, m3);
-    for (g=4; g<SCHEDULE_SIZE/4; g+=4) {
-        ARMV8_SCHEDULE(m0, m1, m2, m3); ARMV8_ROUNDS(g,   m0);
-        ARMV8_SCHEDULE(m1, m2, m3, m0); ARMV8_ROUNDS(g+1, m1);
-        ARMV8_SCHEDULE(m2, m3, m0, m1); ARMV8_ROUNDS(g+2, m2);
-        ARMV8_SCHEDULE(m3, m0, m1, m2); ARMV8_ROUNDS(g+3, m3);
-    }
-
-    vst1q_u32(&h_out[0], vaddq_u32(abcd, vld1q_u32(&h_in[0])));
-    vst1q_u32(&h_out[4], vaddq_u32(efgh, vld1q_u32(&h_in[4])));
-}
-
-#elif defined(SHA2_ARMV8) && WORD_SIZE == 8
-
-/**
- * Rounds 2g and 2g+1, with message words w = W[2g..2g+1].
- *
- * SHA512H returns T1 of both rounds (the sum without A..D), from:
- * - H + K[2g] + W[2g] (high lane) and G + K[2g+1] + W[2g+1] (low lane)
- * - {F,G} and {D,E} (low lane first)
- * SHA512H2 returns the new A of both rounds, from T1, {C,D} and {A,B}.
- * After the two rounds, the new {E,F} is {C,D} plus T1, and
- * {A,B}, {C,D} and {E,F} move to {C,D}, {E,F} and {G,H}.
- */
-#define ARMV8_ROUNDS(g, w) do { \
-    uint64x2_t wk = vaddq_u64(w, vld1q_u64(&K[(g)*2])); \
-    uint64x2_t t1, a_new; \
-    wk = vaddq_u64(vextq_u64(wk, wk, 1), gh); \
-    t1 = vsha512hq_u64(wk, vextq_u64(ef, gh, 1), vextq_u64(cd, ef, 1)); \
-    a_new = vsha512h2q_u64(t1, cd, ab); \
-    gh = ef; \
-    ef = vaddq_u64(cd, t1); \
-    cd = ab; \
-    ab = a_new; \
-    } while (0)
-
-/** With m0..m7 = W[t-16..t-1], replace m0 with W[t..t+1] **/
-#define ARMV8_SCHEDULE(m0, m1, m4, m5, m7) do { \
-    m0 = vsha512su1q_u64(vsha512su0q_u64(m0, m1), m7, vextq_u64(m4, m5, 1)); \
-    } while (0)
-
-/**
- * Compress one block, already decoded into sixteen words,
- * with the SHA-512 instructions of the ARMv8 Cryptography Extensions.
- * h_out[] may be the same array as h_in[] or M[].
- */
-static void sha_compress_words(const sha2_word_t h_in[8], sha2_word_t h_out[8], const sha2_word_t M[16])
-{
-    uint64x2_t ab, cd, ef, gh;
-    uint64x2_t m0, m1, m2, m3, m4, m5, m6, m7;
-    unsigned g;
-
-    /** The state as {A,B}, {C,D}, {E,F} and {G,H} (low lane first) **/
-    ab = vld1q_u64(&h_in[0]);
-    cd = vld1q_u64(&h_in[2]);
-    ef = vld1q_u64(&h_in[4]);
-    gh = vld1q_u64(&h_in[6]);
-
-    /** m0..m7 are a rolling window of the last 16 words of the message schedule **/
-    m0 = vld1q_u64(&M[0]);
-    m1 = vld1q_u64(&M[2]);
-    m2 = vld1q_u64(&M[4]);
-    m3 = vld1q_u64(&M[6]);
-    m4 = vld1q_u64(&M[8]);
-    m5 = vld1q_u64(&M[10]);
-    m6 = vld1q_u64(&M[12]);
-    m7 = vld1q_u64(&M[14]);
-
-    ARMV8_ROUNDS(0, m0);
-    ARMV8_ROUNDS(1, m1);
-    ARMV8_ROUNDS(2, m2);
-    ARMV8_ROUNDS(3, m3);
-    ARMV8_ROUNDS(4, m4);
-    ARMV8_ROUNDS(5, m5);
-    ARMV8_ROUNDS(6, m6);
-    ARMV8_ROUNDS(7, m7);
-    for (g=8; g<SCHEDULE_SIZE/2; g+=8) {
-        ARMV8_SCHEDULE(m0, m1, m4, m5, m7); ARMV8_ROUNDS(g,   m0);
-        ARMV8_SCHEDULE(m1, m2, m5, m6, m0); ARMV8_ROUNDS(g+1, m1);
-        ARMV8_SCHEDULE(m2, m3, m6, m7, m1); ARMV8_ROUNDS(g+2, m2);
-        ARMV8_SCHEDULE(m3, m4, m7, m0, m2); ARMV8_ROUNDS(g+3, m3);
-        ARMV8_SCHEDULE(m4, m5, m0, m1, m3); ARMV8_ROUNDS(g+4, m4);
-        ARMV8_SCHEDULE(m5, m6, m1, m2, m4); ARMV8_ROUNDS(g+5, m5);
-        ARMV8_SCHEDULE(m6, m7, m2, m3, m5); ARMV8_ROUNDS(g+6, m6);
-        ARMV8_SCHEDULE(m7, m0, m3, m4, m6); ARMV8_ROUNDS(g+7, m7);
-    }
-
-    vst1q_u64(&h_out[0], vaddq_u64(ab, vld1q_u64(&h_in[0])));
-    vst1q_u64(&h_out[2], vaddq_u64(cd, vld1q_u64(&h_in[2])));
-    vst1q_u64(&h_out[4], vaddq_u64(ef, vld1q_u64(&h_in[4])));
-    vst1q_u64(&h_out[6], vaddq_u64(gh, vld1q_u64(&h_in[6])));
-}
-
-#else
-
-/**
- * Compress one block, already decoded into sixteen words.
- * h_out[] may be the same array as h_in[] or M[].
- */
-static void sha_compress_words(const sha2_word_t h_in[8], sha2_word_t h_out[8], const sha2_word_t M[16])
-{
-    sha2_word_t a, b, c, d, e, f, g, h;
-    sha2_word_t W[16];
-
-    memcpy(W, M, sizeof W);
-
-    a = h_in[0];
-    b = h_in[1];
-    c = h_in[2];
-    d = h_in[3];
-    e = h_in[4];
-    f = h_in[5];
-    g = h_in[6];
-    h = h_in[7];
-
-    CYCLE(a,b,c,d,e,f,g,h, 0);
-    CYCLE(h,a,b,c,d,e,f,g, 1);
-    CYCLE(g,h,a,b,c,d,e,f, 2);
-    CYCLE(f,g,h,a,b,c,d,e, 3);
-    CYCLE(e,f,g,h,a,b,c,d, 4);
-    CYCLE(d,e,f,g,h,a,b,c, 5);
-    CYCLE(c,d,e,f,g,h,a,b, 6);
-    CYCLE(b,c,d,e,f,g,h,a, 7);
-    CYCLE(a,b,c,d,e,f,g,h, 8);
-    CYCLE(h,a,b,c,d,e,f,g, 9);
-    CYCLE(g,h,a,b,c,d,e,f, 10);
-    CYCLE(f,g,h,a,b,c,d,e, 11);
-    CYCLE(e,f,g,h,a,b,c,d, 12);
-    CYCLE(d,e,f,g,h,a,b,c, 13);
-    CYCLE(c,d,e,f,g,h,a,b, 14);
-    CYCLE(b,c,d,e,f,g,h,a, 15);
-    CYCLE(a,b,c,d,e,f,g,h, 16);
-    CYCLE(h,a,b,c,d,e,f,g, 17);
-    CYCLE(g,h,a,b,c,d,e,f, 18);
-    CYCLE(f,g,h,a,b,c,d,e, 19);
-    CYCLE(e,f,g,h,a,b,c,d, 20);
-    CYCLE(d,e,f,g,h,a,b,c, 21);
-    CYCLE(c,d,e,f,g,h,a,b, 22);
-    CYCLE(b,c,d,e,f,g,h,a, 23);
-    CYCLE(a,b,c,d,e,f,g,h, 24);
-    CYCLE(h,a,b,c,d,e,f,g, 25);
-    CYCLE(g,h,a,b,c,d,e,f, 26);
-    CYCLE(f,g,h,a,b,c,d,e, 27);
-    CYCLE(e,f,g,h,a,b,c,d, 28);
-    CYCLE(d,e,f,g,h,a,b,c, 29);
-    CYCLE(c,d,e,f,g,h,a,b, 30);
-    CYCLE(b,c,d,e,f,g,h,a, 31);
-    CYCLE(a,b,c,d,e,f,g,h, 32);
-    CYCLE(h,a,b,c,d,e,f,g, 33);
-    CYCLE(g,h,a,b,c,d,e,f, 34);
-    CYCLE(f,g,h,a,b,c,d,e, 35);
-    CYCLE(e,f,g,h,a,b,c,d, 36);
-    CYCLE(d,e,f,g,h,a,b,c, 37);
-    CYCLE(c,d,e,f,g,h,a,b, 38);
-    CYCLE(b,c,d,e,f,g,h,a, 39);
-    CYCLE(a,b,c,d,e,f,g,h, 40);
-    CYCLE(h,a,b,c,d,e,f,g, 41);
-    CYCLE(g,h,a,b,c,d,e,f, 42);
-    CYCLE(f,g,h,a,b,c,d,e, 43);
-    CYCLE(e,f,g,h,a,b,c,d, 44);
-    CYCLE(d,e,f,g,h,a,b,c, 45);
-    CYCLE(c,d,e,f,g,h,a,b, 46);
-    CYCLE(b,c,d,e,f,g,h,a, 47);
-    CYCLE(a,b,c,d,e,f,g,h, 48);
-    CYCLE(h,a,b,c,d,e,f,g, 49);
-    CYCLE(g,h,a,b,c,d,e,f, 50);
-    CYCLE(f,g,h,a,b,c,d,e, 51);
-    CYCLE(e,f,g,h,a,b,c,d, 52);
-    CYCLE(d,e,f,g,h,a,b,c, 53);
-    CYCLE(c,d,e,f,g,h,a,b, 54);
-    CYCLE(b,c,d,e,f,g,h,a, 55);
-    CYCLE(a,b,c,d,e,f,g,h, 56);
-    CYCLE(h,a,b,c,d,e,f,g, 57);
-    CYCLE(g,h,a,b,c,d,e,f, 58);
-    CYCLE(f,g,h,a,b,c,d,e, 59);
-    CYCLE(e,f,g,h,a,b,c,d, 60);
-    CYCLE(d,e,f,g,h,a,b,c, 61);
-    CYCLE(c,d,e,f,g,h,a,b, 62);
-    CYCLE(b,c,d,e,f,g,h,a, 63);
-
-#if SCHEDULE_SIZE==80
-    CYCLE(a,b,c,d,e,f,g,h, 64);
-    CYCLE(h,a,b,c,d,e,f,g, 65);
-    CYCLE(g,h,a,b,c,d,e,f, 66);
-    CYCLE(f,g,h,a,b,c,d,e, 67);
-    CYCLE(e,f,g,h,a,b,c,d, 68);
-    CYCLE(d,e,f,g,h,a,b,c, 69);
-    CYCLE(c,d,e,f,g,h,a,b, 70);
-    CYCLE(b,c,d,e,f,g,h,a, 71);
-    CYCLE(a,b,c,d,e,f,g,h, 72);
-    CYCLE(h,a,b,c,d,e,f,g, 73);
-    CYCLE(g,h,a,b,c,d,e,f, 74);
-    CYCLE(f,g,h,a,b,c,d,e, 75);
-    CYCLE(e,f,g,h,a,b,c,d, 76);
-    CYCLE(d,e,f,g,h,a,b,c, 77);
-    CYCLE(c,d,e,f,g,h,a,b, 78);
-    CYCLE(b,c,d,e,f,g,h,a, 79);
+/** The compression function sha_compress_words() **/
+#if defined(SHA2_ARMV8) && !(defined(__aarch64__) || defined(_M_ARM64))
+#undef SHA2_ARMV8
 #endif
 
-    /** compute new intermediate hash **/
-    h_out[0] = h_in[0] + a;
-    h_out[1] = h_in[1] + b;
-    h_out[2] = h_in[2] + c;
-    h_out[3] = h_in[3] + d;
-    h_out[4] = h_in[4] + e;
-    h_out[5] = h_in[5] + f;
-    h_out[6] = h_in[6] + g;
-    h_out[7] = h_in[7] + h;
-}
-
-#endif /** SHA2_SHA_NI, SHA2_ARMV8 **/
+#if defined(SHA2_SHA_NI)
+#include "hash_SHA2_compress_shani.c"
+#elif defined(SHA2_ARMV8)
+#include "hash_SHA2_compress_armv8.c"
+#else
+#include "hash_SHA2_compress_portable.c"
+#endif
 
 /** Compress one block of BLOCK_SIZE bytes **/
 static void sha_compress_block(hash_state *hs, const uint8_t *block)
@@ -863,51 +501,3 @@ EXPORT_SYM int FUNC_NAME(_pbkdf2_hmac_assist)(const hash_state *inner, const has
 
     return 0;
 }
-
-#ifdef MAIN
-
-void initialize(hash_state **hs)
-{
-#if DIGEST_SIZE == (512/8)
-    FUNC_NAME(_init)(hs, 512);
-#else
-    FUNC_NAME(_init)(hs);
-#endif
- 
-}
-
-int main(void)
-{
-    hash_state *hs;
-    const uint8_t tv[] = "The quick brown fox jumps over the lazy dog";
-    uint8_t result[DIGEST_SIZE];
-    int i;
-
-    initialize(&hs);
-    FUNC_NAME(_update)(hs, tv, sizeof tv - 1);
-    FUNC_NAME(_digest)(hs, result);
-    FUNC_NAME(_destroy)(hs);
-
-    for (i=0; i < hs->digest_size; i++) {
-        printf("%02X", result[i]);
-    }
-    printf("\n");
-
-    initialize(&hs);
-    FUNC_NAME(_digest)(hs, result);
-    FUNC_NAME(_destroy)(hs);
-
-    for (i=0; i< hs->digest_size; i++) {
-        printf("%02X", result[i]);
-    }
-    printf("\n");
-
-    initialize(&hs);
-    for (i=0; i<10000000; i++) {
-        FUNC_NAME(_update)(hs, tv, sizeof tv - 1);
-    }
-    FUNC_NAME(_destroy)(hs);
-
-    printf("\n");
-}
-#endif
