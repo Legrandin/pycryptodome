@@ -31,74 +31,37 @@ This is the state machine for a cipher object:
 
     Generic state diagram for a AEAD cipher mode
 
-Beside the usual :meth:`encrypt()` and :meth:`decrypt()` already
-available for classic modes of operation, several other methods are present:
+Besides :meth:`encrypt` and :meth:`decrypt`, which are also available
+in classic modes of operation, a cipher object for an AEAD mode has these methods:
 
-.. method:: update(data)
+.. list-table::
+    :header-rows: 1
+    :widths: 35 65
 
-    Authenticate those parts of the message that get delivered as is,
-    without any encryption (like headers).
-    It is similar to the ``update()`` method of a MAC object.
-    Note that all data passed to ``encrypt()`` and ``decrypt()`` get
-    automatically authenticated already.
+    * - Method
+      - Purpose
+    * - ``update(data)``
+      - Authenticate data that is delivered as it is, without encryption
+        (*associated data*, like a header).
+        Call it before :meth:`encrypt` or :meth:`decrypt`.
+        Data passed to :meth:`encrypt` and :meth:`decrypt` is authenticated automatically.
+    * - ``digest()``, ``hexdigest()``
+      - At the end of encryption, return the MAC tag to deliver with the ciphertext
+        (as ``bytes`` or as a hexadecimal string).
+    * - ``verify(tag)``, ``hexverify(hex_tag)``
+      - At the end of decryption, check the MAC tag received with the ciphertext.
+        They raise ``ValueError`` if the tag is not valid:
+        then the key is wrong or the message was modified,
+        and you must discard the plaintext.
+    * - ``encrypt_and_digest(plaintext)``
+      - :meth:`encrypt` and ``digest()`` in one call:
+        returns the tuple ``(ciphertext, tag)``.
+    * - ``decrypt_and_verify(ciphertext, tag)``
+      - :meth:`decrypt` and ``verify()`` in one call:
+        returns the plaintext, or raises ``ValueError`` if the tag is not valid.
 
-    :param bytes data: the extra data to authenticate
-
-.. method:: digest()
-
-    Create the final authentication tag (MAC tag) for a message.
-
-    :return bytes: the MAC tag
- 
-.. method:: hexdigest()
-
-    Equivalent to ``digest()``, with the output encoded in hexadecimal.
-
-    :return str: the MAC tag as a hexadecimal string
-
-.. method:: verify(mac_tag)
-
-    Check if the provided authentication tag (MAC tag) is valid, that is, if the message
-    has been decrypted using the right key and if no modification has taken
-    place in transit.
-
-    :param bytes mac_tag: the MAC tag
-    :raise ValueError: if the MAC tag is not valid, that is, if the entire message
-                       should not be trusted.
- 
-.. method:: hexverify(mac_tag_hex)
-
-    Same as ``verify()`` but accepts the MAC tag encoded as an hexadecimal
-    string.
-
-    :param str mac_tag_hex: the MAC tag as a hexadecimal string
-    :raise ValueError: if the MAC tag is not valid, that is, if the entire message
-                       should not be trusted.
-
-.. method:: encrypt_and_digest(plaintext, output=None)
-
-    Perform ``encrypt()`` and ``digest()`` in one go.
-
-    :param bytes plaintext: the last piece of plaintext to encrypt
-    :keyword bytes/bytearray/memoryview output: the pre-allocated buffer
-      where the ciphertext must be stored (as opposed to being returned).
-    :return: a tuple with two items
-      
-      - the ciphertext, as ``bytes``
-      - the MAC tag, as ``bytes``
-
-      The first item becomes ``None`` when the ``output`` parameter
-      specified a location for the result.
-
-.. method:: decrypt_and_verify(ciphertext, mac_tag, output=None)
-
-    Perform ``decrypt()`` and ``verify()`` in one go.
-    
-    :param bytes ciphertext: the last piece of ciphertext to decrypt
-    :keyword bytes/bytearray/memoryview output: the pre-allocated buffer
-      where the plaintext must be stored (as opposed to being returned).
-    :raise ValueError: if the MAC tag is not valid, that is, if the entire message
-                       should not be trusted.
+The full API of each mode is at the end of its section below
+(for instance, :class:`~Crypto.Cipher._mode_gcm.GcmMode` for GCM).
 
 .. _ccm_mode:
 
@@ -129,14 +92,14 @@ In the following definition, ``<algorithm>`` can only be ``AES`` today:
   :param integer mac_len: the desired length of the 
     MAC tag (default if not present: 16 bytes).
   :param integer msg_len: pre-declaration of the length of the
-    message to encipher. If not specified, :func:`encrypt` and :func:`decrypt`
+    message to encipher. If not specified, :meth:`~Crypto.Cipher._mode_ccm.CcmMode.encrypt` and :meth:`~Crypto.Cipher._mode_ccm.CcmMode.decrypt`
     can only be called once.
   :param integer assoc_len: pre-declaration of the length of the
     associated data. If not specified, some extra buffering will take place
     internally.
-  :return: a CTR cipher object
+  :return: a CCM cipher object (:class:`~Crypto.Cipher._mode_ccm.CcmMode`)
       
-The cipher object has a read-only attribute :attr:`nonce`.
+The cipher object has a read-only attribute :attr:`~Crypto.Cipher._mode_ccm.CcmMode.nonce`.
 
 Example (encryption)::
 
@@ -177,6 +140,13 @@ Example (decryption)::
     ... except (ValueError, KeyError):
     ...     print("Incorrect decryption")
 
+CCM cipher object
+~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Crypto.Cipher._mode_ccm.CcmMode
+   :members:
+   :member-order: bysource
+
 .. _eax_mode:
 
 EAX mode
@@ -199,9 +169,9 @@ a new EAX cipher object for the relevant base algorithm.
   :param integer mac_len: the length of the MAC tag, in bytes.
     At least 2, and not larger than the cipher's block size (default),
     which is 16 bytes for AES.
-  :return: an EAX cipher object
+  :return: an EAX cipher object (:class:`~Crypto.Cipher._mode_eax.EaxMode`)
 
-The cipher object has a read-only attribute :attr:`nonce`.
+The cipher object has a read-only attribute :attr:`~Crypto.Cipher._mode_eax.EaxMode.nonce`.
 
 Example (encryption)::
 
@@ -242,6 +212,13 @@ Example (decryption)::
     ... except (ValueError, KeyError):
     ...     print("Incorrect decryption")
 
+EAX cipher object
+~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Crypto.Cipher._mode_eax.EaxMode
+   :members:
+   :member-order: bysource
+
 .. _gcm_mode:
 
 GCM mode
@@ -268,9 +245,9 @@ a new GCM cipher object for the relevant base algorithm.
     encrypt or decrypt long data (default: 1, no extra threads).
     Use 0 for as many threads as the CPU cores available to the process.
     See the same parameter for the :ref:`ctr_mode`.
-  :return: a GCM cipher object
+  :return: a GCM cipher object (:class:`~Crypto.Cipher._mode_gcm.GcmMode`)
       
-The cipher object has a read-only attribute :attr:`nonce`.
+The cipher object has a read-only attribute :attr:`~Crypto.Cipher._mode_gcm.GcmMode.nonce`.
 
 With the ``threads`` parameter, both the encryption (CTR mode) and
 the authentication (GHASH) of long data run on several CPU cores.
@@ -325,6 +302,13 @@ Example (decryption)::
     >>> nonce = get_random_bytes(12)
     >>> cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
 
+GCM cipher object
+~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Crypto.Cipher._mode_gcm.GcmMode
+   :members:
+   :member-order: bysource
+
 .. _siv_mode:
 
 SIV mode
@@ -352,9 +336,9 @@ a new SIV cipher object for the relevant base algorithm.
   :param bytes nonce: the value of the fixed nonce.
     It must be unique for the combination message/key.
     If not present, the encryption will be deterministic.
-  :return: a SIV cipher object
+  :return: a SIV cipher object (:class:`~Crypto.Cipher._mode_siv.SivMode`)
 
-If the `nonce` parameter was provided to :func:`new`, the resulting cipher object has a read-only attribute :attr:`nonce`.
+If the `nonce` parameter was provided to :func:`new`, the resulting cipher object has a read-only attribute :attr:`~Crypto.Cipher._mode_siv.SivMode.nonce`.
 
 Example (encryption)::
 
@@ -421,6 +405,14 @@ is **not** equivalent to::
     >>> siv_cipher.update(b"built")
     >>> siv_cipher.update(b"insecurely")
 
+SIV cipher object
+~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Crypto.Cipher._mode_siv.SivMode
+   :members:
+   :exclude-members: encrypt, decrypt
+   :member-order: bysource
+
 .. _ocb_mode:
 
 OCB mode
@@ -465,9 +457,9 @@ a new OCB cipher object for the relevant base algorithm.
     encrypt or decrypt long data (default: 1, no extra threads).
     Use 0 for as many threads as the CPU cores available to the process.
     See the same parameter for the :ref:`ctr_mode`.
-  :return: an OCB cipher object
+  :return: an OCB cipher object (:class:`~Crypto.Cipher._mode_ocb.OcbMode`)
 
-The cipher object has two read-only attributes: :attr:`nonce` and :attr:`block_size`.
+The cipher object has two read-only attributes: :attr:`~Crypto.Cipher._mode_ocb.OcbMode.nonce` and :attr:`~Crypto.Cipher._mode_ocb.OcbMode.block_size`.
 
 With the ``threads`` parameter, the encryption and the decryption of long data
 run on several CPU cores (each block is processed independently of the others).
@@ -565,6 +557,13 @@ Example (decryption with multiple chunks)::
     ... except (ValueError, KeyError):
     ...     print("Incorrect decryption")
 
+OCB cipher object
+~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Crypto.Cipher._mode_ocb.OcbMode
+   :members:
+   :member-order: bysource
+
 .. _kw_mode:
 
 KW mode
@@ -590,10 +589,10 @@ In the following definition, ``<algorithm>`` can only be ``AES`` today:
   using <algorithm> as the base block cipher.
 
   :param bytes key: the cryptographic key
-  :return: a KW cipher object
+  :return: a KW cipher object (:class:`~Crypto.Cipher._mode_kw.KWMode`)
 
-The cipher object has one read-only attribute :attr:`block_size`,
-and two methods (``seal`` and ``unseal``).
+The cipher object has one read-only attribute :attr:`~Crypto.Cipher._mode_kw.KWMode.block_size`,
+and two methods (:meth:`~Crypto.Cipher._mode_kw.KWMode.seal` and :meth:`~Crypto.Cipher._mode_kw.KWMode.unseal`).
 
 Example of encryption::
 
@@ -616,6 +615,13 @@ Example of decryption::
     ...     unwrapped_key = cipher.unseal(ciphertext)
     ... except ValueError:
     ...     print("Invalid decryption")
+
+KW cipher object
+~~~~~~~~~~~~~~~~
+
+.. autoclass:: Crypto.Cipher._mode_kw.KWMode
+   :members:
+   :member-order: bysource
 
 .. _kwp_mode:
 
@@ -642,10 +648,10 @@ In the following definition, ``<algorithm>`` can only be ``AES`` today:
   using <algorithm> as the base block cipher.
 
   :param bytes key: the cryptographic key
-  :return: a KWP cipher object
+  :return: a KWP cipher object (:class:`~Crypto.Cipher._mode_kwp.KWPMode`)
 
-The cipher object has one read-only attribute :attr:`block_size`,
-and two methods (``seal`` and ``unseal``).
+The cipher object has one read-only attribute :attr:`~Crypto.Cipher._mode_kwp.KWPMode.block_size`,
+and two methods (:meth:`~Crypto.Cipher._mode_kwp.KWPMode.seal` and :meth:`~Crypto.Cipher._mode_kwp.KWPMode.unseal`).
 
 Example of encryption::
 
@@ -668,3 +674,10 @@ Example of decryption::
     ...     unwrapped_key = cipher.unseal(ciphertext)
     ... except ValueError:
     ...     print("Invalid decryption")
+
+KWP cipher object
+~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Crypto.Cipher._mode_kwp.KWPMode
+   :members:
+   :member-order: bysource

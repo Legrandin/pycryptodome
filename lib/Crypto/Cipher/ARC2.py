@@ -189,7 +189,8 @@ def new(
             Each thread processes at least 1 MiB of a single call.
             The output does not depend on the number of threads.
 
-    :Return: an ARC2 object, of the applicable mode.
+    :returns: a cipher object, whose class depends on ``mode``:
+        see :ref:`classic_cipher_modes` and :ref:`modern_cipher_modes`.
     """
 
     return _create_cipher(sys.modules[__name__], key, mode, *args, **kwargs)

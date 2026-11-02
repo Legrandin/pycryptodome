@@ -157,8 +157,6 @@ class CtrMode:
     Appendix B (for how to manage the *initial counter block*).
 
     .. _`NIST SP800-38A` : http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
-
-    :undocumented: __init__
     """
 
     def __init__(
@@ -172,36 +170,36 @@ class CtrMode:
     ) -> None:
         """Create a new block cipher, configured in CTR mode.
 
-        :Parameters:
-          block_cipher : C pointer
-            A smart pointer to the low-level block cipher instance.
+        Args:
+            block_cipher (C pointer):
+                A smart pointer to the low-level block cipher instance.
 
-          initial_counter_block : bytes/bytearray/memoryview
-            The initial plaintext to use to generate the key stream.
+            initial_counter_block (bytes/bytearray/memoryview):
+                The initial plaintext to use to generate the key stream.
 
-            It is as large as the cipher block, and it embeds
-            the initial value of the counter.
+                It is as large as the cipher block, and it embeds
+                the initial value of the counter.
 
-            This value must not be reused.
-            It shall contain a nonce or a random component.
-            Reusing the *initial counter block* for encryptions
-            performed with the same key compromises confidentiality.
+                This value must not be reused.
+                It shall contain a nonce or a random component.
+                Reusing the *initial counter block* for encryptions
+                performed with the same key compromises confidentiality.
 
-          prefix_len : integer
-            The amount of bytes at the beginning of the counter block
-            that never change.
+            prefix_len (integer):
+                The amount of bytes at the beginning of the counter block
+                that never change.
 
-          counter_len : integer
-            The length in bytes of the counter embedded in the counter
-            block.
+            counter_len (integer):
+                The length in bytes of the counter embedded in the counter
+                block.
 
-          little_endian : boolean
-            True if the counter in the counter block is an integer encoded
-            in little endian mode. If False, it is big endian.
+            little_endian (boolean):
+                True if the counter in the counter block is an integer encoded
+                in little endian mode. If False, it is big endian.
 
-          threads : integer
-            The maximum number of threads used to process long data
-            (0 for as many as the CPU cores available).
+            threads (integer):
+                The maximum number of threads used to process long data
+                (0 for as many as the CPU cores available).
         """
 
         self._threads = threads_param(threads)
@@ -265,17 +263,17 @@ class CtrMode:
 
         This function does not add any padding to the plaintext.
 
-        :Parameters:
-          plaintext : bytes/bytearray/memoryview
-            The piece of data to encrypt.
-            It can be of any length.
-        :Keywords:
-          output : bytearray/memoryview
-            The location where the ciphertext must be written to.
-            If ``None``, the ciphertext is returned.
-        :Return:
-          If ``output`` is ``None``, the ciphertext is returned as ``bytes``.
-          Otherwise, ``None``.
+        Args:
+            plaintext (bytes/bytearray/memoryview):
+                The piece of data to encrypt.
+                It can be of any length.
+        Keyword Args:
+            output (bytearray/memoryview):
+                The location where the ciphertext must be written to.
+                If ``None``, the ciphertext is returned.
+        Returns:
+            If ``output`` is ``None``, the ciphertext is returned as ``bytes``.
+            Otherwise, ``None``.
         """
 
         if Method.ENCRYPT not in self._next:
@@ -312,17 +310,17 @@ class CtrMode:
 
         This function does not remove any padding from the plaintext.
 
-        :Parameters:
-          ciphertext : bytes/bytearray/memoryview
-            The piece of data to decrypt.
-            It can be of any length.
-        :Keywords:
-          output : bytearray/memoryview
-            The location where the plaintext must be written to.
-            If ``None``, the plaintext is returned.
-        :Return:
-          If ``output`` is ``None``, the plaintext is returned as ``bytes``.
-          Otherwise, ``None``.
+        Args:
+            ciphertext (bytes/bytearray/memoryview):
+                The piece of data to decrypt.
+                It can be of any length.
+        Keyword Args:
+            output (bytearray/memoryview):
+                The location where the plaintext must be written to.
+                If ``None``, the plaintext is returned.
+        Returns:
+            If ``output`` is ``None``, the plaintext is returned as ``bytes``.
+            Otherwise, ``None``.
         """
 
         if Method.DECRYPT not in self._next:
@@ -376,38 +374,38 @@ class CtrMode:
 def _create_ctr_cipher(factory, **kwargs):
     """Instantiate a cipher object that performs CTR encryption/decryption.
 
-    :Parameters:
-      factory : module
-        The underlying block cipher, a module from ``Crypto.Cipher``.
+    Args:
+        factory (module):
+            The underlying block cipher, a module from ``Crypto.Cipher``.
 
-    :Keywords:
-      nonce : bytes/bytearray/memoryview
-        The fixed part at the beginning of the counter block - the rest is
-        the counter number that gets increased when processing the next block.
-        The nonce must be such that no two messages are encrypted under the
-        same key and the same nonce.
+    Keyword Args:
+        nonce (bytes/bytearray/memoryview):
+            The fixed part at the beginning of the counter block - the rest is
+            the counter number that gets increased when processing the next block.
+            The nonce must be such that no two messages are encrypted under the
+            same key and the same nonce.
 
-        The nonce must be shorter than the block size (it can have
-        zero length; the counter is then as long as the block).
+            The nonce must be shorter than the block size (it can have
+            zero length; the counter is then as long as the block).
 
-        If this parameter is not present, a random nonce will be created with
-        length equal to half the block size. No random nonce shorter than
-        64 bits will be created though - you must really think through all
-        security consequences of using such a short block size.
+            If this parameter is not present, a random nonce will be created with
+            length equal to half the block size. No random nonce shorter than
+            64 bits will be created though - you must really think through all
+            security consequences of using such a short block size.
 
-      initial_value : positive integer or bytes/bytearray/memoryview
-        The initial value for the counter. If not present, the cipher will
-        start counting from 0. The value is incremented by one for each block.
-        The counter number is encoded in big endian mode.
+        initial_value (positive integer or bytes/bytearray/memoryview):
+            The initial value for the counter. If not present, the cipher will
+            start counting from 0. The value is incremented by one for each block.
+            The counter number is encoded in big endian mode.
 
-      counter : object
-        Instance of ``Crypto.Util.Counter``, which allows full customization
-        of the counter block. This parameter is incompatible to both ``nonce``
-        and ``initial_value``.
+        counter (object):
+            Instance of ``Crypto.Util.Counter``, which allows full customization
+            of the counter block. This parameter is incompatible to both ``nonce``
+            and ``initial_value``.
 
-      threads : integer
-        The maximum number of threads used to process long data
-        (default: 1, no extra threads; 0 for all CPU cores).
+        threads (integer):
+            The maximum number of threads used to process long data
+            (default: 1, no extra threads; 0 for all CPU cores).
 
     Any other keyword will be passed to the underlying block cipher.
     See the relevant documentation for details (at least ``key`` will need

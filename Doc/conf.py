@@ -124,7 +124,7 @@ release = ".".join(str(x) for x in version_tuple)
 exclude_patterns = ["_build"]
 
 # The reST default role (used for this markup: `text`) to use for all documents.
-# default_role = None
+default_role = "py:obj"
 
 # If true, '()' will be appended to :func: etc. cross-reference text.
 # add_function_parentheses = True
@@ -327,3 +327,17 @@ texinfo_documents = [
 
 # How to display URL addresses: 'footnote', 'no', or 'inline'.
 # texinfo_show_urls = 'footnote'
+
+
+def _hide_cipher_mode_signature(app, what, name, obj, options, signature, return_annotation):
+    """The cipher objects of the modes of operation are created by the
+    ``new()`` function of the cipher module, never directly by the user:
+    do not show the internal parameters of their constructor."""
+
+    if what == "class" and name.startswith("Crypto.Cipher._mode_"):
+        return "", None
+    return None
+
+
+def setup(app):
+    app.connect("autodoc-process-signature", _hide_cipher_mode_signature, priority=400)

@@ -20,12 +20,12 @@ class KWPMode:
     (e.g., AES).
 
     .. _`NIST SP800-38F`: http://csrc.nist.gov/publications/nistpubs/800-38F/SP-800-38F.pdf
-
-    :undocumented: __init__
     """
 
     def __init__(self, factory: ModuleType, key: Union[bytes, bytearray]):
         self.block_size = factory.block_size
+        """The block size of the underlying cipher, in bytes."""
+
         if self.block_size != 16:
             raise ValueError(
                 "Key Wrap with Padding mode is only available for ciphers that operate on 128 bits blocks"

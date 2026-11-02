@@ -158,10 +158,7 @@ def _process_threaded(
 
 
 class OcbMode:
-    """Offset Codebook (OCB) mode.
-
-    :undocumented: __init__
-    """
+    """Offset Codebook (OCB) mode."""
 
     def __init__(
         self, factory: ModuleType, nonce: Buffer, mac_len: int, cipher_params: dict, threads: int = 1
@@ -173,7 +170,7 @@ class OcbMode:
         """The block size of the underlying cipher, in bytes."""
 
         self.nonce = bytes(nonce)
-        """Nonce used for this session."""
+        """The nonce originally used to create the object."""
         if len(nonce) not in range(1, 16):
             raise ValueError("Nonce must be at most 15 bytes long")
         if not is_buffer(nonce):
@@ -242,9 +239,9 @@ class OcbMode:
         The caller may split associated data in segments of any size, and
         invoke this method multiple times, each time with the next segment.
 
-        :Parameters:
-          assoc_data : bytes/bytearray/memoryview
-            A piece of associated data.
+        Args:
+            assoc_data (bytes/bytearray/memoryview):
+                A piece of associated data.
         """
 
         if Method.UPDATE not in self._next:
@@ -343,12 +340,12 @@ class OcbMode:
 
         If possible, use the method `encrypt_and_digest` instead.
 
-        :Parameters:
-          plaintext : bytes/bytearray/memoryview
-            The next piece of data to encrypt or ``None`` to signify
-            that encryption has finished and that any remaining ciphertext
-            has to be produced.
-        :Return:
+        Args:
+            plaintext (bytes/bytearray/memoryview):
+                The next piece of data to encrypt or ``None`` to signify
+                that encryption has finished and that any remaining ciphertext
+                has to be produced.
+        Returns:
             the ciphertext, as a byte string.
             Its length may not match the length of the *plaintext*.
         """
@@ -371,12 +368,12 @@ class OcbMode:
 
         If possible, use the method `decrypt_and_verify` instead.
 
-        :Parameters:
-          ciphertext : bytes/bytearray/memoryview
-            The next piece of data to decrypt or ``None`` to signify
-            that decryption has finished and that any remaining plaintext
-            has to be produced.
-        :Return:
+        Args:
+            ciphertext (bytes/bytearray/memoryview):
+                The next piece of data to decrypt or ``None`` to signify
+                that decryption has finished and that any remaining plaintext
+                has to be produced.
+        Returns:
             the plaintext, as a byte string.
             Its length may not match the length of the *ciphertext*.
         """
@@ -413,7 +410,8 @@ class OcbMode:
         The MAC tag is needed by the receiver to determine authenticity
         of the message.
 
-        :Return: the MAC, as a byte string.
+        Returns:
+            the MAC, as a byte string.
         """
 
         if Method.DIGEST not in self._next:
@@ -434,7 +432,8 @@ class OcbMode:
 
         This method is like `digest`.
 
-        :Return: the MAC, as a hexadecimal string.
+        Returns:
+            the MAC, as a hexadecimal string.
         """
         return self.digest().hex()
 
@@ -444,12 +443,13 @@ class OcbMode:
         Call this method after the final `decrypt` (the one with no arguments)
         to check if the message is authentic and valid.
 
-        :Parameters:
-          received_mac_tag : bytes/bytearray/memoryview
-            This is the *binary* MAC, as received from the sender.
-        :Raises ValueError:
-            if the MAC does not match. The message has been tampered with
-            or the key is incorrect.
+        Args:
+            received_mac_tag (bytes/bytearray/memoryview):
+                This is the *binary* MAC, as received from the sender.
+        Raises:
+            ValueError:
+                if the MAC does not match. The message has been tampered with
+                or the key is incorrect.
         """
 
         if Method.VERIFY not in self._next:
@@ -471,12 +471,13 @@ class OcbMode:
 
         This method is like `verify`.
 
-        :Parameters:
-          hex_mac_tag : string
-            This is the *printable* MAC, as received from the sender.
-        :Raises ValueError:
-            if the MAC does not match. The message has been tampered with
-            or the key is incorrect.
+        Args:
+            hex_mac_tag (string):
+                This is the *printable* MAC, as received from the sender.
+        Raises:
+            ValueError:
+                if the MAC does not match. The message has been tampered with
+                or the key is incorrect.
         """
 
         self.verify(unhexlify(hex_mac_tag))
@@ -484,14 +485,11 @@ class OcbMode:
     def encrypt_and_digest(self, plaintext: Buffer) -> tuple[bytes, bytes]:
         """Encrypt the message and create the MAC tag in one step.
 
-        :Parameters:
-          plaintext : bytes/bytearray/memoryview
-            The entire message to encrypt.
-        :Return:
-            a tuple with two byte strings:
-
-            - the encrypted data
-            - the MAC
+        Args:
+            plaintext (bytes/bytearray/memoryview):
+                The entire message to encrypt.
+        Returns:
+            The tuple ``(ciphertext, tag)``, both ``bytes``.
         """
 
         if Method.ENCRYPT in self._next and not self._cache_P:
@@ -507,16 +505,18 @@ class OcbMode:
     def decrypt_and_verify(self, ciphertext: Buffer, received_mac_tag: Buffer) -> bytes:
         """Decrypted the message and verify its authenticity in one step.
 
-        :Parameters:
-          ciphertext : bytes/bytearray/memoryview
-            The entire message to decrypt.
-          received_mac_tag : byte string
-            This is the *binary* MAC, as received from the sender.
+        Args:
+            ciphertext (bytes/bytearray/memoryview):
+                The entire message to decrypt.
+            received_mac_tag (byte string):
+                This is the *binary* MAC, as received from the sender.
 
-        :Return: the decrypted data (byte string).
-        :Raises ValueError:
-            if the MAC does not match. The message has been tampered with
-            or the key is incorrect.
+        Returns:
+            the decrypted data (byte string).
+        Raises:
+            ValueError:
+                if the MAC does not match. The message has been tampered with
+                or the key is incorrect.
         """
 
         if Method.DECRYPT in self._next and not self._cache_P:
@@ -533,25 +533,25 @@ class OcbMode:
 def _create_ocb_cipher(factory, **kwargs):
     """Create a new block cipher, configured in OCB mode.
 
-    :Parameters:
-      factory : module
-        A symmetric cipher module from `Crypto.Cipher`
-        (like `Crypto.Cipher.AES`).
+    Args:
+        factory (module):
+            A symmetric cipher module from `Crypto.Cipher`
+            (like `Crypto.Cipher.AES`).
 
-    :Keywords:
-      nonce : bytes/bytearray/memoryview
-        A  value that must never be reused for any other encryption.
-        Its length can vary from 1 to 15 bytes.
-        If not specified, a random 15 bytes long nonce is generated.
+    Keyword Args:
+        nonce (bytes/bytearray/memoryview):
+            A  value that must never be reused for any other encryption.
+            Its length can vary from 1 to 15 bytes.
+            If not specified, a random 15 bytes long nonce is generated.
 
-      mac_len : integer
-        Length of the MAC, in bytes.
-        It must be in the range ``[8..16]``.
-        The default is 16 (128 bits).
+        mac_len (integer):
+            Length of the MAC, in bytes.
+            It must be in the range ``[8..16]``.
+            The default is 16 (128 bits).
 
-      threads : integer
-        The maximum number of threads used to encrypt or decrypt long data
-        (default: 1, no extra threads; 0 for all CPU cores).
+        threads (integer):
+            The maximum number of threads used to encrypt or decrypt long data
+            (default: 1, no extra threads; 0 for all CPU cores).
 
     Any other keyword will be passed to the underlying block cipher.
     See the relevant documentation for details (at least ``key`` will need

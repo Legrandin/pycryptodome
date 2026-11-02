@@ -19,6 +19,10 @@ Constants for each mode of operation are defined at the module level for each al
 Their name starts with ``MODE_``, for instance :const:`Crypto.Cipher.AES.MODE_CBC`.
 Note that not all ciphers support all modes.
 
+The class of the object returned by :func:`new` depends on the mode,
+and its full API is at the end of the section of each mode
+(for instance, :class:`~Crypto.Cipher._mode_cbc.CbcMode` for CBC).
+
 For instance::
 
     >>> from Crypto.Cipher import AES
@@ -62,11 +66,18 @@ In the following definition, ``<algorithm>`` could be ``AES``:
   
   :param bytes key: the cryptographic key
   :param mode: the constant ``Crypto.Cipher.<algorithm>.MODE_ECB``
-  :return: an ECB cipher object
+  :return: an ECB cipher object (:class:`~Crypto.Cipher._mode_ecb.EcbMode`)
 
-The method :func:`encrypt` (and likewise :func:`decrypt`) of an ECB cipher object
+The method :meth:`~Crypto.Cipher._mode_ecb.EcbMode.encrypt` (and likewise :meth:`~Crypto.Cipher._mode_ecb.EcbMode.decrypt`) of an ECB cipher object
 expects data to have length multiple of the block size (e.g. 16 bytes for AES).
 You might need to use :mod:`Crypto.Util.Padding` to align the plaintext to the right boundary.
+
+ECB cipher object
+~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Crypto.Cipher._mode_ecb.EcbMode
+   :members:
+   :member-order: bysource
 
 .. _cbc_mode:
 
@@ -90,13 +101,13 @@ In the following definition, ``<algorithm>`` could be ``AES``:
   :param bytes iv: the *Initialization Vector*. A piece of data unpredictable to adversaries.
          It is as long as the block size (e.g. 16 bytes for AES).
          If not present, the library creates a random IV value.
-  :return: a CBC cipher object
+  :return: a CBC cipher object (:class:`~Crypto.Cipher._mode_cbc.CbcMode`)
 
-The method :func:`encrypt` (and likewise :func:`decrypt`) of a CBC cipher object
+The method :meth:`~Crypto.Cipher._mode_cbc.CbcMode.encrypt` (and likewise :meth:`~Crypto.Cipher._mode_cbc.CbcMode.decrypt`) of a CBC cipher object
 expects data to have length multiple of the block size (e.g. 16 bytes for AES).
 You might need to use :mod:`Crypto.Util.Padding` to align the plaintext to the right boundary.
 
-A CBC cipher object has a read-only attribute :attr:`iv`, holding the
+A CBC cipher object has a read-only attribute :attr:`~Crypto.Cipher._mode_cbc.CbcMode.iv`, holding the
 *Initialization Vector* (*bytes*).
 
 Example (encryption)::
@@ -134,6 +145,13 @@ Example (decryption)::
     ...     print("The message was: ", pt)
     ... except (ValueError, KeyError):
     ...     print("Incorrect decryption")
+
+CBC cipher object
+~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Crypto.Cipher._mode_cbc.CbcMode
+   :members:
+   :member-order: bysource
 
 .. _ctr_mode:
 
@@ -178,14 +196,14 @@ In the following definition, ``<algorithm>`` could be ``AES``:
   :param int threads: the maximum number of threads used to
     encrypt or decrypt long data (default: 1, no extra threads).
     Use 0 for as many threads as the CPU cores available to the process.
-  :return: a CTR cipher object
+  :return: a CTR cipher object (:class:`~Crypto.Cipher._mode_ctr.CtrMode`)
 
-The methods :func:`encrypt` and :func:`decrypt` of a CTR cipher object
+The methods :meth:`~Crypto.Cipher._mode_ctr.CtrMode.encrypt` and :meth:`~Crypto.Cipher._mode_ctr.CtrMode.decrypt` of a CTR cipher object
 accept data of any length (i.e. padding is not needed).
 Both raise :class:`Crypto.MessageTooLongError` (which is also an ``OverflowError``)
 as soon as the counter wraps around to repeat the original value.
 
-The CTR cipher object has a read-only attribute :attr:`nonce` (*bytes*).
+The CTR cipher object has a read-only attribute :attr:`~Crypto.Cipher._mode_ctr.CtrMode.nonce` (*bytes*).
 
 Each block of the *keystream* only depends on its counter block,
 so the CTR mode can use several CPU cores.
@@ -197,7 +215,7 @@ This is disabled by default; enable it with the ``threads`` parameter::
 With ``threads=0``, it uses as many threads as the CPU cores available to the process.
 The output does not depend on the number of threads.
 Threads only help with long data passed in large chunks:
-each thread processes at least 1 MiB of a single :func:`encrypt` or :func:`decrypt` call.
+each thread processes at least 1 MiB of a single :meth:`~Crypto.Cipher._mode_ctr.CtrMode.encrypt` or :meth:`~Crypto.Cipher._mode_ctr.CtrMode.decrypt` call.
 
 Example (encryption)::
 
@@ -233,6 +251,13 @@ Example (decryption)::
     ... except (ValueError, KeyError):
     ...     print("Incorrect decryption")
 
+CTR cipher object
+~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Crypto.Cipher._mode_ctr.CtrMode
+   :members:
+   :member-order: bysource
+
 .. _cfb_mode:
 
 CFB mode
@@ -264,12 +289,12 @@ In the following definition, ``<algorithm>`` could be ``AES``:
          If not present, the library creates a random IV.
   :param integer segment_size: the number of **bits** (not bytes!) the plaintext and the
     ciphertext are segmented in (default if not specified: 8 bits = 1 byte).
-  :return: a CFB cipher object
+  :return: a CFB cipher object (:class:`~Crypto.Cipher._mode_cfb.CfbMode`)
 
-The methods :func:`encrypt` and :func:`decrypt` of a CFB cipher object
+The methods :meth:`~Crypto.Cipher._mode_cfb.CfbMode.encrypt` and :meth:`~Crypto.Cipher._mode_cfb.CfbMode.decrypt` of a CFB cipher object
 accept data of any length (i.e. padding is not needed).
 
-The CFB cipher object has a read-only attribute :attr:`iv` (*bytes*), holding
+The CFB cipher object has a read-only attribute :attr:`~Crypto.Cipher._mode_cfb.CfbMode.iv` (*bytes*), holding
 the Initialization Vector.
 
 Example (encryption)::
@@ -306,6 +331,13 @@ Example (decryption)::
     ... except (ValueError, KeyError):
     ...     print("Incorrect decryption")
 
+CFB cipher object
+~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Crypto.Cipher._mode_cfb.CfbMode
+   :members:
+   :member-order: bysource
+
 .. _ofb_mode:
 
 OFB mode
@@ -330,12 +362,12 @@ In the following definition, ``<algorithm>`` could be ``AES``:
          It must be unique for the combination message/key.
          It is as long as the block size (e.g. 16 bytes for AES).
          If not present, the library creates a random IV.
-  :return: an OFB cipher object
+  :return: an OFB cipher object (:class:`~Crypto.Cipher._mode_ofb.OfbMode`)
 
-The methods :func:`encrypt` and :func:`decrypt` of an OFB cipher object
+The methods :meth:`~Crypto.Cipher._mode_ofb.OfbMode.encrypt` and :meth:`~Crypto.Cipher._mode_ofb.OfbMode.decrypt` of an OFB cipher object
 accept data of any length (i.e. padding is not needed).
 
-The OFB cipher object has a read-only attribute :attr:`iv` (*bytes*), holding
+The OFB cipher object has a read-only attribute :attr:`~Crypto.Cipher._mode_ofb.OfbMode.iv` (*bytes*), holding
 the Initialization Vector.
 
 Example (encryption)::
@@ -372,6 +404,13 @@ Example (decryption)::
     ... except (ValueError, KeyError):
     ...     print("Incorrect decryption")
 
+OFB cipher object
+~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Crypto.Cipher._mode_ofb.OfbMode
+   :members:
+   :member-order: bysource
+
 .. _openpgp_mode:
 
 OpenPGP mode
@@ -381,7 +420,7 @@ Constant: ``Crypto.Cipher.<cipher>.MODE_OPENPGP``.
 OpenPGP (defined in `RFC4880 <https://tools.ietf.org/html/rfc4880>`_).
 A variant of CFB, with two differences:
 
-1.  The first invocation to the :func:`encrypt` method
+1.  The first invocation to the :meth:`~Crypto.Cipher._mode_openpgp.OpenPgpMode.encrypt` method
     returns the encrypted IV concatenated to the first chunk
     of ciphertext (as opposed to the ciphertext only).
     The encrypted IV is as long as the block size plus 2 more bytes.
@@ -390,5 +429,11 @@ A variant of CFB, with two differences:
     the parameter ``iv`` to :func:`new` is the encrypted IV
     (and not the IV, which is still the case for encryption).
 
-Like for CTR, an OpenPGP cipher object has a read-only attribute :attr:`iv`.
+Like for CTR, an OpenPGP cipher object has a read-only attribute :attr:`~Crypto.Cipher._mode_openpgp.OpenPgpMode.iv`.
 
+OpenPGP cipher object
+~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Crypto.Cipher._mode_openpgp.OpenPgpMode
+   :members:
+   :member-order: bysource

@@ -74,16 +74,14 @@ class EcbMode:
     See `NIST SP800-38A`_ , Section 6.1.
 
     .. _`NIST SP800-38A` : http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
-
-    :undocumented: __init__
     """
 
     def __init__(self, block_cipher: Any) -> None:
         """Create a new block cipher, configured in ECB mode.
 
-        :Parameters:
-          block_cipher : C pointer
-            A smart pointer to the low-level block cipher instance.
+        Args:
+            block_cipher (C pointer):
+                A smart pointer to the low-level block cipher instance.
         """
         self.block_size = block_cipher.block_size
 
@@ -125,17 +123,17 @@ class EcbMode:
 
         This function does not add any padding to the plaintext.
 
-        :Parameters:
-          plaintext : bytes/bytearray/memoryview
-            The piece of data to encrypt.
-            The length must be multiple of the cipher block length.
-        :Keywords:
-          output : bytearray/memoryview
-            The location where the ciphertext must be written to.
-            If ``None``, the ciphertext is returned.
-        :Return:
-          If ``output`` is ``None``, the ciphertext is returned as ``bytes``.
-          Otherwise, ``None``.
+        Args:
+            plaintext (bytes/bytearray/memoryview):
+                The piece of data to encrypt.
+                The length must be multiple of the cipher block length.
+        Keyword Args:
+            output (bytearray/memoryview):
+                The location where the ciphertext must be written to.
+                If ``None``, the ciphertext is returned.
+        Returns:
+            If ``output`` is ``None``, the ciphertext is returned as ``bytes``.
+            Otherwise, ``None``.
         """
 
         if output is None:
@@ -191,17 +189,17 @@ class EcbMode:
 
         This function does not remove any padding from the plaintext.
 
-        :Parameters:
-          ciphertext : bytes/bytearray/memoryview
-            The piece of data to decrypt.
-            The length must be multiple of the cipher block length.
-        :Keywords:
-          output : bytearray/memoryview
-            The location where the plaintext must be written to.
-            If ``None``, the plaintext is returned.
-        :Return:
-          If ``output`` is ``None``, the plaintext is returned as ``bytes``.
-          Otherwise, ``None``.
+        Args:
+            ciphertext (bytes/bytearray/memoryview):
+                The piece of data to decrypt.
+                The length must be multiple of the cipher block length.
+        Keyword Args:
+            output (bytearray/memoryview):
+                The location where the plaintext must be written to.
+                If ``None``, the plaintext is returned.
+        Returns:
+            If ``output`` is ``None``, the plaintext is returned as ``bytes``.
+            Otherwise, ``None``.
         """
 
         if output is None:
@@ -237,9 +235,9 @@ class EcbMode:
 def _create_ecb_cipher(factory, **kwargs):
     """Instantiate a cipher object that performs ECB encryption/decryption.
 
-    :Parameters:
-      factory : module
-        The underlying block cipher, a module from ``Crypto.Cipher``.
+    Args:
+        factory (module):
+            The underlying block cipher, a module from ``Crypto.Cipher``.
 
     All keywords are passed to the underlying block cipher.
     See the relevant documentation for details (at least ``key`` will need

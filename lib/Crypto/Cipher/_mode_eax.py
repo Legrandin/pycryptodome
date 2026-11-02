@@ -38,7 +38,7 @@ class EaxMode:
     and it will still be subject to authentication.
 
     The decryption step tells the receiver if the message comes
-    from a source that really knowns the secret key.
+    from a source that really knows the secret key.
     Additionally, decryption detects if any part of the message -
     including the header - has been modified or corrupted.
 
@@ -53,8 +53,6 @@ class EaxMode:
 
     .. _AEAD: http://blog.cryptographyengineering.com/2012/05/how-to-choose-authenticated-encryption.html
     .. __: http://csrc.nist.gov/groups/ST/toolkit/BCM/documents/proposedmodes/eax/eax-spec.pdf
-
-    :undocumented: __init__
     """
 
     def __init__(
@@ -120,9 +118,9 @@ class EaxMode:
         The caller may split associated data in segments of any size, and
         invoke this method multiple times, each time with the next segment.
 
-        :Parameters:
-          assoc_data : bytes/bytearray/memoryview
-            A piece of associated data. There are no restrictions on its size.
+        Args:
+            assoc_data (bytes/bytearray/memoryview):
+                A piece of associated data. There are no restrictions on its size.
         """
 
         if Method.UPDATE not in self._next:
@@ -166,17 +164,17 @@ class EaxMode:
 
         This function does not add any padding to the plaintext.
 
-        :Parameters:
-          plaintext : bytes/bytearray/memoryview
-            The piece of data to encrypt.
-            It can be of any length.
-        :Keywords:
-          output : bytearray/memoryview
-            The location where the ciphertext must be written to.
-            If ``None``, the ciphertext is returned.
-        :Return:
-          If ``output`` is ``None``, the ciphertext as ``bytes``.
-          Otherwise, ``None``.
+        Args:
+            plaintext (bytes/bytearray/memoryview):
+                The piece of data to encrypt.
+                It can be of any length.
+        Keyword Args:
+            output (bytearray/memoryview):
+                The location where the ciphertext must be written to.
+                If ``None``, the ciphertext is returned.
+        Returns:
+            If ``output`` is ``None``, the ciphertext as ``bytes``.
+            Otherwise, ``None``.
         """
 
         if Method.ENCRYPT not in self._next:
@@ -222,17 +220,17 @@ class EaxMode:
 
         This function does not remove any padding from the plaintext.
 
-        :Parameters:
-          ciphertext : bytes/bytearray/memoryview
-            The piece of data to decrypt.
-            It can be of any length.
-        :Keywords:
-          output : bytearray/memoryview
-            The location where the plaintext must be written to.
-            If ``None``, the plaintext is returned.
-        :Return:
-          If ``output`` is ``None``, the plaintext as ``bytes``.
-          Otherwise, ``None``.
+        Args:
+            ciphertext (bytes/bytearray/memoryview):
+                The piece of data to decrypt.
+                It can be of any length.
+        Keyword Args:
+            output (bytearray/memoryview):
+                The location where the plaintext must be written to.
+                If ``None``, the plaintext is returned.
+        Returns:
+            If ``output`` is ``None``, the plaintext as ``bytes``.
+            Otherwise, ``None``.
         """
 
         if Method.DECRYPT not in self._next:
@@ -249,7 +247,8 @@ class EaxMode:
         This method returns the MAC that shall be sent to the receiver,
         together with the ciphertext.
 
-        :Return: the MAC, as a byte string.
+        Returns:
+            the MAC, as a byte string.
         """
 
         if Method.DIGEST not in self._next:
@@ -269,7 +268,8 @@ class EaxMode:
 
         This method is like `digest`.
 
-        :Return: the MAC, as a hexadecimal string.
+        Returns:
+            the MAC, as a hexadecimal string.
         """
         return self.digest().hex()
 
@@ -282,12 +282,13 @@ class EaxMode:
         (that is, if the key is correct) and it has not been
         tampered with while in transit.
 
-        :Parameters:
-          received_mac_tag : bytes/bytearray/memoryview
-            This is the *binary* MAC, as received from the sender.
-        :Raises MacMismatchError:
-            if the MAC does not match. The message has been tampered with
-            or the key is incorrect.
+        Args:
+            received_mac_tag (bytes/bytearray/memoryview):
+                This is the *binary* MAC, as received from the sender.
+        Raises:
+            ValueError:
+                if the MAC does not match. The message has been tampered with
+                or the key is incorrect.
         """
 
         if Method.VERIFY not in self._next:
@@ -308,12 +309,13 @@ class EaxMode:
 
         This method is like `verify`.
 
-        :Parameters:
-          hex_mac_tag : string
-            This is the *printable* MAC, as received from the sender.
-        :Raises MacMismatchError:
-            if the MAC does not match. The message has been tampered with
-            or the key is incorrect.
+        Args:
+            hex_mac_tag (string):
+                This is the *printable* MAC, as received from the sender.
+        Raises:
+            ValueError:
+                if the MAC does not match. The message has been tampered with
+                or the key is incorrect.
         """
 
         self.verify(unhexlify(hex_mac_tag))
@@ -331,20 +333,16 @@ class EaxMode:
     ) -> tuple[Optional[bytes], bytes]:
         """Perform encrypt() and digest() in one step.
 
-        :Parameters:
-          plaintext : bytes/bytearray/memoryview
-            The piece of data to encrypt.
-        :Keywords:
-          output : bytearray/memoryview
-            The location where the ciphertext must be written to.
-            If ``None``, the ciphertext is returned.
-        :Return:
-            a tuple with two items:
-
-            - the ciphertext, as ``bytes``
-            - the MAC tag, as ``bytes``
-
-            The first item becomes ``None`` when the ``output`` parameter
+        Args:
+            plaintext (bytes/bytearray/memoryview):
+                The piece of data to encrypt.
+        Keyword Args:
+            output (bytearray/memoryview):
+                The location where the ciphertext must be written to.
+                If ``None``, the ciphertext is returned.
+        Returns:
+            The tuple ``(ciphertext, tag)``, both ``bytes``.
+            The ciphertext is ``None`` when the ``output`` parameter
             specified a location for the result.
         """
 
@@ -366,20 +364,22 @@ class EaxMode:
     ) -> Optional[bytes]:
         """Perform decrypt() and verify() in one step.
 
-        :Parameters:
-          ciphertext : bytes/bytearray/memoryview
-            The piece of data to decrypt.
-          received_mac_tag : bytes/bytearray/memoryview
-            This is the *binary* MAC, as received from the sender.
-        :Keywords:
-          output : bytearray/memoryview
-            The location where the plaintext must be written to.
-            If ``None``, the plaintext is returned.
-        :Return: the plaintext as ``bytes`` or ``None`` when the ``output``
+        Args:
+            ciphertext (bytes/bytearray/memoryview):
+                The piece of data to decrypt.
+            received_mac_tag (bytes/bytearray/memoryview):
+                This is the *binary* MAC, as received from the sender.
+        Keyword Args:
+            output (bytearray/memoryview):
+                The location where the plaintext must be written to.
+                If ``None``, the plaintext is returned.
+        Returns:
+            the plaintext as ``bytes`` or ``None`` when the ``output``
             parameter specified a location for the result.
-        :Raises MacMismatchError:
-            if the MAC does not match. The message has been tampered with
-            or the key is incorrect.
+        Raises:
+            ValueError:
+                if the MAC does not match. The message has been tampered with
+                or the key is incorrect.
         """
 
         pt = self.decrypt(ciphertext, output=output)
@@ -390,28 +390,28 @@ class EaxMode:
 def _create_eax_cipher(factory, **kwargs):
     """Create a new block cipher, configured in EAX mode.
 
-    :Parameters:
-      factory : module
-        A symmetric cipher module from `Crypto.Cipher` (like
-        `Crypto.Cipher.AES`).
+    Args:
+        factory (module):
+            A symmetric cipher module from `Crypto.Cipher` (like
+            `Crypto.Cipher.AES`).
 
-    :Keywords:
-      key : bytes/bytearray/memoryview
-        The secret key to use in the symmetric cipher.
+    Keyword Args:
+        key (bytes/bytearray/memoryview):
+            The secret key to use in the symmetric cipher.
 
-      nonce : bytes/bytearray/memoryview
-        A value that must never be reused for any other encryption.
-        There are no restrictions on its length, but it is recommended to use
-        at least 16 bytes.
+        nonce (bytes/bytearray/memoryview):
+            A value that must never be reused for any other encryption.
+            There are no restrictions on its length, but it is recommended to use
+            at least 16 bytes.
 
-        The nonce shall never repeat for two different messages encrypted with
-        the same key, but it does not need to be random.
+            The nonce shall never repeat for two different messages encrypted with
+            the same key, but it does not need to be random.
 
-        If not specified, a 16 byte long random string is used.
+            If not specified, a 16 byte long random string is used.
 
-      mac_len : integer
-        Length of the MAC, in bytes. It must be no larger than the cipher
-        block bytes (which is the default).
+        mac_len (integer):
+            Length of the MAC, in bytes. It must be no larger than the cipher
+            block bytes (which is the default).
     """
 
     try:

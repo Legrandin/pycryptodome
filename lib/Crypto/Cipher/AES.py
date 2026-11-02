@@ -369,14 +369,15 @@ def new(key: Buffer, mode: int, *args: Any, **kwargs: Any) -> Any:
         The output does not depend on the number of threads.
 
     Returns:
-        an AES object, of the applicable mode.
+        :ref:`A cipher object <aes_modes>`: Its class depends on ``mode``,
+        see the table in :ref:`aes_modes`.
     """
 
     kwargs["add_aes_modes"] = True
     return _create_cipher(sys.modules[__name__], key, mode, *args, **kwargs)
 
 
-# Size of a data block (in bytes)
+#: Size of a data block (in bytes)
 block_size: int = 16
-# Size of a key (in bytes)
+#: The valid sizes of a key (in bytes)
 key_size: tuple[int, int, int] = (16, 24, 32)

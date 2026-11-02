@@ -36,8 +36,6 @@ class OpenPgpMode:
     longer than the clean IV.
 
     .. _OpenPGP: https://www.rfc-editor.org/rfc/rfc4880
-
-    :undocumented: __init__
     """
 
     def __init__(self, factory: ModuleType, key: Buffer, iv: Buffer, cipher_params: dict) -> None:
@@ -75,7 +73,12 @@ class OpenPgpMode:
                 " for MODE_OPENPGP" % (self.block_size, self.block_size + 2)
             )
 
-        self.iv = self.IV = iv
+        self.iv = iv
+        """The Initialization Vector originally used to create the object
+        (without the two extra bytes used for decryption)."""
+
+        self.IV = iv
+        """Alias for `iv`"""
 
         # Instantiate the cipher for the real PGP data
         self._cipher = factory.new(
@@ -106,11 +109,11 @@ class OpenPgpMode:
 
         This function does not add any padding to the plaintext.
 
-        :Parameters:
-          plaintext : bytes/bytearray/memoryview
-            The piece of data to encrypt.
+        Args:
+            plaintext (bytes/bytearray/memoryview):
+                The piece of data to encrypt.
 
-        :Return:
+        Returns:
             the encrypted data, as a byte string.
             It is as long as *plaintext* with one exception:
             when encrypting the first message chunk,
@@ -143,11 +146,12 @@ class OpenPgpMode:
 
         This function does not remove any padding from the plaintext.
 
-        :Parameters:
-          ciphertext : bytes/bytearray/memoryview
-            The piece of data to decrypt.
+        Args:
+            ciphertext (bytes/bytearray/memoryview):
+                The piece of data to decrypt.
 
-        :Return: the decrypted data (byte string).
+        Returns:
+            the decrypted data (byte string).
         """
 
         return self._cipher.decrypt(ciphertext)
@@ -156,21 +160,21 @@ class OpenPgpMode:
 def _create_openpgp_cipher(factory, **kwargs):
     """Create a new block cipher, configured in OpenPGP mode.
 
-    :Parameters:
-      factory : module
-        The module.
+    Args:
+        factory (module):
+            The module.
 
-    :Keywords:
-      key : bytes/bytearray/memoryview
-        The secret key to use in the symmetric cipher.
+    Keyword Args:
+        key (bytes/bytearray/memoryview):
+            The secret key to use in the symmetric cipher.
 
-      IV : bytes/bytearray/memoryview
-        The initialization vector to use for encryption or decryption.
+        IV (bytes/bytearray/memoryview):
+            The initialization vector to use for encryption or decryption.
 
-        For encryption, the IV must be as long as the cipher block size.
+            For encryption, the IV must be as long as the cipher block size.
 
-        For decryption, it must be 2 bytes longer (it is actually the
-        *encrypted* IV which was prefixed to the ciphertext).
+            For decryption, it must be 2 bytes longer (it is actually the
+            *encrypted* IV which was prefixed to the ciphertext).
     """
 
     iv = kwargs.pop("IV", None)

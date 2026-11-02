@@ -78,26 +78,24 @@ class OfbMode:
     See `NIST SP800-38A`_ , Section 6.4.
 
     .. _`NIST SP800-38A` : http://csrc.nist.gov/publications/nistpubs/800-38a/sp800-38a.pdf
-
-    :undocumented: __init__
     """
 
     def __init__(self, block_cipher: SmartPointer, iv: Buffer) -> None:
         """Create a new block cipher, configured in OFB mode.
 
-        :Parameters:
-          block_cipher : C pointer
-            A smart pointer to the low-level block cipher instance.
+        Args:
+            block_cipher (C pointer):
+                A smart pointer to the low-level block cipher instance.
 
-          iv : bytes/bytearray/memoryview
-            The initialization vector to use for encryption or decryption.
-            It is as long as the cipher block.
+            iv (bytes/bytearray/memoryview):
+                The initialization vector to use for encryption or decryption.
+                It is as long as the cipher block.
 
-            **The IV must be a nonce, to to be reused for any other
-            message**. It shall be a nonce or a random value.
+                **The IV must be a nonce, to to be reused for any other
+                message**. It shall be a nonce or a random value.
 
-            Reusing the *IV* for encryptions performed with the same key
-            compromises confidentiality.
+                Reusing the *IV* for encryptions performed with the same key
+                compromises confidentiality.
         """
 
         state = VoidPointer()
@@ -156,17 +154,17 @@ class OfbMode:
 
         This function does not add any padding to the plaintext.
 
-        :Parameters:
-          plaintext : bytes/bytearray/memoryview
-            The piece of data to encrypt.
-            It can be of any length.
-        :Keywords:
-          output : bytearray/memoryview
-            The location where the ciphertext must be written to.
-            If ``None``, the ciphertext is returned.
-        :Return:
-          If ``output`` is ``None``, the ciphertext is returned as ``bytes``.
-          Otherwise, ``None``.
+        Args:
+            plaintext (bytes/bytearray/memoryview):
+                The piece of data to encrypt.
+                It can be of any length.
+        Keyword Args:
+            output (bytearray/memoryview):
+                The location where the ciphertext must be written to.
+                If ``None``, the ciphertext is returned.
+        Returns:
+            If ``output`` is ``None``, the ciphertext is returned as ``bytes``.
+            Otherwise, ``None``.
         """
 
         if Method.ENCRYPT not in self._next:
@@ -228,17 +226,17 @@ class OfbMode:
 
         This function does not remove any padding from the plaintext.
 
-        :Parameters:
-          ciphertext : bytes/bytearray/memoryview
-            The piece of data to decrypt.
-            It can be of any length.
-        :Keywords:
-          output : bytearray/memoryview
-            The location where the plaintext is written to.
-            If ``None``, the plaintext is returned.
-        :Return:
-          If ``output`` is ``None``, the plaintext is returned as ``bytes``.
-          Otherwise, ``None``.
+        Args:
+            ciphertext (bytes/bytearray/memoryview):
+                The piece of data to decrypt.
+                It can be of any length.
+        Keyword Args:
+            output (bytearray/memoryview):
+                The location where the plaintext is written to.
+                If ``None``, the plaintext is returned.
+        Returns:
+            If ``output`` is ``None``, the plaintext is returned as ``bytes``.
+            Otherwise, ``None``.
         """
 
         if Method.DECRYPT not in self._next:
@@ -276,16 +274,16 @@ class OfbMode:
 def _create_ofb_cipher(factory, **kwargs):
     """Instantiate a cipher object that performs OFB encryption/decryption.
 
-    :Parameters:
-      factory : module
-        The underlying block cipher, a module from ``Crypto.Cipher``.
+    Args:
+        factory (module):
+            The underlying block cipher, a module from ``Crypto.Cipher``.
 
-    :Keywords:
-      iv : bytes/bytearray/memoryview
-        The IV to use for OFB.
+    Keyword Args:
+        iv (bytes/bytearray/memoryview):
+            The IV to use for OFB.
 
-      IV : bytes/bytearray/memoryview
-        Alias for ``iv``.
+        IV (bytes/bytearray/memoryview):
+            Alias for ``iv``.
 
     Any other keyword will be passed to the underlying block cipher.
     See the relevant documentation for details (at least ``key`` will need
