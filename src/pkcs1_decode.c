@@ -4,6 +4,7 @@
  */
 
 #include "common.h"
+#include "nat_ct.h"
 
 FAKE_INIT(pkcs1_decode)
 
@@ -288,7 +289,7 @@ STATIC size_t select_alt_length(const uint8_t cl[IR_NUM_LENGTHS][2], size_t max_
 
         candidate = (((size_t)cl[i][0] << 8) | cl[i][1]) & mask_bits;
         /* All bits set to 1 if candidate <= max_len, 0 otherwise */
-        mask = ((max_len - candidate) >> (sizeof(size_t)*8 - 1)) - 1;
+        mask = (size_t)ct_mask(1 ^ ct_lt(max_len, candidate));
         result = (result & ~mask) | (candidate & mask);
     }
 
@@ -354,7 +355,8 @@ EXPORT_SYM int pkcs1_decode_implicit(const uint8_t *em, size_t len_em_output,
  * Decode and verify the OAEP padding in constant time.
  *
  * The function returns the number of bytes to ignore at the beginning
- * of db (the rest is the plaintext), or -1 in case of problems.
+ * of db (the rest is the plaintext), 0 if the padding is not correct,
+ * or -1 in case of other problems (invalid parameters, no memory).
  */
 
 EXPORT_SYM int oaep_decode(const uint8_t *em,
@@ -397,19 +399,23 @@ EXPORT_SYM int oaep_decode(const uint8_t *em,
         goto cleanup;
     }
 
-    memset(eq_mask, 0xAA, db_len);
     memcpy(target_db, lHash, hLen);
     memset(eq_mask, 0xFF, hLen);
 
+    /*
+     * The barrier on i stops gcc from rewriting the loop counter as
+     * i - one_pos (found with test_pkcs1_ct)
+     */
     for (i=0; i<search_len; i++) {
-        eq_mask[hLen + i] = (uint8_t)propagate_ones(i < one_pos);
+        eq_mask[hLen + i] = (uint8_t)ct_mask(ct_lt(ct_barrier(i), one_pos));
     }
 
     wrong_padding = em[0];
     wrong_padding |= safe_cmp_masks(db, target_db, eq_mask, neq_mask, db_len);
     set_if_match(&wrong_padding, one_pos, search_len);
 
-    result = wrong_padding ? -1 : (int)(hLen + 1 + one_pos);
+    /* hLen + 1 + one_pos is at least 1, so 0 is never a valid result */
+    result = (int)safe_select_idx(hLen + 1 + one_pos, 0, wrong_padding);
 
 cleanup:
     free(eq_mask);
