@@ -125,17 +125,21 @@ STATIC uint8_t safe_cmp_masks(const uint8_t *in1, const uint8_t *in2,
 }
 
 /*
- * Return the index of the first byte with value c,
- * the length of in1[] when c is not present,
- * or SIZE_T_MAX in case of problems.
+ * Put into *pos the index of the first byte with value c,
+ * or the length of in1[] when c is not present.
+ *
+ * Return 0 on success. Return -1, without setting *pos, if in1 or pos
+ * is NULL, if len is 0, or if memory cannot be allocated.
+ * The status is returned separately from the (secret) position,
+ * so that the caller never needs to compare the position with an error value.
  */
-STATIC size_t safe_search(const uint8_t *in1, uint8_t c, size_t len)
+STATIC int safe_search(const uint8_t *in1, uint8_t c, size_t len, size_t *pos)
 {
     size_t result, mask1, mask2, i;
     uint8_t *in1_c;
 
-    if (NULL == in1 || 0 == len) {
-        return SIZE_T_MAX;
+    if (NULL == in1 || 0 == len || NULL == pos) {
+        return -1;
     }
 
     /*
@@ -144,7 +148,7 @@ STATIC size_t safe_search(const uint8_t *in1, uint8_t c, size_t len)
      */
     in1_c = (uint8_t*) malloc(len + 1);
     if (NULL == in1_c) {
-        return SIZE_T_MAX;
+        return -1;
     }
     memcpy(in1_c, in1, len);
     in1_c[len] = c;
@@ -159,7 +163,8 @@ STATIC size_t safe_search(const uint8_t *in1, uint8_t c, size_t len)
     }
 
     free(in1_c);
-    return result;
+    *pos = result;
+    return 0;
 }
 
 #define PKCS1_PREFIX_LEN 10
@@ -225,10 +230,8 @@ EXPORT_SYM int pkcs1_decode(const uint8_t *em, size_t len_em_output,
      * pos is the index of the first 0 byte. It is followed by the plaintext M.
      * It can be (len_em_output-1) when the 0 is at the end (empty M).
      * It can be len_em_output when the 0 is not present.
-     * It can SIZE_T_MAX in case of other errors.
      */
-    pos = safe_search(em + 10, 0, len_em_output - 10);
-    if (pos == SIZE_T_MAX) {
+    if (safe_search(em + 10, 0, len_em_output - 10, &pos)) {
         result = -1;
         goto end;
     }
@@ -323,32 +326,43 @@ EXPORT_SYM int pkcs1_decode_implicit(const uint8_t *em, size_t len_em_output,
                                      size_t expected_pt_len,
                                      uint8_t *output)
 {
-    size_t alt_len;
+    size_t max_len, alt_len, mask;
     int result;
     uint8_t failed;
 
-    if (NULL == am || NULL == cl || len_em_output > 0xFFFF) {
+    if (NULL == em || NULL == am || NULL == cl || NULL == output) {
         return -1;
     }
-
-    /*
-     * With the whole am as sentinel, the number of bytes to skip is 0
-     * only when the padding is wrong (it is at least 11 otherwise).
-     */
-    result = pkcs1_decode(em, len_em_output, am, len_em_output, expected_pt_len, output);
-    if (result < 0) {
+    if (len_em_output < (PKCS1_PREFIX_LEN + 2) || len_em_output > 0xFFFF) {
+        return -1;
+    }
+    max_len = len_em_output - PKCS1_PREFIX_LEN - 1;
+    if (expected_pt_len > max_len) {
         return -1;
     }
 
     if (expected_pt_len > 0) {
         alt_len = expected_pt_len;
     } else {
-        alt_len = select_alt_length(cl, len_em_output - PKCS1_PREFIX_LEN - 1);
+        alt_len = select_alt_length(cl, max_len);
     }
 
+    /*
+     * With the whole am as sentinel, the number of bytes to skip is 0
+     * only when the padding is wrong (it is at least 11 otherwise).
+     * With the parameters checked above, pkcs1_decode() can only fail
+     * (-1) when out of memory.
+     */
+    result = pkcs1_decode(em, len_em_output, am, len_em_output, expected_pt_len, output);
+
+    /*
+     * No branch on result, which depends on the padding: replace 0
+     * with len_em_output - alt_len, and keep any other value (also -1)
+     */
     failed = 0;
     set_if_match(&failed, (size_t)result, 0);
-    return (int)safe_select_idx((size_t)result, len_em_output - alt_len, failed);
+    mask = propagate_ones(failed);
+    return result + (int)((len_em_output - alt_len) & mask);
 }
 
 /*
@@ -393,8 +407,7 @@ EXPORT_SYM int oaep_decode(const uint8_t *em,
     /* Step 3g */
     search_len = db_len - hLen;
 
-    one_pos = safe_search(db + hLen, 0x01, search_len);
-    if (SIZE_T_MAX == one_pos) {
+    if (safe_search(db + hLen, 0x01, search_len, &one_pos)) {
         result = -1;
         goto cleanup;
     }

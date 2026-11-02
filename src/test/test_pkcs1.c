@@ -8,7 +8,7 @@ size_t safe_select_idx(size_t in1, size_t in2, uint8_t choice);
 uint8_t safe_cmp_masks(const uint8_t *in1, const uint8_t *in2,
                  const uint8_t *eq_mask, const uint8_t *neq_mask,
                  size_t len);
-size_t safe_search(const uint8_t *in1, uint8_t c, size_t len);
+int safe_search(const uint8_t *in1, uint8_t c, size_t len, size_t *pos);
 /* As in pkcs1_decode.c */
 #define IR_NUM_LENGTHS 128
 
@@ -148,16 +148,21 @@ void test_safe_cmp_masks(void)
 
 void test_safe_search(void)
 {
-    size_t res;
+    size_t pos;
 
-    res = safe_search((uint8_t*)"ABCDEFB", 0x41, 6);
-    assert(res == 0);
+    assert(safe_search((uint8_t*)"ABCDEFB", 0x41, 6, &pos) == 0);
+    assert(pos == 0);
 
-    res = safe_search((uint8_t*)"ABCDEFB", 0x42, 6);
-    assert(res == 1);
+    assert(safe_search((uint8_t*)"ABCDEFB", 0x42, 6, &pos) == 0);
+    assert(pos == 1);
 
-    res = safe_search((uint8_t*)"ABCDEFB", 0x47, 6);
-    assert(res == 6);
+    assert(safe_search((uint8_t*)"ABCDEFB", 0x47, 6, &pos) == 0);
+    assert(pos == 6);
+
+    /* Errors */
+    assert(safe_search(NULL, 0x41, 6, &pos) == -1);
+    assert(safe_search((uint8_t*)"ABCDEFB", 0x41, 0, &pos) == -1);
+    assert(safe_search((uint8_t*)"ABCDEFB", 0x41, 6, NULL) == -1);
 }
 
 /*
