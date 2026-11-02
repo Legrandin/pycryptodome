@@ -21,14 +21,15 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Callable, Optional, TypeVar, Union, overload
 
 __all__ = ["new", "PKCS115_Cipher"]
 
 from Crypto import Random
+from Crypto.Hash import HMAC, SHA256
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 
-from ._pkcs1_oaep_decode import pkcs1_decode
+from ._pkcs1_oaep_decode import pkcs1_decode, pkcs1_decode_implicit
 
 if TYPE_CHECKING:
     from Crypto.PublicKey.RSA import RsaKey
@@ -36,6 +37,33 @@ if TYPE_CHECKING:
 Buffer = Union[bytes, bytearray, memoryview]
 
 T = TypeVar("T")
+
+
+class _NoSentinel:
+    """Default value of the sentinel parameter of decrypt()"""
+
+    def __repr__(self) -> str:
+        return "<no sentinel>"
+
+
+_NO_SENTINEL: Any = _NoSentinel()
+
+
+def _irprf(kdk: bytes, label: bytes, length: int) -> bytes:
+    """The Implicit Rejection Pseudo-Random Function (IRPRF),
+    section 7.1 of draft-irtf-cfrg-rsa-guidance."""
+
+    # Step 1 (the bit length must fit into 2 bytes)
+    if len(kdk) != 32 or length * 8 > 0xFFFF:
+        raise ValueError("Invalid IRPRF parameters")
+
+    # Steps 2-5
+    bit_length = (length * 8).to_bytes(2, "big")
+    blocks = [
+        HMAC.new(kdk, i.to_bytes(2, "big") + label + bit_length, digestmod=SHA256).digest()
+        for i in range((length + 31) // 32)
+    ]
+    return b"".join(blocks)[:length]
 
 
 class PKCS115_Cipher:
@@ -109,47 +137,78 @@ class PKCS115_Cipher:
         c = long_to_bytes(m_int, k)
         return c
 
-    def decrypt(self, ciphertext: Buffer, sentinel: T, expected_pt_len: Optional[int] = 0) -> Union[bytes, T]:
+    @overload
+    def decrypt(self, ciphertext: Buffer, *, expected_pt_len: Optional[int] = 0) -> bytes: ...
+
+    @overload
+    def decrypt(
+        self, ciphertext: Buffer, sentinel: T, expected_pt_len: Optional[int] = 0
+    ) -> Union[bytes, T]: ...
+
+    def decrypt(
+        self, ciphertext: Buffer, sentinel: T = _NO_SENTINEL, expected_pt_len: Optional[int] = 0
+    ) -> Union[bytes, T]:
         r"""Decrypt a PKCS#1 v1.5 ciphertext.
 
         This is the function ``RSAES-PKCS1-V1_5-DECRYPT`` specified in
         `section 7.2.2 of RFC8017
-        <https://tools.ietf.org/html/rfc8017#page-29>`_.
+        <https://tools.ietf.org/html/rfc8017#page-29>`_,
+        with the *implicit rejection* of
+        `section 7.2 of draft-irtf-cfrg-rsa-guidance
+        <https://datatracker.ietf.org/doc/draft-irtf-cfrg-rsa-guidance/>`_:
+        when the padding is not correct, the function does **not** fail,
+        and it returns instead a pseudo-random message.
+        That message only depends on the private key and on the ciphertext
+        (the same ciphertext always results in the same message),
+        and it cannot be told apart from the message of a ciphertext with
+        correct padding by those who do not know the private key.
 
         Args:
           ciphertext (bytes/bytearray/memoryview):
             The ciphertext that contains the message to recover.
-          sentinel (any type):
-            The object to return whenever an error is detected.
           expected_pt_len (integer):
             The length the plaintext is known to have, or 0 if unknown.
+            When it is not 0, a plaintext of a different length is also
+            rejected (and the pseudo-random message has this length).
+          sentinel (any type):
+            The object to return when the padding is not correct.
+            If present, the function does not perform implicit rejection.
+            Do not pass it, unless the party that submitted the ciphertext
+            can never find out (directly or indirectly) that ``sentinel``
+            was returned.
 
         Returns (byte string):
-            It is either the original message or the ``sentinel`` (in case of an error).
+            The original message, or the pseudo-random message
+            (or ``sentinel``, if passed) in case the padding is not correct.
+
+        Raises:
+          ValueError: if the ciphertext does not have the length of
+            the modulus, or if it is not smaller than the modulus.
+          TypeError: if the RSA key is not private.
 
         .. warning::
-            PKCS#1 v1.5 decryption is intrinsically vulnerable to timing
-            attacks (see `Bleichenbacher's`__ attack).
-            **Use PKCS#1 OAEP instead**.
+            PKCS#1 v1.5 decryption is intrinsically vulnerable to
+            `Bleichenbacher's`__ attack. **Use PKCS#1 OAEP instead**.
 
-            This implementation attempts to mitigate the risk
-            with some constant-time constructs.
-            However, they are not sufficient by themselves: the type of protocol you
-            implement and the way you handle errors make a big difference.
+            Implicit rejection hides from the caller if the padding was
+            correct. The protocol that uses this function must then also
+            treat in the same way messages that are random or that have
+            an unexpected length (for instance, they must fail later and
+            in the same way as a message that has the expected format but
+            the wrong value).
 
-            Specifically, you should make it very hard for the (malicious)
-            party that submitted the ciphertext to quickly understand if decryption
-            succeeded or not.
-
-            To this end, it is recommended that your protocol only encrypts
-            plaintexts of fixed length (``expected_pt_len``),
-            that ``sentinel`` is a random byte string of the same length,
-            and that processing continues for as long
-            as possible even if ``sentinel`` is returned (i.e. in case of
-            incorrect decryption).
+            With a ``sentinel``, the result of the padding check is
+            something that the caller can detect, and any difference in the
+            behaviour of the application that follows from it is the oracle
+            exploited by the attack. This includes subtle differences:
+            for instance, a random ``sentinel`` changes at each call,
+            whereas the plaintext of a ciphertext with correct padding does not.
 
             .. __: https://dx.doi.org/10.1007/BFb0055716
         """
+
+        if expected_pt_len is None:
+            expected_pt_len = 0
 
         # See 7.2.2 in RFC8017
         k = self._key.size_in_bytes()
@@ -157,6 +216,35 @@ class PKCS115_Cipher:
         # Step 1
         if len(ciphertext) != k:
             raise ValueError("Ciphertext with incorrect length (not %d bytes)" % k)
+
+        if sentinel is not _NO_SENTINEL:
+            return self._decrypt_sentinel(ciphertext, sentinel, expected_pt_len)
+
+        # Step 2a (O2SIP)
+        ct_int = bytes_to_long(ciphertext)
+
+        # Step 2b (RSADP) and Step 2c (I2OSP)
+        em = self._key._decrypt_to_bytes(ct_int)
+
+        # Step 3.1 of the draft (KDK)
+        d_hash = SHA256.new(self._key._d.to_bytes(k)).digest()
+        kdk = HMAC.new(d_hash, ciphertext, digestmod=SHA256).digest()
+
+        # Step 3.2 of the draft (CL and AM)
+        cl = _irprf(kdk, b"length", 256)
+        am = _irprf(kdk, b"message", k)
+
+        # Steps 3.3, 4 and 5 of the draft (in constant time)
+        output = bytearray(k)
+        size = pkcs1_decode_implicit(em, am, cl, expected_pt_len, output)
+        if size < 0:
+            raise ValueError("Incorrect PKCS#1 v1.5 parameters")
+        return bytes(output[size:])
+
+    def _decrypt_sentinel(self, ciphertext: Buffer, sentinel: T, expected_pt_len: int) -> Union[bytes, T]:
+        """The decryption with a sentinel (no implicit rejection)."""
+
+        k = self._key.size_in_bytes()
 
         # Step 2a (O2SIP)
         ct_int = bytes_to_long(ciphertext)
@@ -167,14 +255,19 @@ class PKCS115_Cipher:
         # Step 3 (not constant time when the sentinel is not a byte string)
         output = bytes(bytearray(k))
         if not isinstance(sentinel, (bytes, bytearray, memoryview)) or len(sentinel) > k:
-            size = pkcs1_decode(em, b"", expected_pt_len, output)
+            # A placeholder of k bytes: the number of bytes to skip is 0 only
+            # when the padding is not correct (it is at least 11 otherwise)
+            size = pkcs1_decode(em, bytes(k), expected_pt_len, output)
             if size < 0:
+                raise ValueError("Incorrect PKCS#1 v1.5 parameters")
+            if size == 0:
                 return sentinel
-            else:
-                return output[size:]
+            return output[size:]
 
         # Step 3 (somewhat constant time)
         size = pkcs1_decode(em, sentinel, expected_pt_len, output)
+        if size < 0:
+            raise ValueError("Incorrect PKCS#1 v1.5 parameters")
         return output[size:]
 
 

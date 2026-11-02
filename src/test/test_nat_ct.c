@@ -137,6 +137,16 @@ static void run(size_t nw)
         VALGRIND_MAKE_MEM_DEFINED(e->w, nw*sizeof(uint64_t));
         nat_powmod_ctx(out, a, e, 64*nw, 1, m_odd, ctx);
         VALGRIND_MAKE_MEM_UNDEFINED(e->w, nw*sizeof(uint64_t));
+        {
+            /*
+             * As in the CRT step of RSA (c^dp mod p): the base is twice
+             * as wide as the modulus, and it is first reduced modulo it
+             */
+            Nat *wide = secret(2*nw, 0);
+
+            nat_powmod_ctx(out, wide, e, 64*nw, 0, m_odd, ctx);
+            nat_free(wide);
+        }
         nat_mont_free(ctx);
     }
     res = nat_invmod(out, a, m_odd);

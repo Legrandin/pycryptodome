@@ -240,6 +240,14 @@ if (VALGRIND AND HAVE_VALGRIND_MEMCHECK_H)
         LINK_LIBRARIES "")
     add_test(NAME test_nat_ct COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_nat_ct>)
 
+    # Constant-time check of the PKCS#1 v1.5 and OAEP decoding
+    add_executable(test_pkcs1_ct test_pkcs1_ct.c ../pkcs1_decode.c)
+    set_target_properties(test_pkcs1_ct PROPERTIES
+        COMPILE_OPTIONS "-O2;-g;-Wall;-Werror"
+        LINK_OPTIONS ""
+        LINK_LIBRARIES "")
+    add_test(NAME test_pkcs1_ct COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_pkcs1_ct>)
+
     add_executable(test_ec_nat_ct test_ec_nat_ct.c ${EC_SOURCES} ${NAT_SOURCES})
     target_compile_definitions(test_ec_nat_ct PRIVATE NAT_CTGRIND)
     set_target_properties(test_ec_nat_ct PROPERTIES
@@ -292,6 +300,13 @@ if (VALGRIND AND HAVE_VALGRIND_MEMCHECK_H)
             LINK_OPTIONS "-m32"
             LINK_LIBRARIES "")
         add_test(NAME test_nat_ct_32 COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_nat_ct_32>)
+
+        add_executable(test_pkcs1_ct_32 test_pkcs1_ct.c ../pkcs1_decode.c)
+        set_target_properties(test_pkcs1_ct_32 PROPERTIES
+            COMPILE_OPTIONS "-m32;-O2;-g;-Wall;-Werror;-UHAVE_UINT128;-USYS_BITS;-DSYS_BITS=32"
+            LINK_OPTIONS "-m32"
+            LINK_LIBRARIES "")
+        add_test(NAME test_pkcs1_ct_32 COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_pkcs1_ct_32>)
 
         add_executable(test_ec_nat_ct_32 test_ec_nat_ct.c ${EC_SOURCES} ${NAT_SOURCES})
         target_compile_definitions(test_ec_nat_ct_32 PRIVATE NAT_CTGRIND)

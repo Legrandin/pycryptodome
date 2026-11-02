@@ -34,6 +34,12 @@ New features
 * On 64-bit ARM CPUs, KangarooTwelve, ML-KEM and ML-DSA compute 4 Keccak states at once
   (2 with scalar code and 2 with NEON).
   On a Graviton3, KangarooTwelve is 1.9x faster, ML-DSA 7-20% and ML-KEM 7-8%.
+* PKCS#1 v1.5 decryption (``Crypto.Cipher.PKCS1_v1_5``) performs implicit rejection,
+  as defined in section 7.2 of ``draft-irtf-cfrg-rsa-guidance``,
+  when ``decrypt()`` is called without a ``sentinel`` (which is now optional):
+  when the padding of a ciphertext is not correct, it returns a pseudo-random
+  message, which only depends on the private key and on the ciphertext.
+  With a ``sentinel``, ``decrypt()`` behaves as before.
 
 Other changes
 -------------
@@ -44,6 +50,12 @@ Other changes
 
 Resolved issues
 ---------------
+* GH#481: PKCS#1 v1.5 decryption could be used as a Bleichenbacher oracle,
+  through the ``sentinel`` returned for ciphertexts with incorrect padding.
+  Calling ``decrypt()`` without ``sentinel`` (implicit rejection) is now
+  recommended. Thanks to tomato42 and eslerm.
+* PKCS#1 v1.5 ``decrypt()`` never returned a ``sentinel`` that is not a byte string
+  (such as ``None``), and it returned an empty byte string instead.
 * GH#954: ``Crypto.Util.asn1.DerObjectId`` accepted an ASN.1 OBJECT IDENTIFIER where an arc
   is encoded with the initial octet 0x80 (invalid, as that would violate the minimal
   encoding rule for BER) or where the last octet encoding the last arc has bit 7 set

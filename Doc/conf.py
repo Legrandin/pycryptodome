@@ -41,6 +41,11 @@ class MockLib:
     have_bmi2 = have_avx2
     have_sha_ni = have_avx2
     have_adx = have_avx2
+    have_aes_armv8 = have_avx2
+    have_pmull = have_avx2
+    have_sha256_armv8 = have_avx2
+    have_sha512_armv8 = have_avx2
+    have_sha3_armv8 = have_avx2
     ec_nat_new_curve = lambda *x: 0
     ec_nat_free_curve = lambda *x: None
     ec_nat_new_point = lambda *x: 0
