@@ -27,6 +27,8 @@ class MockLib:
     ghash_clmul = None
     ghash_expand_clmul = None
     ghash_destroy_clmul = None
+    AESNI_start_operation = None
+    AESNI_stop_operation = None
 
     def have_aes_ni(self):
         return True
