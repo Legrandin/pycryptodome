@@ -100,11 +100,11 @@ and to check them::
 
     from base64 import b64encode
     from Crypto.Hash import SHA256
-    from Crypto.Protocol.KDF import bcrypt
+    from Crypto.Protocol.KDF import bcrypt_check
 
     password_to_test = b"test"
     try:
-        b64pwd = b64encode(SHA256.new(password).digest())
+        b64pwd = b64encode(SHA256.new(password_to_test).digest())
         bcrypt_check(b64pwd, bcrypt_hash)
     except ValueError:
         print("Incorrect password")

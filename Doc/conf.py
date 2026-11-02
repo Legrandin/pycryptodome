@@ -206,6 +206,9 @@ html_title = "PyCryptodome"
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
+
+# Rank the guides first in the search results
+html_search_scorer = "_static/scorer.js"
 html_css_files = ["custom.css"]
 
 
@@ -339,5 +342,24 @@ def _hide_cipher_mode_signature(app, what, name, obj, options, signature, return
     return None
 
 
+def _lower_search_priority_of_cipher_modes():
+    """The methods of the cipher objects (like ``GcmMode.encrypt``) would
+    otherwise be the first results when searching for common words
+    like "encrypt", ahead of the guides."""
+
+    from sphinx.domains.python import PythonDomain
+
+    get_objects = PythonDomain.get_objects
+
+    def patched_get_objects(self):
+        for name, dispname, objtype, docname, anchor, prio in get_objects(self):
+            if name.startswith("Crypto.Cipher._mode_"):
+                prio = 2  # "unimportant"
+            yield name, dispname, objtype, docname, anchor, prio
+
+    PythonDomain.get_objects = patched_get_objects
+
+
 def setup(app):
     app.connect("autodoc-process-signature", _hide_cipher_mode_signature, priority=400)
+    _lower_search_priority_of_cipher_modes()

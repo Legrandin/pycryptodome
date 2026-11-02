@@ -15,16 +15,21 @@ To protect messages of any length, you combine it with a *mode of operation*,
 which you select with the ``mode`` parameter of :func:`new`.
 The table in :ref:`aes_modes` lists the modes you can choose from.
 
-For instance, you can encrypt and authenticate a message with AES in EAX mode::
+.. tip::
+
+    For a step-by-step explanation of how to encrypt data with AES,
+    including large files, see the guide :doc:`../guides/symmetric`.
+
+For instance, you can encrypt and authenticate a message with AES in GCM mode::
 
     >>> from Crypto.Cipher import AES
     >>> from Crypto.Random import get_random_bytes
     >>>
     >>> data = b'The secret message'
     >>> key = get_random_bytes(16)
-    >>> cipher = AES.new(key, AES.MODE_EAX)
+    >>> nonce = get_random_bytes(12)
+    >>> cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
     >>> ciphertext, tag = cipher.encrypt_and_digest(data)
-    >>> nonce = cipher.nonce
 
 You must deliver the triple ``(nonce, ciphertext, tag)`` to the recipient.
 The nonce and the tag are not secret, but the key is.
@@ -32,7 +37,7 @@ With the same key, the recipient decrypts the message and checks that it is auth
 
     >>> from Crypto.Cipher import AES
     >>>
-    >>> cipher = AES.new(key, AES.MODE_EAX, nonce=nonce)
+    >>> cipher = AES.new(key, AES.MODE_GCM, nonce=nonce)
     >>> try:
     ...     plaintext = cipher.decrypt_and_verify(ciphertext, tag)
     ...     print("The message is authentic:", plaintext)
@@ -153,9 +158,11 @@ follow the link in the last column for its methods and attributes.
 Which mode should I use?
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
-* If in doubt, use **EAX** or **GCM**. They are *authenticated* modes (AEAD):
+* If in doubt, use **GCM**, with a random 12-byte nonce.
+  It is an *authenticated* mode (AEAD):
   the recipient detects if the message was modified or encrypted with a different key.
-  For GCM, prefer a 12-byte nonce if you need to interoperate with other libraries.
+  It is also the most widely supported by other libraries.
+  The other authenticated modes (EAX, OCB, CCM) are equally secure.
 * Use **SIV** if you cannot guarantee that a nonce is never reused with the same key.
 * Use the *confidentiality only* modes, like CTR or CBC, only to interoperate with existing
   protocols, and then combine them with a MAC (like :mod:`Crypto.Hash.HMAC`).

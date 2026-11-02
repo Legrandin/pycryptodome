@@ -271,7 +271,7 @@ def new(key: Buffer, mode: int, *args: Any, **kwargs: Any) -> Any:
         For ``MODE_SIV`` only, it doubles to 32, 48, or 64 bytes.
       mode (a ``MODE_*`` constant):
         The chaining mode to use for encryption or decryption.
-        If in doubt, use ``MODE_EAX``.
+        If in doubt, use ``MODE_GCM`` (with a random 12-byte ``nonce``).
 
     Keyword Args:
       iv (bytes/bytearray/memoryview):

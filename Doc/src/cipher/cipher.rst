@@ -4,13 +4,14 @@
 Introduction
 ------------
 
-.. toctree::
-    :hidden:
-
-    oaep
-
 The :mod:`Crypto.Cipher` package contains algorithms for protecting the confidentiality
 of data.
+
+.. tip::
+
+    To learn how to encrypt data, start from the guides
+    :doc:`../guides/symmetric`, :doc:`../guides/passwords`,
+    and :doc:`../guides/public_key_encryption`.
 
 There are three types of encryption algorithms:
 
@@ -120,6 +121,11 @@ authentication (MAC). For instance:
     chacha20
     salsa20
     chacha20_poly1305
+
+.. toctree::
+    :hidden:
+
+    oaep
 
 Legacy ciphers
 --------------

@@ -16,6 +16,10 @@ API documentation
 All cryptographic functionalities are organized in sub-packages;
 each sub-package is dedicated to solving a specific class of problems.
 
+This is the reference for all algorithms and their parameters.
+If you are looking for how to accomplish a task, like encrypting or signing data,
+start from the :doc:`guides <guides/index>`.
+
 .. csv-table:: 
     :header: Package, Description
     :widths: 25, 75
