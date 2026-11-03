@@ -46,6 +46,7 @@ class BlockCipherParams(TypedDict, total=False):
     initial_value: Union[int, Buffer]
     counter: CounterParams
     threads: int
+    allow_weak_keys: bool
 
 
 def _create_cipher(factory, key, mode, *args, **kwargs):

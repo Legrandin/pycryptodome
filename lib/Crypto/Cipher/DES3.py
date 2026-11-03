@@ -73,7 +73,7 @@ _raw_des3_lib = load_pycryptodome_raw_lib(
 )
 
 
-def adjust_key_parity(key_in: bytes) -> bytes:
+def adjust_key_parity(key_in: Buffer, allow_weak_keys=False) -> bytes:
     """Set the parity bits in a TDES key.
 
     :param key_in: the TDES key whose bits need to be adjusted
@@ -81,6 +81,9 @@ def adjust_key_parity(key_in: bytes) -> bytes:
 
     :returns: a copy of ``key_in``, with the parity bits correctly set
     :rtype: byte string
+
+    :param allow_weak_keys: if ``True``, allow keys that degrade to Single DES
+    :type allow_weak_keys: bool
 
     :raises ValueError: if the TDES key is not 16 or 24 bytes long
     :raises ValueError: if the TDES key degenerates into Single DES
@@ -97,7 +100,8 @@ def adjust_key_parity(key_in: bytes) -> bytes:
 
     key_out = b"".join([bytes([parity_byte(x)]) for x in key_in])
 
-    if key_out[:8] == key_out[8:16] or key_out[-16:-8] == key_out[-8:]:
+    if (not allow_weak_keys and
+            (key_out[:8] == key_out[8:16] or key_out[-16:-8] == key_out[-8:])):
         raise ValueError("Triple DES key degenerates to single DES")
 
     return key_out
@@ -112,7 +116,9 @@ def _create_base_cipher(dict_parameters):
     except KeyError:
         raise TypeError("Missing 'key' parameter")
 
-    key = adjust_key_parity(tobytes(key_in))
+    allow_weak_keys = dict_parameters.pop("allow_weak_keys", False)
+
+    key = adjust_key_parity(tobytes(key_in), allow_weak_keys=allow_weak_keys)
 
     start_operation = _raw_des3_lib.DES3_start_operation
     stop_operation = _raw_des3_lib.DES3_stop_operation
@@ -189,6 +195,10 @@ def new(
             0 for as many as the CPU cores available to this process).
             Each thread processes at least 1 MiB of a single call.
             The output does not depend on the number of threads.
+
+        *   **allow_weak_keys** : (*bool*) --
+            If set to ``True``, skip the check that rejects keys that degrade
+            Triple DES to Single DES. The default is ``False``.
 
     :returns: a cipher object, whose class depends on ``mode``:
         see :ref:`classic_cipher_modes` and :ref:`modern_cipher_modes`.

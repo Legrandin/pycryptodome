@@ -129,6 +129,19 @@ class TestDegenerateToDES:
         with pytest.raises(ValueError):
             DES3.new(sub_key1 + sub_key2 + strxor_c(sub_key2, 0x1), DES3.MODE_ECB)
 
+        cipher = DES3.new(sub_key1 * 3, DES3.MODE_ECB, allow_weak_keys=True)
+        plaintext = bytes([0]) * 8
+
+        ciphertext = cipher.encrypt(plaintext)
+        assert len(ciphertext) == 8
+        assert cipher.decrypt(ciphertext) == plaintext
+
+        cipher = DES3.new(sub_key1 + sub_key2 * 2, DES3.MODE_ECB,
+                          allow_weak_keys=True)
+        ciphertext = cipher.encrypt(plaintext)
+        assert len(ciphertext) == 8
+        assert cipher.decrypt(ciphertext) == plaintext
+
 
 class TestOutput:
     def test(self):
