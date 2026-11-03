@@ -100,8 +100,7 @@ def adjust_key_parity(key_in: Buffer, allow_weak_keys=False) -> bytes:
 
     key_out = b"".join([bytes([parity_byte(x)]) for x in key_in])
 
-    if (not allow_weak_keys and
-            (key_out[:8] == key_out[8:16] or key_out[-16:-8] == key_out[-8:])):
+    if not allow_weak_keys and (key_out[:8] == key_out[8:16] or key_out[-16:-8] == key_out[-8:]):
         raise ValueError("Triple DES key degenerates to single DES")
 
     return key_out

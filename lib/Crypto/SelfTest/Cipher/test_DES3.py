@@ -136,8 +136,7 @@ class TestDegenerateToDES:
         assert len(ciphertext) == 8
         assert cipher.decrypt(ciphertext) == plaintext
 
-        cipher = DES3.new(sub_key1 + sub_key2 * 2, DES3.MODE_ECB,
-                          allow_weak_keys=True)
+        cipher = DES3.new(sub_key1 + sub_key2 * 2, DES3.MODE_ECB, allow_weak_keys=True)
         ciphertext = cipher.encrypt(plaintext)
         assert len(ciphertext) == 8
         assert cipher.decrypt(ciphertext) == plaintext
