@@ -1,14 +1,14 @@
 Changelog
 =========
 
-Under development
-+++++++++++++++++
+4.4.0 (Under development)
++++++++++++++++++++++++++++
 
 New features
 ------------
 * Added the elliptic curve secp256k1 to ``Crypto.PublicKey.ECC``: key generation,
   import and export, ECDSA with ``Crypto.Signature.DSS``, and ECDH with
-  ``Crypto.Protocol.DH``. It is not available in HPKE and OpenSSH, which define no use for it.
+  ``Crypto.Protocol.DH``.
 * GH#759: Added the parameter ``low_s`` to ``Crypto.Signature.DSS.new``, for ECDSA signatures
   in the low-S form (for all curves): signing normalizes ``s``, and verifying rejects a high ``s``.
 * ECDSA signatures in DER encoding are about 5-8x faster.
