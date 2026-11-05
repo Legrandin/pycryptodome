@@ -1,6 +1,20 @@
 Changelog
 =========
 
+3.24.2 (5 November 2026)
+++++++++++++++++++++++++++
+
+This release is only for ``pycryptodomex``.
+
+Resolved issues
+---------------
+* GH#958: on Windows with PyPy, native modules built with setuptools 84.2 or newer
+  could not be loaded because they were named ``.pyd``.
+
+Other changes
+-------------
+* Build wheels for PyPy 8.0 (Python 3.11), in addition to PyPy 7.3.
+
 3.24.1 (11 October 2026)
 ++++++++++++++++++++++++++
 
