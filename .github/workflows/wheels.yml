@@ -76,6 +76,45 @@ jobs:
           overwrite: true
           path: ./wheelhouse/*.whl
 
+  # cibuildwheel 4 builds PyPy 3.11 for the pp80 ABI but it cannot build for Python 3.8,
+  # and cibuildwheel 3 builds PyPy 3.11 for the pp73 ABI: we publish wheels for both.
+  # This is a separate job because PyPy 7.3 and 8.0 share the same directory in build/.
+  build_pypy_pp80_wheels:
+    name: Build PyPy 8.0 wheels on ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        # PyPy is not available for Windows on ARM
+        os: [ubuntu-22.04, windows-2022, macos-15, ubuntu-22.04-arm]
+
+    if: github.actor == 'Legrandin'
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: pypa/cibuildwheel@v4.3.4
+        name: Build wheels
+        env:
+          CIBW_BUILD: "pp311-*"
+          CIBW_ENABLE: "pypy"
+          CIBW_ARCHS_MACOS: "x86_64"
+
+          # delvewheel does not know that PyPy 8.0 provides vcruntime140.dll: if vendored,
+          # the modules (loaded with cffi or ctypes) cannot find the renamed copy.
+          CIBW_REPAIR_WHEEL_COMMAND_WINDOWS: "delvewheel repair --exclude vcruntime140.dll -w {dest_dir} -v {wheel}"
+
+          # Set pycryptodome/x test command according to built package
+          CIBW_TEST_COMMAND:
+            "${{ endsWith(github.ref, 'x') == true &&
+            'python -m Cryptodome.SelfTest --skip-slow-tests' ||
+            'python -m Crypto.SelfTest --skip-slow-tests' }}"
+
+      - uses: actions/upload-artifact@v6
+        with:
+          name: wheels-pypy-pp80-${{ matrix.os }}-${{ github.ref_name }}
+          overwrite: true
+          path: ./wheelhouse/*.whl
+
   build_legacy_wheels:
     name: Build legacy Python wheels on ${{ matrix.os }} (${{ matrix.arch }})
     runs-on: ${{ matrix.os }}

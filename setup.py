@@ -512,6 +512,15 @@ if sys.version_info[0] > 2:
     if not sysconfig.get_config_var('Py_GIL_DISABLED'):
         setup_options['options'] = {'bdist_wheel': {'py_limited_api': 'cp37'}}
 
+# PyPy has no stable ABI: name its extensions with its own suffix.
+# Since setuptools 84.2, a py_limited_api extension built on PyPy for Windows
+# gets the suffix .pyd, which PyPy does not accept (only, for instance,
+# .pypy311-pp80-win_amd64.pyd), so the modules would not be found.
+# See https://github.com/pypa/setuptools/issues/5367
+if '__pypy__' in sys.builtin_module_names:
+    for ext in ext_modules:
+        ext.py_limited_api = False
+
 setup(
     name=project_name,
     version=version_string,
