@@ -1,6 +1,8 @@
 # This file is licensed under the BSD 2-Clause License.
 # See https://opensource.org/licenses/BSD-2-Clause for details.
 
+# The NIST curves, and secp256k1 (not a NIST curve, but it shares their C code)
+
 from Crypto.Math.Numbers import Integer
 from Crypto.Util._raw_api import (
     SmartPointer,
@@ -23,6 +25,7 @@ int ec_nat_new_curve(EcCurve **out,
                      const uint8_t *gx,
                      const uint8_t *gy,
                      size_t len);
+int ec_nat_new_curve_secp256k1(EcCurve **out);
 void ec_nat_free_curve(EcCurve *curve);
 int ec_nat_new_point(EcPoint **out,
                      const uint8_t *x,
@@ -83,6 +86,10 @@ def _new_curve(p, b, order, Gx, Gy, bits, oid, desc, openssh):
     if result:
         raise ImportError("Error %d initializing %s context" % (result, desc))
 
+    return _wrap_curve(curve, p, b, order, Gx, Gy, bits, oid, desc, openssh)
+
+
+def _wrap_curve(curve, p, b, order, Gx, Gy, bits, oid, desc, openssh):
     context = SmartPointer(curve.get(), _ec_lib.ec_nat_free_curve)
     # The parameters of the curve are public
     return _Curve(
@@ -149,3 +156,21 @@ def p521_curve():
     Gy = 0x0000011839296A789A3BC0045C8A5FB42C7D1BD998F54449579B446817AFBD17273E662C97EE72995EF42640C550B9013FAD0761353C7086A272C24088BE94769FD16650
 
     return _new_curve(p, b, order, Gx, Gy, 521, "1.3.132.0.35", "NIST P-521", "ecdsa-sha2-nistp521")
+
+
+def secp256k1_curve():
+    """y^2 = x^3 + 7 mod p (SEC 2, Section 2.4.1). The C code has its own copy of the parameters."""
+
+    p = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEFFFFFC2F
+    b = 7
+    order = 0xFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141
+    Gx = 0x79BE667EF9DCBBAC55A06295CE870B07029BFCDB2DCE28D959F2815B16F81798
+    Gy = 0x483ADA7726A3C4655DA4FBFC0E1108A8FD17B448A68554199C47D08FFB10D4B8
+
+    curve = VoidPointer()
+    result = _ec_lib.ec_nat_new_curve_secp256k1(curve.address_of())
+    if result:
+        raise ImportError("Error %d initializing secp256k1 context" % result)
+
+    # No SSH key type is defined for this curve
+    return _wrap_curve(curve, p, b, order, Gx, Gy, 256, "1.3.132.0.10", "secp256k1", None)

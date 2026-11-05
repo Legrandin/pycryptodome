@@ -187,7 +187,7 @@ if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64" AND NOT MSVC)
     endif()
 endif()
 
-# The elliptic curves on the natural numbers: NIST curves, Ed448, X448
+# The elliptic curves on the natural numbers: NIST curves, secp256k1, Ed448, X448
 set(EC_SOURCES ../ec_common.c ../ec_nat.c ../ed448.c ../curve448.c)
 set(NAT_SOURCES ../nat.c ../nat_div.c ../nat_mod.c ../nat_gcd.c ../nat_prime.c)
 add_library(ec OBJECT ${EC_SOURCES})

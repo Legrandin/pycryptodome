@@ -55,6 +55,7 @@ static void fe_mul_wide_##N(uint64_t *o, const uint64_t *a, const uint64_t *b) \
 static void fe_sqr_wide_##N(uint64_t *o, const uint64_t *a) \
     { rows_sqr(o, a, N, rows_addmul); }
 
+FE_INSTANCE_WIDE(4)
 FE_INSTANCE_WIDE(7)
 /* With BMI2 and ADX, P-521 uses the MULX/ADX rows of mul_wide() instead */
 #if !defined(NAT_BMI2_ADX)

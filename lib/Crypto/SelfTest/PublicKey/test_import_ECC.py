@@ -1,8 +1,10 @@
 # SPDX-FileCopyrightText: 2015 Legrandin <helderijs@gmail.com>
 # SPDX-License-Identifier: BSD-2-Clause
 
+import base64
 import errno
 import os
+import struct
 from binascii import unhexlify
 
 import pytest
@@ -48,6 +50,21 @@ def load_file(file_name, mode="rb"):
 def compact(lines):
     ext = b"".join(lines)
     return unhexlify(ext.decode("latin-1").replace(" ", "").replace(":", ""))
+
+
+def create_ref_keys_secp256k1():
+    key_len = 32
+    key_lines = load_file("ecc_secp256k1.txt").splitlines()
+    private_key_d = bytes_to_long(compact(key_lines[2:5]))
+    public_key_xy = compact(key_lines[6:11])
+    assert public_key_xy[0] == 4  # Uncompressed
+    public_key_x = bytes_to_long(public_key_xy[1 : key_len + 1])
+    public_key_y = bytes_to_long(public_key_xy[key_len + 1 :])
+
+    return (
+        ECC.construct(curve="secp256k1", d=private_key_d),
+        ECC.construct(curve="secp256k1", point_x=public_key_x, point_y=public_key_y),
+    )
 
 
 def create_ref_keys_p192():
@@ -1116,6 +1133,66 @@ class TestExport_P192:
         key2 = ECC.import_key(pem2)
         low16 = int(key2.pointQ.y % 65536)
         assert low16 == 0xA0FD
+
+
+class TestImport_secp256k1:
+    """Keys created by OpenSSL (see gen_ecc_secp256k1.sh)"""
+
+    def setup_method(self):
+        self.ref_private, self.ref_public = create_ref_keys_secp256k1()
+
+    @pytest.mark.parametrize(
+        "name", ["public.der", "public.pem", "public_compressed.der", "public_compressed.pem"]
+    )
+    def test_import_public(self, name):
+        key = ECC.import_key(load_file("ecc_secp256k1_" + name))
+        assert key == self.ref_public
+        assert key.curve == "secp256k1"
+
+    def test_import_sec1(self):
+        spki = load_file("ecc_secp256k1_public.der")
+        assert ECC.import_key(extract_bitstring_from_spki(spki), curve_name="secp256k1") == self.ref_public
+        spki = load_file("ecc_secp256k1_public_compressed.der")
+        assert ECC.import_key(extract_bitstring_from_spki(spki), curve_name="secp256k1") == self.ref_public
+
+    @pytest.mark.parametrize("name", ["x509.der", "x509.pem"])
+    def test_import_x509(self, name):
+        assert ECC.import_key(load_file("ecc_secp256k1_" + name)) == self.ref_public
+
+    @pytest.mark.parametrize(
+        "name", ["private.der", "private.pem", "private_p8_clear.der", "private_p8_clear.pem"]
+    )
+    def test_import_private(self, name):
+        key = ECC.import_key(load_file("ecc_secp256k1_" + name))
+        assert key == self.ref_private
+        assert key.d == self.ref_private.d
+
+    @pytest.mark.parametrize(
+        "name", ["private_p8.der", "private_p8.pem", "private_p8_2.der", "private_enc_aes256.pem"]
+    )
+    def test_import_private_encrypted(self, name):
+        key = ECC.import_key(load_file("ecc_secp256k1_" + name), passphrase="secret")
+        assert key == self.ref_private
+        assert key.d == self.ref_private.d
+
+    def test_import_private_ecparams(self):
+        key = ECC.import_key(load_file("ecc_secp256k1_private_ecparams.pem"))
+        assert key.has_private()
+        assert key.curve == "secp256k1"
+
+    def test_export_matches_openssl(self):
+        """The DER encodings are canonical, so they must be the same bytes"""
+
+        assert self.ref_public.export_key(format="DER") == load_file("ecc_secp256k1_public.der")
+        assert self.ref_public.export_key(format="DER", compress=True) == load_file(
+            "ecc_secp256k1_public_compressed.der"
+        )
+        assert self.ref_private.export_key(format="DER", use_pkcs8=True) == load_file(
+            "ecc_secp256k1_private_p8_clear.der"
+        )
+        assert self.ref_private.export_key(format="DER", use_pkcs8=False) == load_file(
+            "ecc_secp256k1_private.der"
+        )
 
 
 class TestExport_P224:
@@ -2350,6 +2427,92 @@ class TestImportOpenSSHLimits:
     def test_zero_rounds(self):
         with pytest.raises(ValueError, match="Invalid bcrypt_pbkdf rounds count"):
             ECC.import_key(_patch_openssh_rounds(self.pem, 0), b"password", max_iteration_count=0)
+
+
+def _ssh_string(data):
+    return struct.pack(">I", len(data)) + data
+
+
+def _openssh_public(key_type, curve_name, point):
+    blob = _ssh_string(key_type) + _ssh_string(curve_name) + _ssh_string(point)
+    return key_type + b" " + base64.b64encode(blob)
+
+
+def _openssh_private(key_type, curve_name, key):
+    """An unencrypted OpenSSH private key, in the format of OpenSSH 6.5"""
+
+    point = key.public_key().export_key(format="SEC1")
+    d = int(key.d).to_bytes(key.pointQ.size_in_bytes(), "big")
+    public = _ssh_string(key_type) + _ssh_string(curve_name) + _ssh_string(point)
+    body = struct.pack(">II", 1, 1) + public + _ssh_string(d) + _ssh_string(b"comment")
+    body += bytes(range(1, 8 - len(body) % 8 + 1)) if len(body) % 8 else b""
+    encoded = b"openssh-key-v1\0" + _ssh_string(b"none") + _ssh_string(b"none") + _ssh_string(b"")
+    encoded += struct.pack(">I", 1) + _ssh_string(public) + _ssh_string(body)
+    return (
+        b"-----BEGIN OPENSSH PRIVATE KEY-----\n"
+        + base64.encodebytes(encoded)
+        + b"-----END OPENSSH PRIVATE KEY-----\n"
+    )
+
+
+class TestImportOpenSSHCurve:
+    def test_private_valid(self):
+        key = ECC.generate(curve="P-256")
+        encoded = _openssh_private(b"ecdsa-sha2-nistp256", b"nistp256", key)
+        assert ECC.import_key(encoded) == key
+
+    @pytest.mark.parametrize(
+        "key_type",
+        [b"ecdsa-sha2-secp256k1", b"ecdsa-sha2-nistp256"],
+    )
+    def test_private_secp256k1(self, key_type):
+        key = ECC.generate(curve="secp256k1")
+        encoded = _openssh_private(key_type, b"secp256k1", key)
+        with pytest.raises(ECC.UnsupportedEccFeature, match="secp256k1"):
+            ECC.import_key(encoded)
+
+    def test_private_curve_mismatch(self):
+        key = ECC.generate(curve="P-384")
+        encoded = _openssh_private(b"ecdsa-sha2-nistp256", b"nistp384", key)
+        with pytest.raises(ECC.UnsupportedEccFeature, match="nistp384"):
+            ECC.import_key(encoded)
+
+    def test_private_unknown_curve(self):
+        key = ECC.generate(curve="P-256")
+        encoded = _openssh_private(b"ecdsa-sha2-nistp999", b"nistp999", key)
+        with pytest.raises(ECC.UnsupportedEccFeature, match="nistp999"):
+            ECC.import_key(encoded)
+
+    def test_public_valid(self):
+        key = ECC.generate(curve="P-256").public_key()
+        point = key.export_key(format="SEC1")
+        assert ECC.import_key(_openssh_public(b"ecdsa-sha2-nistp256", b"nistp256", point)) == key
+
+    @pytest.mark.parametrize(
+        "name, curve",
+        [(b"secp256k1", "secp256k1"), (b"nistp999", "P-256")],
+    )
+    def test_public_unsupported_curve(self, name, curve):
+        point = ECC.generate(curve=curve).public_key().export_key(format="SEC1")
+        encoded = _openssh_public(b"ecdsa-sha2-" + name, name, point)
+        with pytest.raises(ValueError, match="Unsupported ECC curve.*" + name.decode()):
+            ECC.import_key(encoded)
+
+    def test_public_curve_mismatch(self):
+        point = ECC.generate(curve="P-384").public_key().export_key(format="SEC1")
+        encoded = _openssh_public(b"ecdsa-sha2-nistp256", b"nistp384", point)
+        with pytest.raises(ValueError, match="Mismatch in openssh public key"):
+            ECC.import_key(encoded)
+
+    def test_public_unsupported_key_type(self):
+        encoded = b"ssh-unknown " + base64.b64encode(_ssh_string(b"ssh-unknown"))
+        with pytest.raises(ValueError, match=r"Unsupported SSH key type.*ssh-unknown"):
+            ECC._import_openssh_public(encoded)
+
+    def test_public_truncated(self):
+        encoded = b"ecdsa-sha2-nistp256 " + base64.b64encode(_ssh_string(b"ecdsa-sha2-nistp256"))
+        with pytest.raises(ValueError, match="Error parsing SSH key type"):
+            ECC._import_openssh_public(encoded)
 
 
 class TestImport_Ed25519:

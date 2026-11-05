@@ -135,7 +135,7 @@ class EccKey:
     :vartype pointQ: :class:`EccPoint` or :class:`EccXPoint`
 
     :ivar d: A scalar that represents the private component
-             in NIST P curves. It is smaller than the
+             in NIST P curves and secp256k1. It is smaller than the
              order of the generator point.
     :vartype d: integer
 
@@ -159,7 +159,7 @@ class EccKey:
           curve : string
             The name of the curve.
           d : integer
-            Mandatory for a private key one NIST P curves.
+            Mandatory for a private key on NIST P curves and secp256k1.
             It must be in the range ``[1..order-1]``.
           seed : bytes
             Mandatory for a private key on Ed25519 (32 bytes),
@@ -194,18 +194,18 @@ class EccKey:
         if count == 2:
             raise ValueError("Parameters d and seed are mutually exclusive")
 
-        # NIST P curves work with d, the other curves with a seed
+        # NIST P curves and secp256k1 work with d, the other curves with a seed
         seed_len = _SEED_LENGTHS.get(self._curve.id)
         if seed_len is None:
             if self._seed is not None:
-                raise ValueError("Parameter 'seed' cannot be used with NIST P-curves")
+                raise ValueError("Parameter 'seed' cannot be used with NIST P-curves or secp256k1")
             self._d = Integer(self._d)
             if not 1 <= self._d < self._curve.order:
                 raise ValueError("Parameter d must be an integer smaller than the curve order")
             return
 
         if self._d is not None:
-            raise ValueError("Parameter d can only be used with NIST P curves")
+            raise ValueError("Parameter d can only be used with NIST P curves or secp256k1")
         if len(self._seed) != seed_len:
             raise ValueError(
                 "Parameter seed must be %d bytes long for %s" % (seed_len, self._curve.canonical)
@@ -293,7 +293,7 @@ class EccKey:
 
     def _export_SEC1(self, compress):
         if not self._curve.is_weierstrass:
-            raise ValueError("SEC1 format is only supported for NIST P curves")
+            raise ValueError("SEC1 format is only supported for NIST P curves and secp256k1")
 
         # See 2.2 in RFC5480 and 2.3.3 in SEC1
         #
@@ -519,11 +519,11 @@ class EccKey:
             - ``'SEC1'``. The public key (i.e., the EC point) will be encoded
               into ``bytes`` according to Section 2.3.3 of `SEC1`_
               (which is a subset of the older X9.62 ITU standard).
-              Only for NIST P-curves.
+              Only for NIST P-curves and secp256k1.
             - ``'raw'``. The public key will be encoded as ``bytes``,
               without any metadata.
 
-              * For NIST P-curves: equivalent to ``'SEC1'``.
+              * For NIST P-curves and secp256k1: equivalent to ``'SEC1'``.
               * For Ed25519 and Ed448: ``bytes`` in the format
                 defined in `RFC8032`_.
               * For Curve25519 and Curve448: ``bytes`` in the format
@@ -729,7 +729,7 @@ def construct(**kwargs: Unpack[ConstructParams]) -> EccKey:
         Mandatory. The name of the elliptic curve, as defined in the `ECC table`_.
 
       d (integer):
-        Mandatory for a private key and a NIST P-curve (e.g., P-256).
+        Mandatory for a private key and a NIST P-curve (e.g., P-256) or secp256k1.
         It must be an integer in the range ``[1..order-1]``.
 
       seed (bytes):
@@ -827,8 +827,12 @@ def _import_public_der(ec_point, curve_oid=None, curve_name=None):
         if x >= curve.p:
             raise ValueError("The EC point does not belong to the curve")
         # Right now, we only support Short Weierstrass curves:
-        # y^2 = x^3 - 3x + b, computed without negative intermediate values
-        y = (x**3 + curve.b + (curve.p - x) * 3).sqrt(curve.p)
+        # y^2 = x^3 + b for secp256k1, and y^2 = x^3 - 3x + b for the others,
+        # computed without negative intermediate values
+        if curve.id == _CurveID.SECP256K1:
+            y = (x**3 + curve.b).sqrt(curve.p)
+        else:
+            y = (x**3 + curve.b + (curve.p - x) * 3).sqrt(curve.p)
         if point_type == 0x02 and y.is_odd():
             y = curve.p - y
         if point_type == 0x03 and y.is_even():
@@ -1093,7 +1097,10 @@ def _import_openssh_public(encoded):
                 if keyparts[1] == middle:
                     break
             else:
-                raise ValueError("Unsupported ECC curve: " + middle)
+                raise ValueError("Unsupported ECC curve: %r" % keyparts[1])
+
+            if tobytes(curve.openssh) != parts[0]:
+                raise ValueError("Mismatch in openssh public key")
 
             ecc_key = _import_public_der(keyparts[2], curve_oid=curve.oid)
 
@@ -1102,10 +1109,10 @@ def _import_openssh_public(encoded):
             x, y = _import_ed25519_public_key(keyparts[1])
             ecc_key = construct(curve="Ed25519", point_x=x, point_y=y)
         else:
-            raise ValueError("Unsupported SSH key type: " + parts[0])
+            raise ValueError("Unsupported SSH key type: %r" % parts[0])
 
     except (IndexError, TypeError, binascii.Error):
-        raise ValueError("Error parsing SSH key type: " + parts[0])
+        raise ValueError("Error parsing SSH key type: %r" % parts[0])
 
     return ecc_key
 
@@ -1125,6 +1132,11 @@ def _import_openssh_private_ecc(data, password, max_iteration_count=None):
         if ecdsa_curve_name not in _curves:
             raise UnsupportedEccFeature("Unsupported ECC curve %s" % ecdsa_curve_name)
         curve = _curves[ecdsa_curve_name]
+        # Also rejects the curves without an OpenSSH key type (secp256k1)
+        if curve.openssh != key_type:
+            raise UnsupportedEccFeature(
+                "ECC curve %s cannot be used with SSH key type %s" % (ecdsa_curve_name, key_type)
+            )
         modulus_bytes = (curve.modulus_bits + 7) // 8
 
         public_key, decrypted = read_bytes(decrypted)
@@ -1288,7 +1300,7 @@ def import_key(
 
         * X.509 certificate: binary (DER) or ASCII (PEM).
         * X.509 ``subjectPublicKeyInfo``: binary (DER) or ASCII (PEM).
-        * SEC1_ (or X9.62), as ``bytes``. NIST P curves only.
+        * SEC1_ (or X9.62), as ``bytes``. NIST P curves and secp256k1 only.
           You must also provide the ``curve_name`` (with a value from the `ECC table`_)
         * OpenSSH line, defined in RFC5656_ and RFC8709_ (ASCII).
           This is normally the content of files like ``~/.ssh/id_ecdsa.pub``.
@@ -1296,7 +1308,7 @@ def import_key(
         Supported formats for an ECC **private** key:
 
         * A binary ``ECPrivateKey`` structure, as defined in `RFC5915`_ (DER).
-          NIST P curves only.
+          NIST P curves and secp256k1 only.
         * A `PKCS#8`_ structure (or the more recent Asymmetric Key
           Package, RFC5958_): binary (DER) or ASCII (PEM).
         * `OpenSSH 6.5`_ and newer versions (ASCII).

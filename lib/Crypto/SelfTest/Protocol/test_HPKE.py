@@ -58,8 +58,9 @@ class TestHPKE:
         aead_id = HPKE.AEAD.AES128_GCM
         HPKE.new(receiver_key=self.key1.public_key(), aead_id=aead_id, info=b"baba")
 
-    def test_neg_unsupported_curve(self):
-        key3 = ECC.generate(curve="p224")
+    @pytest.mark.parametrize("curve", ["p224", "secp256k1"])
+    def test_neg_unsupported_curve(self, curve):
+        key3 = ECC.generate(curve=curve)
         with pytest.raises(ValueError) as cm:
             HPKE.new(receiver_key=key3.public_key(), aead_id=HPKE.AEAD.AES128_GCM)
         assert "Unsupported curve" in str(cm.value)

@@ -51,6 +51,8 @@ int ec_field_new(EcField **out, const Nat *p)
 
     /* p is public */
     f->kind = EC_FIELD_MONT;
+    if (P256K1_WORDS == f->nw && words_eq(p->w, ec_p256k1, P256K1_WORDS))
+        f->kind = EC_FIELD_P256K1;
     if (P448_WORDS == f->nw && words_eq(p->w, ec_p448, P448_WORDS))
         f->kind = EC_FIELD_P448;
     if (P521_WORDS == f->nw && words_eq(p->w, ec_p521, P521_WORDS))
@@ -204,6 +206,7 @@ void fe_sub(EcWs *ws, uint64_t *out, const uint64_t *a, const uint64_t *b)
 void fe_mul(EcWs *ws, uint64_t *out, const uint64_t *a, const uint64_t *b)
 {
     switch (ws->f->kind) {
+    case EC_FIELD_P256K1: fe_p256k1_mul(ws, out, a, b); break;
     case EC_FIELD_P448: fe_p448_mul(ws, out, a, b); break;
     case EC_FIELD_P521: fe_p521_mul(ws, out, a, b); break;
     case EC_FIELD_MONT:
@@ -214,6 +217,7 @@ void fe_mul(EcWs *ws, uint64_t *out, const uint64_t *a, const uint64_t *b)
 void fe_sqr(EcWs *ws, uint64_t *out, const uint64_t *a)
 {
     switch (ws->f->kind) {
+    case EC_FIELD_P256K1: fe_p256k1_sqr(ws, out, a); break;
     case EC_FIELD_P448: fe_p448_sqr(ws, out, a); break;
     case EC_FIELD_P521: fe_p521_sqr(ws, out, a); break;
     case EC_FIELD_MONT:
@@ -224,6 +228,11 @@ void fe_sqr(EcWs *ws, uint64_t *out, const uint64_t *a)
 void fe_neg(EcWs *ws, uint64_t *out, const uint64_t *a)
 {
     fe_sub(ws, out, ws->zero, a);
+}
+
+void fe_p256k1_mul_word(uint64_t *out, const uint64_t *a, uint64_t m)
+{
+    fe_p256k1_mul_small(out, a, m);
 }
 
 #define FE_POW_WINDOW 4
@@ -357,12 +366,18 @@ void fe_random(EcWs *ws, uint64_t *out, size_t p_bits, BlindPrf *prf)
 
 int ec_blind_scalar(uint64_t *kb, size_t k_words, const Nat *order, const uint8_t *k, size_t len, uint64_t r)
 {
+    return ec_blind_scalar_wide(kb, k_words, order, k, len, &r, 1);
+}
+
+int ec_blind_scalar_wide(uint64_t *kb, size_t k_words, const Nat *order, const uint8_t *k, size_t len,
+                         const uint64_t *r, size_t r_words)
+{
     Nat *kn = NULL, *kred = NULL, *rn = NULL, out;
     int res = ERR_MEMORY;
 
     kn = nat_alloc(len/8 + 1);
     kred = nat_alloc(order->nw);
-    rn = nat_alloc(1);
+    rn = nat_alloc(r_words);
     if (NULL == kn || NULL == kred || NULL == rn)
         goto cleanup;
 
@@ -373,7 +388,7 @@ int ec_blind_scalar(uint64_t *kb, size_t k_words, const Nat *order, const uint8_
     if (res)
         goto cleanup;
 
-    rn->w[0] = r;
+    memcpy(rn->w, r, r_words*sizeof(uint64_t));
     out.nw = k_words;
     out.w = kb;
     res = nat_muladd(&out, kred, order, rn);
@@ -766,8 +781,11 @@ int ec_group_init(EcGroup *g, const uint8_t *p, const uint8_t *param, const uint
     if (res)
         goto cleanup;
     order_bits = (size_t)nat_bit_length(g->order);
-    g->k_words = ec_k_words(order_bits);
-    g->windows = ec_windows(order_bits);
+    if (0 == g->blinding_bits)
+        g->blinding_bits = EC_BLINDING_BITS;
+    /* ec_k_words() and ec_windows() already count EC_BLINDING_BITS */
+    g->k_words = ec_k_words(order_bits + g->blinding_bits - EC_BLINDING_BITS);
+    g->windows = ec_windows(order_bits + g->blinding_bits - EC_BLINDING_BITS);
 
     res = ec_ws_new(&ws, g->field);
     if (res)
@@ -956,6 +974,8 @@ int ec_point_scalar(EcPoint *p, const uint8_t *k, size_t len, uint64_t seed)
 {
     const EcGroup *g;
     uint64_t *kb, *lambda;
+    uint64_t r[EC_BLINDING_BITS_WIDE/64];
+    size_t r_words, i;
     BlindPrf prf;
     EcWs ws;
     int res;
@@ -966,6 +986,7 @@ int ec_point_scalar(EcPoint *p, const uint8_t *k, size_t len, uint64_t seed)
         return ERR_NOT_ENOUGH_DATA;
     g = p->g;
     blind_prf_init(&prf, seed);
+    r_words = g->blinding_bits/64;
 
     res = ec_ws_new(&ws, g->field);
     if (res)
@@ -978,7 +999,10 @@ int ec_point_scalar(EcPoint *p, const uint8_t *k, size_t len, uint64_t seed)
     }
 
     /* The random values: r for the scalar, lambda for the coordinates */
-    res = ec_blind_scalar(kb, g->k_words, g->order, k, len, blind_prf_next(&prf));
+    for (i=0; i<r_words; i++)
+        r[i] = blind_prf_next(&prf);
+    res = ec_blind_scalar_wide(kb, g->k_words, g->order, k, len, r, r_words);
+    ct_wipe(r, sizeof r);
     if (res)
         goto cleanup;
     fe_random(&ws, lambda, g->field->p_bits, &prf);

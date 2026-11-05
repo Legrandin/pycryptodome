@@ -5,7 +5,7 @@
 
 /*
  * The elliptic curves on the natural number library (nat*.c): the NIST
- * curves (ec_nat.c), Ed448 (ed448.c) and X448 (curve448.c),
+ * curves and secp256k1 (ec_nat.c), Ed448 (ed448.c) and X448 (curve448.c),
  * compiled for x86-64 CPUs with BMI2 and ADX, as the module
  * Crypto.PublicKey._ec_nat_bmi2_adx. It can only be loaded on a CPU that
  * supports both; Crypto.PublicKey._ec_lib checks that, and uses

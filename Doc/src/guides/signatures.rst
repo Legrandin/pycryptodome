@@ -75,6 +75,20 @@ Choose a different algorithm if a protocol or a standard requires it:
 
   See :doc:`../signature/dsa`.
 
+* **ECDSA** with the curve ``secp256k1``, only for the blockchain protocols that require it
+  (like Bitcoin). The code is the one above, with ``curve="secp256k1"``.
+  Those protocols often have additional rules. Bitcoin, for instance,
+  only accepts a signature if ``s`` is at most half of the curve order:
+  without the parameter ``low_s=True``, about half of the signatures would be refused.
+
+  .. code-block:: python
+
+      bitcoin_key = ECC.generate(curve="secp256k1")
+      signature = DSS.new(bitcoin_key, "deterministic-rfc6979", low_s=True).sign(SHA256.new(message))
+
+      verifier = DSS.new(bitcoin_key.public_key(), "deterministic-rfc6979", low_s=True)
+      verifier.verify(SHA256.new(message), signature)       # ValueError if invalid or high-S
+
 * **RSA** keys, when the existing infrastructure uses them.
   Prefer the :doc:`PSS <../signature/pkcs1_pss>` scheme;
   use :doc:`PKCS#1 v1.5 <../signature/pkcs1_v1_5>` only for compatibility:

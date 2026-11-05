@@ -74,7 +74,7 @@ only to enable backward compatibility where required by the applications.
 * Asymmetric keys (generation, import and export):
 
   - RSA
-  - ECC: NIST P-curves (P-192, P-224, P-256, P-384, P-521), Ed25519 and Ed448,
+  - ECC: NIST P-curves (P-192, P-224, P-256, P-384, P-521), secp256k1, Ed25519 and Ed448,
     Curve25519 (X25519) and Curve448 (X448)
   - ML-DSA (FIPS 204): ML-DSA-44, ML-DSA-65 and ML-DSA-87
   - ML-KEM (FIPS 203): ML-KEM-512, ML-KEM-768 and ML-KEM-1024
@@ -105,7 +105,7 @@ only to enable backward compatibility where required by the applications.
 
 * Key agreement:
 
-  - Elliptic-curve Diffie-Hellman (NIST P-curves, X25519, X448),
+  - Elliptic-curve Diffie-Hellman (NIST P-curves, secp256k1, X25519, X448),
     with static or ephemeral keys (NIST SP 800-56A)
 
 * Key derivation:

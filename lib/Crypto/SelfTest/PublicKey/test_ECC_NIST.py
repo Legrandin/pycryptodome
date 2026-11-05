@@ -1414,7 +1414,7 @@ def _spy_scalar(monkeypatch, rawlib):
     return calls
 
 
-@pytest.mark.parametrize("curve", ["P-192", "P-224", "P-256", "P-384", "P-521"])
+@pytest.mark.parametrize("curve", ["P-192", "P-224", "P-256", "P-384", "P-521", "secp256k1"])
 def test_scalar_multiply_public(curve, monkeypatch):
     key = ECC.generate(curve=curve)
     order = int(key._curve.order)

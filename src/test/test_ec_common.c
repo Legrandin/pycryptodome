@@ -438,8 +438,14 @@ static void test_field_sizes(void)
 /* The primes of a special form (ec_special.h)                      */
 /* ---------------------------------------------------------------- */
 
+void red_p256k1(uint64_t *out, const uint64_t *t);
 void red_p448(uint64_t *out, const uint64_t *t);
 void red_p521(uint64_t *out, const uint64_t *t);
+
+static const uint64_t sp256k1[4] = {
+    0xFFFFFFFEFFFFFC2FULL, 0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL,
+    0xFFFFFFFFFFFFFFFFULL
+};
 
 static const uint64_t sp448[7] = {
     0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL,
@@ -453,7 +459,21 @@ static const uint64_t sp521[9] = {
     0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL, 0x1FF
 };
 
-/* red_p448 (nw = 7) or red_p521 (nw = 9) of t (2*nw words), against nat_divmod() */
+/* The primes of a special form, by number of words */
+static const size_t sp_sizes[] = { 4, 7, 9 };
+#define SP_COUNT (sizeof sp_sizes / sizeof sp_sizes[0])
+
+static const uint64_t *sp_prime(size_t nw)
+{
+    return nw == 4 ? sp256k1 : (nw == 7 ? sp448 : sp521);
+}
+
+static size_t sp_bits(size_t nw)
+{
+    return nw == 4 ? 256 : (nw == 7 ? 448 : 521);
+}
+
+/* red_p256k1 (nw = 4), red_p448 (nw = 7) or red_p521 (nw = 9) of t (2*nw words), against nat_divmod() */
 static void check_reduction(size_t nw, const uint64_t *t)
 {
     Nat *nt, *np, *nr;
@@ -463,9 +483,11 @@ static void check_reduction(size_t nw, const uint64_t *t)
     assert(nat_new(&np, nw) == 0);
     assert(nat_new(&nr, nw) == 0);
     memcpy(nt->w, t, 2*nw*8);
-    memcpy(np->w, nw == 7 ? sp448 : sp521, nw*8);
+    memcpy(np->w, sp_prime(nw), nw*8);
     assert(nat_divmod(NULL, nr, nt, np) == 0);
-    if (nw == 7)
+    if (nw == 4)
+        red_p256k1(out, t);
+    else if (nw == 7)
         red_p448(out, t);
     else
         red_p521(out, t);
@@ -493,17 +515,19 @@ static void wide_product(uint64_t *t, const uint64_t *a, const uint64_t *b, size
 }
 
 /*
- * The reductions on their own: any input below 2^896 for p448, and below
- * 2^1042 (the largest product) for p521, with the edge cases.
+ * The reductions on their own: any input below 2^512 for p256k1, below
+ * 2^896 for p448, and below 2^1042 (the largest product) for p521, with
+ * the edge cases.
  */
 static void test_special_reductions(void)
 {
     uint64_t t[18], pm1[9], x[9];
-    size_t nw, i;
+    size_t s, i;
     unsigned it;
 
-    for (nw=7; nw<=9; nw+=2) {
-        const uint64_t *p = nw == 7 ? sp448 : sp521;
+    for (s=0; s<SP_COUNT; s++) {
+        const size_t nw = sp_sizes[s];
+        const uint64_t *p = sp_prime(nw);
 
         memcpy(pm1, p, nw*8);
         pm1[0]--;
@@ -542,7 +566,9 @@ static void test_special_reductions(void)
                 break;
             case 6:                             /* the top half only, all ones */
                 memset(t, 0, sizeof t);
-                if (nw == 7) {
+                if (nw == 4) {
+                    memset(t + 4, 0xFF, 4*8);
+                } else if (nw == 7) {
                     memset(t + 7, 0xFF, 7*8);
                 } else {
                     t[8] = ~(uint64_t)0x1FF;    /* hi = 2^521 - 1 */
@@ -555,13 +581,15 @@ static void test_special_reductions(void)
                 if (nw == 9) {
                     t[16] = 0x3FFFF;
                     t[17] = 0;
-                } else {
+                } else if (nw == 7) {
                     t[3] = 0xFFFFFFFEFFFFFFFFULL;
                 }
                 break;
-            case 8:                             /* 2^448 or 2^521: 2^224 + 1, or 1 */
+            case 8:                             /* 2^256, 2^448 or 2^521: C, 2^224 + 1, or 1 */
                 memset(t, 0, sizeof t);
-                if (nw == 7)
+                if (nw == 4)
+                    t[4] = 1;
+                else if (nw == 7)
                     t[7] = 1;
                 else
                     t[8] = 0x200;
@@ -589,8 +617,8 @@ static void test_special_reductions(void)
             } else {
                 size_t k = (it - 32) * (64*nw - 1) / 31;    /* a bit position below p */
 
-                if (k >= (nw == 7 ? 448U : 521U))
-                    k = (nw == 7 ? 447U : 520U);
+                if (k >= sp_bits(nw))
+                    k = sp_bits(nw) - 1;
                 x[k/64] = (uint64_t)1 << (k % 64);
                 memcpy(y, x, nw*8);
                 y[0] -= 1;
@@ -603,6 +631,32 @@ static void test_special_reductions(void)
             check_reduction(nw, t);
         }
     }
+
+    /*
+     * p256k1: the values around 2^256 that reach each step of the reduction:
+     * the low half close to overflowing with a small high half, so that
+     * the carries of the two folds are taken (or just missed), and the
+     * final subtraction of p.
+     */
+    for (it=0; it<4096; it++) {
+        memset(t, 0xFF, 4*8);
+        t[0] -= it & 0xFF;
+        t[1] = ~((uint64_t)(it >> 8));
+        memset(t + 4, 0, 4*8);
+        t[4] = it % 3;
+        check_reduction(4, t);
+
+        /* l + h*C just below, at, and just above p and 2^256 */
+        memcpy(t, sp256k1, 4*8);
+        t[0] -= it;
+        memset(t + 4, 0, 4*8);
+        check_reduction(4, t);
+        t[4] = 1;
+        check_reduction(4, t);
+        t[4] = 0;
+        t[7] = ~(uint64_t)0;
+        check_reduction(4, t);
+    }
 }
 
 /*
@@ -611,16 +665,17 @@ static void test_special_reductions(void)
  */
 static void test_special_fields(void)
 {
-    size_t nw, i;
+    size_t s, i;
 
-    for (nw=7; nw<=9; nw+=2) {
-        const uint64_t *p = nw == 7 ? sp448 : sp521;
+    for (s=0; s<SP_COUNT; s++) {
+        const size_t nw = sp_sizes[s];
+        const uint64_t *p = sp_prime(nw);
         EcField *field;
         EcWs ws;
         Nat *n, *two, *p_minus_2, *na, *nb, *expected;
         uint64_t a[9], b[9], am[9], bm[9], r[9];
         uint8_t buf[72], ab[72];
-        size_t len = nw == 7 ? 56 : 66;
+        size_t len = (sp_bits(nw) + 7)/8;
         unsigned t;
 
         assert(nat_new(&n, nw) == 0);
@@ -634,9 +689,9 @@ static void test_special_fields(void)
         assert(nat_sub(p_minus_2, n, two) == 0);
 
         assert(ec_field_new(&field, n) == 0);
-        assert(field->kind == (nw == 7 ? EC_FIELD_P448 : EC_FIELD_P521));
+        assert(field->kind == (nw == 4 ? EC_FIELD_P256K1 : (nw == 7 ? EC_FIELD_P448 : EC_FIELD_P521)));
         assert(nat_cmp(field->p_minus_2, p_minus_2) == 0);
-        assert(field->p_bits == (nw == 7 ? 448U : 521U));
+        assert(field->p_bits == sp_bits(nw));
         assert(field->one[0] == 1);
         for (i=1; i<nw; i++)
             assert(field->one[i] == 0);
@@ -700,6 +755,24 @@ static void test_special_fields(void)
             assert(memcmp(r, expected->w, nw*8) == 0);
             fe_add(&ws, r, r, bm);
             assert(memcmp(r, am, nw*8) == 0);
+
+            /* The product by a small constant, also in place */
+            if (nw == 4) {
+                static const uint64_t words[] = { 0, 1, 7, 21, 0xFFFFFFFFU };
+                unsigned w;
+
+                for (w=0; w<sizeof words / sizeof words[0]; w++) {
+                    uint64_t m[4] = { 0, 0, 0, 0 }, e[4];
+
+                    m[0] = words[w];
+                    fe_mul(&ws, e, am, m);
+                    fe_p256k1_mul_word(r, am, words[w]);
+                    assert(memcmp(r, e, sizeof e) == 0);
+                    memcpy(r, am, sizeof e);
+                    fe_p256k1_mul_word(r, r, words[w]);
+                    assert(memcmp(r, e, sizeof e) == 0);
+                }
+            }
 
             /* inv: a * 1/a = 1, and 1/0 = 0 */
             assert(fe_inv(&ws, r, am) == 0);

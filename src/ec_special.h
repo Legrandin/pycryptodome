@@ -4,10 +4,11 @@
  */
 
 /*
- * Field arithmetic modulo the two primes of a special form, with the
+ * Field arithmetic modulo the primes of a special form, with the
  * elements in plain representation (not in Montgomery form).
  * Only included by ec_common.c.
  *
+ *   p256k1 = 2^256 - 2^32 - 977  (secp256k1), 4 words
  *   p448 = 2^448 - 2^224 - 1     (Ed448 and X448), 7 words
  *   p521 = 2^521 - 1             (P-521), 9 words
  *
@@ -31,8 +32,14 @@
 #include "ec_common.h"
 #include "ec_field.h"
 
+#define P256K1_WORDS 4
 #define P448_WORDS 7
 #define P521_WORDS 9
+
+static const uint64_t ec_p256k1[P256K1_WORDS] = {
+    0xFFFFFFFEFFFFFC2FULL, 0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL,
+    0xFFFFFFFFFFFFFFFFULL
+};
 
 static const uint64_t ec_p448[P448_WORDS] = {
     0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL, 0xFFFFFFFFFFFFFFFFULL,
@@ -48,11 +55,15 @@ static const uint64_t ec_p521[P521_WORDS] = {
 
 /* The full products */
 #if defined(NAT_32BIT)
+#define P256K1_MUL_WIDE(t, a, b, ws)    mul_wide(t, a, b, (ws)->m)
+#define P256K1_SQR_WIDE(t, a, ws)       sqr_wide(t, a, (ws)->m)
 #define P448_MUL_WIDE(t, a, b, ws)  mul_wide(t, a, b, (ws)->m)
 #define P448_SQR_WIDE(t, a, ws)     sqr_wide(t, a, (ws)->m)
 #define P521_MUL_WIDE(t, a, b, ws)  mul_wide(t, a, b, (ws)->m)
 #define P521_SQR_WIDE(t, a, ws)     sqr_wide(t, a, (ws)->m)
 #else
+#define P256K1_MUL_WIDE(t, a, b, ws)    fe_mul_wide_4(t, a, b)
+#define P256K1_SQR_WIDE(t, a, ws)       fe_sqr_wide_4(t, a)
 #define P448_MUL_WIDE(t, a, b, ws)  fe_mul_wide_7(t, a, b)
 #define P448_SQR_WIDE(t, a, ws)     fe_sqr_wide_7(t, a)
 #if defined(NAT_BMI2_ADX)
@@ -63,6 +74,86 @@ static const uint64_t ec_p521[P521_WORDS] = {
 #define P521_SQR_WIDE(t, a, ws)     fe_sqr_wide_9(t, a)
 #endif
 #endif
+
+/* ---------------------------------------------------------------- */
+/* p256k1 = 2^256 - 2^32 - 977                                      */
+/* ---------------------------------------------------------------- */
+
+/* 2^256 = P256K1_C (mod p) */
+#define P256K1_C 0x1000003D1ULL
+
+/**
+ * out (4 words) = (r + top*2^256) mod p256k1, for top < 2^34.
+ *
+ * top*C is smaller than 2^68, and it is added to r. If that carries, what
+ * is left is smaller than 2^68, so adding C once more cannot carry. The
+ * result is then smaller than 2^256 < 2p: p is subtracted if needed.
+ */
+static void p256k1_fold(uint64_t *out, const uint64_t *r, uint64_t top)
+{
+    uint64_t s[P256K1_WORDS], d[P256K1_WORDS];
+    uint64_t lo, hi, c, mask;
+    unsigned i;
+
+    lo = ct_mac(top, P256K1_C, 0, 0, &hi);
+    s[0] = ct_add(r[0], lo, 0, &c);
+    s[1] = ct_add(r[1], hi, c, &c);
+    s[2] = ct_add(r[2], 0, c, &c);
+    s[3] = ct_add(r[3], 0, c, &c);
+
+    s[0] = ct_add(s[0], P256K1_C & ct_mask(c), 0, &c);
+    for (i=1; i<P256K1_WORDS; i++)
+        s[i] = ct_add(s[i], 0, c, &c);
+
+    c = 0;
+    for (i=0; i<P256K1_WORDS; i++)
+        d[i] = ct_sub(s[i], ec_p256k1[i], c, &c);
+    mask = ct_mask(1 ^ c);
+    for (i=0; i<P256K1_WORDS; i++)
+        out[i] = ct_select(mask, d[i], s[i]);
+}
+
+/**
+ * out (4 words) = t mod p256k1, for t < 2^512 (8 words).
+ *
+ * With t = l + h*2^256: t = l + h*C (mod p), which is smaller than 2^290.
+ */
+STATIC void red_p256k1(uint64_t *out, const uint64_t *t)
+{
+    uint64_t r[P256K1_WORDS], c = 0;
+    unsigned i;
+
+    for (i=0; i<P256K1_WORDS; i++)
+        r[i] = ct_mac(t[P256K1_WORDS + i], P256K1_C, t[i], c, &c);
+    p256k1_fold(out, r, c);
+}
+
+static void fe_p256k1_mul(EcWs *ws, uint64_t *out, const uint64_t *a, const uint64_t *b)
+{
+    uint64_t t[2*P256K1_WORDS];
+
+    P256K1_MUL_WIDE(t, a, b, ws);
+    red_p256k1(out, t);
+}
+
+static void fe_p256k1_sqr(EcWs *ws, uint64_t *out, const uint64_t *a)
+{
+    uint64_t t[2*P256K1_WORDS];
+
+    P256K1_SQR_WIDE(t, a, ws);
+    red_p256k1(out, t);
+}
+
+/** out = a*m mod p256k1, for a small public m (m < 2^32) **/
+static void fe_p256k1_mul_small(uint64_t *out, const uint64_t *a, uint64_t m)
+{
+    uint64_t r[P256K1_WORDS], c = 0;
+    unsigned i;
+
+    for (i=0; i<P256K1_WORDS; i++)
+        r[i] = ct_mac(a[i], m, 0, c, &c);
+    p256k1_fold(out, r, c);
+}
 
 /* ---------------------------------------------------------------- */
 /* p448 = 2^448 - 2^224 - 1                                         */

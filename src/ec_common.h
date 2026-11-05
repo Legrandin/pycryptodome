@@ -5,7 +5,7 @@
 
 /*
  * What the elliptic curves on the nat library have in common (the NIST
- * curves in ec_nat.c, Ed448 in ed448.c, X448 in curve448.c):
+ * curves and secp256k1 in ec_nat.c, Ed448 in ed448.c, X448 in curve448.c):
  * the field, a workspace, field elements, and the
  * side-channel countermeasures of the scalar multiplications (blinding,
  * signed windows, full table scans, randomized coordinates).
@@ -27,8 +27,15 @@
 #define EC_WINDOW 5
 /* Points per window in a table: the multiples 1..16 (2^(EC_WINDOW-1)) */
 #define EC_DIGITS 16
-/* Random bits added to the scalar (k + r*order) */
+/*
+ * Random bits added to the scalar (k + r*order).
+ * Blinding randomizes the scalar only as far as r*(2^bits(order) - order)
+ * reaches: the top bits of k are left unchanged if the order is too close
+ * to a power of two. For secp256k1, that difference only has 129 bits, so
+ * that r needs 128 bits to cover the whole scalar (see EcGroup).
+ */
 #define EC_BLINDING_BITS 64
+#define EC_BLINDING_BITS_WIDE 128
 
 /*
  * The precomputed tables of the generator (NIST curves, Ed448) can be left
@@ -47,12 +54,13 @@
 /*
  * The representation of the field elements, which depends on p (public):
  *  - EC_FIELD_MONT: Montgomery form, for any odd p;
+ *  - EC_FIELD_P256K1: plain, for p = 2^256 - 2^32 - 977 (secp256k1);
  *  - EC_FIELD_P448: plain, for p = 2^448 - 2^224 - 1 (Ed448, X448);
  *  - EC_FIELD_P521: plain, for p = 2^521 - 1 (P-521).
- * The two primes of a special form have their own reduction, after a
+ * The primes of a special form have their own reduction, after a
  * full product (ec_special.h).
  */
-typedef enum { EC_FIELD_MONT, EC_FIELD_P448, EC_FIELD_P521 } EcFieldKind;
+typedef enum { EC_FIELD_MONT, EC_FIELD_P256K1, EC_FIELD_P448, EC_FIELD_P521 } EcFieldKind;
 
 /* The field of a curve (shared by all the operations: read only) */
 typedef struct {
@@ -105,6 +113,8 @@ void fe_sqr(EcWs *ws, uint64_t *out, const uint64_t *a);
 void fe_add(EcWs *ws, uint64_t *out, const uint64_t *a, const uint64_t *b);
 void fe_sub(EcWs *ws, uint64_t *out, const uint64_t *a, const uint64_t *b);
 void fe_neg(EcWs *ws, uint64_t *out, const uint64_t *a);
+/** out = a*m, for a small public m (m < 2^32), in the field EC_FIELD_P256K1 only **/
+void fe_p256k1_mul_word(uint64_t *out, const uint64_t *a, uint64_t m);
 
 static inline void fe_copy(EcWs *ws, uint64_t *out, const uint64_t *a)
 {
@@ -140,6 +150,9 @@ void fe_random(EcWs *ws, uint64_t *out, size_t p_bits, BlindPrf *prf);
  * bits(order) + EC_BLINDING_BITS bits.
  */
 int ec_blind_scalar(uint64_t *kb, size_t k_words, const Nat *order, const uint8_t *k, size_t len, uint64_t r);
+/** The same with r of r_words words **/
+int ec_blind_scalar_wide(uint64_t *kb, size_t k_words, const Nat *order, const uint8_t *k, size_t len,
+                         const uint64_t *r, size_t r_words);
 
 /**
  * kw (k_words words) = k mod order, for the big-endian scalar k (len bytes,
@@ -179,7 +192,7 @@ int ec_batch_to_affine(EcWs *ws, uint64_t *affine, const uint64_t *proj, size_t 
 
 /* ---------------------------------------------------------------- */
 /* Curves with points in projective coordinates (X:Y:Z):            */
-/* the NIST curves (ec_nat.c) and Ed448 (ed448.c)                   */
+/* the NIST curves, secp256k1 (ec_nat.c) and Ed448 (ed448.c)        */
 /* ---------------------------------------------------------------- */
 
 typedef struct EcGroup EcGroup;
@@ -217,10 +230,12 @@ struct EcGroup {
     size_t nw;              /* 64-bit words of a field element */
     size_t len;             /* bytes of an encoded coordinate */
     EcField *field;         /* the field: arithmetic modulo p */
-    uint64_t *param;        /* the constant of the formulas: b (NIST curves), d (Ed448) */
+    uint64_t *param;        /* the constant of the formulas: b (Weierstrass), d (Ed448) */
     uint64_t *gx, *gy;      /* the generator G (affine, field elements) */
     Nat *order;             /* the scalars are reduced and blinded modulo it: the order
-                               of the whole group (n for the NIST curves, 4n for Ed448) */
+                               of the whole group (n for Weierstrass curves, 4n for Ed448) */
+    unsigned blinding_bits; /* random bits of a blinded scalar (multiple of 64); to be
+                               set before ec_group_init(): 0 is EC_BLINDING_BITS */
     size_t k_words;         /* 64-bit words of a blinded scalar */
     size_t windows;         /* windows of a blinded scalar */
     uint64_t *g_table;      /* windows*EC_DIGITS affine points, x then y:
@@ -248,7 +263,7 @@ typedef struct {
 } EcPoint;
 
 /**
- * Set up g, whose functions (and the flag edwards) are already set: the
+ * Set up g, whose functions (and the flags) are already set: the
  * field p, the constant param of the formulas, the generator (gx, gy) of
  * prime order n, all big-endian and len bytes long. The scalars are taken
  * modulo n * 2^cofactor_bits. Also compute the tables of the generator.

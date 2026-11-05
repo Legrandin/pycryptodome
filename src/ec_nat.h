@@ -4,9 +4,10 @@
  */
 
 /*
- * Short Weierstrass curves y^2 = x^3 - 3x + b over a prime field
- * (the NIST curves P-192, P-224, P-256, P-384 and P-521), on the
- * constant-time arithmetic of the nat library. See ec_nat.c.
+ * Short Weierstrass curves over a prime field: y^2 = x^3 - 3x + b (the
+ * NIST curves P-192, P-224, P-256, P-384 and P-521) and y^2 = x^3 + 7
+ * (secp256k1), on the constant-time arithmetic of the nat library.
+ * See ec_nat.c.
  */
 
 #ifndef EC_NAT_H
@@ -25,6 +26,7 @@ typedef EcPoint EcPointN;
 EXPORT_SYM int ec_nat_new_curve(EcCurve **out,
                                 const uint8_t *p, const uint8_t *b, const uint8_t *order,
                                 const uint8_t *gx, const uint8_t *gy, size_t len);
+EXPORT_SYM int ec_nat_new_curve_secp256k1(EcCurve **out);
 EXPORT_SYM void ec_nat_free_curve(EcCurve *curve);
 
 EXPORT_SYM int ec_nat_new_point(EcPointN **out, const uint8_t *x, const uint8_t *y, size_t len,

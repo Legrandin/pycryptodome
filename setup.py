@@ -302,7 +302,7 @@ if sys.implementation.name == "pypy":
 
 # Set PYCRYPTODOME_NO_EC_TABLES to build the elliptic curves without the
 # precomputed tables of the generator (Ed25519: 36 KB in the binary;
-# Ed448 and the NIST curves: 39-266 KB of memory per curve, at runtime).
+# Ed448, the NIST curves and secp256k1: 39-266 KB of memory per curve, at runtime).
 # The multiplication of the generator (key generation, signing) becomes
 # about 4-6x slower.
 if os.environ.get("PYCRYPTODOME_NO_EC_TABLES"):

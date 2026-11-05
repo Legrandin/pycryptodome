@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: BSD-2-Clause
 
 """The C module with the elliptic curves on the constant-time big integer
-library: the NIST curves, Ed448 and X448 (src/ec_nat.c, src/ed448.c and
-src/curve448.c)."""
+library: the NIST curves, secp256k1, Ed448 and X448 (src/ec_nat.c,
+src/ed448.c and src/curve448.c)."""
 
 import os
 from typing import Any

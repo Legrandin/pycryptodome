@@ -49,6 +49,7 @@ class MockLib:
     have_sha512_armv8 = have_avx2
     have_sha3_armv8 = have_avx2
     ec_nat_new_curve = lambda *x: 0
+    ec_nat_new_curve_secp256k1 = lambda *x: 0
     ec_nat_free_curve = lambda *x: None
     ec_nat_new_point = lambda *x: 0
     ec_nat_free_point = lambda *x: None
