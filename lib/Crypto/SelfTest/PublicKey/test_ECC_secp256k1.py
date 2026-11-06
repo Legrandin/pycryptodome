@@ -285,7 +285,7 @@ class TestSignatures:
             "2442CE9D2B916064108014783E923EC36B49743E2FFA1C4496F01A512AAFD9E5"
         )
 
-    @pytest.mark.parametrize("mode", ["fips-186-3", "deterministic-rfc6979"])
+    @pytest.mark.parametrize("mode", ["sec1", "deterministic-rfc6979"])
     @pytest.mark.parametrize("encoding", ["binary", "der"])
     def test_sign_verify(self, mode, encoding):
         key = ECC.generate(curve="secp256k1")
@@ -301,18 +301,18 @@ class TestSignatures:
     def test_randomized_nonce(self):
         key = ECC.generate(curve="secp256k1")
         msg_hash = SHA256.new(b"message")
-        signer = DSS.new(key, "fips-186-3")
+        signer = DSS.new(key, "sec1")
         assert signer.sign(msg_hash) != signer.sign(msg_hash)
 
     def test_wrong_curve(self):
         msg_hash = SHA256.new(b"message")
-        signature = DSS.new(ECC.generate(curve="secp256k1"), "fips-186-3").sign(msg_hash)
+        signature = DSS.new(ECC.generate(curve="secp256k1"), "sec1").sign(msg_hash)
         with pytest.raises(ValueError, match="not authentic"):
             DSS.new(ECC.generate(curve="p256").public_key(), "fips-186-3").verify(msg_hash, signature)
 
     def test_verify_range(self):
         key = ECC.construct(curve="secp256k1", d=1)
-        verifier = DSS.new(key.public_key(), "fips-186-3")
+        verifier = DSS.new(key.public_key(), "sec1")
         msg_hash = SHA256.new(b"message")
         for r, s in ((0, 1), (1, 0), (N, 1), (1, N)):
             bad = r.to_bytes(32, "big") + s.to_bytes(32, "big")

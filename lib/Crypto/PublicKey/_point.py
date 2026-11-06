@@ -99,14 +99,8 @@ class CurveID:
     SECP256K1 = 10
 
 
-_weierstrass_curve_ids = (
-    CurveID.P192,
-    CurveID.P224,
-    CurveID.P256,
-    CurveID.P384,
-    CurveID.P521,
-    CurveID.SECP256K1,
-)
+_nist_curve_ids = (CurveID.P192, CurveID.P224, CurveID.P256, CurveID.P384, CurveID.P521)
+_weierstrass_curve_ids = (*_nist_curve_ids, CurveID.SECP256K1)
 
 
 class _Curves:

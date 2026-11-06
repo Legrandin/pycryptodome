@@ -1438,13 +1438,13 @@ def test_scalar_multiply_public(curve, monkeypatch):
 
     h = SHA256.new(b"message")
     del calls[:]
-    signature = DSS.new(key, "fips-186-3").sign(h)
+    signature = DSS.new(key, "sec1").sign(h)
     assert set(calls) == {"scalar"}
     del calls[:]
-    DSS.new(key.public_key(), "fips-186-3").verify(h, signature)
+    DSS.new(key.public_key(), "sec1").verify(h, signature)
     assert set(calls) == {"scalar_public"}
     with pytest.raises(ValueError):
-        DSS.new(key.public_key(), "fips-186-3").verify(SHA256.new(b"other"), signature)
+        DSS.new(key.public_key(), "sec1").verify(SHA256.new(b"other"), signature)
 
 
 @pytest.mark.parametrize(

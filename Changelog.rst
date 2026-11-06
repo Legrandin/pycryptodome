@@ -9,6 +9,8 @@ New features
 * Added the elliptic curve secp256k1 to ``Crypto.PublicKey.ECC``: key generation,
   import and export, ECDSA with ``Crypto.Signature.DSS``, and ECDH with
   ``Crypto.Protocol.DH``.
+* Added the mode ``'sec1'`` to ``Crypto.Signature.DSS.new``, for randomized ECDSA on all Weierstrass
+  curves. Mode ``'fips-186-3'`` does not accept secp256k1, which is not a curve of that standard.
 * GH#759: Added the parameter ``low_s`` to ``Crypto.Signature.DSS.new``, for ECDSA signatures
   in the low-S form (for all curves): signing normalizes ``s``, and verifying rejects a high ``s``.
 * ECDSA signatures in DER encoding are about 5-8x faster.

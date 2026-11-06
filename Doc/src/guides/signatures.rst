@@ -76,7 +76,8 @@ Choose a different algorithm if a protocol or a standard requires it:
   See :doc:`../signature/dsa`.
 
 * **ECDSA** with the curve ``secp256k1``, only for the blockchain protocols that require it
-  (like Bitcoin). The code is the one above, with ``curve="secp256k1"``.
+  (like Bitcoin). The mode ``"fips-186-3"`` is not valid with this curve:
+  use ``"deterministic-rfc6979"`` (as below) or ``"sec1"``, which is the randomized equivalent.
   Those protocols often have additional rules. Bitcoin, for instance,
   only accepts a signature if ``s`` is at most half of the curve order:
   without the parameter ``low_s=True``, about half of the signatures would be refused.
