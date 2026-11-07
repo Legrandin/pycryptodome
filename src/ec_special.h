@@ -76,55 +76,87 @@ static const uint64_t ec_p521[P521_WORDS] = {
 #endif
 
 /* ---------------------------------------------------------------- */
-/* p256k1 = 2^256 - 2^32 - 977                                      */
+/* For modulo p used for p256k1, the following holds:               */
+/*                                                                  */
+/* p = 2^256 − 2^32 − 977, so 2^256 ≡ 2^32 + 977 = C (mod p)        */
+/*                                                                  */
+/* P256K1_C is 2^256 (mod p) and it is < 2^33                       */
 /* ---------------------------------------------------------------- */
-
-/* 2^256 = P256K1_C (mod p) */
 #define P256K1_C 0x1000003D1ULL
 
 /**
+ * The input is r + top·2^256, where r is 4 words and top is below 2^34.
+ * It comes from red_p256k1, which already folded the high half
+ * of a 512-bit product and left a result below 2^290.
+ *
  * out (4 words) = (r + top*2^256) mod p256k1, for top < 2^34.
  *
  * top*C is smaller than 2^68, and it is added to r. If that carries, what
  * is left is smaller than 2^68, so adding C once more cannot carry. The
  * result is then smaller than 2^256 < 2p: p is subtracted if needed.
  */
-static void p256k1_fold(uint64_t *out, const uint64_t *r, uint64_t top)
+static void p256k1_fold(uint64_t out[P256K1_WORDS], const uint64_t r[P256K1_WORDS], uint64_t top)
 {
     uint64_t s[P256K1_WORDS], d[P256K1_WORDS];
     uint64_t lo, hi, c, mask;
     unsigned i;
 
+    /* ct_mac(a,b,c,d,&hi) computes a*b+c+d   */
+    /* which always fits into 128 bits.       */
+
+    /* We fold top*2^256 into (lo hi)         */
+    /* The result is < 2^67                   */
     lo = ct_mac(top, P256K1_C, 0, 0, &hi);
+
     s[0] = ct_add(r[0], lo, 0, &c);
     s[1] = ct_add(r[1], hi, c, &c);
     s[2] = ct_add(r[2], 0, c, &c);
     s[3] = ct_add(r[3], 0, c, &c);
+    /* s = r + top·C modulo 2^256, with c=1 if there was carry */
 
+    /* if c=0, the following addition does nothing               */
+    /* if c=1, it means that the previous addition overflowed    */
+    /* and its value is:                                         */
+    /*      s = r + top·C − 2^256                                */
+    /*      s <= (2^256 − 1) + top·C − 2^256 = top·C − 1 < 2^67  */
+    /* Adding c=1 will not make it further overflow              */
     s[0] = ct_add(s[0], P256K1_C & ct_mask(c), 0, &c);
     for (i=1; i<P256K1_WORDS; i++)
         s[i] = ct_add(s[i], 0, c, &c);
 
+    /* s is below 2^256, which is less than 2p, so one subtraction */
+    /* of p is enough to reduce it fully.                          */
+
     c = 0;
     for (i=0; i<P256K1_WORDS; i++)
         d[i] = ct_sub(s[i], ec_p256k1[i], c, &c);
+    /* c = 1 means s < p */
+
     mask = ct_mask(1 ^ c);
     for (i=0; i<P256K1_WORDS; i++)
         out[i] = ct_select(mask, d[i], s[i]);
+    /* out is in the range 0 to p − 1 */
 }
 
 /**
- * out (4 words) = t mod p256k1, for t < 2^512 (8 words).
- *
- * With t = l + h*2^256: t = l + h*C (mod p), which is smaller than 2^290.
+ * Reduce a value t from 512 bits modulo p of p256k1 (therefore, into 256 bits).
  */
-STATIC void red_p256k1(uint64_t *out, const uint64_t *t)
+STATIC void red_p256k1(uint64_t out[P256K1_WORDS], const uint64_t t[2*P256K1_WORDS])
 {
     uint64_t r[P256K1_WORDS], c = 0;
     unsigned i;
 
+    /* ct_mac(a,b,c,d,&hi) computes a*b+c+d   */
+    /* which always fits into 128 bits.       */
+
     for (i=0; i<P256K1_WORDS; i++)
         r[i] = ct_mac(t[P256K1_WORDS + i], P256K1_C, t[i], c, &c);
+    /*
+     * r[] = t (mod p) and only guaranteed to be < 2^290.
+     *
+     * c is < 2^34
+    */
+
     p256k1_fold(out, r, c);
 }
 

@@ -387,10 +387,6 @@ def new(
             for the same message (but the signer still can).
             It is required by protocols like Bitcoin and AT Protocol.
 
-            It is not part of ECDSA, FIPS 186-5 or RFC6979:
-            with the ``'deterministic-rfc6979'`` mode, ``k`` is still generated according to
-            RFC6979, but about half of the signatures differ from the ones of that RFC.
-
             If ``False`` (default), :meth:`sign` does not change ``s``, and
             :meth:`verify` accepts both forms.
 
