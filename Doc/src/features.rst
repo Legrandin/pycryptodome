@@ -211,5 +211,7 @@ These CPU extensions are used when present:
       - SHA-224, SHA-256
     * - AVX2
       - SHA-3 and the other Keccak-based functions, ChaCha20, Salsa20, ML-KEM, ML-DSA
+    * - SSE2 (x86, selected at compile time)
+      - ChaCha20, Salsa20, scrypt, big integers (32-bit only)
     * - BMI2 and ADX
       - Big integers, NIST curves
