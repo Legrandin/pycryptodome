@@ -1,3 +1,11 @@
+/* FAQ page: a question is a short heading, not a title */
+section#frequently-asked-questions h2 {
+    font-size: 1.125em;
+    font-weight: 700;
+    margin-top: 1.75em;
+    margin-bottom: 0.5em;
+}
+
 /* API names (like MODE_ECB or encrypt_and_digest()) in the sidebars are code:
    show them at the size of the text around them, so that they stay readable */
 .toc-tree code.literal,
