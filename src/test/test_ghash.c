@@ -2,7 +2,7 @@
 
 /*
  * Tests of GHASH, for the portable and (if available) the CLMUL or PMULL implementation:
- * ghash_*(), ghash_at_*() and ghash_combine_*().
+ * ghash_*(), ghash_at_*(), ghash_rev_*(), ghash_rev_at_*() and ghash_combine_*().
  * The reference is a plain bit-by-bit multiplication in GF(2^128)
  * (NIST SP 800-38D, Algorithm 1), independent of both implementations.
  */
@@ -20,6 +20,9 @@ int ghash_destroy_portable(void *exp_key);
 int ghash_portable(uint8_t y_out[16], const uint8_t data[], size_t len, const uint8_t y_in[16], const void *exp_key);
 int ghash_at_portable(uint8_t y_out[16], const uint8_t data[], size_t offset, size_t len,
                       const uint8_t y_in[16], const void *exp_key);
+int ghash_rev_portable(uint8_t y_out[16], const uint8_t data[], size_t len, const uint8_t y_in[16], const void *exp_key);
+int ghash_rev_at_portable(uint8_t y_out[16], const uint8_t data[], size_t offset, size_t len,
+                          const uint8_t y_in[16], const void *exp_key);
 int ghash_combine_portable(uint8_t y_out[16], const uint8_t y_in[16], size_t n_blocks, const uint8_t g[16],
                            const void *exp_key);
 
@@ -29,6 +32,9 @@ int ghash_destroy_clmul(void *exp_key);
 int ghash_clmul(uint8_t y_out[16], const uint8_t data[], size_t len, const uint8_t y_in[16], const void *exp_key);
 int ghash_at_clmul(uint8_t y_out[16], const uint8_t data[], size_t offset, size_t len,
                    const uint8_t y_in[16], const void *exp_key);
+int ghash_rev_clmul(uint8_t y_out[16], const uint8_t data[], size_t len, const uint8_t y_in[16], const void *exp_key);
+int ghash_rev_at_clmul(uint8_t y_out[16], const uint8_t data[], size_t offset, size_t len,
+                       const uint8_t y_in[16], const void *exp_key);
 int ghash_combine_clmul(uint8_t y_out[16], const uint8_t y_in[16], size_t n_blocks, const uint8_t g[16],
                         const void *exp_key);
 #endif
@@ -39,6 +45,9 @@ int ghash_destroy_pmull(void *exp_key);
 int ghash_pmull(uint8_t y_out[16], const uint8_t data[], size_t len, const uint8_t y_in[16], const void *exp_key);
 int ghash_at_pmull(uint8_t y_out[16], const uint8_t data[], size_t offset, size_t len,
                    const uint8_t y_in[16], const void *exp_key);
+int ghash_rev_pmull(uint8_t y_out[16], const uint8_t data[], size_t len, const uint8_t y_in[16], const void *exp_key);
+int ghash_rev_at_pmull(uint8_t y_out[16], const uint8_t data[], size_t offset, size_t len,
+                       const uint8_t y_in[16], const void *exp_key);
 int ghash_combine_pmull(uint8_t y_out[16], const uint8_t y_in[16], size_t n_blocks, const uint8_t g[16],
                         const void *exp_key);
 #endif
@@ -50,18 +59,20 @@ typedef struct {
     Ghash ghash;
     GhashAt ghash_at;
     Combine combine;
+    Ghash ghash_rev;
+    GhashAt ghash_rev_at;
 } Implementation;
 
 static const Implementation implementations[] = {
     { "portable", ghash_expand_portable, ghash_destroy_portable, ghash_portable,
-      ghash_at_portable, ghash_combine_portable },
+      ghash_at_portable, ghash_combine_portable, ghash_rev_portable, ghash_rev_at_portable },
 #ifdef TEST_CLMUL
     { "clmul", ghash_expand_clmul, ghash_destroy_clmul, ghash_clmul,
-      ghash_at_clmul, ghash_combine_clmul },
+      ghash_at_clmul, ghash_combine_clmul, ghash_rev_clmul, ghash_rev_at_clmul },
 #endif
 #ifdef TEST_PMULL
     { "pmull", ghash_expand_pmull, ghash_destroy_pmull, ghash_pmull,
-      ghash_at_pmull, ghash_combine_pmull },
+      ghash_at_pmull, ghash_combine_pmull, ghash_rev_pmull, ghash_rev_at_pmull },
 #endif
 };
 
@@ -103,6 +114,22 @@ static void ref_ghash(uint8_t y_out[16], const uint8_t h[16], const uint8_t *dat
         for (j=0; j<16; j++)
             y[j] ^= data[i+j];
         ref_mult(y, y, h);
+    }
+    memcpy(y_out, y, 16);
+}
+
+/** Like ref_ghash(), after reversing the bytes of each block of the data **/
+static void ref_ghash_rev(uint8_t y_out[16], const uint8_t h[16], const uint8_t *data, size_t len, const uint8_t y_in[16])
+{
+    uint8_t y[16], block[16];
+    size_t i;
+    unsigned j;
+
+    memcpy(y, y_in, 16);
+    for (i=0; i<len; i+=16) {
+        for (j=0; j<16; j++)
+            block[j] = data[i + 15 - j];
+        ref_ghash(y, h, block, 16, y);
     }
     memcpy(y_out, y, 16);
 }
@@ -368,6 +395,111 @@ static void test_split_and_combine(const Implementation *imp)
     imp->destroy(exp_key);
 }
 
+/** RFC 8452, Appendix A: POLYVAL is the reversed GHASH of the reversed blocks, with mulX_GHASH(ByteReverse(H)) **/
+static void test_rev_known_answer(const Implementation *imp)
+{
+    static const uint8_t h[16] = { 0xdc, 0xba, 0xa5, 0xdd, 0x13, 0x7c, 0x18, 0x8e,
+                                   0xbb, 0x21, 0x49, 0x2c, 0x23, 0xc9, 0xb1, 0x12 };
+    static const uint8_t data[32] = { 0x4f, 0x4f, 0x95, 0x66, 0x8c, 0x83, 0xdf, 0xb6,
+                                      0x40, 0x17, 0x62, 0xbb, 0x2d, 0x01, 0xa2, 0x62,
+                                      0xd1, 0xa2, 0x4d, 0xdd, 0x27, 0x21, 0xd0, 0x06,
+                                      0xbb, 0xe4, 0x5f, 0x20, 0xd3, 0xc9, 0xf3, 0x62 };
+    static const uint8_t polyval[16] = { 0xf7, 0xa3, 0xb4, 0x7b, 0x84, 0x61, 0x19, 0xfa,
+                                         0xe5, 0xb7, 0x86, 0x6c, 0xf5, 0xe5, 0xb7, 0x7e };
+    uint8_t zero[16] = { 0 }, y[16];
+    unsigned j;
+    void *exp_key = expand(imp, h);
+
+    assert(0 == imp->ghash_rev(y, data, 32, zero, exp_key));
+    for (j=0; j<16; j++)
+        assert(y[j] == polyval[15 - j]);
+
+    imp->destroy(exp_key);
+}
+
+/** ghash_rev() and ghash_rev_at() of 0 to 20 blocks, at any offset, against the reference **/
+static void test_ghash_rev(const Implementation *imp)
+{
+    uint8_t h[16], y_in[16], data[16*20 + 16], y[16], y_ref[16];
+    size_t offset, len;
+    void *exp_key;
+
+    random_bytes(h, 16);
+    random_bytes(y_in, 16);
+    random_bytes(data, sizeof data);
+    exp_key = expand(imp, h);
+
+    for (len=0; len<=16*20; len+=16) {
+        assert(0 == imp->ghash_rev(y, data, len, y_in, exp_key));
+        ref_ghash_rev(y_ref, h, data, len, y_in);
+        assert(0 == memcmp(y, y_ref, 16));
+
+        for (offset=0; offset<=16; offset++) {
+            assert(0 == imp->ghash_rev_at(y, data, offset, len, y_in, exp_key));
+            ref_ghash_rev(y_ref, h, data + offset, len, y_in);
+            assert(0 == memcmp(y, y_ref, 16));
+        }
+    }
+
+    /** No data: y_out is y_in **/
+    assert(0 == imp->ghash_rev(y, data, 0, y_in, exp_key));
+    assert(0 == memcmp(y, y_in, 16));
+
+    /** y_out can be y_in **/
+    memcpy(y, y_in, 16);
+    assert(0 == imp->ghash_rev(y, data, 16*7, y, exp_key));
+    ref_ghash_rev(y_ref, h, data, 16*7, y_in);
+    assert(0 == memcmp(y, y_ref, 16));
+    memcpy(y, y_in, 16);
+    assert(0 == imp->ghash_rev_at(y, data, 32, 64, y, exp_key));
+    ref_ghash_rev(y_ref, h, data + 32, 64, y_in);
+    assert(0 == memcmp(y, y_ref, 16));
+
+    /** Only whole blocks **/
+    assert(ERR_NOT_ENOUGH_DATA == imp->ghash_rev(y, data, 15, y_in, exp_key));
+    assert(ERR_NOT_ENOUGH_DATA == imp->ghash_rev_at(y, data, 0, 31, y_in, exp_key));
+
+    imp->destroy(exp_key);
+}
+
+/** As test_split_and_combine(), for blocks with reversed bytes **/
+static void test_rev_split_and_combine(const Implementation *imp)
+{
+    uint8_t h[16], y_in[16], data[16*40], y_full[16], y[16], part[16], zero[16] = { 0 };
+    unsigned trial;
+    void *exp_key;
+
+    random_bytes(h, 16);
+    random_bytes(y_in, 16);
+    random_bytes(data, sizeof data);
+    exp_key = expand(imp, h);
+
+    assert(0 == imp->ghash_rev(y_full, data, sizeof data, y_in, exp_key));
+
+    for (trial=0; trial<50; trial++) {
+        size_t start = 0;
+
+        memcpy(y, y_in, 16);
+        while (start < sizeof data) {
+            uint8_t r;
+            size_t n_blocks;
+
+            random_bytes(&r, 1);
+            n_blocks = MIN((size_t)(r % 9), (sizeof data - start) / 16);
+            if (0 == start) {
+                assert(0 == imp->ghash_rev_at(y, data, 0, n_blocks*16, y, exp_key));
+            } else {
+                assert(0 == imp->ghash_rev_at(part, data, start, n_blocks*16, zero, exp_key));
+                assert(0 == imp->combine(y, y, n_blocks, part, exp_key));
+            }
+            start += n_blocks*16;
+        }
+        assert(0 == memcmp(y, y_full, 16));
+    }
+
+    imp->destroy(exp_key);
+}
+
 /** Both implementations agree **/
 static void test_implementations_agree(void)
 {
@@ -391,6 +523,9 @@ static void test_implementations_agree(void)
         k2 = expand(&implementations[1], h);
         assert(0 == implementations[0].ghash(y1, data, sizeof data, y_in, k1));
         assert(0 == implementations[1].ghash(y2, data, sizeof data, y_in, k2));
+        assert(0 == memcmp(y1, y2, 16));
+        assert(0 == implementations[0].ghash_rev(y1, data, sizeof data, y_in, k1));
+        assert(0 == implementations[1].ghash_rev(y2, data, sizeof data, y_in, k2));
         assert(0 == memcmp(y1, y2, 16));
         assert(0 == implementations[0].combine(y1, y_in, n, g, k1));
         assert(0 == implementations[1].combine(y2, y_in, n, g, k2));
@@ -420,6 +555,16 @@ static void test_null(const Implementation *imp)
     assert(ERR_NULL == imp->ghash_at(y, data, 0, 16, NULL, exp_key));
     assert(ERR_NULL == imp->ghash_at(y, data, 0, 16, h, NULL));
 
+    assert(ERR_NULL == imp->ghash_rev(NULL, data, 16, h, exp_key));
+    assert(ERR_NULL == imp->ghash_rev(y, NULL, 16, h, exp_key));
+    assert(ERR_NULL == imp->ghash_rev(y, data, 16, NULL, exp_key));
+    assert(ERR_NULL == imp->ghash_rev(y, data, 16, h, NULL));
+
+    assert(ERR_NULL == imp->ghash_rev_at(NULL, data, 0, 16, h, exp_key));
+    assert(ERR_NULL == imp->ghash_rev_at(y, NULL, 0, 16, h, exp_key));
+    assert(ERR_NULL == imp->ghash_rev_at(y, data, 0, 16, NULL, exp_key));
+    assert(ERR_NULL == imp->ghash_rev_at(y, data, 0, 16, h, NULL));
+
     assert(ERR_NULL == imp->combine(NULL, h, 1, h, exp_key));
     assert(ERR_NULL == imp->combine(y, NULL, 1, h, exp_key));
     assert(ERR_NULL == imp->combine(y, h, 1, NULL, exp_key));
@@ -441,6 +586,9 @@ int main(void)
         test_combine_values(imp);
         test_combine_special(imp);
         test_split_and_combine(imp);
+        test_rev_known_answer(imp);
+        test_ghash_rev(imp);
+        test_rev_split_and_combine(imp);
         test_null(imp);
     }
     test_implementations_agree();

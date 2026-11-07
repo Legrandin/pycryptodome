@@ -68,7 +68,7 @@ Features
 --------
 
 * AES, RSA (with OAEP and PSS), DSA
-* Authenticated encryption modes (GCM, CCM, EAX, SIV, OCB, KW, KWP)
+* Authenticated encryption modes (GCM, CCM, EAX, SIV, GCM-SIV, OCB, KW, KWP)
 * Hybrid Public Key Encryption (HPKE), also post-quantum with ML-KEM and the hybrid KEM
   X-Wing (ML-KEM + X25519)
 * Elliptic curve cryptography (NIST P-curves; secp256k1; Ed25519, Ed448, Curve25519, Curve448)

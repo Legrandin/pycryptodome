@@ -33,6 +33,7 @@ only to enable backward compatibility where required by the applications.
   - CCM (AES only)
   - OCB (AES only)
   - SIV (AES only)
+  - GCM-SIV (AES only, RFC 8452)
   - EAX
   - ChaCha20-Poly1305 and XChaCha20-Poly1305
 

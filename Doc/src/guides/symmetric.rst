@@ -170,7 +170,8 @@ AES-GCM is the right choice in most cases. Consider the alternatives when:
 
 * **You cannot guarantee that nonces never repeat** (for instance, many devices
   share a key and have no good random source):
-  use :ref:`SIV mode <siv_mode>`, which tolerates a repeated nonce, at the price of speed.
+  use :ref:`GCM-SIV mode <gcm_siv_mode>`, which tolerates a repeated nonce.
+  The whole message must fit in memory, as encryption and decryption take one step.
 
 * **You must use the same key to encrypt the same value always to the same ciphertext**
   (for instance, to look up encrypted values in a database):

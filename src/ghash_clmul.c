@@ -162,6 +162,18 @@ STATIC __m128i swap(__m128i a)
     return _mm_shuffle_epi8(a, mask);
 }
 
+/**
+ * Load a block of data. A block of GHASH is byte-swapped (see above), so
+ * a block with its bytes already in reversed order is just loaded as it is.
+ */
+STATIC __m128i load_block(const uint8_t *p, int reversed)
+{
+    __m128i x;
+
+    x = LOADU_128(p);
+    return reversed ? x : swap(x);
+}
+
 EXPORT_SYM int ghash_expand_clmul(const uint8_t h[16], struct exp_key **expanded)
 {
     __m128i h128;
@@ -193,12 +205,13 @@ EXPORT_SYM int ghash_destroy_clmul(struct exp_key *expanded)
     return 0;
 }
 
-EXPORT_SYM int ghash_clmul(
+STATIC int ghash_blocks(
         uint8_t y_out[16],
         const uint8_t block_data[],
         size_t len,
         const uint8_t y_in[16],
-        struct exp_key *expanded
+        struct exp_key *expanded,
+        int reversed
         )
 {
     size_t i;
@@ -220,10 +233,10 @@ EXPORT_SYM int ghash_clmul(
         __m128i xm3, xm2, xm1, x;
         __m128i r0, r1, r2, r3, r4, r5, r6;
 
-        xm3 = swap(LOADU_128(&block_data[i]));
-        xm2 = swap(LOADU_128(&block_data[i+16]));
-        xm1 = swap(LOADU_128(&block_data[i+16*2]));
-        x = swap(LOADU_128(&block_data[i+16*3]));
+        xm3 = load_block(&block_data[i], reversed);
+        xm2 = load_block(&block_data[i+16], reversed);
+        xm1 = load_block(&block_data[i+16*2], reversed);
+        x = load_block(&block_data[i+16*3], reversed);
 
         /** (X_{i-3} + Y_{i-4}) * H^4 **/
         r0 = _mm_xor_si128(xm3, y_temp);
@@ -253,7 +266,7 @@ EXPORT_SYM int ghash_clmul(
         __m128i z, xi;
         __m128i prod_hi, prod_lo;
 
-        xi = swap(LOADU_128(&block_data[i]));
+        xi = load_block(&block_data[i], reversed);
         z = _mm_xor_si128(y_temp, xi);
         clmult(&prod_hi, &prod_lo, z, expanded->h[0]);
         y_temp = reduce(prod_hi, prod_lo);
@@ -262,6 +275,32 @@ EXPORT_SYM int ghash_clmul(
     y_temp = swap(y_temp);
     STOREU_128(y_out, y_temp);
     return 0;
+}
+
+EXPORT_SYM int ghash_clmul(
+        uint8_t y_out[16],
+        const uint8_t block_data[],
+        size_t len,
+        const uint8_t y_in[16],
+        struct exp_key *expanded
+        )
+{
+    return ghash_blocks(y_out, block_data, len, y_in, expanded, 0);
+}
+
+/**
+ * Like ghash_clmul(), but the bytes of each block of data are in reversed
+ * order. This is what POLYVAL needs (RFC 8452, Appendix A).
+ */
+EXPORT_SYM int ghash_rev_clmul(
+        uint8_t y_out[16],
+        const uint8_t block_data[],
+        size_t len,
+        const uint8_t y_in[16],
+        struct exp_key *expanded
+        )
+{
+    return ghash_blocks(y_out, block_data, len, y_in, expanded, 1);
 }
 
 /**
@@ -282,6 +321,25 @@ EXPORT_SYM int ghash_at_clmul(
         return ERR_NULL;
 
     return ghash_clmul(y_out, block_data + offset, len, y_in, expanded);
+}
+
+/**
+ * Like ghash_rev_clmul(), but for the len bytes at the given offset
+ * in block_data[] (see ghash_at_clmul()).
+ */
+EXPORT_SYM int ghash_rev_at_clmul(
+        uint8_t y_out[16],
+        const uint8_t block_data[],
+        size_t offset,
+        size_t len,
+        const uint8_t y_in[16],
+        struct exp_key *expanded
+        )
+{
+    if (NULL==block_data)
+        return ERR_NULL;
+
+    return ghash_rev_clmul(y_out, block_data + offset, len, y_in, expanded);
 }
 
 /**

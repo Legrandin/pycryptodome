@@ -91,6 +91,13 @@ follow the link in the last column for its methods and attributes.
       - :ref:`Synthetic Initialization Vector <siv_mode>`
       - confidentiality + authenticity
       - :class:`~Crypto.Cipher._mode_siv.SivMode`
+    * - .. py:data:: MODE_GCM_SIV
+            :no-typesetting:
+
+        ``MODE_GCM_SIV``
+      - :ref:`AES-GCM-SIV <gcm_siv_mode>`
+      - confidentiality + authenticity
+      - :class:`~Crypto.Cipher._mode_gcm_siv.GcmSivMode`
     * - .. py:data:: MODE_CCM
             :no-typesetting:
 
@@ -163,7 +170,8 @@ Which mode should I use?
   the recipient detects if the message was modified or encrypted with a different key.
   It is also the most widely supported by other libraries.
   The other authenticated modes (EAX, OCB, CCM) are equally secure.
-* Use **SIV** if you cannot guarantee that a nonce is never reused with the same key.
+* Use **GCM-SIV** if you cannot guarantee that a nonce is never reused with the same key
+  (or **SIV**, if you need a nonce of another size, or none at all).
 * Use the *confidentiality only* modes, like CTR or CBC, only to interoperate with existing
   protocols, and then combine them with a MAC (like :mod:`Crypto.Hash.HMAC`).
   Never use ECB to encrypt more than one block.
@@ -192,5 +200,5 @@ API
 
 .. automodule:: Crypto.Cipher.AES
    :members:
-   :exclude-members: MODE_ECB, MODE_CBC, MODE_CFB, MODE_OFB, MODE_CTR, MODE_OPENPGP, MODE_CCM, MODE_EAX, MODE_SIV, MODE_GCM, MODE_OCB, MODE_KW, MODE_KWP
+   :exclude-members: MODE_ECB, MODE_CBC, MODE_CFB, MODE_OFB, MODE_CTR, MODE_OPENPGP, MODE_CCM, MODE_EAX, MODE_SIV, MODE_GCM, MODE_OCB, MODE_KW, MODE_KWP, MODE_GCM_SIV
    :member-order: bysource
