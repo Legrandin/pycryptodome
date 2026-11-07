@@ -64,45 +64,13 @@ Why PyCryptodome
   on Linux, macOS and Windows, x86 and ARM, CPython and PyPy.
 * **Permissive license.** BSD 2-Clause, and public domain for the oldest code.
 
-Features
---------
-
-* AES, RSA (with OAEP and PSS), DSA
-* Authenticated encryption modes (GCM, CCM, EAX, SIV, GCM-SIV, OCB, KW, KWP)
-* Hybrid Public Key Encryption (HPKE), also post-quantum with ML-KEM and the hybrid KEM
-  X-Wing (ML-KEM + X25519)
-* Elliptic curve cryptography (NIST P-curves; secp256k1; Ed25519, Ed448, Curve25519, Curve448)
-* Post-quantum signatures: ML-DSA and HashML-DSA (FIPS 204), including external mu
-* A compact API (``nonce`` and ``iv`` attributes for ciphers,
-  automatic generation of random nonces and IVs, simplified CTR cipher mode,
-  and more)
-* SHA-2 hash algorithms, including truncated ones SHA-512/224 and SHA-512/256 (FIPS 180-4)
-* HMAC  and CMAC
-* SHA-3 hash algorithms (FIPS 202) and derived functions (NIST SP-800 185):
-
-  - SHAKE128 and SHAKE256 XOFs
-  - cSHAKE128 and cSHAKE256 XOFs
-  - KMAC128 and KMAC256
-  - TupleHash128 and TupleHash256
-
-* KangarooTwelve, TurboSHAKE128, and TurboSHAKE256 XOFs
-* BLAKE2b and BLAKE2s hash algorithms
-* Salsa20 and ChaCha20/XChaCha20 stream ciphers
-* Poly1305 MAC
-* ChaCha20-Poly1305 and XChaCha20-Poly1305 authenticated ciphers
-* scrypt, bcrypt, HKDF, and NIST SP 800 108r1 Counter Mode key derivation functions
-* Deterministic (EC)DSA and EdDSA
-* Password-protected PKCS#8 key containers
-* Shamir's Secret Sharing scheme
-* Random numbers sourced directly from the operating system
-* Simple installation, including on Windows
-* RSA and DSA key generation largely based on FIPS 186-4
-
-For more information, see the `homepage`_.
+For the full list of algorithms and formats, see the `features page`_.
+For everything else, see the `homepage`_.
 
 For security issues, please send an email to security@pycryptodome.org.
 
 All the code can be downloaded from `GitHub`_.
 
 .. _`homepage`: https://www.pycryptodome.org
+.. _`features page`: https://www.pycryptodome.org/src/features
 .. _GitHub: https://github.com/Legrandin/pycryptodome

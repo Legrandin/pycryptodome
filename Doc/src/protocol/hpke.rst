@@ -27,7 +27,6 @@ the encapsulated session secret (**enc**) to the receiver.
 
 .. figure:: hpke.png
    :align: center
-   :width: 500px
 
 In the basic scheme above, the receiver gets no proof
 of the sender's identity.
@@ -39,14 +38,12 @@ The receiver must have the matching public key:
 
 .. figure:: hpkeAUTH.png
    :align: center
-   :width: 500px
 
 **Second variant: PSK mode**. The sender and the receiver can agree on a secret key
 (a pre-shared key, PSK, of at least 32 random bytes) and use it for both encryption and decryption.
 
 .. figure:: hpkePSK.png
    :align: center
-   :width: 500px
 
 Finally, the two authentication modes can also be combined (*AuthPSK* mode).
 

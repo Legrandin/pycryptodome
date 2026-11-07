@@ -38,6 +38,8 @@ For example, if you need to derive two AES256 keys::
     key1 = keys[:32]
     key2 = keys[32:]
 
+.. _pbkdf2_func:
+
 .. autofunction:: Crypto.Protocol.KDF.PBKDF2
 
 scrypt
@@ -196,5 +198,7 @@ PBKDF1 is an old key derivation function defined in version 2.0 of the PKCS#5 st
 
 .. warning::
     Newer applications should use the more secure and versatile :ref:`scrypt <scrypt_func>` instead.
+
+.. _pbkdf1_func:
 
 .. autofunction:: Crypto.Protocol.KDF.PBKDF1

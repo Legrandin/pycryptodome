@@ -183,6 +183,9 @@ html_theme_options = {
     },
 }
 
+# In the "On this page" sidebar, show update() instead of CcmMode.update()
+toc_object_entries_show_parents = "hide"
+
 # Links to the Python documentation (for instance, for bytes or ValueError)
 intersphinx_mapping = {"python": ("https://docs.python.org/3", None)}
 

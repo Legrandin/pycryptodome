@@ -11,5 +11,46 @@
 /* The logo at the top of the sidebar is square: keep it from taking the full
    width of the sidebar, which would push the navigation down */
 .sidebar-logo {
-    width: 160px;
+    width: 120px;
+}
+
+/* The diagrams have a white background: invert them in dark mode */
+@media (prefers-color-scheme: dark) {
+    body:not([data-theme="light"]) article img {
+        filter: invert(1) hue-rotate(180deg);
+    }
+}
+body[data-theme="dark"] article img {
+    filter: invert(1) hue-rotate(180deg);
+}
+
+/* Features page: the categories have small headings */
+section#features h2 {
+    font-size: 1em;
+    font-weight: 700;
+    margin-top: 1.5em;
+    margin-bottom: 0.25em;
+}
+
+/* Features page: lists of short items */
+@media (min-width: 46em) {
+    .two-columns {
+        columns: 2;
+    }
+}
+.two-columns li {
+    break-inside: avoid;
+}
+/* The margin of the theme only stays at the top of the first column */
+ul.two-columns li > p:first-child {
+    margin-top: 0;
+}
+
+/* Features page: the "legacy" label */
+.legacy {
+    border: 1px solid var(--color-foreground-border);
+    border-radius: 0.25em;
+    color: var(--color-foreground-muted);
+    font-size: 0.8em;
+    padding: 0 0.3em;
 }

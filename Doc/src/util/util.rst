@@ -8,6 +8,8 @@ Useful modules that don't belong in any other package.
     
     asn1
 
+.. _padding_module:
+
 :mod:`Crypto.Util.Padding` module
 ---------------------------------
 
