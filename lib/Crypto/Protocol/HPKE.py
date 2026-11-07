@@ -317,7 +317,6 @@ class HPKE_Cipher:
             raise ValueError(f"Unknown AEAD cipher ID {self._aead_id:#x}")
         if self._sequence >= self._max_sequence:
             raise MessageLimitReachedError()
-        self._sequence += 1
         return cipher
 
     def seal(self, plaintext: bytes, auth_data: Optional[bytes] = None) -> bytes:
@@ -345,6 +344,7 @@ class HPKE_Cipher:
         if auth_data:
             cipher.update(auth_data)
         ct, tag = cipher.encrypt_and_digest(plaintext)
+        self._sequence += 1
         return ct + tag
 
     def unseal(self, ciphertext: bytes, auth_data: Optional[bytes] = None) -> bytes:
@@ -352,6 +352,8 @@ class HPKE_Cipher:
 
         This method can be invoked multiple times
         to unseal an ordered sequence of messages.
+        If a message is rejected, the context does not move on:
+        the next call still expects the same message of the sequence.
 
         Args:
           ciphertext:
@@ -365,7 +367,7 @@ class HPKE_Cipher:
 
         Raises:
           ValueError: if the ciphertext (in combination with the AAD) is not valid.
-            At the first call of ``unseal()``, it can also mean that one of the
+            Until a call of ``unseal()`` succeeds, it can also mean that one of the
             keys or parameters used to set up the context is wrong or missing.
         """
 
@@ -382,9 +384,11 @@ class HPKE_Cipher:
         try:
             pt = cipher.decrypt_and_verify(ciphertext[: -self._Nt], ciphertext[-self._Nt :])
         except ValueError:
-            if self._sequence == 1:
+            if self._sequence == 0:
                 raise ValueError("Incorrect HPKE keys/parameters or invalid message (wrong MAC tag)")
             raise ValueError("Invalid message (wrong MAC tag)")
+        # The sequence number only advances on success (RFC 9180, Section 5.2)
+        self._sequence += 1
         return pt
 
     def export(self, exporter_context: bytes, length: int) -> bytes:
@@ -510,8 +514,7 @@ def new(
         (with ``HPKE.AEAD.EXPORT_ONLY``, only for that).
         For the receiver,
         correctness of all the keys and parameters will only
-        be assessed with the first call to ``unseal()``,
-        and never by ``export()``.
+        be assessed by ``unseal()``, and never by ``export()``.
     """
 
     try:

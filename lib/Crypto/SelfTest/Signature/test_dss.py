@@ -1471,6 +1471,11 @@ class TestLowS:
         with pytest.raises(ValueError, match="only for ECC keys"):
             DSS.new(key, "deterministic-rfc6979", low_s=True)
 
+    def test_keyword_only(self):
+        key = ECC.generate(curve="P-256")
+        with pytest.raises(TypeError):
+            DSS.new(key, "fips-186-3", "binary", None, True)
+
 
 class TestModes:
     nist_curves = ["P-192", "P-224", "P-256", "P-384", "P-521"]

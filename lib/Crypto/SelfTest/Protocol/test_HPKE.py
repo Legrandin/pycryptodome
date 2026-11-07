@@ -128,6 +128,24 @@ class TestHPKE:
         with pytest.raises(ValueError):
             decryptor.unseal(ct)
 
+    def test_unseal_after_invalid_ct(self):
+        # A rejected ciphertext must not advance the sequence number
+        aead_id = HPKE.AEAD.AES128_GCM
+
+        encryptor = HPKE.new(receiver_key=self.key1.public_key(), aead_id=aead_id)
+        ct1 = encryptor.seal(b"ABC")
+        ct2 = encryptor.seal(b"DEF")
+
+        decryptor = HPKE.new(receiver_key=self.key1, aead_id=aead_id, enc=encryptor.enc)
+
+        with pytest.raises(ValueError):
+            decryptor.unseal(ct2)
+        assert decryptor.unseal(ct1) == b"ABC"
+
+        with pytest.raises(ValueError):
+            decryptor.unseal(ct1)
+        assert decryptor.unseal(ct2) == b"DEF"
+
     def test_x25519_mode_0(self):
         # RFC x9180, A.1.1.1, seq 0 and 1
 

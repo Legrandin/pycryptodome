@@ -317,6 +317,7 @@ def new(
     mode: Literal["fips-186-3", "sec1", "deterministic-rfc6979"],
     encoding: Literal["binary", "der"] = "binary",
     randfunc: Optional[Callable[[int], bytes]] = None,
+    *,
     low_s: bool = False,
 ) -> Union[DeterministicDsaSigScheme, FipsDsaSigScheme, FipsEcDsaSigScheme]:
     """Create a signature object :class:`DssSigScheme` that
