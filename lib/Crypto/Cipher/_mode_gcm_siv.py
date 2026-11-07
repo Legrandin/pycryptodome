@@ -25,7 +25,6 @@ from Crypto.Random import get_random_bytes
 from Crypto.Util import Counter
 from Crypto.Util._raw_api import is_buffer
 from Crypto.Util._threads import threads_param
-from Crypto.Util.number import bytes_to_long, long_to_bytes
 from Crypto.Util.strxor import strxor
 
 if TYPE_CHECKING:
@@ -37,13 +36,6 @@ Buffer = Union[bytes, bytearray, memoryview]
 # See RFC 8452, Section 6 (the ciphertext is 16 bytes longer, because of the tag)
 _MAX_MSG_LEN = 2**36
 _MAX_AAD_LEN = 2**36
-
-
-def _mul_x_ghash(element: bytes) -> bytes:
-    """Multiply an element of the GHASH field by x (RFC 8452, Appendix A)"""
-
-    value = bytes_to_long(element)
-    return long_to_bytes((value >> 1) ^ ((value & 1) * (0xE1 << 120)), 16)
 
 
 class _Polyval:
@@ -58,11 +50,14 @@ class _Polyval:
     The C code takes care of reversing the blocks: GHASH must byte-swap each block
     for the carry-less multiplication, so here that step and the reversal cancel out.
 
+    The C code also derives the GHASH key, because H is secret and Python integers
+    do not run in constant time.
+
     The input can be split in pieces of any size.
     """
 
     def __init__(self, subkey: bytes, ghash_c: Any, threads: int = 1) -> None:
-        self._ghash = _GHASH(_mul_x_ghash(subkey[::-1]), ghash_c, threads, reversed_blocks=True)
+        self._ghash = _GHASH(subkey, ghash_c, threads, reversed_blocks=True)
         self._cache = b""
 
     def update(self, data: Buffer) -> None:

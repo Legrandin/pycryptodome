@@ -46,8 +46,10 @@ _ghash_api_template = """
                     const uint8_t y_in[16],
                     const void *exp_key);
     int ghash_expand_%imp%(const uint8_t h[16],
-                           void **ghash_tables);
-    int ghash_destroy_%imp%(void *ghash_tables);
+                           void **exp_key);
+    int ghash_expand_rev_%imp%(const uint8_t h[16],
+                               void **exp_key);
+    int ghash_destroy_%imp%(void *exp_key);
     int ghash_at_%imp%(uint8_t y_out[16],
                        const uint8_t block_data[],
                        size_t offset,
@@ -79,6 +81,7 @@ def _build_impl(lib, postfix):
     funcs = (
         "ghash",
         "ghash_expand",
+        "ghash_expand_rev",
         "ghash_destroy",
         "ghash_at",
         "ghash_combine",
@@ -156,7 +159,8 @@ class _GHASH:
        GHASH(A || B) = GHASH(A) * H^{len(B)} + GHASH(B)
 
     If ``reversed_blocks`` is true, the input is made up by the blocks
-    X_1, X_2, .. X_m with their bytes in reversed order.
+    X_1, X_2, .. X_m with their bytes in reversed order, and the subkey
+    is the POLYVAL key K, for which H = mulX_GHASH(ByteReverse(K)).
     """
 
     def __init__(self, subkey, ghash_c, threads=1, reversed_blocks=False):
@@ -168,7 +172,8 @@ class _GHASH:
         self._ghash_at = ghash_c.ghash_rev_at if reversed_blocks else ghash_c.ghash_at
 
         self._exp_key = VoidPointer()
-        result = ghash_c.ghash_expand(c_uint8_ptr(subkey), self._exp_key.address_of())
+        ghash_expand = ghash_c.ghash_expand_rev if reversed_blocks else ghash_c.ghash_expand
+        result = ghash_expand(c_uint8_ptr(subkey), self._exp_key.address_of())
         if result:
             raise ValueError("Error %d while expanding the GHASH key" % result)
 

@@ -174,9 +174,8 @@ STATIC __m128i load_block(const uint8_t *p, int reversed)
     return reversed ? x : swap(x);
 }
 
-EXPORT_SYM int ghash_expand_clmul(const uint8_t h[16], struct exp_key **expanded)
+STATIC int expand_key(const uint8_t h[16], struct exp_key **expanded, int reversed)
 {
-    __m128i h128;
     unsigned i;
 
     if (NULL==h || NULL==expanded)
@@ -186,9 +185,8 @@ EXPORT_SYM int ghash_expand_clmul(const uint8_t h[16], struct exp_key **expanded
     if (NULL == *expanded)
         return ERR_MEMORY;
 
-    h128 = swap(LOADU_128(h));
-    (*expanded)->h[0] = multx(h128);    /** x*H **/
-    
+    (*expanded)->h[0] = reversed ? LOADU_128(h) : multx(swap(LOADU_128(h)));    /** x*H **/
+
     for (i=1; i<4; i++) {
         __m128i r0, r1;
         
@@ -197,6 +195,23 @@ EXPORT_SYM int ghash_expand_clmul(const uint8_t h[16], struct exp_key **expanded
     }
 
     return 0;
+}
+
+EXPORT_SYM int ghash_expand_clmul(const uint8_t h[16], struct exp_key **expanded)
+{
+    return expand_key(h, expanded, 0);
+}
+
+/**
+ * Expand the POLYVAL key h (RFC 8452), for ghash_rev_clmul(): the result is the
+ * same as ghash_expand_clmul() with the GHASH key mulX_GHASH(ByteReverse(h)).
+ *
+ * multx() undoes mulX_GHASH() and swap() undoes ByteReverse(), so the key is
+ * only loaded, and no operation depends on its value.
+ */
+EXPORT_SYM int ghash_expand_rev_clmul(const uint8_t h[16], struct exp_key **expanded)
+{
+    return expand_key(h, expanded, 1);
 }
 
 EXPORT_SYM int ghash_destroy_clmul(struct exp_key *expanded)
