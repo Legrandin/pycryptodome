@@ -8,7 +8,7 @@ import pytest
 from Crypto import MessageTooLongError
 from Crypto.Cipher import AES, _mode_gcm_siv
 from Crypto.Cipher._mode_gcm import _GHASH, _ghash_clmul, _ghash_portable
-from Crypto.Cipher._mode_gcm_siv import _mul_x_ghash, _Polyval
+from Crypto.Cipher._mode_gcm_siv import _Polyval
 from Crypto.Hash import SHAKE128
 from Crypto.SelfTest.loader import load_test_vectors_wycheproof, wycheproof_id
 from Crypto.Util._bytes import tobytes
@@ -31,6 +31,13 @@ def get_tag_random(tag, length):
     return SHAKE128.new(data=tobytes(tag)).read(length)
 
 
+def mul_x_ghash(element):
+    """Reference for mulX_GHASH (RFC 8452, Appendix A), only for public test values"""
+
+    value = int.from_bytes(element, "big")
+    return ((value >> 1) ^ ((value & 1) * (0xE1 << 120))).to_bytes(16, "big")
+
+
 class TestPolyval:
     # RFC 8452, Appendix A
     h = unhexlify("25629347589242761d31f826ba4b757b")
@@ -40,7 +47,7 @@ class TestPolyval:
     ghash = unhexlify("bd9b3997046731fb96251b91f9c99d7a")
 
     def test_mul_x_ghash(self):
-        assert _mul_x_ghash(self.h[::-1]) == unhexlify("dcbaa5dd137c188ebb21492c23c9b112")
+        assert mul_x_ghash(self.h[::-1]) == unhexlify("dcbaa5dd137c188ebb21492c23c9b112")
 
     @pytest.mark.parametrize("impl", GHASH_IMPLS)
     def test_ghash_of_appendix_a(self, impl):
@@ -84,9 +91,30 @@ class TestPolyval:
         # The definition in Appendix A, with the blocks reversed here
         data = get_tag_random("polyval", blocks * 16)
         reversed_blocks = b"".join(data[i : i + 16][::-1] for i in range(0, len(data), 16))
-        ghash = _GHASH(_mul_x_ghash(self.h[::-1]), impl).update(reversed_blocks).digest()
+        ghash = _GHASH(mul_x_ghash(self.h[::-1]), impl).update(reversed_blocks).digest()
 
         polyval = _Polyval(self.h, impl)
+        polyval.update(data)
+        assert polyval.digest() == ghash[::-1]
+
+    @pytest.mark.parametrize("impl", GHASH_IMPLS)
+    @pytest.mark.parametrize(
+        "key",
+        [
+            bytes(16),
+            b"\x01" + bytes(15),  # The bit that selects the reduction
+            b"\xfe" + b"\xff" * 15,
+            b"\xff" * 16,
+            bytes(15) + b"\x80",
+            bytes(15) + b"\x01",
+        ],
+    )
+    def test_key_derivation(self, impl, key):
+        data = get_tag_random("polyval key", 16 * 9)
+        reversed_blocks = b"".join(data[i : i + 16][::-1] for i in range(0, len(data), 16))
+        ghash = _GHASH(mul_x_ghash(key[::-1]), impl).update(reversed_blocks).digest()
+
+        polyval = _Polyval(key, impl)
         polyval.update(data)
         assert polyval.digest() == ghash[::-1]
 

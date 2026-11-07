@@ -186,7 +186,7 @@ STATIC void store_swap(uint8_t *p, uint64x2_t a)
     vst1q_u8(p, vrev64q_u8(vreinterpretq_u8_u64(swap_lanes(a))));
 }
 
-EXPORT_SYM int ghash_expand_pmull(const uint8_t h[16], struct exp_key **expanded)
+STATIC int expand_key(const uint8_t h[16], struct exp_key **expanded, int reversed)
 {
     unsigned i;
 
@@ -197,13 +197,30 @@ EXPORT_SYM int ghash_expand_pmull(const uint8_t h[16], struct exp_key **expanded
     if (NULL == *expanded)
         return ERR_MEMORY;
 
-    (*expanded)->h[0] = multx(load_swap(h));    /** x*H **/
+    (*expanded)->h[0] = reversed ? load_block(h, 1) : multx(load_swap(h));  /** x*H **/
 
     for (i=1; i<GROUP; i++) {
         (*expanded)->h[i] = gf_mult((*expanded)->h[i-1], (*expanded)->h[0]);
     }
 
     return 0;
+}
+
+EXPORT_SYM int ghash_expand_pmull(const uint8_t h[16], struct exp_key **expanded)
+{
+    return expand_key(h, expanded, 0);
+}
+
+/**
+ * Expand the POLYVAL key h (RFC 8452), for ghash_rev_pmull(): the result is the
+ * same as ghash_expand_pmull() with the GHASH key mulX_GHASH(ByteReverse(h)).
+ *
+ * multx() undoes mulX_GHASH() and load_swap() undoes ByteReverse(), so the key
+ * is only loaded, and no operation depends on its value.
+ */
+EXPORT_SYM int ghash_expand_rev_pmull(const uint8_t h[16], struct exp_key **expanded)
+{
+    return expand_key(h, expanded, 1);
 }
 
 EXPORT_SYM int ghash_destroy_pmull(struct exp_key *expanded)

@@ -611,24 +611,52 @@ EXPORT_SYM int ghash_combine_portable(
 /**
  * Expand the GHASH key H.
  */
-EXPORT_SYM int ghash_expand_portable(const uint8_t h[16], t_exp_key **ghash_tables)
+EXPORT_SYM int ghash_expand_portable(const uint8_t h[16], t_exp_key **exp_key)
 {
-    t_exp_key *exp_key;
-
-    if (NULL==h || NULL==ghash_tables)
+    if (NULL==h || NULL==exp_key)
         return ERR_NULL;
 
-    *ghash_tables = exp_key = calloc(1, sizeof(t_exp_key));
-    if (NULL == exp_key)
+    *exp_key = calloc(1, sizeof(t_exp_key));
+    if (NULL == *exp_key)
         return ERR_MEMORY;
 
-    expand_key_bytes(exp_key, h);
+    expand_key_bytes(*exp_key, h);
 
     return 0;
 }
 
-EXPORT_SYM int ghash_destroy_portable(t_exp_key *ghash_tables)
+/**
+ * Expand the POLYVAL key h (RFC 8452), for ghash_rev_portable(): the result is
+ * the same as ghash_expand_portable() with the key mulX_GHASH(ByteReverse(h)).
+ */
+EXPORT_SYM int ghash_expand_rev_portable(const uint8_t h[16], t_exp_key **exp_key)
 {
-    free(ghash_tables);
+    word_t hw[N_WORDS], mask;
+    unsigned i;
+
+    if (NULL==h || NULL==exp_key)
+        return ERR_NULL;
+
+    *exp_key = calloc(1, sizeof(t_exp_key));
+    if (NULL == *exp_key)
+        return ERR_MEMORY;
+
+    load_element_rev(hw, h);
+
+    /** mulX_GHASH: shift right by 1 bit, and reduce without any branch on the key **/
+    mask = (word_t)0 - (hw[0] & 1);
+    for (i=0; i<N_WORDS-1; i++) {
+        hw[i] = (hw[i] >> 1) | (hw[i+1] << (WORD_BITS-1));
+    }
+    hw[N_WORDS-1] = (hw[N_WORDS-1] >> 1) ^ (mask & ((word_t)0xE1 << (WORD_BITS-8)));
+
+    expand_key(*exp_key, hw);
+
+    return 0;
+}
+
+EXPORT_SYM int ghash_destroy_portable(t_exp_key *exp_key)
+{
+    free(exp_key);
     return 0;
 }
