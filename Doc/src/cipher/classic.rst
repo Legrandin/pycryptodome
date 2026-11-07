@@ -474,3 +474,67 @@ OpenPGP cipher object
 .. autoclass:: Crypto.Cipher._mode_openpgp.OpenPgpMode
    :members:
    :member-order: bysource
+
+.. _xts_mode:
+
+XTS mode
+--------
+*XEX-based Tweaked-codebook mode with ciphertext Stealing*,
+defined in `IEEE 1619 <https://standards.ieee.org/ieee/1619/7168/>`_
+and `NIST SP 800-38E <https://csrc.nist.gov/pubs/sp/800/38/e/final>`_.
+It is meant for encrypting storage, such as a disk,
+where each *data unit* (such as a sector) is stored in place, and the ciphertext cannot
+be longer than the plaintext. It is only available for AES.
+
+.. warning::
+
+    XTS does not authenticate the data, and it has no room for a nonce or a tag.
+    An attacker who can modify the ciphertext can turn it into random-looking plaintext
+    (one block for each block changed), can restore an old version of a data unit,
+    and can see if a block in a data unit has gone back to a previous value.
+
+    Unless you are constrained by the storage format, use an :doc:`authenticated mode <modern>` instead.
+
+Each cipher object processes one data unit::
+
+    Crypto.Cipher.AES.new(key, AES.MODE_XTS, tweak=tweak)
+
+The arguments are:
+
+* ``key``: 32 bytes (two AES-128 keys) or 64 bytes (two AES-256 keys), concatenated.
+  The two keys must be different, and independent of each other: generate the whole value at random.
+* ``tweak``: 16 bytes that identify the data unit, and that must be different for each data unit
+  encrypted with the same key.
+  It is mandatory: it must come from the position of the data, so it is not generated for you,
+  and it is not stored with the ciphertext.
+  The standard way is the number of the sector, as a little-endian value: ``number.to_bytes(16, "little")``.
+
+The methods :meth:`~Crypto.Cipher._mode_xts.XtsMode.encrypt` and :meth:`~Crypto.Cipher._mode_xts.XtsMode.decrypt`
+return data of the same length as their input.
+A data unit must be at least 16 bytes long, and it cannot be longer than 16 MiB (2\ :sup:`20` blocks).
+There is no padding, as its length does not need to be a multiple of the block size.
+
+A data unit can be processed in several pieces. Each one must have a length that is a multiple
+of 16 bytes, except for the last one, which can have any length above 16 bytes.
+
+Example of encryption and decryption of a disk sector:
+
+.. code-block:: pycon
+
+    >>> from Crypto.Cipher import AES
+    >>> from Crypto.Random import get_random_bytes
+    >>>
+    >>> key = get_random_bytes(64)
+    >>> sector_number = 1234
+    >>> tweak = sector_number.to_bytes(16, "little")
+    >>> sector = b"A" * 512
+    >>>
+    >>> ciphertext = AES.new(key, AES.MODE_XTS, tweak=tweak).encrypt(sector)
+    >>> assert AES.new(key, AES.MODE_XTS, tweak=tweak).decrypt(ciphertext) == sector
+
+XTS cipher object
+~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Crypto.Cipher._mode_xts.XtsMode
+   :members:
+   :member-order: bysource

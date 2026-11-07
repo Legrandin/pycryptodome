@@ -415,6 +415,9 @@ add_test(NAME test_pkcs1 COMMAND test_pkcs1)
 add_executable(test_raw_ctr test_raw_ctr.c ../raw_ctr.c)
 add_test(NAME test_raw_ctr COMMAND test_raw_ctr)
 
+add_executable(test_raw_xts test_raw_xts.c ../raw_xts.c)
+add_test(NAME test_raw_xts COMMAND test_raw_xts)
+
 # The 4-state Keccak for 64-bit ARM (it does nothing on other CPUs)
 add_executable(test_keccak_x4 test_keccak_x4.c)
 add_test(NAME test_keccak_x4 COMMAND test_keccak_x4)

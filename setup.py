@@ -186,6 +186,9 @@ ext_modules = [
         "Crypto.Cipher._raw_ctr", include_dirs=["src/"], sources=["src/raw_ctr.c"], py_limited_api=True
     ),
     Extension("Crypto.Cipher._raw_ocb", sources=["src/raw_ocb.c"], py_limited_api=True),
+    Extension(
+        "Crypto.Cipher._raw_xts", include_dirs=["src/"], sources=["src/raw_xts.c"], py_limited_api=True
+    ),
     # Stream ciphers
     Extension("Crypto.Cipher._ARC4", include_dirs=["src/"], sources=["src/ARC4.c"], py_limited_api=True),
     Extension(

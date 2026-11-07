@@ -35,6 +35,7 @@ Traditional modes of operation for block ciphers
 * :ref:`OFB <ofb_mode>`
 * :ref:`CTR <ctr_mode>`
 * :ref:`OpenPGP <openpgp_mode>` (a variant of CFB, RFC 4880)
+* :ref:`XTS <xts_mode>` (AES only, for storage; IEEE 1619)
 
 Authenticated encryption
 ~~~~~~~~~~~~~~~~~~~~~~~~

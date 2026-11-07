@@ -50,6 +50,7 @@ if TYPE_CHECKING:
     from Crypto.Cipher._mode_ofb import OfbMode
     from Crypto.Cipher._mode_openpgp import OpenPgpMode
     from Crypto.Cipher._mode_siv import SivMode
+    from Crypto.Cipher._mode_xts import XtsMode
     from Crypto.Util.Counter import CounterParams
 
 Buffer = Union[bytes, bytearray, memoryview]
@@ -68,6 +69,7 @@ MODE_OCB: Literal[12] = 12  #: Offset Code Book (:ref:`ocb_mode`)
 MODE_KW: Literal[13] = 13  #: Key Wrap (:ref:`kw_mode`)
 MODE_KWP: Literal[14] = 14  #: Key Wrap with Padding (:ref:`kwp_mode`)
 MODE_GCM_SIV: Literal[15] = 15  #: AES-GCM-SIV (:ref:`gcm_siv_mode`)
+MODE_XTS: Literal[16] = 16  #: XEX with ciphertext stealing, for storage (:ref:`xts_mode`)
 
 _cproto = """
         int AES_start_operation(const uint8_t key[],
@@ -271,6 +273,10 @@ def new(
 ) -> GcmSivMode: ...
 
 
+@overload
+def new(key: Buffer, mode: Literal[16], *, tweak: Buffer, use_aesni: bool = ...) -> XtsMode: ...
+
+
 def new(key: Buffer, mode: int, *args: Any, **kwargs: Any) -> Any:
     """Create a new AES cipher.
 
@@ -283,6 +289,9 @@ def new(key: Buffer, mode: int, *args: Any, **kwargs: Any) -> Any:
         For ``MODE_SIV`` only, it doubles to 32, 48, or 64 bytes.
 
         For ``MODE_GCM_SIV`` only, it must be 16 or 32 bytes long.
+
+        For ``MODE_XTS`` only, it must be 32 or 64 bytes long: two AES-128 or
+        AES-256 keys (concatenated), which must be different.
       mode (a ``MODE_*`` constant):
         The chaining mode to use for encryption or decryption.
         If in doubt, use ``MODE_GCM`` (with a random 12-byte ``nonce``).
@@ -385,6 +394,11 @@ def new(key: Buffer, mode: int, *args: Any, **kwargs: Any) -> Any:
         fewer threads are used, or none at all.
         For best results, do not exceed the number of physical cores.
         The output does not depend on the number of threads.
+
+      tweak (bytes/bytearray/memoryview):
+        (Only ``MODE_XTS``, where it is mandatory).
+        The value that identifies the data unit, 16 bytes long.
+        For a sector number, use ``number.to_bytes(16, "little")``.
 
     Returns:
         :ref:`A cipher object <aes_modes>`: Its class depends on ``mode``,

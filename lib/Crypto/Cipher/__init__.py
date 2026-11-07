@@ -45,6 +45,7 @@ class BlockCipherParams(TypedDict, total=False):
     assoc_len: int
     initial_value: Union[int, Buffer]
     counter: CounterParams
+    tweak: Buffer
     threads: int
 
 
@@ -56,6 +57,8 @@ def _create_cipher(factory, key, mode, *args, **kwargs):
             if len(args) > 1:
                 raise TypeError("Too many arguments for this mode")
             kwargs["nonce"] = args[0]
+        elif mode == 16:
+            raise TypeError("The tweak must be passed as a keyword argument")
         elif mode in (2, 3, 5, 7):
             if len(args) > 1:
                 raise TypeError("Too many arguments for this mode")
@@ -126,6 +129,10 @@ def _create_cipher(factory, key, mode, *args, **kwargs):
             from Crypto.Cipher._mode_gcm_siv import _create_gcm_siv_cipher
 
             res = _create_gcm_siv_cipher(factory, **kwargs)
+        elif mode == 16:
+            from Crypto.Cipher._mode_xts import _create_xts_cipher
+
+            res = _create_xts_cipher(factory, **kwargs)
 
     if res is None:
         raise ValueError("Mode not supported")

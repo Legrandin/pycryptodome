@@ -8,6 +8,8 @@ New features
 ------------
 * Added the mode ``MODE_GCM_SIV`` to ``Crypto.Cipher.AES`` (AES-GCM-SIV, RFC 8452),
   for authenticated encryption that is resistant to the reuse of a nonce.
+* Added the mode ``MODE_XTS`` to ``Crypto.Cipher.AES`` (IEEE 1619, NIST SP 800-38E),
+  for the encryption of storage.
 
 4.4.0 (7 November 2026)
 +++++++++++++++++++++++++++

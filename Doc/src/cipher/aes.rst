@@ -147,6 +147,13 @@ follow the link in the last column for its methods and attributes.
       - :ref:`Electronic CodeBook <ecb_mode>`
       - confidentiality only (weak)
       - :class:`~Crypto.Cipher._mode_ecb.EcbMode`
+    * - .. py:data:: MODE_XTS
+            :no-typesetting:
+
+        ``MODE_XTS``
+      - :ref:`XEX with ciphertext stealing <xts_mode>`
+      - confidentiality only, for storage
+      - :class:`~Crypto.Cipher._mode_xts.XtsMode`
     * - .. py:data:: MODE_KW
             :no-typesetting:
 
@@ -200,5 +207,5 @@ API
 
 .. automodule:: Crypto.Cipher.AES
    :members:
-   :exclude-members: MODE_ECB, MODE_CBC, MODE_CFB, MODE_OFB, MODE_CTR, MODE_OPENPGP, MODE_CCM, MODE_EAX, MODE_SIV, MODE_GCM, MODE_OCB, MODE_KW, MODE_KWP, MODE_GCM_SIV
+   :exclude-members: MODE_ECB, MODE_CBC, MODE_CFB, MODE_OFB, MODE_CTR, MODE_OPENPGP, MODE_CCM, MODE_EAX, MODE_SIV, MODE_GCM, MODE_OCB, MODE_KW, MODE_KWP, MODE_GCM_SIV, MODE_XTS
    :member-order: bysource
