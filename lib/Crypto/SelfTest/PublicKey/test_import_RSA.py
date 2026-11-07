@@ -374,6 +374,17 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         assert openssh_1[0] == openssh_2[0]
         assert openssh_1[1] == openssh_2[1]
 
+    @pytest.mark.parametrize("kwargs", [{}, {"passphrase": "secret"}])
+    def test_export_openssh_private(self, kwargs):
+        # A private key must not silently turn into its public key
+        key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
+        with pytest.raises(ValueError, match="Private keys cannot be exported"):
+            key.export_key("OpenSSH", **kwargs)
+
+    def test_export_openssh_public_key_of_private(self):
+        key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
+        assert key.public_key().export_key("OpenSSH") == RSA.construct([self.n, self.e]).export_key("OpenSSH")
+
     def testExportKey7(self):
         key = RSA.construct([self.n, self.e, self.d, self.p, self.q, self.pInv])
         derKey = key.export_key("DER", pkcs=8)

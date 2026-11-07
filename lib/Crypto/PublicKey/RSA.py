@@ -442,7 +442,8 @@ class RsaKey:
           ValueError:when the format is unknown, when you try to encrypt a private
             key with *DER* format and PKCS#1, when you pass ``protection``
             or ``prot_params`` with PKCS#1 or without a passphrase,
-            or when the passphrase is empty.
+            when the passphrase is empty, or when you export a private key
+            in the ``'OpenSSH'`` format.
 
         .. warning::
             If you don't provide a pass phrase, the private key will be
@@ -464,6 +465,8 @@ class RsaKey:
             randfunc = Random.get_random_bytes
 
         if format == "OpenSSH":
+            if self.has_private():
+                raise ValueError("Private keys cannot be exported in the 'OpenSSH' format")
             e_bytes, n_bytes = (x.to_bytes() for x in (self._e, self._n))
             if e_bytes[0] & 0x80:
                 e_bytes = b"\x00" + e_bytes

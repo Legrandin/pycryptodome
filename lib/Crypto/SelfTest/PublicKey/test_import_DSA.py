@@ -252,6 +252,17 @@ tBxWrkP9MA2JJi5O/YmUP5mmUbA4iAQWAhRevZo/C4IGnZhCCYazFCFQJXVgZQ==
         encoded = key.export_key("OpenSSH")
         assert self.ssh_pub == encoded
 
+    @pytest.mark.parametrize("kwargs", [{}, {"passphrase": "secret"}])
+    def test_export_openssh_private(self, kwargs):
+        # A private key must not silently turn into its public key
+        key = DSA.construct((self.y, self.g, self.p, self.q, self.x))
+        with pytest.raises(ValueError, match="Private keys cannot be exported"):
+            key.export_key("OpenSSH", **kwargs)
+
+    def test_export_openssh_public_key_of_private(self):
+        key = DSA.construct((self.y, self.g, self.p, self.q, self.x))
+        assert key.public_key().export_key("OpenSSH") == self.ssh_pub
+
     # 8. Encrypted OpenSSL/OpenSSH
     pem_private_encrypted = """\
 -----BEGIN DSA PRIVATE KEY-----

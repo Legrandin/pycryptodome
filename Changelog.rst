@@ -12,6 +12,12 @@ New features
   for the encryption of storage.
 * CTR mode is about 35% faster on short ``bytes`` messages.
 
+Breaking changes
+----------------
+* ``export_key`` of RSA and DSA keys raises ``ValueError`` for a private key in the ``'OpenSSH'`` format,
+  like ECC keys. It used to silently return the public key, ignoring any ``passphrase``.
+  To export the public key, use ``key.public_key().export_key('OpenSSH')``.
+
 4.4.0 (7 November 2026)
 +++++++++++++++++++++++++++
 
