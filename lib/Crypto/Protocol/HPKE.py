@@ -352,6 +352,8 @@ class HPKE_Cipher:
 
         This method can be invoked multiple times
         to unseal an ordered sequence of messages.
+        If a message is rejected, the context does not move on:
+        the next call still expects the same message of the sequence.
 
         Args:
           ciphertext:
@@ -365,7 +367,7 @@ class HPKE_Cipher:
 
         Raises:
           ValueError: if the ciphertext (in combination with the AAD) is not valid.
-            At the first call of ``unseal()``, it can also mean that one of the
+            Until a call of ``unseal()`` succeeds, it can also mean that one of the
             keys or parameters used to set up the context is wrong or missing.
         """
 
@@ -512,8 +514,7 @@ def new(
         (with ``HPKE.AEAD.EXPORT_ONLY``, only for that).
         For the receiver,
         correctness of all the keys and parameters will only
-        be assessed with the first call to ``unseal()``,
-        and never by ``export()``.
+        be assessed by ``unseal()``, and never by ``export()``.
     """
 
     try:

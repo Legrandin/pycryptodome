@@ -20,6 +20,11 @@ Resolved issues
 * ``ECC.import_key`` raised ``TypeError`` instead of ``ValueError`` for an OpenSSH public key
   with an unsupported curve or key type, or with a malformed body.
 * ``ECC.import_key`` accepted an OpenSSH key (public or private) whose curve did not match its key type.
+* GH#960: In HPKE, a message rejected by ``unseal()`` consumed a sequence number, so all later
+  messages of that context failed too. The sequence number now only advances when ``unseal()``
+  succeeds (RFC 9180, Section 5.2). Thanks to Zulfareen Shaikh.
+* In HPKE, a ``seal()`` that raised an exception also consumed a sequence number,
+  so the receiver could not unseal the messages that followed.
 
 4.3.0 (2 November 2026)
 ++++++++++++++++++++++++++
