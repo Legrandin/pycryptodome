@@ -1,6 +1,14 @@
 Changelog
 =========
 
+4.5.0 (Under development)
++++++++++++++++++++++++++++
+
+New features
+------------
+* Added the mode ``MODE_GCM_SIV`` to ``Crypto.Cipher.AES`` (AES-GCM-SIV, RFC 8452),
+  for authenticated encryption that is resistant to the reuse of a nonce.
+
 4.4.0 (7 November 2026)
 +++++++++++++++++++++++++++
 
@@ -14,8 +22,6 @@ New features
 * GH#759: Added the parameter ``low_s`` to ``Crypto.Signature.DSS.new``, for ECDSA signatures
   in the low-S form (for all curves): signing normalizes ``s``, and verifying rejects a high ``s``.
 * ECDSA signatures in DER encoding are about 5-8x faster.
-* Added the mode ``MODE_GCM_SIV`` to ``Crypto.Cipher.AES`` (AES-GCM-SIV, RFC 8452),
-  for authenticated encryption that is resistant to the reuse of a nonce.
 
 Resolved issues
 ---------------
