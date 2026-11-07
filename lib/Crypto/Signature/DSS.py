@@ -6,10 +6,11 @@
 
 from __future__ import annotations
 
-from typing import Callable, Optional, Protocol, Union
+from typing import Callable, Literal, Optional, Protocol, Union
 
 from Crypto.Hash import HMAC
 from Crypto.Math.Numbers import Integer
+from Crypto.PublicKey._point import _nist_curve_ids
 from Crypto.PublicKey.DSA import DsaKey
 from Crypto.PublicKey.ECC import EccKey
 from Crypto.Util.asn1 import DerSequence
@@ -29,7 +30,9 @@ class DssSigScheme:
     Use :func:`Crypto.Signature.DSS.new`.
     """
 
-    def __init__(self, key: Union[DsaKey, EccKey], encoding: str, order: Integer) -> None:
+    def __init__(
+        self, key: Union[DsaKey, EccKey], encoding: str, order: Integer, low_s: bool = False
+    ) -> None:
         """Create a new Digital Signature Standard (DSS) object.
 
         Do not instantiate this object directly,
@@ -39,6 +42,9 @@ class DssSigScheme:
         self._key = key
         self._encoding = encoding
         self._order = order
+        self._low_s = low_s
+        # The order is odd: s is low if it is not larger than (order - 1) / 2
+        self._max_low_s = order >> 1
 
         self._order_bits = self._order.size_in_bits()
         self._order_bytes = (self._order_bits - 1) // 8 + 1
@@ -62,7 +68,7 @@ class DssSigScheme:
           msg_hash (hash object):
             The hash that was carried out over the message.
             The object belongs to the :mod:`Crypto.Hash` package.
-            Under mode ``'fips-186-3'``, the hash must be a FIPS
+            Under modes ``'fips-186-3'`` and ``'sec1'``, the hash must be a FIPS
             approved secure hash (SHA-2 or SHA-3).
 
         :return: The signature as ``bytes``
@@ -83,6 +89,10 @@ class DssSigScheme:
         z = Integer.from_bytes(msg_hash.digest()[: self._order_bytes])
         sig_pair = self._key._sign(z, nonce)
 
+        # s is public from here on: the comparison does not need to be constant time
+        if self._low_s and sig_pair[1] > self._max_low_s:
+            sig_pair = (sig_pair[0], self._order - sig_pair[1])
+
         # Encode the signature into a single byte string
         if self._encoding == "binary":
             output = b"".join([long_to_bytes(x, self._order_bytes) for x in sig_pair])
@@ -95,7 +105,9 @@ class DssSigScheme:
             #   r   INTEGER,
             #   s   INTEGER
             # }
-            output = DerSequence(sig_pair).encode()
+            # r and s are the signature, so they are public: as plain integers,
+            # the encoding is about 5-8x faster for the whole signature
+            output = DerSequence([int(x) for x in sig_pair]).encode()
 
         return output
 
@@ -106,7 +118,7 @@ class DssSigScheme:
           msg_hash (hash object):
             The hash that was carried out over the message.
             This is an object belonging to the :mod:`Crypto.Hash` module.
-            Under mode ``'fips-186-3'``, the hash must be a FIPS
+            Under modes ``'fips-186-3'`` and ``'sec1'``, the hash must be a FIPS
             approved secure hash (SHA-2 or SHA-3).
 
           signature (``bytes``):
@@ -138,6 +150,9 @@ class DssSigScheme:
         if not (0 < r_prime < self._order) or not (0 < s_prime < self._order):
             raise ValueError("The signature is not authentic (d)")
 
+        if self._low_s and s_prime > self._max_low_s:
+            raise ValueError("The signature is not authentic (high s)")
+
         z = Integer.from_bytes(msg_hash.digest()[: self._order_bytes], public=True)
         result = self._key._verify(z, (r_prime, s_prime))
         if not result:
@@ -150,9 +165,14 @@ class DeterministicDsaSigScheme(DssSigScheme):
     # Also applicable to ECDSA
 
     def __init__(
-        self, key: Union[DsaKey, EccKey], encoding: str, order: Integer, private_key: Optional[Integer]
+        self,
+        key: Union[DsaKey, EccKey],
+        encoding: str,
+        order: Integer,
+        private_key: Optional[Integer],
+        low_s: bool = False,
     ) -> None:
-        super().__init__(key, encoding, order)
+        super().__init__(key, encoding, order, low_s)
         self._private_key = private_key
 
     def _bits2int(self, bstr):
@@ -257,9 +277,14 @@ class FipsDsaSigScheme(DssSigScheme):
 
 class FipsEcDsaSigScheme(DssSigScheme):
     def __init__(
-        self, key: EccKey, encoding: str, order: Integer, randfunc: Optional[Callable[[int], bytes]]
+        self,
+        key: EccKey,
+        encoding: str,
+        order: Integer,
+        randfunc: Optional[Callable[[int], bytes]],
+        low_s: bool = False,
     ) -> None:
-        super().__init__(key, encoding, order)
+        super().__init__(key, encoding, order, low_s)
         self._randfunc = randfunc
 
     def _compute_nonce(self, msg_hash):
@@ -289,9 +314,10 @@ class FipsEcDsaSigScheme(DssSigScheme):
 
 def new(
     key: Union[DsaKey, EccKey],
-    mode: str,
-    encoding: str = "binary",
+    mode: Literal["fips-186-3", "sec1", "deterministic-rfc6979"],
+    encoding: Literal["binary", "der"] = "binary",
     randfunc: Optional[Callable[[int], bytes]] = None,
+    low_s: bool = False,
 ) -> Union[DeterministicDsaSigScheme, FipsDsaSigScheme, FipsEcDsaSigScheme]:
     """Create a signature object :class:`DssSigScheme` that
     can perform (EC)DSA signature or verification.
@@ -313,13 +339,21 @@ def new(
             - (2048, 256)
             - (3072, 256)
 
-            For ECC, only keys over P-224, P-256, P-384, and P-521 are accepted.
+            For ECC, only keys over P-192, P-224, P-256, P-384, P-521, and secp256k1
+            are accepted. `SP 800-186`_ (Appendix H) only allows secp256k1
+            for blockchain-related applications.
 
         mode (string):
             The parameter can take these values:
 
             - ``'fips-186-3'``. The signature generation is randomized and carried out
               according to `FIPS 186-3`_: the nonce ``k`` is taken from the RNG.
+              Not valid for secp256k1, which is not a curve of that standard.
+            - ``'sec1'``. The signature generation is randomized and carried out
+              according to `SEC 1`_: the nonce ``k`` is taken from the RNG.
+              Only for ECC keys, on any of the curves above (all defined in `SEC 2`_).
+              The accepted hashes are the same as for ``'fips-186-3'``, which
+              include SHA-3 even if it is more recent than `SEC 1`_.
             - ``'deterministic-rfc6979'``. The signature generation is not
               randomized. See RFC6979_.
 
@@ -343,10 +377,30 @@ def new(
         randfunc (callable):
             A function that returns random ``bytes``, of a given length.
             If omitted, the internal RNG is used.
-            Only applicable for the *'fips-186-3'* mode.
+            Only applicable for the *'fips-186-3'* and *'sec1'* modes.
+
+        low_s (boolean):
+            If ``True``, only *low-S* signatures are used, where ``s`` is
+            at most ``(n-1)/2`` and ``n`` is the order of the curve: :meth:`sign`
+            replaces any larger ``s`` with ``n-s``, and :meth:`verify` rejects it.
+            A third party cannot then turn a signature into a different valid one
+            for the same message (but the signer still can).
+            It is required by protocols like Bitcoin and AT Protocol.
+
+            In mode ``'deterministic-rfc6979'``, the signature will still be
+            deterministic but not strictly compliant to RFC6979 for half of the
+            messages.
+
+            If ``False`` (default), :meth:`sign` does not change ``s``, and
+            :meth:`verify` accepts both forms.
+
+            Only for ECC keys.
 
     .. _FIPS 186-3: http://csrc.nist.gov/publications/fips/fips186-3/fips_186-3.pdf
     .. _FIPS 186-4: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf
+    .. _SEC 1: https://www.secg.org/sec1-v2.pdf
+    .. _SEC 2: https://www.secg.org/sec2-v2.pdf
+    .. _SP 800-186: https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-186.pdf
     .. _NIST SP 800 Part 1 Rev 4: http://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-57pt1r4.pdf
     .. _RFC6979: https://www.rfc-editor.org/rfc/rfc6979
     .. _RFC3279: https://tools.ietf.org/html/rfc3279#section-2.2.2
@@ -366,8 +420,8 @@ def new(
     private_key: Optional[Integer] = None
     if isinstance(key, EccKey):
         order = key._curve.order
-        if not key.curve.startswith("NIST"):
-            raise ValueError("ECC key is not on a NIST P curve")
+        if not key._curve.is_weierstrass:
+            raise ValueError("ECC key is not on a NIST P curve or secp256k1")
         if key.has_private():
             private_key = key._d
     elif isinstance(key, DsaKey):
@@ -377,11 +431,24 @@ def new(
     else:
         raise ValueError("Unsupported key type " + str(type(key)))
 
+    if low_s and not isinstance(key, EccKey):
+        raise ValueError("Parameter low_s is only for ECC keys")
+
     if mode == "deterministic-rfc6979":
-        return DeterministicDsaSigScheme(key, encoding, order, private_key)
+        return DeterministicDsaSigScheme(key, encoding, order, private_key, low_s)
+    elif mode == "sec1":
+        if not isinstance(key, EccKey):
+            raise ValueError("Mode 'sec1' is only for ECC keys")
+        # The same computation and the same accepted hashes as in FIPS 186
+        return FipsEcDsaSigScheme(key, encoding, order, randfunc, low_s)
     elif mode == "fips-186-3":
         if isinstance(key, EccKey):
-            return FipsEcDsaSigScheme(key, encoding, order, randfunc)
+            if key._curve.id not in _nist_curve_ids:
+                raise ValueError(
+                    "Mode 'fips-186-3' is not valid for curve %s: use 'sec1' or 'deterministic-rfc6979'"
+                    % key.curve
+                )
+            return FipsEcDsaSigScheme(key, encoding, order, randfunc, low_s)
         else:
             return FipsDsaSigScheme(key, encoding, order, randfunc)
     else:

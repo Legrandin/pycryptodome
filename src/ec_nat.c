@@ -4,17 +4,18 @@
  */
 
 /*
- * Short Weierstrass curves y^2 = x^3 - 3x + b over a prime field p
- * (the NIST curves P-192, P-224, P-256, P-384 and P-521), on the
- * constant-time arithmetic of the nat library (nat_mod.c).
+ * Short Weierstrass curves over a prime field p, on the constant-time
+ * arithmetic of the nat library (nat_mod.c): y^2 = x^3 - 3x + b (the NIST
+ * curves P-192, P-224, P-256, P-384 and P-521) and y^2 = x^3 + 7 (secp256k1).
  *
  * - Field elements: arrays of nw 64-bit words, in Montgomery form,
- *   except for P-521 (plain, with the reduction of 2^521 - 1: see
- *   ec_special.h).
+ *   except for P-521 and secp256k1 (plain, with the reduction of their
+ *   prime: see ec_special.h).
  * - Points: projective coordinates (X:Y:Z); the point at infinity is
  *   (0:1:0). Additions and doublings use the complete formulas of Renes,
  *   Costello and Batina, "Complete addition formulas for prime order
- *   elliptic curves" (2016), for a = -3: they have no special cases.
+ *   elliptic curves" (2016), for a = -3 and for a = 0 (secp256k1):
+ *   they have no special cases.
  * - Scalar multiplications are those of ec_common.c (blinded scalar,
  *   signed windows, full table scans, randomized coordinates).
  * - For a PUBLIC scalar (ec_nat_scalar_public(), as in the verification
@@ -257,6 +258,184 @@ STATIC uint64_t point_on_curve(EcWs *ws, const EcGroup *g, const uint64_t *x, co
 }
 
 /* ---------------------------------------------------------------- */
+/* Points of secp256k1 (a = 0, b = 7)                               */
+/* ---------------------------------------------------------------- */
+
+#define MUL(o, a, b)    fe_mul(ws, o, a, b)
+#define ADD(o, a, b)    fe_add(ws, o, a, b)
+#define SUB(o, a, b)    fe_sub(ws, o, a, b)
+/* b3 = 3*b = 21: a public constant */
+#define B3(o, a)        fe_p256k1_mul_word(o, a, 21)
+
+/*
+ * (x3:y3:z3) = 2*(x1:y1:z1).
+ * Algorithm 9 in Renes, Costello, Batina (a = 0). Complete: also for the
+ * point at infinity. The output may be the input.
+ */
+STATIC void point_double_a0(EcWs *ws, const EcGroup *g,
+                            uint64_t *x3, uint64_t *y3, uint64_t *z3,
+                            const uint64_t *x1, const uint64_t *y1, const uint64_t *z1)
+{
+    uint64_t *t0 = ws->t[0], *t1 = ws->t[1], *t2 = ws->t[2];
+    uint64_t *x = ws->t[3], *y = ws->t[4], *z = ws->t[5];
+
+    (void)g;
+    fe_copy(ws, x, x1);
+    fe_copy(ws, y, y1);
+    fe_copy(ws, z, z1);
+
+    MUL(t0, y, y);      /* 1 */
+    ADD(z3, t0, t0);
+    ADD(z3, z3, z3);
+    ADD(z3, z3, z3);    /* 4 */
+    MUL(t1, y, z);
+    MUL(t2, z, z);
+    B3(t2, t2);         /* 7 */
+    MUL(x3, t2, z3);
+    ADD(y3, t0, t2);
+    MUL(z3, t1, z3);    /* 10 */
+    ADD(t1, t2, t2);
+    ADD(t2, t1, t2);
+    SUB(t0, t0, t2);    /* 13 */
+    MUL(y3, t0, y3);
+    ADD(y3, x3, y3);
+    MUL(t1, x, y);      /* 16 */
+    MUL(x3, t0, t1);
+    ADD(x3, x3, x3);
+}
+
+/*
+ * (x3:y3:z3) = (x1:y1:z1) + (x2:y2:z2).
+ * Algorithm 7 in Renes, Costello, Batina (a = 0). Complete: also for
+ * equal points and for the point at infinity. The output may be an input.
+ */
+STATIC void point_add_a0(EcWs *ws, const EcGroup *g,
+                         uint64_t *x3, uint64_t *y3, uint64_t *z3,
+                         const uint64_t *x1i, const uint64_t *y1i, const uint64_t *z1i,
+                         const uint64_t *x2i, const uint64_t *y2i, const uint64_t *z2i)
+{
+    uint64_t *t0 = ws->t[0], *t1 = ws->t[1], *t2 = ws->t[2], *t3 = ws->t[3], *t4 = ws->t[4];
+    uint64_t *x1 = ws->t[5], *y1 = ws->t[6], *z1 = ws->t[7];
+    uint64_t *x2 = ws->t[8], *y2 = ws->t[9], *z2 = ws->t[10];
+
+    (void)g;
+    fe_copy(ws, x1, x1i);
+    fe_copy(ws, y1, y1i);
+    fe_copy(ws, z1, z1i);
+    fe_copy(ws, x2, x2i);
+    fe_copy(ws, y2, y2i);
+    fe_copy(ws, z2, z2i);
+
+    MUL(t0, x1, x2);    /* 1 */
+    MUL(t1, y1, y2);
+    MUL(t2, z1, z2);
+    ADD(t3, x1, y1);    /* 4 */
+    ADD(t4, x2, y2);
+    MUL(t3, t3, t4);
+    ADD(t4, t0, t1);    /* 7 */
+    SUB(t3, t3, t4);
+    ADD(t4, y1, z1);
+    ADD(x3, y2, z2);    /* 10 */
+    MUL(t4, t4, x3);
+    ADD(x3, t1, t2);
+    SUB(t4, t4, x3);    /* 13 */
+    ADD(x3, x1, z1);
+    ADD(y3, x2, z2);
+    MUL(x3, x3, y3);    /* 16 */
+    ADD(y3, t0, t2);
+    SUB(y3, x3, y3);
+    ADD(x3, t0, t0);    /* 19 */
+    ADD(t0, x3, t0);
+    B3(t2, t2);
+    ADD(z3, t1, t2);    /* 22 */
+    SUB(t1, t1, t2);
+    B3(y3, y3);
+    MUL(x3, t4, y3);    /* 25 */
+    MUL(t2, t3, t1);
+    SUB(x3, t2, x3);
+    MUL(y3, y3, t0);    /* 28 */
+    MUL(t1, t1, z3);
+    ADD(y3, t1, y3);
+    MUL(t0, t0, t3);    /* 31 */
+    MUL(z3, z3, t4);
+    ADD(z3, z3, t0);
+}
+
+/*
+ * (x3:y3:z3) = (x1:y1:z1) + (x2, y2), with the second point affine.
+ * Algorithm 8 in Renes, Costello, Batina (a = 0). The affine point cannot
+ * be the point at infinity: the callers deal with that case with a
+ * masked select. The output may be the first input.
+ */
+STATIC void point_add_mixed_a0(EcWs *ws, const EcGroup *g,
+                               uint64_t *x3, uint64_t *y3, uint64_t *z3,
+                               const uint64_t *x1i, const uint64_t *y1i, const uint64_t *z1i,
+                               const uint64_t *x2, const uint64_t *y2)
+{
+    uint64_t *t0 = ws->t[0], *t1 = ws->t[1], *t2 = ws->t[2], *t3 = ws->t[3], *t4 = ws->t[4];
+    uint64_t *x1 = ws->t[5], *y1 = ws->t[6], *z1 = ws->t[7];
+
+    (void)g;
+    fe_copy(ws, x1, x1i);
+    fe_copy(ws, y1, y1i);
+    fe_copy(ws, z1, z1i);
+
+    MUL(t0, x1, x2);    /* 1 */
+    MUL(t1, y1, y2);
+    ADD(t3, x2, y2);
+    ADD(t4, x1, y1);    /* 4 */
+    MUL(t3, t3, t4);
+    ADD(t4, t0, t1);
+    SUB(t3, t3, t4);    /* 7 */
+    MUL(t4, y2, z1);
+    ADD(t4, t4, y1);
+    MUL(y3, x2, z1);    /* 10 */
+    ADD(y3, y3, x1);
+    ADD(x3, t0, t0);
+    ADD(t0, x3, t0);    /* 13 */
+    B3(t2, z1);
+    ADD(z3, t1, t2);
+    SUB(t1, t1, t2);    /* 16 */
+    B3(y3, y3);
+    MUL(x3, t4, y3);
+    MUL(t2, t3, t1);    /* 19 */
+    SUB(x3, t2, x3);
+    MUL(y3, y3, t0);
+    MUL(t1, t1, z3);    /* 22 */
+    ADD(y3, t1, y3);
+    MUL(t0, t0, t3);
+    MUL(z3, z3, t4);    /* 25 */
+    ADD(z3, z3, t0);
+}
+
+#undef MUL
+#undef ADD
+#undef SUB
+#undef B3
+
+/**
+ * 1 if (x:y:z) is on the curve: Y^2*Z = X^3 + b*Z^3
+ * (also true for the point at infinity), 0 otherwise.
+ */
+STATIC uint64_t point_on_curve_a0(EcWs *ws, const EcGroup *g, const uint64_t *x, const uint64_t *y, const uint64_t *z)
+{
+    uint64_t *lhs = ws->t[0], *rhs = ws->t[1], *t = ws->t[2];
+
+    fe_sqr(ws, lhs, y);
+    fe_mul(ws, lhs, lhs, z);
+
+    fe_sqr(ws, rhs, x);
+    fe_mul(ws, rhs, rhs, x);
+
+    fe_sqr(ws, t, z);
+    fe_mul(ws, t, t, z);
+    fe_mul(ws, t, t, g->param);
+    fe_add(ws, rhs, rhs, t);
+
+    return words_eq(lhs, rhs, g->nw);
+}
+
+/* ---------------------------------------------------------------- */
 /* Public scalars only: Jacobian coordinates, NOT constant time     */
 /* ---------------------------------------------------------------- */
 
@@ -304,6 +483,38 @@ static void jac_double(EcWs *ws, uint64_t *t, uint64_t *x, uint64_t *y, uint64_t
     SUB(y, y, gamma);
 }
 
+/* 2M + 5S, for a = 0 (dbl-2009-l in the Explicit-Formulas Database). In place. */
+static void jac_double_a0(EcWs *ws, uint64_t *t, uint64_t *x, uint64_t *y, uint64_t *z)
+{
+    const size_t nw = ws->nw;
+    uint64_t *a = t, *b = t + nw, *c = t + 2*nw, *d = t + 3*nw, *e = t + 4*nw;
+
+    SQR(a, x);
+    SQR(b, y);
+    SQR(c, b);
+    ADD(d, x, b);               /* D = 2 ((X + B)^2 - A - C) */
+    SQR(d, d);
+    SUB(d, d, a);
+    SUB(d, d, c);
+    ADD(d, d, d);
+    ADD(e, a, a);               /* E = 3 A */
+    ADD(e, e, a);
+    MUL(z, y, z);               /* Z3 = 2 Y Z */
+    ADD(z, z, z);
+    SQR(x, e);                  /* X3 = E^2 - 2 D */
+    SUB(x, x, d);
+    SUB(x, x, d);
+    SUB(d, d, x);               /* Y3 = E (D - X3) - 8 C */
+    MUL(y, e, d);
+    ADD(c, c, c);
+    ADD(c, c, c);
+    ADD(c, c, c);
+    SUB(y, y, c);
+}
+
+/** A doubling in Jacobian coordinates, in place **/
+typedef void (*JacDoubleFunc)(EcWs *ws, uint64_t *t, uint64_t *x, uint64_t *y, uint64_t *z);
+
 static int fe_is_zero(EcWs *ws, const uint64_t *a)
 {
     return (int)words_is_zero(a, ws->nw);
@@ -313,7 +524,7 @@ static int fe_is_zero(EcWs *ws, const uint64_t *a)
  * (x1, y1, z1) += (x2, y2, z2): 11M + 5S (add-2007-bl), plus the special
  * cases. In place.
  */
-static void jac_add(EcWs *ws, uint64_t *t, uint64_t *x1, uint64_t *y1, uint64_t *z1,
+static void jac_add(EcWs *ws, JacDoubleFunc dbl, uint64_t *t, uint64_t *x1, uint64_t *y1, uint64_t *z1,
                     const uint64_t *x2, const uint64_t *y2, const uint64_t *z2)
 {
     const size_t nw = ws->nw;
@@ -342,7 +553,7 @@ static void jac_add(EcWs *ws, uint64_t *t, uint64_t *x1, uint64_t *y1, uint64_t 
 
     if (fe_is_zero(ws, h)) {
         if (fe_is_zero(ws, r)) {
-            jac_double(ws, t + 10*nw, x1, y1, z1);
+            dbl(ws, t + 10*nw, x1, y1, z1);
         } else {
             memset(z1, 0, nw*sizeof(uint64_t));     /* P + (-P) */
         }
@@ -381,8 +592,9 @@ static void jac_add(EcWs *ws, uint64_t *t, uint64_t *x1, uint64_t *y1, uint64_t 
  * ec_mul_var(), but with branches, and the faster formulas.
  * Input and output in projective coordinates.
  */
-STATIC int scalar_mul_var_public(EcWs *ws, const EcGroup *g, uint64_t *x, uint64_t *y, uint64_t *z,
-                                 const uint64_t *kb, size_t windows)
+static int scalar_mul_jacobian(EcWs *ws, const EcGroup *g, JacDoubleFunc dbl,
+                               uint64_t *x, uint64_t *y, uint64_t *z,
+                               const uint64_t *kb, size_t windows)
 {
     const size_t nw = g->nw;
     uint64_t *table, *acc, *t, *ny;
@@ -413,7 +625,7 @@ STATIC int scalar_mul_var_public(EcWs *ws, const EcGroup *g, uint64_t *x, uint64
     fe_copy(ws, TZ(1), z);
     for (i=2; i<=EC_DIGITS; i++) {
         memcpy(TX(i), TX(i-1), 3*nw*sizeof(uint64_t));
-        jac_add(ws, t, TX(i), TY(i), TZ(i), TX(1), TY(1), TZ(1));
+        jac_add(ws, dbl, t, TX(i), TY(i), TZ(i), TX(1), TY(1), TZ(1));
     }
 
     memset(acc, 0, 3*nw*sizeof(uint64_t));
@@ -425,7 +637,7 @@ STATIC int scalar_mul_var_public(EcWs *ws, const EcGroup *g, uint64_t *x, uint64
 
         if (!words_is_zero(acc + 2*nw, nw)) {
             for (i=0; i<EC_WINDOW; i++)
-                jac_double(ws, t, acc, acc + nw, acc + 2*nw);
+                dbl(ws, t, acc, acc + nw, acc + 2*nw);
         }
 
         ec_booth_digit(kb, g->k_words, w, &sign, &digit);
@@ -433,9 +645,9 @@ STATIC int scalar_mul_var_public(EcWs *ws, const EcGroup *g, uint64_t *x, uint64
             continue;
         if (sign) {
             fe_neg(ws, ny, TY(digit));
-            jac_add(ws, t, acc, acc + nw, acc + 2*nw, TX(digit), ny, TZ(digit));
+            jac_add(ws, dbl, t, acc, acc + nw, acc + 2*nw, TX(digit), ny, TZ(digit));
         } else {
-            jac_add(ws, t, acc, acc + nw, acc + 2*nw, TX(digit), TY(digit), TZ(digit));
+            jac_add(ws, dbl, t, acc, acc + nw, acc + 2*nw, TX(digit), TY(digit), TZ(digit));
         }
     }
 
@@ -460,6 +672,18 @@ cleanup:
     nat_words_free(t, 15*nw);
     nat_words_free(ny, nw);
     return res;
+}
+
+STATIC int scalar_mul_var_public(EcWs *ws, const EcGroup *g, uint64_t *x, uint64_t *y, uint64_t *z,
+                                 const uint64_t *kb, size_t windows)
+{
+    return scalar_mul_jacobian(ws, g, jac_double, x, y, z, kb, windows);
+}
+
+STATIC int scalar_mul_var_public_a0(EcWs *ws, const EcGroup *g, uint64_t *x, uint64_t *y, uint64_t *z,
+                                    const uint64_t *kb, size_t windows)
+{
+    return scalar_mul_jacobian(ws, g, jac_double_a0, x, y, z, kb, windows);
 }
 
 /* ---------------------------------------------------------------- */
@@ -500,6 +724,58 @@ EXPORT_SYM int ec_nat_new_curve(EcCurve **out,
     c->mul_public = scalar_mul_var_public;
 
     res = ec_group_init(c, p, b, order, 0, gx, gy, len);
+    if (res) {
+        ec_nat_free_curve(c);
+        *out = NULL;
+    }
+    return res;
+}
+
+/**
+ * Create the curve secp256k1 (SEC 2, Section 2.4.1), with the tables of
+ * its generator. Its scalars are blinded with more random bits than the
+ * other curves: see EC_BLINDING_BITS.
+ */
+EXPORT_SYM int ec_nat_new_curve_secp256k1(EcCurve **out)
+{
+    static const uint8_t p[32] = {
+        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
+        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE, 0xFF, 0xFF, 0xFC, 0x2F
+    };
+    static const uint8_t b[32] = {
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 7
+    };
+    static const uint8_t n[32] = {
+        0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFE,
+        0xBA, 0xAE, 0xDC, 0xE6, 0xAF, 0x48, 0xA0, 0x3B, 0xBF, 0xD2, 0x5E, 0x8C, 0xD0, 0x36, 0x41, 0x41
+    };
+    static const uint8_t gx[32] = {
+        0x79, 0xBE, 0x66, 0x7E, 0xF9, 0xDC, 0xBB, 0xAC, 0x55, 0xA0, 0x62, 0x95, 0xCE, 0x87, 0x0B, 0x07,
+        0x02, 0x9B, 0xFC, 0xDB, 0x2D, 0xCE, 0x28, 0xD9, 0x59, 0xF2, 0x81, 0x5B, 0x16, 0xF8, 0x17, 0x98
+    };
+    static const uint8_t gy[32] = {
+        0x48, 0x3A, 0xDA, 0x77, 0x26, 0xA3, 0xC4, 0x65, 0x5D, 0xA4, 0xFB, 0xFC, 0x0E, 0x11, 0x08, 0xA8,
+        0xFD, 0x17, 0xB4, 0x48, 0xA6, 0x85, 0x54, 0x19, 0x9C, 0x47, 0xD0, 0x8F, 0xFB, 0x10, 0xD4, 0xB8
+    };
+    EcCurve *c;
+    int res;
+
+    if (!out)
+        return ERR_NULL;
+
+    *out = c = (EcCurve*)calloc(1, sizeof(EcCurve));
+    if (NULL == c)
+        return ERR_MEMORY;
+    c->edwards = 0;
+    c->add = point_add_a0;
+    c->add_affine = point_add_mixed_a0;
+    c->dbl = point_double_a0;
+    c->on_curve = point_on_curve_a0;
+    c->mul_public = scalar_mul_var_public_a0;
+    c->blinding_bits = EC_BLINDING_BITS_WIDE;
+
+    res = ec_group_init(c, p, b, n, 0, gx, gy, sizeof p);
     if (res) {
         ec_nat_free_curve(c);
         *out = NULL;
@@ -559,7 +835,7 @@ EXPORT_SYM int ec_nat_new_point(EcPointN **out, const uint8_t *x, const uint8_t 
     /* (0, 0) is the point at infinity: only that fact leaks */
     if (ct_declassify(words_is_zero(p->x, 2*c->nw)))
         ec_point_set_neutral(c, p->x, p->y, p->z);
-    else if (!ct_declassify(point_on_curve(&ws, c, p->x, p->y, p->z)))
+    else if (!ct_declassify(c->on_curve(&ws, c, p->x, p->y, p->z)))
         res = ERR_EC_POINT;
 
 cleanup:

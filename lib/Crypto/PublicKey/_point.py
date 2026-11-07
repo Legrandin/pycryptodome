@@ -96,9 +96,11 @@ class CurveID:
     ED448 = 7
     CURVE25519 = 8
     CURVE448 = 9
+    SECP256K1 = 10
 
 
 _nist_curve_ids = (CurveID.P192, CurveID.P224, CurveID.P256, CurveID.P384, CurveID.P521)
+_weierstrass_curve_ids = (*_nist_curve_ids, CurveID.SECP256K1)
 
 
 class _Curves:
@@ -114,6 +116,7 @@ class _Curves:
     ed448_names = ["ed448", "Ed448"]
     curve25519_names = ["curve25519", "Curve25519", "X25519"]
     curve448_names = ["curve448", "Curve448", "X448"]
+    secp256k1_names = ["secp256k1", "k256", "K-256", "bitcoin"]
 
     # For each curve: its names, its ID, and the module and function that create it
     definitions = (
@@ -126,6 +129,7 @@ class _Curves:
         (ed448_names, CurveID.ED448, "_edwards", "ed448_curve"),
         (curve25519_names, CurveID.CURVE25519, "_montgomery", "curve25519_curve"),
         (curve448_names, CurveID.CURVE448, "_montgomery", "curve448_curve"),
+        (secp256k1_names, CurveID.SECP256K1, "_nist_ecc", "secp256k1_curve"),
     )
 
     all_names = [name for definition in definitions for name in definition[0]]
@@ -210,11 +214,11 @@ class EccPoint:
         xb = _encode_coordinate(x, modulus_bytes)
         yb = _encode_coordinate(y, modulus_bytes)
 
-        # For the NIST curves, coordinates that fit in the length of the
+        # For the Weierstrass curves, coordinates that fit in the length of the
         # modulus are reduced modulo p (the C code only accepts values
         # smaller than p). Imported keys are checked before, and they are
         # rejected instead (see ECC._import_public_der).
-        if self._curve.id in _nist_curve_ids:
+        if self._curve.id in _weierstrass_curve_ids:
             p = int(self._curve.p)
             xb = long_to_bytes(bytes_to_long(xb) % p, modulus_bytes)
             yb = long_to_bytes(bytes_to_long(yb) % p, modulus_bytes)

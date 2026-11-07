@@ -36,12 +36,13 @@ from binascii import hexlify, unhexlify
 
 import pytest
 
-from Crypto.Hash import SHA1, SHA3_224, SHA3_256, SHA3_384, SHA3_512, SHA224, SHA256, SHA384, SHA512
+from Crypto.Hash import SHA1, SHA3_224, SHA3_256, SHA3_384, SHA3_512, SHA224, SHA256, SHA384, SHA512, SHAKE128
 from Crypto.PublicKey import DSA, ECC
 from Crypto.SelfTest.loader import load_test_vectors, load_test_vectors_wycheproof, wycheproof_id
 from Crypto.SelfTest.st_common import mark_slow, wycheproof_warnings
 from Crypto.Signature import DSS
 from Crypto.Util._bytes import tobytes
+from Crypto.Util.asn1 import DerSequence
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 
 
@@ -1260,7 +1261,6 @@ def _load_tests_ecdsa(filename):
         # These are the only curves we accept to skip
         if group["publicKey"]["curve"] in (
             "secp224k1",
-            "secp256k1",
             "brainpoolP224r1",
             "brainpoolP224t1",
             "brainpoolP256r1",
@@ -1280,7 +1280,7 @@ def _load_tests_ecdsa(filename):
 
     def filter_encoding(group):
         encoding_name = group["type"]
-        if encoding_name == "EcdsaVerify":
+        if encoding_name in ("EcdsaVerify", "EcdsaBitcoinVerify"):
             return "der"
         elif encoding_name == "EcdsaP1363Verify":
             return "binary"
@@ -1329,6 +1329,13 @@ def load_wycheproof_vectors_ecdsa():
     vectors += mark_slow(_load_tests_ecdsa("ecdsa_secp192r1_sha256_p1363_test.json"))
     vectors += _load_tests_ecdsa("ecdsa_secp192r1_sha256_test.json")
     vectors += mark_slow(_load_tests_ecdsa("ecdsa_secp384r1_sha256_test.json"))
+    vectors += _load_tests_ecdsa("ecdsa_secp256k1_sha256_test.json")
+    vectors += _load_tests_ecdsa("ecdsa_secp256k1_sha256_p1363_test.json")
+    vectors += _load_tests_ecdsa("ecdsa_secp256k1_sha256_bitcoin_test.json")
+    vectors += mark_slow(_load_tests_ecdsa("ecdsa_secp256k1_sha3_256_test.json"))
+    vectors += mark_slow(_load_tests_ecdsa("ecdsa_secp256k1_sha3_512_test.json"))
+    vectors += mark_slow(_load_tests_ecdsa("ecdsa_secp256k1_sha512_p1363_test.json"))
+    vectors += mark_slow(_load_tests_ecdsa("ecdsa_secp256k1_sha512_test.json"))
     return vectors
 
 
@@ -1349,7 +1356,10 @@ class TestVectorsECDSAWycheproof:
             return
 
         hashed_msg = tv.hash_module.new(tv.msg)
-        signer = DSS.new(tv.key, "fips-186-3", encoding=tv.encoding)
+        # This file also expects the rule of Bitcoin that s must be low
+        low_s = "_bitcoin_" in tv.filename
+        mode = "sec1" if tv.key.curve == "secp256k1" else "fips-186-3"
+        signer = DSS.new(tv.key, mode, encoding=tv.encoding, low_s=low_s)
         try:
             signer.verify(hashed_msg, tv.sig)
         except ValueError:
@@ -1363,3 +1373,160 @@ class TestVectorsECDSAWycheproof:
     @pytest.mark.parametrize("tv", load_wycheproof_vectors_ecdsa(), ids=wycheproof_id)
     def test(self, tv):
         self.check_verify(tv)
+
+
+class TestLowS:
+    curves = ["P-224", "P-256", "P-384", "P-521", "secp256k1"]
+    modes = ["sec1", "deterministic-rfc6979"]
+
+    @staticmethod
+    def _split(signature, size):
+        return bytes_to_long(signature[:size]), bytes_to_long(signature[size:])
+
+    @pytest.mark.parametrize("curve", curves)
+    @pytest.mark.parametrize("mode", modes)
+    def test_sign_verify(self, curve, mode):
+        key = ECC.generate(curve=curve)
+        order = int(key._curve.order)
+        size = key.pointQ.size_in_bytes()
+        low = DSS.new(key, mode, low_s=True)
+        low_verifier = DSS.new(key.public_key(), mode, low_s=True)
+        plain_verifier = DSS.new(key.public_key(), mode)
+
+        for i in range(16):
+            msg_hash = SHA256.new(b"message %d" % i)
+            signature = low.sign(msg_hash)
+            r, s = self._split(signature, size)
+            assert s <= (order - 1) // 2
+            low_verifier.verify(msg_hash, signature)
+            plain_verifier.verify(msg_hash, signature)
+
+            # The twin signature is valid ECDSA, but it is not low-S
+            twin = long_to_bytes(r, size) + long_to_bytes(order - s, size)
+            plain_verifier.verify(msg_hash, twin)
+            with pytest.raises(ValueError, match="high s"):
+                low_verifier.verify(msg_hash, twin)
+
+    @pytest.mark.parametrize("curve", curves)
+    def test_deterministic_only_changes_s(self, curve):
+        """k still follows RFC 6979: r is the same, and s the low one of the two"""
+
+        key = ECC.generate(curve=curve)
+        order = int(key._curve.order)
+        size = key.pointQ.size_in_bytes()
+        flipped = 0
+        for i in range(32):
+            msg_hash = SHA256.new(b"message %d" % i)
+            r1, s1 = self._split(DSS.new(key, "deterministic-rfc6979").sign(msg_hash), size)
+            r2, s2 = self._split(DSS.new(key, "deterministic-rfc6979", low_s=True).sign(msg_hash), size)
+            assert r1 == r2
+            assert s2 == min(s1, order - s1)
+            flipped += s1 != s2
+        # The default does not normalize: all 32 being low has a chance of 2^-32
+        assert flipped > 0
+
+    def test_der(self):
+        key = ECC.generate(curve="secp256k1")
+        order = int(key._curve.order)
+        msg_hash = SHA256.new(b"message")
+        signature = DSS.new(key, "deterministic-rfc6979", encoding="der", low_s=True).sign(msg_hash)
+        r, s = DerSequence().decode(signature, strict=True)
+        assert s <= (order - 1) // 2
+        verifier = DSS.new(key.public_key(), "deterministic-rfc6979", encoding="der", low_s=True)
+        verifier.verify(msg_hash, signature)
+        with pytest.raises(ValueError, match="high s"):
+            verifier.verify(msg_hash, DerSequence([r, order - s]).encode())
+
+    @pytest.mark.parametrize("curve", curves)
+    def test_boundary(self, curve):
+        """(n-1)/2 is the largest low s: it goes on to the actual verification"""
+
+        key = ECC.generate(curve=curve).public_key()
+        order = int(key._curve.order)
+        size = key.pointQ.size_in_bytes()
+        verifier = DSS.new(key, "sec1", low_s=True)
+        msg_hash = SHA256.new(b"message")
+
+        highest_low = long_to_bytes(1, size) + long_to_bytes((order - 1) // 2, size)
+        with pytest.raises(ValueError) as cm:
+            verifier.verify(msg_hash, highest_low)
+        assert "high s" not in str(cm.value)
+
+        lowest_high = long_to_bytes(1, size) + long_to_bytes((order + 1) // 2, size)
+        with pytest.raises(ValueError, match="high s"):
+            verifier.verify(msg_hash, lowest_high)
+
+    def test_fips_mode(self):
+        key = ECC.generate(curve="P-256")
+        msg_hash = SHA256.new(b"message")
+        for _ in range(16):
+            signature = DSS.new(key, "fips-186-3", low_s=True).sign(msg_hash)
+            assert self._split(signature, 32)[1] <= (int(key._curve.order) - 1) // 2
+            DSS.new(key.public_key(), "fips-186-3", low_s=True).verify(msg_hash, signature)
+
+    def test_not_for_dsa(self):
+        key = DSA.generate(2048)
+        with pytest.raises(ValueError, match="only for ECC keys"):
+            DSS.new(key, "fips-186-3", low_s=True)
+        with pytest.raises(ValueError, match="only for ECC keys"):
+            DSS.new(key, "deterministic-rfc6979", low_s=True)
+
+
+class TestModes:
+    nist_curves = ["P-192", "P-224", "P-256", "P-384", "P-521"]
+
+    @pytest.mark.parametrize("curve", [*nist_curves, "secp256k1"])
+    @pytest.mark.parametrize("encoding", ["binary", "der"])
+    def test_sec1(self, curve, encoding):
+        key = ECC.generate(curve=curve)
+        msg_hash = SHA512.new(b"message")
+        signer = DSS.new(key, "sec1", encoding=encoding)
+        verifier = DSS.new(key.public_key(), "sec1", encoding=encoding)
+
+        signature = signer.sign(msg_hash)
+        verifier.verify(msg_hash, signature)
+        assert signer.sign(msg_hash) != signature
+        with pytest.raises(ValueError, match="not authentic"):
+            verifier.verify(SHA512.new(b"other message"), signature)
+
+    @pytest.mark.parametrize("curve", nist_curves)
+    def test_sec1_same_as_fips(self, curve):
+        """With the same randomness, the two modes make the same signature"""
+
+        key = ECC.generate(curve=curve)
+        msg_hash = SHA512.new(b"message")
+        sec1 = DSS.new(key, "sec1", randfunc=SHAKE128.new(b"seed").read).sign(msg_hash)
+        fips = DSS.new(key, "fips-186-3", randfunc=SHAKE128.new(b"seed").read).sign(msg_hash)
+        assert sec1 == fips
+        DSS.new(key.public_key(), "fips-186-3").verify(msg_hash, sec1)
+
+    @pytest.mark.parametrize("curve", nist_curves)
+    def test_fips_curves(self, curve):
+        key = ECC.generate(curve=curve)
+        msg_hash = SHA512.new(b"message")
+        signature = DSS.new(key, "fips-186-3").sign(msg_hash)
+        DSS.new(key.public_key(), "fips-186-3").verify(msg_hash, signature)
+
+    def test_sec1_hash(self):
+        key = ECC.generate(curve="secp256k1")
+        with pytest.raises(ValueError):
+            DSS.new(key, "sec1").sign(SHA1.new(b"message"))
+        DSS.new(key, "sec1").sign(SHA3_256.new(b"message"))
+
+    def test_sec1_not_for_dsa(self):
+        with pytest.raises(ValueError, match="only for ECC keys"):
+            DSS.new(DSA.generate(1024), "sec1")
+
+    @pytest.mark.parametrize("curve", ["Ed25519", "Ed448"])
+    def test_sec1_not_for_edwards(self, curve):
+        with pytest.raises(ValueError, match="not on a NIST P curve or secp256k1"):
+            DSS.new(ECC.generate(curve=curve), "sec1")
+
+    @pytest.mark.parametrize("name", ["secp256k1", "k256", "K-256", "bitcoin"])
+    def test_fips_not_for_secp256k1(self, name):
+        key = ECC.generate(curve=name)
+        for k in (key, key.public_key()):
+            with pytest.raises(ValueError, match="not valid for curve secp256k1"):
+                DSS.new(k, "fips-186-3")
+            DSS.new(k, "sec1")
+            DSS.new(k, "deterministic-rfc6979")

@@ -88,6 +88,14 @@ static const Curve curves[] = {
       "011839296a789a3bc0045c8a5fb42c7d1bd998f54449579b446817afbd17273e662c97ee72995ef42640c550b9013fad0761353c7086a272c24088be94769fd16650",
       "018c993bccac4691f057a142f6f63cd53ce0c9c389a3b711af11b3196328b499edf795760244a93da5730a60a42d080f7fcfb415fec9ad287a3b74b5ae338e5397f0",
       "0150051f03fdb26e525063e686f842182f3ff094235176de4716bfeab17ea238be9e39879f824ebfc3e7325531177af6951be687309bdcfaf8b396bbdaf4d76e9ac0" },
+    { "secp256k1", 32,
+      "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f",
+      "0000000000000000000000000000000000000000000000000000000000000007",
+      "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141",
+      "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+      "483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8",
+      "28cb0b744dc1c32b7c9702b4341623ea310083fad95659b3d16fde77fa539098",
+      "59907e6c53649626d35e65f59dac88536f0058e2164a57fe70a94b300fb6c3ac" },
 };
 
 #define MAX_LEN 80
@@ -169,7 +177,10 @@ static void run(const Curve *tc)
     from_hex(n, len, tc->n);
     from_hex(gx, len, tc->gx);
     from_hex(gy, len, tc->gy);
-    assert(ec_nat_new_curve(&c, p, b, n, gx, gy, len) == 0);
+    if (strcmp(tc->name, "secp256k1") == 0)
+        assert(ec_nat_new_curve_secp256k1(&c) == 0);
+    else
+        assert(ec_nat_new_curve(&c, p, b, n, gx, gy, len) == 0);
 
     for (t=0; t<2; t++) {
         /* Fixed base (k*G), as for a key generation or a signature */
@@ -368,6 +379,41 @@ static void run_fields(void)
         assert(fe_inv(&ws, r, r) == 0);
         fe_to_words(&ws, r, r);
 
+        ec_ws_free(&ws);
+        ec_field_free(field);
+        nat_free(n);
+    }
+
+    /* The primes of a special form */
+    {
+        static const uint64_t p256k1[4] = {
+            0xFFFFFFFEFFFFFC2FULL, ~(uint64_t)0, ~(uint64_t)0, ~(uint64_t)0
+        };
+        EcField *field;
+        EcWs ws;
+        Nat *n;
+        uint64_t a[4], b[4], r[4];
+
+        assert(nat_new(&n, 4) == 0);
+        memcpy(n->w, p256k1, sizeof p256k1);
+        assert(ec_field_new(&field, n) == 0);
+        assert(field->kind == EC_FIELD_P256K1);
+        assert(ec_ws_new(&ws, field) == 0);
+        for (i=0; i<4; i++) {
+            a[i] = rnd();
+            b[i] = rnd();
+        }
+        a[3] >>= 1;
+        b[3] >>= 1;
+        SECRET(a, sizeof a);
+        SECRET(b, sizeof b);
+        fe_mul(&ws, r, a, b);
+        fe_sqr(&ws, r, r);
+        fe_p256k1_mul_word(r, r, 21);
+        fe_add(&ws, r, r, a);
+        fe_sub(&ws, r, r, b);
+        fe_neg(&ws, r, r);
+        assert(fe_inv(&ws, r, r) == 0);
         ec_ws_free(&ws);
         ec_field_free(field);
         nat_free(n);

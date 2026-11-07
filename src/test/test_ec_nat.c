@@ -1,5 +1,5 @@
 /*
- * Unit tests of ec_nat.c (the NIST curves on the nat library).
+ * Unit tests of ec_nat.c (the NIST curves and secp256k1 on the nat library).
  * The expected results come from a simple implementation in Python
  * (affine coordinates, Python integers).
  */
@@ -27,9 +27,6 @@ static int have_bmi2_adx(void)
     return (ebx & (1U << 8)) && (ebx & (1U << 19));
 }
 #endif
-
-/* Private functions (they are not static when STATIC is defined as empty) */
-uint64_t point_on_curve(EcWs *ws, const EcGroup *g, const uint64_t *x, const uint64_t *y, const uint64_t *z);
 
 typedef struct {
     int base_is_g;
@@ -236,6 +233,44 @@ static const TestCurve curves[] = {
         { 0, "1a9089b5123e842997da9f5307c8ece78b06f29a9f1ced66b447f45b096d3801b73c446ab8c82e261237776c6557c4e4248b1515fff42969a5033288e16ebe80fa9", "00090084941e0dea8afb8aaa21f09f03232b86fa2a25da3008816fa5b8510c88a83188e3d11225f4defc5013e0da6c00a3d0ceb1ff25a452ba2fdb3c765c9366f125", "00569c484e540b4e969b81c94b1cb8787bf6771fb6d65376f2b5b0db335043ef637866bc1336ea1aac06a491b54559578ed9bbb5caf1f1e8533c0b4837b399d141b7" },
         { 0, "367ff79edc822edc49c1f71bd135ec0643b173f29c6a4242c22583e2665af6540600c8fb4456b76dc0c3b07822db703e53cf192f09a9cfd8c364eab42bd67528ea79511070a74a41f8e4", "0009b5fd593a2768bb7507aed93681bf9d0a1f572c16c5b829dbefae1954c7a3c51b94c2139b8e22933b701325f7e20a1b07bbe34900ec5412d422e84e10d9a607bc", "0120968fe958e43dcda065b58227fcef74a1ee8a5b0f717f75d302754fc473638353ee8924c371bdc9ba256866d59d6059ef5188617ede6323ff5956f9c44035221b" },
       } },
+    { "secp256k1", 32,
+      "fffffffffffffffffffffffffffffffffffffffffffffffffffffffefffffc2f",
+      "0000000000000000000000000000000000000000000000000000000000000007",
+      "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141",
+      "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+      "483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8",
+      "28cb0b744dc1c32b7c9702b4341623ea310083fad95659b3d16fde77fa539098",
+      "59907e6c53649626d35e65f59dac88536f0058e2164a57fe70a94b300fb6c3ac",
+      {
+        { 1, "", "0000000000000000000000000000000000000000000000000000000000000000", "0000000000000000000000000000000000000000000000000000000000000000" },
+        { 1, "1", "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798", "483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8" },
+        { 1, "2", "c6047f9441ed7d6d3045406e95c07cd85c778e4b8cef3ca7abac09b95c709ee5", "1ae168fea63dc339a3c58419466ceaeef7f632653266d0e1236431a950cfe52a" },
+        { 1, "10", "e60fce93b59e9ec53011aabc21c23e97b2a31369b87a5ae9c44ee89e2a6dec0a", "f7e3507399e595929db99f34f57937101296891e44d23f0be1f32cce69616821" },
+        { 1, "11", "defdea4cdb677750a420fee807eacf21eb9898ae79b9768766e4faa04a2d4a34", "4211ab0694635168e997b0ead2a93daeced1f4a04a95c0f6cfb199f69e56eb77" },
+        { 1, "1f", "6a245bf6dc698504c89a20cfded60853152b695336c28063b61c65cbd269e6b4", "e022cf42c2bd4a708b3f5126f16a24ad8b33ba48d0423b6efd5e6348100d8a82" },
+        { 1, "20", "d30199d74fb5a22d47b6e054e2f378cedacffcb89904a61d75d0dbd407143e65", "95038d9d0ae3d5c3b3d6dec9e98380651f760cc364ed819605b3ff1f24106ab9" },
+        { 1, "21", "1697ffa6fd9de627c077e3d2fe541084ce13300b0bec1146f95ae57f0d0bd6a5", "b9c398f186806f5d27561506e4557433a2cf15009e498ae7adee9d63d01b2396" },
+        { 1, "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364140", "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798", "b7c52588d95c3b9aa25b0403f1eef75702e84bb7597aabe663b82f6f04ef2777" },
+        { 1, "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141", "0000000000000000000000000000000000000000000000000000000000000000", "0000000000000000000000000000000000000000000000000000000000000000" },
+        { 1, "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364142", "79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798", "483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8" },
+        { 1, "aacdabbb49c9c6072c54a01283037cadfde8ec5e3e1544596ebbec4cc598e827", "1b8297229734af626e80d54fde55d5923ad8310883a22de01399a36930f6dc0f", "032e4fddcdab87a3199d24e9acadfb477da3c75440aaf4144bb1d55b3eb8eed5" },
+        { 1, "ffffffffffffffffffffffffffffffffab457cc801cd52fb4e28eff721c08585", "832bf1510ec2e0594eb12633f8666df1ef8a9ace25e2d3aebba82a5537a8f513", "7bd35578597445e061c576d7053c17149c28678581f2597500a8bb90f41633ef" },
+        { 1, "cce5b3445fff12fb4d7a20d294b97d08e7981664997082c8b7e20bfd2aeeaf914c7d3fd9a1ac067", "83e521446535bcfdcfcbc06f9bbab32727d1f07052b829f627658a091ba4caf0", "311fbc9cf3edbdd8e8d67b38d718694f372a513ed2d8a6f13e7eff6bc4587843" },
+        { 0, "", "0000000000000000000000000000000000000000000000000000000000000000", "0000000000000000000000000000000000000000000000000000000000000000" },
+        { 0, "1", "28cb0b744dc1c32b7c9702b4341623ea310083fad95659b3d16fde77fa539098", "59907e6c53649626d35e65f59dac88536f0058e2164a57fe70a94b300fb6c3ac" },
+        { 0, "2", "6784884acbffdbcb85cdaac2142c607a72c162c016c641829bb122a83dc3481a", "298b01f2fc8be85ee49bcf292f346225be57df9eca827347966fcb972e3dd8af" },
+        { 0, "10", "9391c30e64f5ae11fd672c09b49d4f409dcc98fdd54fc0f0cc27f88562aa2421", "8f8706a763e4e99803a9b05ca171486baaa7a33e2b9d95440798bb9b05a97024" },
+        { 0, "11", "5b8efe32a212daac32be4fa729bf3cccca0026bbef77a5aae6dcd16da569dcd9", "87f0955a9e7705422b7864d4b8181cb839cf271a281a1155c9dee8ff7b13ec23" },
+        { 0, "1f", "35a8a8d336e900e5b5476b9517825f0e3eed950f32bd0714d88f5a41fd7c2791", "f2f555b2c667195d51579c5d78c10afd1917d22cbd540aa26dbeb28c7ad4bb5c" },
+        { 0, "20", "b6c542a0e7a3414ec76edf388cf65cc1b04a8fbec22c69fb6e5592feff2e0cfc", "69364e3726ae1b02af27030887b6cdd924708de7ec5f58ea4bcf386397e5280d" },
+        { 0, "21", "3304b45d212e756a52e5f6b21c53234cd68186d7823e6925998b6233b4aa3f59", "0975768672829c18ca32f2ecb62e20572d15f984f770b602fc2402313b0c3d3f" },
+        { 0, "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364140", "28cb0b744dc1c32b7c9702b4341623ea310083fad95659b3d16fde77fa539098", "a66f8193ac9b69d92ca19a0a625377ac90ffa71de9b5a8018f56b4cef0493883" },
+        { 0, "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364141", "0000000000000000000000000000000000000000000000000000000000000000", "0000000000000000000000000000000000000000000000000000000000000000" },
+        { 0, "fffffffffffffffffffffffffffffffebaaedce6af48a03bbfd25e8cd0364142", "28cb0b744dc1c32b7c9702b4341623ea310083fad95659b3d16fde77fa539098", "59907e6c53649626d35e65f59dac88536f0058e2164a57fe70a94b300fb6c3ac" },
+        { 0, "aacdabbb49c9c6072c54a01283037cadfde8ec5e3e1544596ebbec4cc598e827", "b9265dc160dc8871a722c5736931fdf3e66d802f57059837e9544ed479e23500", "4f0a25de423aaeaed20e38c5826a5de66cf96704a6a4909e28c3a8b035e1ff63" },
+        { 0, "ffffffffffffffffffffffffffffffffab457cc801cd52fb4e28eff721c08585", "0065e90bde6b7b40ffc87b1d04102f28a531d9d8ba7c87d89f310d6c73410e6b", "4d190ba984d1f0693f6f6ffd41da4824e8c4290f890274c4d924b020c090735e" },
+        { 0, "cce5b3445fff12fb4d7a20d294b97d08e7981664997082c8b7e20bfd2aeeaf914c7d3fd9a1ac067", "55bdfc84112491317a73a74399a30524eac6532713eec8eb7889f0736df6ad4b", "188d2e34c682adbbddd161d3899ab6c7d6cc674414199ec0cacc38e998749674" },
+      } },
 };
 
 #define NCURVES (sizeof curves / sizeof curves[0])
@@ -281,7 +316,12 @@ static EcCurve *load_curve(const TestCurve *tc)
     from_hex(n, len, tc->n);
     from_hex(gx, len, tc->gx);
     from_hex(gy, len, tc->gy);
-    assert(ec_nat_new_curve(&c, p, b, n, gx, gy, len) == 0);
+    /* The only curve with a = 0 is created without parameters */
+    if (strcmp(tc->name, "secp256k1") == 0) {
+        assert(ec_nat_new_curve_secp256k1(&c) == 0);
+    } else {
+        assert(ec_nat_new_curve(&c, p, b, n, gx, gy, len) == 0);
+    }
     return c;
 }
 
@@ -320,11 +360,61 @@ static void check_equal(const EcPointN *a, const EcPointN *b)
     assert(ec_nat_cmp(a, b) == 0);
 }
 
+static void test_new_curve_secp256k1(void)
+{
+    EcCurve *c;
+
+    assert(ec_nat_new_curve_secp256k1(NULL) == ERR_NULL);
+    assert(ec_nat_new_curve_secp256k1(&c) == 0);
+    assert(c->len == 32);
+    assert(c->nw == 4);
+    assert(c->field->kind == EC_FIELD_P256K1);
+    /* The order is within 129 bits of 2^256: r must have 128 bits */
+    assert(c->blinding_bits == 128);
+    assert(c->k_words == 6);
+    assert(c->windows == 77);
+
+    /*
+     * k + r*n = k - r*(2^256 - n) (mod 2^256), and 2^256 - n only has 129
+     * bits. So, a 64-bit r leaves the top 64 bits of k in place (give or
+     * take a borrow): only a second word randomizes them.
+     */
+    {
+        uint8_t k[32];
+        uint64_t kb[6], r[2];
+        const uint64_t top = 0x1234560000000000ULL;
+        unsigned i, changed = 0;
+
+        memset(k, 0, 8);
+        memset(k + 8, 0xFF, 24);
+        k[0] = 0x12;
+        k[1] = 0x34;
+        k[2] = 0x56;
+        for (i=0; i<20; i++) {
+            r[0] = rnd();
+            r[1] = 0;
+            assert(ec_blind_scalar_wide(kb, 6, c->order, k, sizeof k, r, 2) == 0);
+            assert(kb[3] == top || kb[3] == top - 1);
+
+            r[1] = rnd();
+            assert(ec_blind_scalar_wide(kb, 6, c->order, k, sizeof k, r, 2) == 0);
+            changed += (kb[3] >> 32) != (top >> 32);
+        }
+        assert(changed == 20);
+    }
+    ec_nat_free_curve(c);
+}
+
 static void test_new_curve(const TestCurve *tc)
 {
     uint8_t p[MAX_LEN], b[MAX_LEN], n[MAX_LEN], gx[MAX_LEN], gy[MAX_LEN];
     EcCurve *c;
     size_t len = tc->len;
+
+    if (strcmp(tc->name, "secp256k1") == 0) {
+        test_new_curve_secp256k1();
+        return;
+    }
 
     from_hex(p, len, tc->p);
     from_hex(b, len, tc->b);
@@ -481,14 +571,14 @@ static void test_point_on_curve(const TestCurve *tc, const EcCurve *c)
 
     assert(ec_ws_new(&ws, c->field) == 0);
     g = load_point(c, tc->gx, tc->gy);
-    assert(point_on_curve(&ws, c, g->x, g->y, g->z) == 1);
+    assert(c->on_curve(&ws, c, g->x, g->y, g->z) == 1);
     assert(ec_nat_double(g) == 0);              /* Z != 1 */
-    assert(point_on_curve(&ws, c, g->x, g->y, g->z) == 1);
+    assert(c->on_curve(&ws, c, g->x, g->y, g->z) == 1);
     g->x[0] ^= 1;
-    assert(point_on_curve(&ws, c, g->x, g->y, g->z) == 0);
+    assert(c->on_curve(&ws, c, g->x, g->y, g->z) == 0);
     ec_nat_free_point(g);
     g = load_point(c, "0", "0");
-    assert(point_on_curve(&ws, c, g->x, g->y, g->z) == 1);
+    assert(c->on_curve(&ws, c, g->x, g->y, g->z) == 1);
     ec_nat_free_point(g);
     ec_ws_free(&ws);
 }

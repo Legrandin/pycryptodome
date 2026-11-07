@@ -56,6 +56,7 @@ You can also export the public key, which is not sensitive::
    "Ed448",      "``'Ed448'``", "``'ed448'``"
    "Curve25519", "``'Curve25519'``", "``'curve25519'``"
    "Curve448", "``'Curve448'``", "``'curve448'``"
+   "secp256k1", "``'secp256k1'``", "``'k256'``, ``'K-256'``, ``'bitcoin'``"
 
 For more information about each NIST curve see `FIPS 186-4`_, Section D.1.2.
 
@@ -63,10 +64,20 @@ Curves Ed25519 and Ed448 are defined in RFC8032_.
 
 Curves Curve25519 and Curve448 are defined in RFC7748_.
 
+The curve secp256k1 is defined in `SEC 2`_, Section 2.4.1.
+`NIST SP 800-186`_ (Appendix H) only allows it for blockchain-related applications:
+prefer another curve for any other purpose.
+It has no standard use in HPKE or in OpenSSH, so those two do not accept its keys.
+ECDSA with this curve is defined in `SEC 1`_: in :mod:`Crypto.Signature.DSS`,
+use the mode ``'sec1'`` or ``'deterministic-rfc6979'`` (and not ``'fips-186-3'``).
+
 The ECC keys can be used to perform or verify signatures, using the modules
-:mod:`Crypto.Signature.DSS` (ECDSA; NIST curves only)
+:mod:`Crypto.Signature.DSS` (ECDSA; NIST curves and secp256k1 only)
 or :mod:`Crypto.Signature.eddsa` (EdDSA; Ed25519 and Ed448 curve only).
 
+.. _SEC 1: https://www.secg.org/sec1-v2.pdf
+.. _SEC 2: https://www.secg.org/sec2-v2.pdf
+.. _NIST SP 800-186: https://nvlpubs.nist.gov/nistpubs/SpecialPublications/NIST.SP.800-186.pdf
 .. _ECC: http://andrea.corbellini.name/2015/05/17/elliptic-curve-cryptography-a-gentle-introduction/
 .. _`FIPS 186-4`: http://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.186-4.pdf
 .. _RFC8032: https://datatracker.ietf.org/doc/html/rfc8032

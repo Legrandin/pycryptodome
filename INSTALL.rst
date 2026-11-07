@@ -126,9 +126,9 @@ Installing without the precomputed tables of the elliptic curves
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 To multiply the generator of a curve faster, the library uses precomputed
-tables: for Ed25519, 36 KB in the binary module; for Ed448 and the NIST curves,
-from 39 KB (P-192) to 266 KB (P-521) of memory for each curve in use, computed
-when the curve is first loaded.
+tables: for Ed25519, 36 KB in the binary module; for Ed448, the NIST curves and
+secp256k1, from 39 KB (P-192) to 266 KB (P-521) of memory for each curve in use,
+computed when the curve is first loaded.
 
 To save that space, set the environment variable ``PYCRYPTODOME_NO_EC_TABLES``
 when compiling from source::

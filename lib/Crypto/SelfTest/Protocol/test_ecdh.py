@@ -122,6 +122,7 @@ def load_wycheproof_vectors_ecdh():
     vectors += _load_tests_ecdh("ecdh_secp256r1_test.json")
     vectors += _load_tests_ecdh("ecdh_secp384r1_test.json")
     vectors += _load_tests_ecdh("ecdh_secp521r1_test.json")
+    vectors += _load_tests_ecdh("ecdh_secp256k1_test.json")
     return vectors
 
 
@@ -179,7 +180,7 @@ def load_wycheproof_vectors_ecdh_keys():
     vectors = []
     for curve in ("secp224r1", "secp256r1", "secp384r1", "secp521r1"):
         vectors += _load_tests_ecdh_keys("ecdh_%s_pem_test.json" % curve)
-    for curve in ("secp256r1", "secp384r1", "secp521r1"):
+    for curve in ("secp256r1", "secp384r1", "secp521r1", "secp256k1"):
         vectors += _load_tests_ecdh_keys("ecdh_%s_webcrypto_test.json" % curve)
     return vectors
 
@@ -192,7 +193,7 @@ def _base64url_int(value):
 def _import_jwk(jwk, curve):
     """An EC key from a JWK (RFC 7518, Section 6.2)"""
 
-    curves = {"P-256": "p256", "P-384": "p384", "P-521": "p521"}
+    curves = {"P-256": "p256", "P-384": "p384", "P-521": "p521", "P-256K": "secp256k1"}
     if jwk.get("kty") != "EC" or jwk.get("crv") != curve:
         raise ValueError("Wrong type of JWK")
     if "d" in jwk:
