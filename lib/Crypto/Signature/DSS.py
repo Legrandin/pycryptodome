@@ -387,6 +387,10 @@ def new(
             for the same message (but the signer still can).
             It is required by protocols like Bitcoin and AT Protocol.
 
+            In mode ``'deterministic-rfc6979'``, the signature will still be
+            deterministic but not strictly compliant to RFC6979 for half of the
+            messages.
+
             If ``False`` (default), :meth:`sign` does not change ``s``, and
             :meth:`verify` accepts both forms.
 
