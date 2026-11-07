@@ -413,6 +413,85 @@ SIV cipher object
    :exclude-members: encrypt, decrypt
    :member-order: bysource
 
+.. _gcm_siv_mode:
+
+GCM-SIV mode
+------------
+AES-GCM-SIV, defined in `RFC8452 <https://www.rfc-editor.org/rfc/rfc8452>`_.
+It only works with AES, with a key of 128 or 256 bits.
+
+Like :ref:`SIV <siv_mode>`, GCM-SIV is *nonce misuse-resistant*: if a nonce is repeated,
+the only loss is that encrypting the same message
+(with the same key, nonce and associated data) gives the same ciphertext.
+It is much faster than SIV and about as fast as GCM on long messages,
+and each nonce gets its own keys, so that one key can protect more data.
+Still, you should not reuse nonces on purpose: RFC 8452 recommends random ones.
+
+Encryption and decryption take place in one step, because the
+whole plaintext is needed to compute the tag, and the tag is the start of the key stream.
+There is no :meth:`encrypt` or :meth:`decrypt`: call
+:meth:`encrypt_and_digest` and :meth:`decrypt_and_verify`, once, with the complete message.
+It cannot be longer than 2\ :sup:`36` bytes, and neither can the associated data.
+
+.. function:: Crypto.Cipher.AES.new(key, mode, *, nonce=None, threads=1)
+  :no-index:
+
+  Create a new GCM-SIV object.
+
+  :param bytes key: the cryptographic key, either 16 or 32 bytes long
+                    (24 bytes is not allowed).
+  :param mode: the constant ``Crypto.Cipher.AES.MODE_GCM_SIV``
+  :param bytes nonce: the value of the nonce, which must be 12 bytes long.
+    If not present, a random nonce is generated.
+  :param int threads: the maximum number of threads used to process long data
+    (default: 1, no extra threads; 0 for all CPU cores).
+  :return: a GCM-SIV cipher object (:class:`~Crypto.Cipher._mode_gcm_siv.GcmSivMode`)
+
+The cipher object has a read-only attribute :attr:`~Crypto.Cipher._mode_gcm_siv.GcmSivMode.nonce`.
+
+Example (encryption)::
+
+    >>> import json
+    >>> from base64 import b64encode
+    >>> from Crypto.Cipher import AES
+    >>> from Crypto.Random import get_random_bytes
+    >>>
+    >>> header = b"header"
+    >>> data = b"secret"
+    >>> key = get_random_bytes(32)
+    >>> cipher = AES.new(key, AES.MODE_GCM_SIV)
+    >>> cipher.update(header)
+    >>> ciphertext, tag = cipher.encrypt_and_digest(data)
+    >>>
+    >>> json_k = [ 'nonce', 'header', 'ciphertext', 'tag' ]
+    >>> json_v = [ b64encode(x).decode() for x in (cipher.nonce, header, ciphertext, tag) ]
+    >>> result = json.dumps(dict(zip(json_k, json_v)))
+
+Example (decryption)::
+
+    >>> import json
+    >>> from base64 import b64decode
+    >>> from Crypto.Cipher import AES
+    >>>
+    >>> # We assume that the key was securely shared beforehand
+    >>> try:
+    >>>     b64 = json.loads(json_input)
+    >>>     jv = {k: b64decode(b64[k]) for k in ('nonce', 'header', 'ciphertext', 'tag')}
+    >>>     cipher = AES.new(key, AES.MODE_GCM_SIV, nonce=jv['nonce'])
+    >>>     cipher.update(jv['header'])
+    >>>     plaintext = cipher.decrypt_and_verify(jv['ciphertext'], jv['tag'])
+    >>>     print("The message was: " + plaintext.decode())
+    >>> except (ValueError, KeyError):
+    >>>     print("Incorrect decryption")
+
+GCM-SIV cipher object
+~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: Crypto.Cipher._mode_gcm_siv.GcmSivMode
+   :members:
+   :exclude-members: encrypt, decrypt
+   :member-order: bysource
+
 .. _ocb_mode:
 
 OCB mode

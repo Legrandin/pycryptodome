@@ -58,6 +58,7 @@ FAKE_INIT(ghash_portable)
 typedef uint64_t word_t;
 #define WORD_BITS 64
 #define LOAD_WORD_BIG(p) LOAD_U64_BIG(p)
+#define LOAD_WORD_LITTLE(p) LOAD_U64_LITTLE(p)
 #define STORE_WORD_BIG(p, w) STORE_U64_BIG(p, w)
 
 #elif SYS_BITS == 32
@@ -65,6 +66,7 @@ typedef uint64_t word_t;
 typedef uint32_t word_t;
 #define WORD_BITS 32
 #define LOAD_WORD_BIG(p) LOAD_U32_BIG(p)
+#define LOAD_WORD_LITTLE(p) LOAD_U32_LITTLE(p)
 #define STORE_WORD_BIG(p, w) STORE_U32_BIG(p, w)
 
 #else
@@ -392,6 +394,16 @@ static void load_element(word_t w[N_WORDS], const uint8_t in[16])
     }
 }
 
+/** Like load_element(), for 16 bytes in reversed order **/
+static void load_element_rev(word_t w[N_WORDS], const uint8_t in[16])
+{
+    unsigned i;
+
+    for (i=0; i<N_WORDS; i++) {
+        w[i] = LOAD_WORD_LITTLE(in + i*(WORD_BITS/8));
+    }
+}
+
 static void store_element(uint8_t out[16], const word_t w[N_WORDS])
 {
     unsigned i;
@@ -403,8 +415,11 @@ static void store_element(uint8_t out[16], const word_t w[N_WORDS])
     }
 }
 
-/** Process len bytes (multiple of 16), with y as the accumulator **/
-static void ghash_blocks(uint8_t y[16], const uint8_t data[], size_t len, const t_exp_key *key)
+/**
+ * Process len bytes (multiple of 16), with y as the accumulator.
+ * If reversed is not 0, the bytes of each block of data are in reversed order.
+ */
+static void ghash_blocks(uint8_t y[16], const uint8_t data[], size_t len, const t_exp_key *key, int reversed)
 {
     word_t yw[N_WORDS], x[N_WORDS];
     size_t i;
@@ -412,7 +427,11 @@ static void ghash_blocks(uint8_t y[16], const uint8_t data[], size_t len, const 
 
     load_element(yw, y);
     for (i=0; i<len; i+=16) {
-        load_element(x, data + i);
+        if (reversed) {
+            load_element_rev(x, data + i);
+        } else {
+            load_element(x, data + i);
+        }
         for (j=0; j<N_WORDS; j++) {
             yw[j] ^= x[j];
         }
@@ -427,6 +446,27 @@ static void expand_key_bytes(t_exp_key *key, const uint8_t h[16])
 
     load_element(hw, h);
     expand_key(key, hw);
+}
+
+static int ghash_check_and_process(
+        uint8_t y_out[16],
+        const uint8_t block_data[],
+        size_t len,
+        const uint8_t y_in[16],
+        const t_exp_key *exp_key,
+        int reversed
+        )
+{
+    if (NULL==y_out || NULL==block_data || NULL==y_in || NULL==exp_key)
+        return ERR_NULL;
+
+    if (len % 16)
+        return ERR_NOT_ENOUGH_DATA;
+
+    memmove(y_out, y_in, 16);
+    ghash_blocks(y_out, block_data, len, exp_key, reversed);
+
+    return 0;
 }
 
 /**
@@ -449,16 +489,22 @@ EXPORT_SYM int ghash_portable(
         const t_exp_key *exp_key
         )
 {
-    if (NULL==y_out || NULL==block_data || NULL==y_in || NULL==exp_key)
-        return ERR_NULL;
+    return ghash_check_and_process(y_out, block_data, len, y_in, exp_key, 0);
+}
 
-    if (len % 16)
-        return ERR_NOT_ENOUGH_DATA;
-
-    memmove(y_out, y_in, 16);
-    ghash_blocks(y_out, block_data, len, exp_key);
-
-    return 0;
+/**
+ * Like ghash_portable(), but the bytes of each block of data are in reversed
+ * order. This is what POLYVAL needs (RFC 8452, Appendix A).
+ */
+EXPORT_SYM int ghash_rev_portable(
+        uint8_t y_out[16],
+        const uint8_t block_data[],
+        size_t len,
+        const uint8_t y_in[16],
+        const t_exp_key *exp_key
+        )
+{
+    return ghash_check_and_process(y_out, block_data, len, y_in, exp_key, 1);
 }
 
 /**
@@ -482,6 +528,25 @@ EXPORT_SYM int ghash_at_portable(
 }
 
 /**
+ * Like ghash_rev_portable(), but for the len bytes at the given offset
+ * in block_data[] (see ghash_at_portable()).
+ */
+EXPORT_SYM int ghash_rev_at_portable(
+        uint8_t y_out[16],
+        const uint8_t block_data[],
+        size_t offset,
+        size_t len,
+        const uint8_t y_in[16],
+        const t_exp_key *exp_key
+        )
+{
+    if (NULL==block_data)
+        return ERR_NULL;
+
+    return ghash_rev_portable(y_out, block_data + offset, len, y_in, exp_key);
+}
+
+/**
  * Multiply two arbitrary elements of GF(2**128).
  * out can point to the same buffer as x or y.
  */
@@ -493,7 +558,7 @@ static void gcm_mult(uint8_t out[16], const uint8_t x[16], const uint8_t y[16])
     expand_key_bytes(&key, y);
     memmove(out, x, 16);
     /** (0 ^ x) * y **/
-    ghash_blocks(out, zero, 16, &key);
+    ghash_blocks(out, zero, 16, &key, 0);
 }
 
 /**
@@ -523,7 +588,7 @@ EXPORT_SYM int ghash_combine_portable(
 
     /** b = H, as 1 * H (the element 1 is x^0, the leftmost bit) **/
     memset(b, 0, 16);
-    ghash_blocks(b, one, 16, exp_key);
+    ghash_blocks(b, one, 16, exp_key, 0);
 
     /** Square and multiply, from the least significant bit of n_blocks **/
     memcpy(y, y_in, 16);

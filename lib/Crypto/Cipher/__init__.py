@@ -52,7 +52,7 @@ def _create_cipher(factory, key, mode, *args, **kwargs):
     kwargs["key"] = key
 
     if args:
-        if mode in (8, 9, 10, 11, 12):
+        if mode in (8, 9, 10, 11, 12, 15):
             if len(args) > 1:
                 raise TypeError("Too many arguments for this mode")
             kwargs["nonce"] = args[0]
@@ -122,6 +122,10 @@ def _create_cipher(factory, key, mode, *args, **kwargs):
             from Crypto.Cipher._mode_kwp import _create_kwp_cipher
 
             res = _create_kwp_cipher(factory, **kwargs)
+        elif mode == 15:
+            from Crypto.Cipher._mode_gcm_siv import _create_gcm_siv_cipher
+
+            res = _create_gcm_siv_cipher(factory, **kwargs)
 
     if res is None:
         raise ValueError("Mode not supported")
