@@ -123,6 +123,16 @@ This is an example of AES-CTR encryption with a custom counter::
     cipher = AES.new(key, AES.MODE_CTR, counter=ctr)
     ciphertext = cipher.encrypt(plaintext)
 
+To decrypt, the recipient needs the same counter block, so you must deliver ``nonce``
+together with the ciphertext. In this example, the cipher object has no ``nonce`` attribute
+to read it from, because the counter has a suffix (see :ref:`ctr_mode`).
+
+.. note::
+
+    If you do not specify ``initial_value``, :func:`Crypto.Util.Counter.new` starts counting at 1,
+    whereas :func:`new` of the cipher without ``counter`` starts at 0.
+    With the same nonce, the two give a different keystream.
+
 .. automodule:: Crypto.Util.Counter
     :members:
 

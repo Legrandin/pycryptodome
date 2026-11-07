@@ -64,6 +64,17 @@ class TestCtr:
         counter = Counter.new(64, prefix=self.nonce_32, suffix=self.nonce_32)
         cipher = AES.new(self.key_128, AES.MODE_CTR, counter=counter)
         assert not hasattr(cipher, "nonce")
+        with pytest.raises(AttributeError, match=r"Counter\.new"):
+            _ = cipher.nonce
+
+        # Other missing attributes get the usual error
+        with pytest.raises(AttributeError, match="iv"):
+            _ = cipher.iv
+
+        # The attribute is read-only
+        cipher = AES.new(self.key_128, AES.MODE_CTR, nonce=self.nonce_64)
+        with pytest.raises(AttributeError):
+            cipher.nonce = b""
 
     def test_nonce_parameter(self):
         # Nonce parameter becomes nonce attribute

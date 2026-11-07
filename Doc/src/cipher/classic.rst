@@ -203,7 +203,44 @@ accept data of any length (i.e. padding is not needed).
 Both raise :class:`Crypto.MessageTooLongError` (which is also an ``OverflowError``)
 as soon as the counter wraps around to repeat the original value.
 
-The CTR cipher object has a read-only attribute :attr:`~Crypto.Cipher._mode_ctr.CtrMode.nonce` (*bytes*).
+The CTR cipher object has a read-only attribute :attr:`~Crypto.Cipher._mode_ctr.CtrMode.nonce` (*bytes*):
+the fixed part at the beginning of the counter block.
+
+If you create the cipher with a custom counter (that is, you pass the result of
+:func:`Crypto.Util.Counter.new` as the ``counter`` parameter of :func:`new`),
+the attribute only holds the ``prefix`` you gave to that function (``b''`` if you gave none).
+If you also gave a ``suffix``, reading the attribute raises ``AttributeError``,
+because no value of the ``nonce`` parameter could produce that counter block,
+and the prefix alone would not be enough to decrypt.
+The cipher object cannot tell which of those values must be delivered to the recipient,
+so you must keep them yourself. It does not reveal the current value of the counter either:
+see :ref:`ctr_next_counter`.
+
+A counter block must never be used twice with the same key, because
+a repeated *keystream* breaks the confidentiality of both messages.
+If the nonce is random, the risk grows with the number of messages encrypted under the same key.
+The nonce that the library creates by default is 8 bytes long, which is not enough for a very large
+number of messages. A 12-byte nonce makes a collision far less likely, but it leaves only 32 bits for
+the counter, so a single message cannot be longer than 64 GiB:
+
+.. list-table::
+    :header-rows: 1
+
+    * - Random nonce
+      - Longest message
+      - Probability of a repeated nonce after 2\ :sup:`16` messages
+      - After 2\ :sup:`24` messages
+      - After 2\ :sup:`32` messages
+    * - 8 bytes (default)
+      - 2\ :sup:`68` bytes
+      - 1.2 · 10\ :sup:`-10`
+      - 7.6 · 10\ :sup:`-6`
+      - 39%
+    * - 12 bytes
+      - 64 GiB
+      - below 10\ :sup:`-19`
+      - 1.8 · 10\ :sup:`-15`
+      - 1.2 · 10\ :sup:`-10`
 
 Each block of the *keystream* only depends on its counter block,
 so the CTR mode can use several CPU cores.

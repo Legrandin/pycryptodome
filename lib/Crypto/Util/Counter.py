@@ -44,16 +44,17 @@ def new(
     little_endian: bool = False,
     allow_wraparound: bool = False,
 ) -> CounterParams:
-    """Create a stateful counter block function suitable for CTR encryption modes.
+    """Describe the counter blocks for a cipher in CTR mode.
 
-    Each call to the function returns the next counter block.
     Each counter block is made up by three parts:
 
     +------+--------------+-------+
     |prefix| counter value|postfix|
     +------+--------------+-------+
 
-    The counter value is incremented by 1 at each call.
+    The cipher increments the counter value by 1 for each block.
+    The result of this function does not change while the cipher
+    is in use, and the cipher does not reveal the current counter value.
 
     Args:
       nbits (integer):
@@ -65,18 +66,20 @@ def new(
         The constant postfix of the counter block. By default, no suffix is
         used.
       initial_value (integer):
-        The initial value of the counter. Default value is 1.
+        The initial value of the counter. Default value is 1
+        (a cipher in CTR mode without the ``counter`` parameter starts at 0 instead).
         Its length in bits must not exceed the argument ``nbits``.
       little_endian (boolean):
         If ``True``, the counter number will be encoded in little endian format.
         If ``False`` (default), in big endian format.
       allow_wraparound (boolean):
         This parameter is ignored.
-        An ``OverflowError`` exception is always raised when the counter wraps
-        around to zero.
+        The counter can wrap around to zero, but the cipher always raises
+        :class:`Crypto.MessageTooLongError` (which is also an ``OverflowError``)
+        before it would repeat a counter value.
     Returns:
-      An object that can be passed with the :data:`counter` parameter to a CTR mode
-      cipher.
+      A dictionary with these parameters, to pass with the :data:`counter`
+      parameter to a cipher in CTR mode.
 
     It must hold that *len(prefix) + nbits//8 + len(suffix)* matches the
     block size of the underlying block cipher.

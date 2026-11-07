@@ -56,6 +56,40 @@ You can replicate the same keystream in PyCryptodome with::
    ivSpec = b'\x00' * 16
    ctr = AES.new(keySpec, AES.MODE_CTR, initial_value=ivSpec, nonce=b'')
 
+.. _ctr_next_counter:
+
+How do I get the nonce or the next counter value in CTR mode?
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+The cipher object only has the attribute ``nonce``, and it does not reveal the current
+value of the counter (see :ref:`ctr_mode`). In most cases, you do not need it:
+create a new random 12-byte nonce for each message, and deliver it with the ciphertext::
+
+   nonce = get_random_bytes(12)
+   cipher = AES.new(key, AES.MODE_CTR, nonce=nonce)
+   ciphertext = cipher.encrypt(message)
+
+A message can then be up to 64 GiB long: beyond that,
+the cipher raises :class:`Crypto.MessageTooLongError` instead of repeating the keystream.
+
+If you really need to count across messages (for instance, to guarantee that no counter
+block is ever used twice), use the whole block as the counter, and compute the next value yourself::
+
+   cipher = AES.new(key, AES.MODE_CTR, nonce=b'', initial_value=counter)
+   ciphertext = cipher.encrypt(message)
+   # Deliver counter with the ciphertext, and store the next value in a safe place
+   counter += (len(message) + 15) // 16
+
+The division must round up, because a block of the keystream that was only partially used
+cannot be used again. You must also store the new value of ``counter`` reliably before using it,
+so that it does not go back if your program restarts.
+
+If you use :func:`Crypto.Util.Counter.new`, you choose the prefix, the suffix and the initial value
+yourself, so you already have all the values that the recipient needs.
+
+Remember that CTR mode does not detect if the ciphertext was modified:
+either combine it with a MAC or, better, use an :doc:`authenticated mode <guides/symmetric>`.
+
 Are RSASSA-PSS signatures compatible with Java?
 +++++++++++++++++++++++++++++++++++++++++++++++
 

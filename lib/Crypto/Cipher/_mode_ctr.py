@@ -204,9 +204,9 @@ class CtrMode:
 
         self._threads = threads_param(threads)
 
+        self._nonce: Optional[bytes] = None
         if len(initial_counter_block) == prefix_len + counter_len:
-            self.nonce = bytes(initial_counter_block[:prefix_len])
-            """Nonce; not available if there is a fixed suffix"""
+            self._nonce = bytes(initial_counter_block[:prefix_len])
 
         state = VoidPointer()
         initial_counter_block_ptr, initial_counter_block_len = c_uint8_ptr_len(initial_counter_block)
@@ -234,6 +234,18 @@ class CtrMode:
         """The block size of the underlying cipher, in bytes."""
 
         self._next = [Method.ENCRYPT, Method.DECRYPT]
+
+    @property
+    def nonce(self) -> bytes:
+        """The fixed part at the beginning of the counter block.
+        It is not available if the counter block has a fixed suffix."""
+
+        if self._nonce is None:
+            raise AttributeError(
+                "This CTR cipher has no 'nonce' attribute, because its counter has a suffix:"
+                " use the prefix, the suffix and the initial value that you passed to Counter.new()"
+            )
+        return self._nonce
 
     @overload
     def encrypt(self, plaintext: Buffer) -> bytes: ...
