@@ -47,6 +47,7 @@ class BlockCipherParams(TypedDict, total=False):
     counter: CounterParams
     tweak: Buffer
     threads: int
+    allow_weak_keys: bool
 
 
 def _create_cipher(factory, key, mode, *args, **kwargs):
