@@ -11,7 +11,7 @@ from typing import Any, Callable, Optional
 __all__ = ["encode", "decode"]
 
 import re
-from binascii import a2b_base64, b2a_base64, hexlify, unhexlify
+from binascii import b2a_base64, hexlify, unhexlify
 
 from Crypto import (
     _INCORRECT_PASSPHRASE,
@@ -24,8 +24,22 @@ from Crypto.Hash import MD5
 from Crypto.Protocol.KDF import PBKDF1
 from Crypto.Random import get_random_bytes
 from Crypto.Util._bytes import tobytes
+from Crypto.Util._raw_api import (
+    c_size_t,
+    c_uint8_ptr,
+    create_string_buffer,
+    get_raw_buffer,
+    load_pycryptodome_raw_lib,
+)
 from Crypto.Util.asn1 import DerSequence
 from Crypto.Util.Padding import pad, unpad
+
+_raw_base64 = load_pycryptodome_raw_lib(
+    "Crypto.Util._base64",
+    """
+    int base64_decode(const uint8_t *in, size_t in_len, uint8_t *out, size_t out_size);
+    """,
+)
 
 
 def encode(
@@ -92,6 +106,65 @@ def _EVP_BytesToKey(data, salt, key_len):
     return b"".join(d)[:key_len]
 
 
+def _parse(pem_data: str) -> tuple[str, list[str], str]:
+    """Split a PEM block into its label (the marker), its encapsulated
+    headers (RFC 1421, without spaces) and its body (base64 text).
+
+    The body may be a private key: it must never reach functions that
+    look up each character in a table (str.split() without arguments,
+    str.strip(), \\s in a regex), as that leaks it through the cache.
+    It is only searched for "\\n" and ":", which are not in base64.
+    """
+
+    lines = pem_data.split("\n")
+
+    # Verify Pre-Encapsulation Boundary
+    first = 0
+    while first < len(lines) and not lines[first].strip():
+        first += 1
+    m = None
+    if first < len(lines):
+        m = re.fullmatch(r"\s*-----BEGIN (.*)-----\s*", lines[first])
+    if not m:
+        raise ValueError("Not a valid PEM pre boundary")
+    marker = m.group(1)
+
+    # Verify Post-Encapsulation Boundary
+    last = len(lines) - 1
+    while last > first and not lines[last].strip():
+        last -= 1
+    if last == first or lines[last].strip() != "-----END %s-----" % marker:
+        raise ValueError("Not a valid PEM post boundary")
+
+    # Encapsulated headers: the lines with a colon after the boundary
+    body_start = first + 1
+    headers = []
+    while body_start < last and ":" in lines[body_start]:
+        headers.append(lines[body_start].replace(" ", "").strip())
+        body_start += 1
+
+    return marker, headers, "\n".join(lines[body_start:last])
+
+
+def _decode_base64(text: str) -> bytes:
+    """Decode the base64 body of a PEM block, in constant time
+    (except for the position of whitespace and padding)."""
+
+    try:
+        # A copy, for a str with only ASCII characters
+        encoded = text.encode("latin-1")
+    except UnicodeEncodeError:
+        raise ValueError("Incorrect base64 in PEM block") from None
+
+    # Always enough: 4 characters (data or padding) for 3 bytes
+    out_size = len(encoded) // 4 * 3
+    out = create_string_buffer(out_size)
+    res = _raw_base64.base64_decode(c_uint8_ptr(encoded), c_size_t(len(encoded)), out, c_size_t(out_size))
+    if res < 0:
+        raise ValueError("Incorrect base64 in PEM block")
+    return get_raw_buffer(out)[:res]
+
+
 def decode(pem_data: str, passphrase: Optional[bytes] = None) -> tuple[bytes, str, bool]:
     """Decode a PEM block into binary.
 
@@ -115,27 +188,13 @@ def decode(pem_data: str, passphrase: Optional[bytes] = None) -> tuple[bytes, st
       ValueError: if decoding fails for any other reason.
     """
 
-    # Verify Pre-Encapsulation Boundary
-    r = re.compile(r"\s*-----BEGIN (.*)-----\s+")
-    m = r.match(pem_data)
-    if not m:
-        raise ValueError("Not a valid PEM pre boundary")
-    marker = m.group(1)
-
-    # Verify Post-Encapsulation Boundary.
-    if not pem_data.rstrip().endswith("-----END %s-----" % marker):
-        raise ValueError("Not a valid PEM post boundary")
-
-    # Removes spaces and slit on lines
-    lines = pem_data.replace(" ", "").split()
-    if len(lines) < 3:
-        raise ValueError("A PEM file must have at least 3 lines")
+    marker, headers, body = _parse(pem_data)
 
     # Decrypts, if necessary
-    if lines[1].startswith("Proc-Type:4,ENCRYPTED"):
+    if headers and headers[0].startswith("Proc-Type:4,ENCRYPTED"):
         if not passphrase:
             raise PassphraseRequiredError(_PASSPHRASE_REQUIRED)
-        DEK = lines[2].split(":")
+        DEK = headers[1].split(":") if len(headers) > 1 else []
         if len(DEK) != 2 or DEK[0] != "DEK-Info":
             raise ValueError("PEM encryption format not supported.")
         algo, salt_hex = DEK[1].split(",")
@@ -165,12 +224,11 @@ def decode(pem_data: str, passphrase: Optional[bytes] = None) -> tuple[bytes, st
             padding = False
         else:
             raise ValueError("Unsupported PEM encryption algorithm (%s)." % algo)
-        lines = lines[2:]
     else:
         objdec = None
 
     # Decode body
-    data = a2b_base64("".join(lines[1:-1]))
+    data = _decode_base64(body)
     enc_flag = False
     if objdec:
         if padding:

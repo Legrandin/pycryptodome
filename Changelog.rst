@@ -18,6 +18,13 @@ Breaking changes
   like ECC keys. It used to silently return the public key, ignoring any ``passphrase``.
   To export the public key, use ``key.public_key().export_key('OpenSSH')``.
 
+Resolved issues
+---------------
+* Security: the base64 body of a PEM block (for instance, a private key that is not encrypted)
+  was decoded with ``binascii.a2b_base64``, which looks up each character in a table, and could leak
+  the key through a cache side channel. The body is now decoded in constant time, and it is no longer
+  processed by Python string functions that look up characters in a table. Thanks to Li-Chung Chiang.
+
 4.4.0 (7 November 2026)
 +++++++++++++++++++++++++++
 

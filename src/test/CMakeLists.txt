@@ -248,6 +248,15 @@ if (VALGRIND AND HAVE_VALGRIND_MEMCHECK_H)
         LINK_LIBRARIES "")
     add_test(NAME test_pkcs1_ct COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_pkcs1_ct>)
 
+    # Constant-time check of the base64 decoding (PEM)
+    add_executable(test_base64_ct test_base64_ct.c ../base64.c)
+    target_compile_definitions(test_base64_ct PRIVATE NAT_CTGRIND)
+    set_target_properties(test_base64_ct PROPERTIES
+        COMPILE_OPTIONS "-O2;-g;-Wall;-Werror"
+        LINK_OPTIONS ""
+        LINK_LIBRARIES "")
+    add_test(NAME test_base64_ct COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_base64_ct>)
+
     add_executable(test_ec_nat_ct test_ec_nat_ct.c ${EC_SOURCES} ${NAT_SOURCES})
     target_compile_definitions(test_ec_nat_ct PRIVATE NAT_CTGRIND)
     set_target_properties(test_ec_nat_ct PROPERTIES
@@ -307,6 +316,14 @@ if (VALGRIND AND HAVE_VALGRIND_MEMCHECK_H)
             LINK_OPTIONS "-m32"
             LINK_LIBRARIES "")
         add_test(NAME test_pkcs1_ct_32 COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_pkcs1_ct_32>)
+
+        add_executable(test_base64_ct_32 test_base64_ct.c ../base64.c)
+        target_compile_definitions(test_base64_ct_32 PRIVATE NAT_CTGRIND)
+        set_target_properties(test_base64_ct_32 PROPERTIES
+            COMPILE_OPTIONS "-m32;-O2;-g;-Wall;-Werror;-UHAVE_UINT128;-USYS_BITS;-DSYS_BITS=32"
+            LINK_OPTIONS "-m32"
+            LINK_LIBRARIES "")
+        add_test(NAME test_base64_ct_32 COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_base64_ct_32>)
 
         add_executable(test_ec_nat_ct_32 test_ec_nat_ct.c ${EC_SOURCES} ${NAT_SOURCES})
         target_compile_definitions(test_ec_nat_ct_32 PRIVATE NAT_CTGRIND)
@@ -410,6 +427,10 @@ endforeach()
 # pkcs1
 add_executable(test_pkcs1 test_pkcs1.c ../pkcs1_decode.c)
 add_test(NAME test_pkcs1 COMMAND test_pkcs1)
+
+# base64 (PEM)
+add_executable(test_base64 test_base64.c ../base64.c)
+add_test(NAME test_base64 COMMAND test_base64)
 
 # CTR mode
 add_executable(test_raw_ctr test_raw_ctr.c ../raw_ctr.c)

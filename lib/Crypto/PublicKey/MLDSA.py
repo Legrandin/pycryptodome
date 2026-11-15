@@ -811,6 +811,7 @@ def import_key(
     .. _`RFC 7468`: https://www.rfc-editor.org/rfc/rfc7468.html
     """
 
+    from Crypto import PassphraseRequiredError
     from Crypto.IO import PEM, PKCS8
 
     PKCS8._check_kdf_params(max_iteration_count, threads, max_memory)
@@ -827,10 +828,12 @@ def import_key(
         except UnicodeDecodeError:
             raise ValueError("Not a valid PEM block") from None
 
-    # PEM (RFC 7468)
-    if "Proc-Type:" in text:
-        raise ValueError("The legacy PEM encryption is not supported: encrypt the key with PKCS#8")
-    der, label, _ = PEM.decode(text)
+    # PEM (RFC 7468). Without a passphrase, PEM.decode() rejects
+    # the legacy encryption (the Proc-Type header).
+    try:
+        der, label, _ = PEM.decode(text)
+    except PassphraseRequiredError:
+        raise ValueError("The legacy PEM encryption is not supported: encrypt the key with PKCS#8") from None
     if label in _CERTIFICATE_LABELS:
         label = "CERTIFICATE"
     if label not in ("PUBLIC KEY", "PRIVATE KEY", "ENCRYPTED PRIVATE KEY", "CERTIFICATE"):

@@ -218,6 +218,7 @@ ext_modules = [
     ),
     # Utility modules
     Extension("Crypto.Util._strxor", include_dirs=["src/"], sources=["src/strxor.c"], py_limited_api=True),
+    Extension("Crypto.Util._base64", include_dirs=["src/"], sources=["src/base64.c"], py_limited_api=True),
     # ECC
     Extension(
         "Crypto.PublicKey._ec_nat",
