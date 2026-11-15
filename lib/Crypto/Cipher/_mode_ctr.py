@@ -48,9 +48,8 @@ from Crypto.Util._raw_api import (
     load_pycryptodome_raw_lib,
 )
 from Crypto.Util._threads import range_boundaries, run_in_threads, threads_param
+from Crypto.Util._typing import Buffer
 from Crypto.Util.number import long_to_bytes
-
-Buffer = Union[bytes, bytearray, memoryview]
 
 raw_ctr_lib = load_pycryptodome_raw_lib(
     "Crypto.Cipher._raw_ctr",

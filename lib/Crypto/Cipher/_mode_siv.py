@@ -17,12 +17,11 @@ from binascii import unhexlify
 from Crypto.Cipher._state_machine import Method
 from Crypto.Protocol.KDF import _S2V
 from Crypto.Util._raw_api import is_buffer
+from Crypto.Util._typing import Buffer
 from Crypto.Util.number import bytes_to_long
 
 if TYPE_CHECKING:
     from types import ModuleType
-
-Buffer = Union[bytes, bytearray, memoryview]
 
 
 class SivMode:

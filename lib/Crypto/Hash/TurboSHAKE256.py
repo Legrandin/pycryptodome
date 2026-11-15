@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from typing import Optional, Union
+from typing import Optional
+
+from Crypto.Util._typing import Buffer
 
 from .TurboSHAKE128 import TurboSHAKE
-
-Buffer = Union[bytes, bytearray, memoryview]
 
 
 def new(*, domain: int = 0x1F, data: Optional[Buffer] = None) -> TurboSHAKE:

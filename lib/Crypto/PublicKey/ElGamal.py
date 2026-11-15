@@ -25,15 +25,15 @@
 
 from __future__ import annotations
 
-from typing import Callable, Optional, Union
+from typing import Optional, Union
 
 __all__ = ["generate", "construct", "ElGamalKey"]
 
 from Crypto import Random
 from Crypto.Math.Numbers import Integer
 from Crypto.Math.Primality import COMPOSITE, generate_probable_safe_prime, test_probable_prime
+from Crypto.Util._typing import RNG
 
-RNG = Callable[[int], bytes]
 Int = Union[int, Integer]
 
 

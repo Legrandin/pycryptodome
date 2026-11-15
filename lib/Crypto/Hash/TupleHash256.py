@@ -3,12 +3,12 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union
+from typing import Optional
+
+from Crypto.Util._typing import Buffer
 
 from . import cSHAKE256
 from .TupleHash128 import TupleHash
-
-Buffer = Union[bytes, bytearray, memoryview]
 
 
 def new(

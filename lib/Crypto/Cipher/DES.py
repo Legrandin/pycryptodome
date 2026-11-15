@@ -43,6 +43,7 @@ from Crypto.Util._raw_api import (
     c_uint8_ptr_len,
     load_pycryptodome_raw_lib,
 )
+from Crypto.Util._typing import Buffer
 
 if TYPE_CHECKING:
     from typing_extensions import Unpack
@@ -56,7 +57,6 @@ if TYPE_CHECKING:
     from Crypto.Cipher._mode_ofb import OfbMode
     from Crypto.Cipher._mode_openpgp import OpenPgpMode
 
-Buffer = Union[bytes, bytearray, memoryview]
 DESMode = int
 
 _raw_des_lib = load_pycryptodome_raw_lib(

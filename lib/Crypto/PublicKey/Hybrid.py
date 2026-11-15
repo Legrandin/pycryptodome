@@ -10,13 +10,14 @@ Currently, the only supported keys are those of the hybrid KEM X-Wing
 from __future__ import annotations
 
 from enum import Enum
-from typing import Any, Callable, NamedTuple, Optional, Union
+from typing import Any, NamedTuple, Optional
 
 from Crypto.Hash import SHA3_256, SHAKE256
 from Crypto.Protocol.DH import import_x25519_public_key, key_agreement
 from Crypto.PublicKey import ECC, MLKEM
 from Crypto.PublicKey.ECC import EccKey
 from Crypto.Random import get_random_bytes
+from Crypto.Util._typing import RNG, Buffer
 
 __all__ = [
     "ParamSet",
@@ -25,8 +26,6 @@ __all__ = [
     "generate",
 ]
 
-Buffer = Union[bytes, bytearray, memoryview]
-RNG = Callable[[int], bytes]
 
 # Length of the seed of a private key (Nseed = Ndk), and of the shared secret (Nss)
 _SEED_LEN = 32

@@ -37,7 +37,6 @@ import struct
 from typing import (
     TYPE_CHECKING,
     Any,
-    Callable,
     Literal,
     Optional,
     TypedDict,
@@ -56,6 +55,7 @@ from Crypto.PublicKey import (
 )
 from Crypto.Random import get_random_bytes
 from Crypto.Util._bytes import tobytes
+from Crypto.Util._typing import RNG
 from Crypto.Util.asn1 import DerBitString, DerObjectId, DerOctetString, DerSequence
 
 from ._point import CurveID as _CurveID
@@ -66,7 +66,6 @@ if TYPE_CHECKING:
 
     from Crypto.IO._PBES import ProtParams
 
-RNG = Callable[[int], bytes]
 Int = Union[int, Integer]
 
 

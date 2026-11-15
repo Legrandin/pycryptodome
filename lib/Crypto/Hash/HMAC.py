@@ -36,15 +36,15 @@ from __future__ import annotations
 import warnings
 from binascii import unhexlify
 from hmac import compare_digest
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional
 
 from Crypto.Util._bytes import tobytes
+from Crypto.Util._typing import Buffer
 from Crypto.Util.strxor import strxor
 
 if TYPE_CHECKING:
     from types import ModuleType
 
-Buffer = Union[bytes, bytearray, memoryview]
 
 __all__ = ["new", "HMAC"]
 

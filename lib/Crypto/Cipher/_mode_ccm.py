@@ -19,13 +19,12 @@ from Crypto import MessageTooLongError
 from Crypto.Cipher._state_machine import Method
 from Crypto.Random import get_random_bytes
 from Crypto.Util._raw_api import is_writeable_buffer
+from Crypto.Util._typing import Buffer
 from Crypto.Util.number import long_to_bytes
 from Crypto.Util.strxor import strxor
 
 if TYPE_CHECKING:
     from types import ModuleType
-
-Buffer = Union[bytes, bytearray, memoryview]
 
 
 def enum(**enums):

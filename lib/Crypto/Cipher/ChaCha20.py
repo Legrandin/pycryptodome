@@ -22,8 +22,7 @@ from Crypto.Util._raw_api import (
     load_pycryptodome_raw_lib,
 )
 from Crypto.Util._threads import range_boundaries, run_in_threads, threads_param
-
-Buffer = Union[bytes, bytearray, memoryview]
+from Crypto.Util._typing import Buffer
 
 _chacha20_cdecl = """
                     int chacha20_init(void **pState,

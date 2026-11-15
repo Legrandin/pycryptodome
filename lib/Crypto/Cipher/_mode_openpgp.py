@@ -7,16 +7,15 @@ OpenPGP mode.
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 __all__ = ["OpenPgpMode"]
 from Crypto.Random import get_random_bytes
 from Crypto.Util._raw_api import is_buffer
+from Crypto.Util._typing import Buffer
 
 if TYPE_CHECKING:
     from types import ModuleType
-
-Buffer = Union[bytes, bytearray, memoryview]
 
 
 class OpenPgpMode:

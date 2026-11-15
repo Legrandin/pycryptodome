@@ -7,7 +7,7 @@ from __future__ import annotations
 
 from typing import Union
 
-Buffer = Union[bytes, bytearray, memoryview]
+from Crypto.Util._typing import Buffer
 
 
 def tobytes(s: Union[str, Buffer], encoding: str = "latin-1") -> bytes:

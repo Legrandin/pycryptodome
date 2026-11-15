@@ -14,8 +14,7 @@ from Crypto.Util._raw_api import (
     is_writeable_buffer,
     load_pycryptodome_raw_lib,
 )
-
-Buffer = Union[bytes, bytearray, memoryview]
+from Crypto.Util._typing import Buffer
 
 _raw_strxor = load_pycryptodome_raw_lib(
     "Crypto.Util._strxor",

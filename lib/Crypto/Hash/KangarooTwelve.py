@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union
+from typing import Optional
 
 from Crypto.Util._cpu_features import load_avx2_bmi2_lib
 from Crypto.Util._raw_api import (
@@ -15,11 +15,10 @@ from Crypto.Util._raw_api import (
     load_pycryptodome_raw_lib,
 )
 from Crypto.Util._threads import range_boundaries, run_in_threads, threads_param
+from Crypto.Util._typing import Buffer
 from Crypto.Util.number import long_to_bytes
 
 from . import TurboSHAKE128
-
-Buffer = Union[bytes, bytearray, memoryview]
 
 _k12_cdecl = """
                         int k12_leaves(const uint8_t *in,

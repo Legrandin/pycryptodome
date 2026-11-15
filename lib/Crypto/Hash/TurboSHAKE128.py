@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Optional, Union
+from typing import Optional
 
 from Crypto.Util._raw_api import (
     SmartPointer,
@@ -12,10 +12,9 @@ from Crypto.Util._raw_api import (
     create_output_buffer,
     get_raw_buffer,
 )
+from Crypto.Util._typing import Buffer
 
 from .keccak import _raw_keccak_lib
-
-Buffer = Union[bytes, bytearray, memoryview]
 
 
 class TurboSHAKE:

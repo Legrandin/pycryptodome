@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union
+from typing import Optional
 
 from Crypto.Util._raw_api import (
     SmartPointer,
@@ -14,8 +14,7 @@ from Crypto.Util._raw_api import (
     get_raw_buffer,
     load_pycryptodome_raw_lib,
 )
-
-Buffer = Union[bytes, bytearray, memoryview]
+from Crypto.Util._typing import Buffer
 
 _raw_md2_lib = load_pycryptodome_raw_lib(
     "Crypto.Hash._MD2",

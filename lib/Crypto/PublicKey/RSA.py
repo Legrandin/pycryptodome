@@ -31,7 +31,7 @@
 from __future__ import annotations
 
 from collections.abc import Sequence
-from typing import TYPE_CHECKING, Callable, Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 __all__ = ["generate", "construct", "import_key", "RsaKey", "oid"]
 
@@ -50,6 +50,7 @@ from Crypto.PublicKey import (
     _extract_subject_public_key_info,
 )
 from Crypto.Util._bytes import tobytes
+from Crypto.Util._typing import RNG
 from Crypto.Util.asn1 import DerNull, DerSequence
 from Crypto.Util.number import bytes_to_long
 
@@ -77,7 +78,6 @@ MAX_MODULUS_BITS = 16384
 if TYPE_CHECKING:
     from Crypto.IO._PBES import ProtParams
 
-RNG = Callable[[int], bytes]
 Int = Union[int, Integer]
 
 

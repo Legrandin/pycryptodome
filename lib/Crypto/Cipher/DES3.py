@@ -38,6 +38,7 @@ from typing import TYPE_CHECKING, Union
 from Crypto.Cipher import _create_cipher
 from Crypto.Util._bytes import tobytes
 from Crypto.Util._raw_api import SmartPointer, VoidPointer, c_size_t, load_pycryptodome_raw_lib
+from Crypto.Util._typing import Buffer
 
 if TYPE_CHECKING:
     from typing_extensions import Unpack
@@ -51,7 +52,6 @@ if TYPE_CHECKING:
     from Crypto.Cipher._mode_ofb import OfbMode
     from Crypto.Cipher._mode_openpgp import OpenPgpMode
 
-Buffer = Union[bytes, bytearray, memoryview]
 DES3Mode = int
 
 _raw_des3_lib = load_pycryptodome_raw_lib(

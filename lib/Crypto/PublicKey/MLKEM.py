@@ -21,6 +21,7 @@ from Crypto.Util._raw_api import (
     get_raw_buffer,
     load_pycryptodome_raw_lib,
 )
+from Crypto.Util._typing import RNG, Buffer
 from Crypto.Util.asn1 import DerBitString, DerInteger, DerNull, DerObjectId, DerOctetString, DerSequence
 
 if TYPE_CHECKING:
@@ -37,8 +38,6 @@ __all__ = [
     "import_key",
 ]
 
-Buffer = Union[bytes, bytearray, memoryview]
-RNG = Callable[[int], bytes]
 
 _mlkem_cdecl = """
     int mlkem_keypair(unsigned level,

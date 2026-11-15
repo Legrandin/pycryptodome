@@ -4,7 +4,7 @@
 from __future__ import annotations
 
 from binascii import unhexlify
-from typing import Optional, Union
+from typing import Optional
 
 from Crypto.Random import get_random_bytes
 from Crypto.Util._bytes import tobytes
@@ -17,8 +17,7 @@ from Crypto.Util._raw_api import (
     get_raw_buffer,
     load_pycryptodome_raw_lib,
 )
-
-Buffer = Union[bytes, bytearray, memoryview]
+from Crypto.Util._typing import Buffer
 
 _raw_blake2b_lib = load_pycryptodome_raw_lib(
     "Crypto.Hash._BLAKE2b",

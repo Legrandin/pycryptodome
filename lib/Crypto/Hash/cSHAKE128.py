@@ -31,7 +31,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union
+from typing import Optional
 
 from Crypto.Hash.keccak import _raw_keccak_lib
 from Crypto.Util._raw_api import (
@@ -44,9 +44,8 @@ from Crypto.Util._raw_api import (
     create_output_buffer,
     get_raw_buffer,
 )
+from Crypto.Util._typing import Buffer
 from Crypto.Util.number import long_to_bytes
-
-Buffer = Union[bytes, bytearray, memoryview]
 
 
 def _left_encode(x):

@@ -34,6 +34,7 @@ from Crypto.Util._raw_api import (
     c_uint8_ptr_len,
     load_pycryptodome_raw_lib,
 )
+from Crypto.Util._typing import Buffer
 
 if TYPE_CHECKING:
     from Crypto.Cipher._mode_cbc import CbcMode
@@ -53,7 +54,6 @@ if TYPE_CHECKING:
     from Crypto.Cipher._mode_xts import XtsMode
     from Crypto.Util.Counter import CounterParams
 
-Buffer = Union[bytes, bytearray, memoryview]
 
 MODE_ECB: Literal[1] = 1  #: Electronic Code Book (:ref:`ecb_mode`)
 MODE_CBC: Literal[2] = 2  #: Cipher-Block Chaining (:ref:`cbc_mode`)

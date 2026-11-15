@@ -23,7 +23,7 @@ from __future__ import annotations
 
 from binascii import unhexlify
 from hmac import compare_digest
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional
 
 from Crypto.Util._bytes import tobytes
 from Crypto.Util._raw_api import (
@@ -35,12 +35,10 @@ from Crypto.Util._raw_api import (
     get_raw_buffer,
     load_pycryptodome_raw_lib,
 )
+from Crypto.Util._typing import Buffer
 
 if TYPE_CHECKING:
     from types import ModuleType
-
-
-Buffer = Union[bytes, bytearray, memoryview]
 
 
 _raw_poly1305 = load_pycryptodome_raw_lib(

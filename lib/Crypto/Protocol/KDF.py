@@ -46,6 +46,7 @@ from Crypto.Util._raw_api import (
     load_pycryptodome_raw_lib,
 )
 from Crypto.Util._threads import range_boundaries, run_in_threads, threads_param
+from Crypto.Util._typing import Buffer
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 from Crypto.Util.number import size as bit_size
 from Crypto.Util.strxor import strxor, strxor_c
@@ -53,8 +54,6 @@ from Crypto.Util.strxor import strxor, strxor_c
 if TYPE_CHECKING:
     from types import ModuleType
 
-Buffer = Union[bytes, bytearray, memoryview]
-RNG = Callable[[int], bytes]
 PRF = Callable[[bytes, bytes], bytes]
 
 _raw_scrypt_lib = load_pycryptodome_raw_lib(

@@ -20,7 +20,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union
+from typing import Optional
 
 from Crypto.Util import _cpu_features
 from Crypto.Util._raw_api import (
@@ -32,8 +32,7 @@ from Crypto.Util._raw_api import (
     get_raw_buffer,
     load_pycryptodome_raw_lib,
 )
-
-Buffer = Union[bytes, bytearray, memoryview]
+from Crypto.Util._typing import Buffer
 
 _sha512_cdecl = """
                         int SHA512_init(void **shaState,

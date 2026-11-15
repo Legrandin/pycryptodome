@@ -44,7 +44,7 @@ from __future__ import annotations
 
 from binascii import unhexlify
 from hmac import compare_digest
-from typing import TYPE_CHECKING, Any, Callable, Optional, Union
+from typing import TYPE_CHECKING, Any, Callable, Optional
 
 from Crypto.Cipher._state_machine import Method
 from Crypto.Random import get_random_bytes
@@ -61,12 +61,12 @@ from Crypto.Util._raw_api import (
     load_pycryptodome_raw_lib,
 )
 from Crypto.Util._threads import range_boundaries, run_in_threads, threads_param
+from Crypto.Util._typing import Buffer
 from Crypto.Util.strxor import strxor
 
 if TYPE_CHECKING:
     from types import ModuleType
 
-Buffer = Union[bytes, bytearray, memoryview]
 
 _raw_ocb_lib = load_pycryptodome_raw_lib(
     "Crypto.Cipher._raw_ocb",

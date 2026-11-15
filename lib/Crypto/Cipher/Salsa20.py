@@ -40,8 +40,7 @@ from Crypto.Util._raw_api import (
     is_writeable_buffer,
     load_pycryptodome_raw_lib,
 )
-
-Buffer = Union[bytes, bytearray, memoryview]
+from Crypto.Util._typing import Buffer
 
 _salsa20_cdecl = """
                     int Salsa20_stream_init(uint8_t *key, size_t keylen,

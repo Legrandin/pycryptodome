@@ -30,11 +30,10 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union
+from typing import Optional
 
 from Crypto.Hash.cSHAKE128 import cSHAKE_XOF
-
-Buffer = Union[bytes, bytearray, memoryview]
+from Crypto.Util._typing import Buffer
 
 
 def _new(data, custom, function):

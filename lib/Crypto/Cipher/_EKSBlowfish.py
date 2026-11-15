@@ -5,7 +5,7 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Iterable
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 from Crypto.Cipher import _create_cipher
 from Crypto.Util._raw_api import (
@@ -16,11 +16,11 @@ from Crypto.Util._raw_api import (
     c_uint8_ptr_len,
     load_pycryptodome_raw_lib,
 )
+from Crypto.Util._typing import Buffer
 
 if TYPE_CHECKING:
     from Crypto.Cipher._mode_ecb import EcbMode
 
-Buffer = Union[bytes, bytearray, memoryview]
 
 _raw_blowfish_lib = load_pycryptodome_raw_lib(
     "Crypto.Cipher._raw_eksblowfish",

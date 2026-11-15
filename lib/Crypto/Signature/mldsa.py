@@ -5,18 +5,17 @@
 
 from __future__ import annotations
 
-from typing import Any, Callable, Optional, Protocol, Union, cast
+from typing import Any, Optional, Protocol, Union, cast
 
 from Crypto.Hash import SHAKE256
 from Crypto.PublicKey.MLDSA import MLDSAKey
 from Crypto.Random import get_random_bytes
 from Crypto.Util._raw_api import is_buffer
+from Crypto.Util._typing import RNG, Buffer
 from Crypto.Util.asn1 import DerObjectId
 
 __all__ = ["MLDSASigScheme", "MLDSAMuHash", "new"]
 
-Buffer = Union[bytes, bytearray, memoryview]
-RNG = Callable[[int], bytes]
 
 # The length of the nonce rnd (FIPS 204, Algorithm 2)
 _RND_LEN = 32

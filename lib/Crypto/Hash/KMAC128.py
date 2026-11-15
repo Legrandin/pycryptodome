@@ -4,19 +4,18 @@
 from __future__ import annotations
 
 from binascii import unhexlify
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional
 
 from Crypto.Random import get_random_bytes
 from Crypto.Util._bytes import tobytes
 from Crypto.Util._raw_api import is_buffer
+from Crypto.Util._typing import Buffer
 
 from . import SHA3_256, cSHAKE128
 from .cSHAKE128 import _bytepad, _encode_str, _right_encode
 
 if TYPE_CHECKING:
     from types import ModuleType
-
-Buffer = Union[bytes, bytearray, memoryview]
 
 
 class KMAC_Hash:

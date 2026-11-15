@@ -13,9 +13,8 @@ from Crypto.Cipher.ChaCha20 import _HChaCha20
 from Crypto.Hash import Poly1305
 from Crypto.Random import get_random_bytes
 from Crypto.Util._raw_api import is_buffer
+from Crypto.Util._typing import Buffer
 from Crypto.Util.number import long_to_bytes
-
-Buffer = Union[bytes, bytearray, memoryview]
 
 
 def _enum(**enums):

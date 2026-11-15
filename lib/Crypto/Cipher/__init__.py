@@ -26,10 +26,10 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypedDict, Union
 
+from Crypto.Util._typing import Buffer
+
 if TYPE_CHECKING:
     from Crypto.Util.Counter import CounterParams
-
-Buffer = Union[bytes, bytearray, memoryview]
 
 
 class BlockCipherParams(TypedDict, total=False):

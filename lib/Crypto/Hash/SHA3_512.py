@@ -20,7 +20,7 @@
 
 from __future__ import annotations
 
-from typing import Optional, Union
+from typing import Optional
 
 from Crypto.Hash.keccak import _pbkdf2_hmac_assist as _pbkdf2_hmac_assist  # For PBKDF2
 from Crypto.Hash.keccak import _raw_keccak_lib
@@ -33,8 +33,7 @@ from Crypto.Util._raw_api import (
     create_string_buffer,
     get_raw_buffer,
 )
-
-Buffer = Union[bytes, bytearray, memoryview]
+from Crypto.Util._typing import Buffer
 
 
 class SHA3_512_Hash:

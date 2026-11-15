@@ -27,6 +27,7 @@ import Crypto.Util.number
 from Crypto import Random
 from Crypto.Signature.pss import MGF1, MaskFunction, RndFunction
 from Crypto.Util._raw_api import is_buffer
+from Crypto.Util._typing import Buffer
 from Crypto.Util.number import bytes_to_long, ceil_div, long_to_bytes
 from Crypto.Util.strxor import strxor
 
@@ -50,7 +51,6 @@ class HashLikeModule(Protocol):
 
 
 HashLike = Union[HashLikeClass, HashLikeModule]
-Buffer = Union[bytes, bytearray, memoryview]
 
 
 class PKCS1OAEP_Cipher:

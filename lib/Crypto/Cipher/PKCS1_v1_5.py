@@ -27,6 +27,7 @@ __all__ = ["new", "PKCS115_Cipher"]
 
 from Crypto import Random
 from Crypto.Hash import HMAC, SHA256
+from Crypto.Util._typing import Buffer
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 
 from ._pkcs1_oaep_decode import pkcs1_decode, pkcs1_decode_implicit
@@ -34,7 +35,6 @@ from ._pkcs1_oaep_decode import pkcs1_decode, pkcs1_decode_implicit
 if TYPE_CHECKING:
     from Crypto.PublicKey.RSA import RsaKey
 
-Buffer = Union[bytes, bytearray, memoryview]
 
 T = TypeVar("T")
 

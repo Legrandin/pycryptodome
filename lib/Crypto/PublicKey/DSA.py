@@ -24,7 +24,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from typing import TYPE_CHECKING, Callable, Optional, Union
+from typing import TYPE_CHECKING, Optional, Union
 
 __all__ = ["generate", "construct", "DsaKey", "import_key"]
 
@@ -43,6 +43,7 @@ from Crypto.PublicKey import (
     _extract_subject_public_key_info,
 )
 from Crypto.Util._bytes import tobytes
+from Crypto.Util._typing import RNG
 from Crypto.Util.asn1 import (
     DerInteger,
     DerSequence,
@@ -51,7 +52,6 @@ from Crypto.Util.asn1 import (
 if TYPE_CHECKING:
     from Crypto.IO._PBES import ProtParams
 
-RNG = Callable[[int], bytes]
 Int = Union[int, Integer]
 
 #   ; The following ASN.1 types are relevant for DSA

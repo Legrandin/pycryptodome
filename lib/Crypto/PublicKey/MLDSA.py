@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import hmac
 from enum import Enum
-from typing import TYPE_CHECKING, Any, Callable, Literal, NamedTuple, Optional, Union, overload
+from typing import TYPE_CHECKING, Any, Literal, NamedTuple, Optional, Union, overload
 
 from Crypto.PublicKey import _create_subject_public_key_info, _extract_subject_public_key_info
 from Crypto.Random import get_random_bytes
@@ -21,6 +21,7 @@ from Crypto.Util._raw_api import (
     get_raw_buffer,
     load_pycryptodome_raw_lib,
 )
+from Crypto.Util._typing import RNG, Buffer
 from Crypto.Util.asn1 import DerBitString, DerInteger, DerNull, DerObjectId, DerOctetString, DerSequence
 
 if TYPE_CHECKING:
@@ -37,8 +38,6 @@ __all__ = [
     "import_key",
 ]
 
-Buffer = Union[bytes, bytearray, memoryview]
-RNG = Callable[[int], bytes]
 
 _mldsa_cdecl = """
     int mldsa_keypair(unsigned level,

@@ -30,12 +30,11 @@ from Crypto.Util._raw_api import (
     load_pycryptodome_raw_lib,
 )
 from Crypto.Util._threads import range_boundaries, run_in_threads
+from Crypto.Util._typing import Buffer
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 
 if TYPE_CHECKING:
     from types import ModuleType
-
-Buffer = Union[bytes, bytearray, memoryview]
 
 
 # C API by module implementing GHASH

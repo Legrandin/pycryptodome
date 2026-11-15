@@ -29,11 +29,10 @@ from __future__ import annotations
 import math
 import operator
 import struct
-from typing import Callable, Optional, Union
+from typing import Optional, Union
 
 from Crypto import Random
-
-RNG = Callable[[int], bytes]
+from Crypto.Util._typing import RNG
 
 # Backward compatibility
 _fastmath = None

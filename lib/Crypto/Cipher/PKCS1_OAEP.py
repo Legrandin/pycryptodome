@@ -32,8 +32,9 @@ from typing import TYPE_CHECKING, Optional
 
 import Crypto.Hash.SHA1
 from Crypto.Cipher import oaep
-from Crypto.Cipher.oaep import Buffer, HashLike
+from Crypto.Cipher.oaep import HashLike
 from Crypto.Signature.pss import MaskFunction, RndFunction
+from Crypto.Util._typing import Buffer
 
 if TYPE_CHECKING:
     from Crypto.PublicKey.RSA import RsaKey

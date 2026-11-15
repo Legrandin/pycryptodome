@@ -3,17 +3,16 @@
 
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Optional, Union
+from typing import TYPE_CHECKING, Optional
 
 from Crypto.Util._raw_api import is_buffer
+from Crypto.Util._typing import Buffer
 
 from . import cSHAKE128
 from .cSHAKE128 import _encode_str, _right_encode
 
 if TYPE_CHECKING:
     from types import ModuleType
-
-Buffer = Union[bytes, bytearray, memoryview]
 
 
 class TupleHash:

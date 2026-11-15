@@ -25,12 +25,11 @@ from Crypto.Random import get_random_bytes
 from Crypto.Util import Counter
 from Crypto.Util._raw_api import is_buffer
 from Crypto.Util._threads import threads_param
+from Crypto.Util._typing import Buffer
 from Crypto.Util.strxor import strxor
 
 if TYPE_CHECKING:
     from types import ModuleType
-
-Buffer = Union[bytes, bytearray, memoryview]
 
 
 # See RFC 8452, Section 6 (the ciphertext is 16 bytes longer, because of the tag)

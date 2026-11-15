@@ -23,16 +23,15 @@ from __future__ import annotations
 
 from binascii import unhexlify
 from hmac import compare_digest
-from typing import TYPE_CHECKING, Any, Optional, Union
+from typing import TYPE_CHECKING, Any, Optional
 
 from Crypto.Util._bytes import tobytes
+from Crypto.Util._typing import Buffer
 from Crypto.Util.number import bytes_to_long, long_to_bytes
 from Crypto.Util.strxor import strxor
 
 if TYPE_CHECKING:
     from types import ModuleType
-
-Buffer = Union[bytes, bytearray, memoryview]
 
 
 # The size of the authentication tag produced by the MAC.
