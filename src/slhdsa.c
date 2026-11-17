@@ -414,7 +414,7 @@ static void hash_shake256_x4(const Context *ctx, uint8_t *out[4], const ADRS adr
     assert(l >= 1 && l <= X4_L_MAX);
     if (l < 1 || l > X4_L_MAX)          /* also with NDEBUG: never overflow blocks */
         return;
-    M_len = l * ctx->n;
+    M_len = (size_t)l * ctx->n;
     len = ctx->n + ADRS_LEN + M_len;
 
     for (j = 0; j < 4; j++) {
