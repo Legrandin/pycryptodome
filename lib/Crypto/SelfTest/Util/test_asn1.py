@@ -295,6 +295,19 @@ class TestDerInteger:
         der = DerInteger()
         assert der == der.decode(b"\x02\x01\x7f")
 
+    def testLarge(self):
+        # Integers of 1 MB: with an algorithm that is quadratic
+        # in the length of the payload, this takes minutes
+        length = 1 << 20
+        header = b"\x02\x83" + length.to_bytes(3, "big")
+        der = DerInteger()
+        der.decode(header + b"\x01" + b"\x00" * (length - 1))
+        assert der.value == 1 << (8 * (length - 1))
+        der.decode(header + b"\x80" + b"\x00" * (length - 1))
+        assert der.value == -(1 << (8 * length - 1))
+        assert DerInteger(der.value).encode() == header + b"\x80" + b"\x00" * (length - 1)
+        assert DerInteger((1 << (8 * length - 1)) - 1).encode() == header + b"\x7f" + b"\xff" * (length - 1)
+
     ###
 
     def testStrict1(self):
@@ -733,6 +746,34 @@ class TestDerObjectId:
         assert der.value == "0.0.128"
         der.decode(b"\x06\x04\x2a\x81\x80\x00")
         assert der.value == "1.2.16384"
+
+    def testDecode6(self):
+        # A UUID (ITU-T X.667): a subidentifier of 128 bits
+        uuid = 0xF81D4FAE_7DEC_11D0_A765_00A0C91E6BF6
+        der = DerObjectId("2.25.%d" % uuid)
+        assert der.encode()[1] == 20
+        assert DerObjectId().decode(der.encode()).value == "2.25.%d" % uuid
+
+    def testDecode7(self):
+        # Subidentifiers of up to 128 bytes, also in a long OID
+        largest = (1 << (7 * 128)) - 1
+        subid = b"\xff" * 127 + b"\x7f"
+        der = DerObjectId()
+        der.decode(b"\x06\x81\x81\x2a" + subid)
+        assert der.value == "1.2.%d" % largest
+        payload = b"\x2a" + subid * 1000
+        der.decode(b"\x06\x83" + len(payload).to_bytes(3, "big") + payload)
+        assert der.value == "1.2" + (".%d" % largest) * 1000
+
+    def testErrDecode2(self):
+        # A subidentifier longer than 128 bytes
+        with pytest.raises(ValueError, match="longer than 128 bytes"):
+            DerObjectId().decode(b"\x06\x81\x82\x2a\x81" + b"\xff" * 127 + b"\x7f")
+        # Also with a payload of 1 MB
+        length = 1 << 20
+        payload = b"\x2a" + b"\xff" * (length - 2) + b"\x7f"
+        with pytest.raises(ValueError, match="longer than 128 bytes"):
+            DerObjectId().decode(b"\x06\x83" + length.to_bytes(3, "big") + payload)
 
     @pytest.mark.parametrize("strict", [False, True])
     @pytest.mark.parametrize(

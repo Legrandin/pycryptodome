@@ -33,6 +33,13 @@ New features
   (like key generation and signing with the SP 800-230 parameter sets, which take about
   half an hour): they do not run otherwise.
 
+Resolved issues
+---------------
+* Security: decoding a DER ``INTEGER`` took time quadratic in its length, so a crafted
+  key of a few hundred KB (for instance, for ``RSA.import_key``) kept the CPU busy for minutes.
+  It now takes linear time. Decoding an ``OBJECT IDENTIFIER`` had the same problem: its
+  subidentifiers are now limited to 128 bytes. Thanks to netherportal3.
+
 4.5.0 (15 November 2026)
 +++++++++++++++++++++++++++
 

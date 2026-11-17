@@ -365,15 +365,10 @@ class DerInteger(DerObject):
         """Return the DER INTEGER, fully encoded as a
         binary string."""
 
-        number = self.value
-        self.payload = b""
-        while True:
-            self.payload = bytes([int(number & 255)]) + self.payload
-            if 128 <= number <= 255:
-                self.payload = bytes([0x00]) + self.payload
-            if -128 <= number <= 255:
-                break
-            number >>= 8
+        # The shortest two's complement encoding (at least one byte)
+        number = int(self.value)
+        magnitude = number if number >= 0 else ~number
+        self.payload = number.to_bytes(magnitude.bit_length() // 8 + 1, "big", signed=True)
         return DerObject.encode(self)
 
     def decode(self, der_encoded: bytes, strict: bool = False) -> DerInteger:
@@ -401,15 +396,9 @@ class DerInteger(DerObject):
             if len(self.payload) >= 2 and struct.unpack(">H", self.payload[:2])[0] < 0x80:
                 raise ValueError("Invalid encoding for DER INTEGER: leading zero")
 
-        # Derive self.value from self.payload
-        self.value = 0
-        bits = 1
-        for i in self.payload:
-            self.value *= 256
-            self.value += i
-            bits <<= 8
-        if self.payload and self.payload[0] & 0x80:
-            self.value -= bits
+        # Derive self.value from self.payload (two's complement),
+        # in time linear in the length of the payload
+        self.value = int.from_bytes(self.payload, "big", signed=True)
 
 
 class DerBoolean(DerObject):
@@ -811,6 +800,12 @@ class DerNull(DerObject):
         DerObject.__init__(self, 0x05, b"", None, False)
 
 
+# The maximum length in bytes of a subidentifier in an OBJECT IDENTIFIER
+# (896 bits): far more than any OID in use, for instance the 128-bit UUIDs
+# of the arc 2.25 (ITU-T X.667), which take 19 bytes
+_MAX_OID_SUBID_LEN = 128
+
+
 class DerObjectId(DerObject):
     """Class to model a DER OBJECT ID.
 
@@ -915,18 +910,25 @@ class DerObjectId(DerObject):
         # Each subidentifier is a base-128 big-endian number, where all octets
         # but the last have bit 8 set. As per X.690 8.19.2, the leading octet
         # cannot be 0x80 (padding) and that holds for BER too.
+        # The length of a subidentifier is limited, so that decoding takes
+        # linear time in the length of the payload.
         subcomps = []
         v = 0
+        v_len = 0
         in_subcomp = False
         while p.remaining_data():
             c = p.read_byte()
             if c == 0x80 and not in_subcomp:
                 raise ValueError("Invalid OID: subidentifier with leading 0x80")
+            v_len += 1
+            if v_len > _MAX_OID_SUBID_LEN:
+                raise ValueError("Invalid OID: subidentifier longer than %d bytes" % _MAX_OID_SUBID_LEN)
             v = (v << 7) + (c & 0x7F)
             in_subcomp = bool(c & 0x80)
             if not in_subcomp:
                 subcomps.append(v)
                 v = 0
+                v_len = 0
 
         if in_subcomp:
             raise ValueError("Invalid OID: truncated subidentifier")
