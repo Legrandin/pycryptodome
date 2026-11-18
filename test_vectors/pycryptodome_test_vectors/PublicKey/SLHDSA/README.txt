@@ -8,13 +8,19 @@ SLH-DSA-sigVer-FIPS205.json
     inputs and the expected results) from:
 
         https://github.com/usnistgov/ACVP-Server/tree/master/gen-val/json-files
-        (commit 112690e8484dba7077709a05b1f3af58ddefdd5d)
+        (commit 112690e8484dba7077709a05b1f3af58ddefdd5d; the SLH-DSA files
+         are unchanged up to commit 975de31, 12 August 2026)
 
-    keyGen:  the first 2 tests of each group.
+    The tests were selected to keep the test time short (generating a key
+    with the "s" parameter sets, and signing with them, is slow):
+
+    keyGen:  the first 4 tests of each group (12 groups, 48 tests).
     sigGen:  the groups for the internal interface and for pure SLH-DSA
              (not HashSLH-DSA), and the test with the shortest message in each.
-    sigVer:  the same groups, with one invalid signature each
-             (the reasons in turn).
+    sigVer:  the groups for the internal interface and for pure SLH-DSA
+             (24 groups), with the first test of each of the 7 kinds in each
+             group (168 tests): a valid signature, and a signature that is too
+             short or too long, or with a modified message, R, SIG_FORS or SIG_HT.
 
 SLH-DSA-sigGen-FIPS205-preHash.json
 SLH-DSA-sigVer-FIPS205-preHash.json
@@ -24,7 +30,8 @@ SLH-DSA-sigVer-FIPS205-preHash.json
     sigGen:  the "f" parameter sets only (signing with the "s" sets is slow),
              with each hash function or XOF twice (once deterministic, once
              hedged, with different parameter sets).
-    sigVer:  one invalid signature in each group (the reasons in turn).
+    sigVer:  the first test of each of the 7 kinds in each group
+             (12 groups, 84 tests), as above.
 
 SLH-DSA-SP800-230-ipd.json
 
@@ -110,3 +117,15 @@ rfc9909_*.pem
 
     The certificate spans several pages of the RFC: the page footers and
     headers were removed from its base64 lines.
+
+openssl_slh_dsa_*_key_cert.pem
+
+    The S/MIME test files of OpenSSL (Apache License 2.0) for SLH-DSA-SHA2-128s,
+    SLH-DSA-SHAKE-128s and SLH-DSA-SHAKE-256s: a private key (PKCS#8 as in
+    RFC 9909, without the public key field) and a certificate for the same key,
+    both made by OpenSSL. The certificates are issued by another key (a test CA),
+    so they test the import of the public key only. Unmodified copies of:
+
+        https://github.com/openssl/openssl/tree/master/test/smime-certs
+        sm_slhdsa_sha2_128s.pem, sm_slhdsa_shake_128s.pem, sm_slhdsa_shake_256s.pem
+        (commit f08c66439cfb6eef09eee64c875090b1d0796c10, 18 November 2026)

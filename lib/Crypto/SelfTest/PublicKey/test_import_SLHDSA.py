@@ -423,6 +423,34 @@ class TestRFC9909:
             assert SLHDSA.import_key(pem.replace("CERTIFICATE", label)) == key.public_key()
 
 
+class TestOpenSSL:
+    """Keys and certificates made by OpenSSL (its S/MIME test files): a PKCS#8
+    private key, and a certificate for the same key (issued by another key)"""
+
+    @pytest.mark.parametrize(
+        "name, ps",
+        [
+            ("sha2_128s", ParamSet.SLH_DSA_SHA2_128s),
+            ("shake_128s", ParamSet.SLH_DSA_SHAKE_128s),
+            ("shake_256s", ParamSet.SLH_DSA_SHAKE_256s),
+        ],
+    )
+    def test_key_and_certificate(self, name, ps):
+        pem = load_file("openssl_slh_dsa_%s_key_cert.pem" % name, "r")
+        end = "-----END PRIVATE KEY-----\n"
+        private_pem = pem[: pem.index(end) + len(end)]
+        cert_pem = pem[pem.index("-----BEGIN CERTIFICATE-----") :]
+
+        key = SLHDSA.import_key(private_pem)
+        assert key.has_private()
+        assert key.param_set is ps
+        assert key.export_key(format="PEM").strip() == private_pem.strip()
+
+        cert_key = SLHDSA.import_key(cert_pem)
+        assert not cert_key.has_private()
+        assert cert_key == key.public_key()
+
+
 class TestPEM:
     ps = ParamSet.SLH_DSA_SHA2_128f
 
