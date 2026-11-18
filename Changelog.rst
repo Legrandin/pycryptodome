@@ -33,6 +33,11 @@ New features
   (like key generation and signing with the SP 800-230 parameter sets, which take about
   half an hour): they do not run otherwise.
 
+Breaking changes
+----------------
+* In ``Crypto.Signature.mldsa.new()``, the context can only be passed as a keyword
+  argument (``context=``), as for ``Crypto.Signature.slhdsa.new()``.
+
 Resolved issues
 ---------------
 * Security: decoding a DER ``INTEGER`` took time quadratic in its length, so a crafted

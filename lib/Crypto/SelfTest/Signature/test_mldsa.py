@@ -93,13 +93,13 @@ class TestACVP:
         key = MLDSA.construct(param_set=ParamSet(group["parameterSet"]), sk=unhexlify(test["sk"]))
         context = unhexlify(test["context"])
         if group["deterministic"]:
-            signer = mldsa.new(key, context, deterministic=True)
+            signer = mldsa.new(key, context=context, deterministic=True)
         else:
-            signer = mldsa.new(key, context, randfunc=fixed_rng(unhexlify(test["rnd"])))
+            signer = mldsa.new(key, context=context, randfunc=fixed_rng(unhexlify(test["rnd"])))
         signature = signer.sign(acvp_message(group, test))
         assert signature == unhexlify(test["signature"])
 
-        verifier = mldsa.new(key.public_key(), context)
+        verifier = mldsa.new(key.public_key(), context=context)
         verifier.verify(acvp_message(group, test), signature)
 
     @pytest.mark.parametrize(
@@ -108,7 +108,7 @@ class TestACVP:
     )
     def test_verify(self, group, test):
         key = MLDSA.construct(param_set=ParamSet(group["parameterSet"]), pk=unhexlify(test["pk"]))
-        verifier = mldsa.new(key, unhexlify(test["context"]))
+        verifier = mldsa.new(key, context=unhexlify(test["context"]))
         msg = acvp_message(group, test)
         signature = unhexlify(test["signature"])
         if test["testPassed"]:
@@ -175,30 +175,34 @@ class TestMLDSASigScheme:
             mldsa.new(self.key, randfunc=lambda n: b"\x00" * (n - 1)).sign(b"message")
 
     def test_deterministic(self):
-        signer = mldsa.new(self.key, b"ctx", deterministic=True)
+        signer = mldsa.new(self.key, context=b"ctx", deterministic=True)
         signature = signer.sign(b"message")
         assert signer.sign(b"message") == signature
         assert signature == self.key._sign((pure_prefix(b"ctx"), b"message"), ZERO_RND)
-        mldsa.new(self.key.public_key(), b"ctx").verify(b"message", signature)
+        mldsa.new(self.key.public_key(), context=b"ctx").verify(b"message", signature)
 
         with pytest.raises(ValueError):
             mldsa.new(self.key, deterministic=True, randfunc=fixed_rng(ZERO_RND))
 
     def test_context(self):
-        signature = mldsa.new(self.key, b"ctx").sign(b"message")
-        mldsa.new(self.key, bytearray(b"ctx")).verify(b"message", signature)
-        mldsa.new(self.key, memoryview(b"ctx")).verify(b"message", signature)
+        # The context is a keyword argument only
+        with pytest.raises(TypeError):
+            mldsa.new(self.key, b"ctx")
+
+        signature = mldsa.new(self.key, context=b"ctx").sign(b"message")
+        mldsa.new(self.key, context=bytearray(b"ctx")).verify(b"message", signature)
+        mldsa.new(self.key, context=memoryview(b"ctx")).verify(b"message", signature)
         for context in (None, b"", b"ctX"):
             with pytest.raises(ValueError):
-                mldsa.new(self.key, context).verify(b"message", signature)
+                mldsa.new(self.key, context=context).verify(b"message", signature)
 
         # Up to 255 bytes
-        signature = mldsa.new(self.key, b"\xff" * 255).sign(b"message")
-        mldsa.new(self.key, b"\xff" * 255).verify(b"message", signature)
+        signature = mldsa.new(self.key, context=b"\xff" * 255).sign(b"message")
+        mldsa.new(self.key, context=b"\xff" * 255).verify(b"message", signature)
         with pytest.raises(ValueError):
-            mldsa.new(self.key, b"\xff" * 256)
+            mldsa.new(self.key, context=b"\xff" * 256)
         with pytest.raises(TypeError):
-            mldsa.new(self.key, "ctx")
+            mldsa.new(self.key, context="ctx")
 
     def test_not_authentic(self):
         signature = bytearray(mldsa.new(self.key).sign(b"message"))
@@ -236,10 +240,10 @@ class TestHashMLDSA:
     @pytest.mark.parametrize("name", list(HASHES))
     def test_sign_verify(self, name):
         h = HASHES[name](b"message")
-        signature = mldsa.new(self.key, b"ctx").sign(h)
-        mldsa.new(self.key.public_key(), b"ctx").verify(HASHES[name](b"message"), signature)
+        signature = mldsa.new(self.key, context=b"ctx").sign(h)
+        mldsa.new(self.key.public_key(), context=b"ctx").verify(HASHES[name](b"message"), signature)
         with pytest.raises(ValueError):
-            mldsa.new(self.key.public_key(), b"ctx").verify(HASHES[name](b"messagE"), signature)
+            mldsa.new(self.key.public_key(), context=b"ctx").verify(HASHES[name](b"messagE"), signature)
 
     @pytest.mark.parametrize("name", list(HASHES))
     def test_message(self, name):
@@ -248,10 +252,10 @@ class TestHashMLDSA:
         oid = DerObjectId(h.oid).encode()
         ph = h.digest() if hasattr(h, "digest") else h.copy().read(64 if name == "SHAKE-256" else 32)
         expected = self.key._sign((b"\x01\x03ctx" + oid, ph), ZERO_RND)
-        assert mldsa.new(self.key, b"ctx", deterministic=True).sign(h) == expected
+        assert mldsa.new(self.key, context=b"ctx", deterministic=True).sign(h) == expected
 
         # The hash object can still be used
-        assert mldsa.new(self.key, b"ctx", deterministic=True).sign(h) == expected
+        assert mldsa.new(self.key, context=b"ctx", deterministic=True).sign(h) == expected
 
     def test_domain_separation(self):
         # Signing the digest of a message is not like signing its hash object
@@ -324,11 +328,11 @@ class TestMLDSAMuHash:
 
         # The same signature as for the message
         signature = mldsa.new(key, deterministic=True).sign(mu_hash)
-        assert signature == mldsa.new(key, context, deterministic=True).sign(b"message")
-        mldsa.new(key.public_key(), context).verify(b"message", signature)
+        assert signature == mldsa.new(key, context=context, deterministic=True).sign(b"message")
+        mldsa.new(key.public_key(), context=context).verify(b"message", signature)
 
         # A hedged signature of the message is verified with the MLDSAMuHash
-        signature = mldsa.new(key, context).sign(b"message")
+        signature = mldsa.new(key, context=context).sign(b"message")
         mldsa.new(key.public_key()).verify(mu_hash, signature)
 
     def test_update(self):
@@ -360,7 +364,7 @@ class TestMLDSAMuHash:
         clone.update(b"y")
         assert mu_hash.digest() == compute_mu(self.key, b"message", b"ctx")
         assert clone.digest() == compute_mu(self.key, b"messy", b"ctx")
-        mldsa.new(self.key).verify(clone, mldsa.new(self.key, b"ctx").sign(b"messy"))
+        mldsa.new(self.key).verify(clone, mldsa.new(self.key, context=b"ctx").sign(b"messy"))
 
     def test_hedged(self):
         mu_hash = mldsa.MLDSAMuHash(self.key, data=b"message")
@@ -387,13 +391,13 @@ class TestMLDSAMuHash:
     def test_context_of_signer(self):
         # The context is the one of the MLDSAMuHash: the signer cannot have one, not even an empty one
         mu_hash = mldsa.MLDSAMuHash(self.key, data=b"message", context=b"ctx")
-        signature = mldsa.new(self.key, b"ctx").sign(b"message")
+        signature = mldsa.new(self.key, context=b"ctx").sign(b"message")
         for context in (b"ctx", b"", bytearray(), memoryview(b"")):
             with pytest.raises(ValueError, match="context"):
-                mldsa.new(self.key, context).sign(mu_hash)
+                mldsa.new(self.key, context=context).sign(mu_hash)
             with pytest.raises(ValueError, match="context"):
-                mldsa.new(self.key, context).verify(mu_hash, signature)
-        mldsa.new(self.key, None).verify(mu_hash, signature)
+                mldsa.new(self.key, context=context).verify(mu_hash, signature)
+        mldsa.new(self.key, context=None).verify(mu_hash, signature)
 
     def test_other_key(self):
         other = MLDSA.generate(param_set=MLDSA.ML_DSA_44)
@@ -505,9 +509,9 @@ class TestWycheproof:
 
         try:
             if tv.rnd is None:
-                signer = mldsa.new(key, tv.ctx, deterministic=True)
+                signer = mldsa.new(key, context=tv.ctx, deterministic=True)
             else:
-                signer = mldsa.new(key, tv.ctx, randfunc=fixed_rng(tv.rnd))
+                signer = mldsa.new(key, context=tv.ctx, randfunc=fixed_rng(tv.rnd))
         except ValueError:
             assert not tv.valid
             assert "InvalidContext" in tv.flags
@@ -516,7 +520,7 @@ class TestWycheproof:
 
         signature = signer.sign(tv.msg)
         assert signature == tv.sig
-        mldsa.new(key.public_key(), tv.ctx).verify(tv.msg, signature)
+        mldsa.new(key.public_key(), context=tv.ctx).verify(tv.msg, signature)
 
         # The message representative mu
         if tv.mu is not None:
@@ -535,7 +539,7 @@ class TestWycheproof:
         assert MLDSA.import_key(tv.pk_der) == key
 
         try:
-            verifier = mldsa.new(key, tv.ctx)
+            verifier = mldsa.new(key, context=tv.ctx)
         except ValueError:
             assert not tv.valid
             assert "InvalidContext" in tv.flags

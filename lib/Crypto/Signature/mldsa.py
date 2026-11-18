@@ -259,8 +259,8 @@ def _check_context(context: Optional[Buffer]) -> Optional[bytes]:
 
 def new(
     key: MLDSAKey,
-    context: Optional[Buffer] = None,
     *,
+    context: Optional[Buffer] = None,
     deterministic: bool = False,
     randfunc: Optional[RNG] = None,
 ) -> MLDSASigScheme:

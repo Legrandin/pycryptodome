@@ -58,7 +58,7 @@ instead of the message itself::
 
         message = b'I give my permission to order #4355'
         key = MLDSA.import_key(open("private_mldsa.pem").read())
-        signer = mldsa.new(key, b'my application')
+        signer = mldsa.new(key, context=b'my application')
         signature = signer.sign(SHA512.new(message))
 
 The hash function can be SHA-2 (:mod:`Crypto.Hash.SHA224`, :mod:`Crypto.Hash.SHA256`,
@@ -86,7 +86,7 @@ The signature is the same as for the whole message::
         signature = mldsa.new(key).sign(mu_hash)
 
         # The receiver can verify with the whole message too
-        mldsa.new(key.public_key(), b'my application').verify(message, signature)
+        mldsa.new(key.public_key(), context=b'my application').verify(message, signature)
 
 The context belongs to the :class:`MLDSAMuHash`: the signature object must
 then be created without one.
