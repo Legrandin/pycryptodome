@@ -252,6 +252,16 @@ class TestSiv:
         with pytest.raises(ValueError):
             cipher.decrypt_and_verify(ct, tag, output=shorter_output)
 
+    @pytest.mark.parametrize("wrap", [bytearray, memoryview])
+    def test_no_unauthenticated_plaintext(self, wrap):
+        ct = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96).encrypt_and_digest(self.data)[0]
+
+        output = wrap(bytearray(b"\xaa" * len(ct)))
+        cipher = AES.new(self.key_256, AES.MODE_SIV, nonce=self.nonce_96)
+        with pytest.raises(ValueError):
+            cipher.decrypt_and_verify(ct, bytes(16), output=output)
+        assert bytes(output) == bytes(len(ct))
+
 
 class TestSivFSM:
     key_256 = get_tag_random("key_256", 32)

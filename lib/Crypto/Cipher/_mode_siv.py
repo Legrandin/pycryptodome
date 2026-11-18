@@ -307,6 +307,7 @@ class SivMode:
             output (bytearray/memoryview):
                 The location where the plaintext must be written to.
                 If ``None``, the plaintext is returned.
+                If the MAC does not match, the location is filled with zeroes.
         Returns:
             the plaintext as ``bytes`` or ``None`` when the ``output``
             parameter specified a location for the result.
@@ -328,7 +329,13 @@ class SivMode:
         if hasattr(self, "nonce"):
             self._kdf.update(self.nonce)
         self._kdf.update(plaintext if output is None else output)
-        self.verify(mac_tag)
+        try:
+            self.verify(mac_tag)
+        except ValueError:
+            # RFC 5297, Section 2.7: unauthenticated plaintext must not be released
+            if output is not None:
+                output[:] = bytes(len(output))
+            raise
 
         return plaintext
 
