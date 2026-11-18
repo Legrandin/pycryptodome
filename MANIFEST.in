@@ -7,6 +7,7 @@ graft Doc
 prune Doc/_build
 include .github/workflows/*.yml
 recursive-include src *.h *.c *.inc
+include src/AEGIS.txt src/KECCAK_K12.txt
 include src/mldsa-native/LICENSE src/mldsa-native/README.md
 include src/mlkem-native/LICENSE src/mlkem-native/README.md
 graft src/test

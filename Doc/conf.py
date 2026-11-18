@@ -62,6 +62,12 @@ class MockLib:
     curve25519_new_point = lambda *x: 0
     curve25519_free_point = lambda *x: 0
 
+    # The functions of the AEGIS modules (AEGIS_init, AEGIS_AESNI_init, ...)
+    def __getattr__(self, name):
+        if name.startswith("AEGIS_"):
+            return None
+        raise AttributeError(name)
+
 
 _raw_api.load_pycryptodome_raw_lib = lambda name, cdec: MockLib()
 

@@ -652,17 +652,18 @@ def set_compiler_options(extensions):
 
     # AESNI
     aesni_result = (cpuid_h_present or intrin_h_present) and compiler_supports_aesni()
-    aesni_mod_name = "Crypto.Cipher._raw_aesni"
+    aesni_mod_names = ["Crypto.Cipher._raw_aesni", "Crypto.Cipher._raw_aegis_aesni"]
     if aesni_result:
         print("Compiling support for AESNI instructions")
-        aes_mods = [x for x in extensions if x.name == aesni_mod_name]
+        aes_mods = [x for x in extensions if x.name in aesni_mod_names]
         for x in aes_mods:
             x.extra_compile_args.extend(aesni_result["extra_cc_options"])
             for macro in aesni_result["extra_macros"]:
                 x.define_macros.append((macro, None))
     else:
         print("Warning: compiler does not support AESNI instructions")
-        remove_extension(extensions, aesni_mod_name)
+        for mod_name in aesni_mod_names:
+            remove_extension(extensions, mod_name)
 
     # CLMUL
     clmul_result = (cpuid_h_present or intrin_h_present) and compiler_supports_clmul()
@@ -682,6 +683,7 @@ def set_compiler_options(extensions):
     armv8_crypto_result = target_may_be_arm64() and compiler_supports_armv8_crypto()
     armv8_crypto_mod_names = [
         "Crypto.Cipher._raw_aes_armv8",
+        "Crypto.Cipher._raw_aegis_armv8",
         "Crypto.Hash._ghash_pmull",
         "Crypto.Hash._SHA224_armv8",
         "Crypto.Hash._SHA256_armv8",
