@@ -85,6 +85,8 @@ def run(module=None, verbosity=0, config=None):
         args.append("-" + "v" * (verbosity - 1))
     if not config.get("slow_tests"):
         args.append("--skip-slow-tests")
+    if config.get("very_slow_tests"):
+        args.append("--include-very-slow-tests")
     if config.get("wycheproof_warnings"):
         args.append("--wycheproof-warnings")
 

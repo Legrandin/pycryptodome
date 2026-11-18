@@ -477,7 +477,7 @@ class TestOpenSSL:
 
         # Pure ML-DSA, empty context
         signature = bytes.fromhex(load_file(base + "sig_message.hex", "r").strip())
-        assert pub_key._verify(b"message", signature, prefix=b"\x00\x00")
+        assert pub_key._verify((b"\x00\x00", b"message"), signature)
 
 
 class TestPEM:

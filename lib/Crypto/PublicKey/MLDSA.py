@@ -21,7 +21,7 @@ from Crypto.Util._raw_api import (
     get_raw_buffer,
     load_pycryptodome_raw_lib,
 )
-from Crypto.Util._typing import RNG, Buffer
+from Crypto.Util._typing import RNG, Buffer, Message
 from Crypto.Util.asn1 import DerBitString, DerInteger, DerNull, DerObjectId, DerOctetString, DerSequence
 
 if TYPE_CHECKING:
@@ -479,12 +479,12 @@ class MLDSAKey:
             threads=threads,
         )
 
-    def _sign(self, msg: Buffer, rnd: Buffer, prefix: Buffer = b"", external_mu: bool = False) -> bytes:
+    def _sign(self, M: Message, rnd: Buffer, external_mu: bool = False) -> bytes:
         """ML-DSA.Sign_internal (FIPS 204, Algorithm 7).
 
-        The message M' is the concatenation of ``prefix`` and ``msg``.
-        If ``external_mu`` is ``True``, ``msg`` is the 64-byte
-        message representative :math:`\\mu` instead, and ``prefix`` is ignored.
+        The message M' is the concatenation of the pieces in the tuple ``M``.
+        If ``external_mu`` is ``True``, their concatenation is the 64-byte
+        message representative :math:`\\mu` instead.
 
         ``rnd`` is the 32-byte nonce (all zeroes for the deterministic variant).
         """
@@ -492,6 +492,7 @@ class MLDSAKey:
         if self._sk is None:
             raise TypeError("This is not a private ML-DSA key")
 
+        prefix, msg = _split_message(M, external_mu)
         msg_ptr, msg_len = c_uint8_ptr_len(msg)
         prefix_ptr, prefix_len = c_uint8_ptr_len(prefix)
         rnd_ptr, rnd_len = c_uint8_ptr_len(rnd)
@@ -521,16 +522,15 @@ class MLDSAKey:
             raise ValueError("Error %d while signing with ML-DSA" % result)
         return get_raw_buffer(sig)
 
-    def _verify(
-        self, msg: Buffer, signature: Buffer, prefix: Buffer = b"", external_mu: bool = False
-    ) -> bool:
+    def _verify(self, M: Message, signature: Buffer, external_mu: bool = False) -> bool:
         """ML-DSA.Verify_internal (FIPS 204, Algorithm 8).
 
-        The message is as for :meth:`_sign`.
+        The message M is as for :meth:`_sign`.
 
         Return ``True`` if the signature is valid, ``False`` otherwise.
         """
 
+        prefix, msg = _split_message(M, external_mu)
         msg_ptr, msg_len = c_uint8_ptr_len(msg)
         prefix_ptr, prefix_len = c_uint8_ptr_len(prefix)
         sig_ptr, sig_len = c_uint8_ptr_len(signature)
@@ -558,6 +558,20 @@ class MLDSAKey:
         if result:
             raise ValueError("Error %d while verifying an ML-DSA signature" % result)
         return True
+
+
+def _split_message(M: Message, external_mu: bool) -> tuple[Buffer, Buffer]:
+    """The two buffers that the C code concatenates (prefix and msg) for the pieces of M:
+    all the pieces but the last one are copied into the prefix (they are short),
+    the last one is the long message (not copied). For an external mu, msg is mu."""
+
+    if not isinstance(M, tuple):
+        raise TypeError("The message must be a tuple of pieces to concatenate")
+    if external_mu:
+        return b"", b"".join(M)
+    if not M:
+        return b"", b""
+    return b"".join(M[:-1]), M[-1]
 
 
 def generate(*, param_set: ParamSet, randfunc: Optional[RNG] = None) -> MLDSAKey:

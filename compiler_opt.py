@@ -685,6 +685,7 @@ def set_compiler_options(extensions):
         "Crypto.Hash._ghash_pmull",
         "Crypto.Hash._SHA224_armv8",
         "Crypto.Hash._SHA256_armv8",
+        "Crypto.PublicKey._slhdsa_armv8",
     ]
     if armv8_crypto_result:
         print("Compiling support for ARMv8 Cryptography Extensions")
@@ -719,6 +720,7 @@ def set_compiler_options(extensions):
         "Crypto.Cipher._chacha20_avx2_bmi2",
         "Crypto.PublicKey._mldsa_avx2_bmi2",
         "Crypto.PublicKey._mlkem_avx2_bmi2",
+        "Crypto.PublicKey._slhdsa_avx2_bmi2",
     ]
     if avx2_bmi2_result:
         print("Compiling support for AVX2 and BMI2 instructions")
@@ -734,7 +736,11 @@ def set_compiler_options(extensions):
 
     # SHA-NI
     sha_ni_result = (cpuid_h_present or intrin_h_present) and compiler_supports_sha_ni()
-    sha_ni_mod_names = ["Crypto.Hash._SHA224_shani", "Crypto.Hash._SHA256_shani"]
+    sha_ni_mod_names = [
+        "Crypto.Hash._SHA224_shani",
+        "Crypto.Hash._SHA256_shani",
+        "Crypto.PublicKey._slhdsa_shani",
+    ]
     if sha_ni_result:
         print("Compiling support for SHA-NI instructions")
         sha_ni_mods = [x for x in extensions if x.name in sha_ni_mod_names]

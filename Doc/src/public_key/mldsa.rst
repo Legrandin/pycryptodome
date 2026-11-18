@@ -15,7 +15,7 @@ Its security is based on the hardness of lattice problems (Module-LWE and Module
 which are believed to be hard even for quantum computers.
 Compared to RSA and ECC, keys and signatures are much larger.
 
-FIPS 204 defines three parameter sets:
+FIPS 204 defines three parameter sets (see :ref:`nist_security_categories`):
 
 .. _ML-DSA table:
 .. csv-table::

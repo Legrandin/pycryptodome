@@ -109,6 +109,8 @@ Asymmetric keys (generation, import and export)
 * :doc:`ML-KEM </src/public_key/mlkem>` (FIPS 203): ML-KEM-512, ML-KEM-768 and ML-KEM-1024,
   for use with HPKE only (no direct encapsulation or decapsulation)
 * :doc:`Hybrid KEM </src/public_key/hybrid>`: MLKEM768-X25519 (X-Wing), for use with HPKE only
+* :doc:`SLH-DSA </src/public_key/slhdsa>` (FIPS 205): all twelve parameter sets
+  (SHA2 and SHAKE, small or fast), and the six of the SP 800-230 draft (experimental)
 * :doc:`DSA </src/public_key/dsa>`
 * :doc:`ElGamal </src/public_key/elgamal>` :legacy:`legacy`
 
@@ -118,7 +120,7 @@ Formats for asymmetric keys
 * :doc:`PEM </src/io/pem>` (also with the legacy encryption of RFC 1423)
   and :doc:`ASN.1 DER </src/util/asn1>`
 * :doc:`PKCS#8 </src/io/pkcs8>`, in clear or encrypted (with PBKDF2 or scrypt, and AES in CBC or GCM mode),
-  also for ML-DSA and ML-KEM keys
+  also for ML-DSA, ML-KEM and SLH-DSA keys
 * PKCS#1 (RSA) and SEC1 (ECC)
 * X.509 ``SubjectPublicKeyInfo``, and public keys in X.509 certificates (import only)
 * OpenSSH: public keys (import and export), and private keys of RSA and ECC,
@@ -147,6 +149,7 @@ Digital signatures
   or deterministic nonces (RFC 6979) and, for ECDSA, optionally in the low-S form
 * :doc:`EdDSA </src/signature/eddsa>` with Ed25519 and Ed448 (RFC 8032), including the pre-hashed variants
 * :doc:`ML-DSA and HashML-DSA </src/signature/mldsa>` (FIPS 204), hedged or deterministic, also with external mu
+* :doc:`SLH-DSA and HashSLH-DSA </src/signature/slhdsa>` (FIPS 205), hedged or deterministic
 
 Key agreement
 ~~~~~~~~~~~~~
@@ -192,7 +195,8 @@ Implementation
   Without them, it uses lookup tables in software, which are not constant time and
   can be exposed to cache-timing attacks from code running on the same machine.
 * Long messages can be processed on several CPU cores (parameter ``threads``):
-  CTR, GCM, GCM-SIV and OCB modes, ChaCha20 and XChaCha20, KangarooTwelve, and scrypt.
+  CTR, GCM, GCM-SIV and OCB modes, ChaCha20 and XChaCha20, KangarooTwelve, and scrypt;
+  and so can SLH-DSA key generation and signing (the XMSS and FORS trees).
 
 These CPU extensions are used when present:
 
@@ -205,13 +209,14 @@ These CPU extensions are used when present:
     * - AES-NI and CLMUL
       - AES, GCM, GCM-SIV
     * - ARMv8 Cryptography Extensions (64-bit ARM)
-      - AES, GCM, GCM-SIV, SHA-2
+      - AES, GCM, GCM-SIV, SHA-2, SLH-DSA (the SHA2 sets)
     * - NEON (64-bit ARM)
       - KangarooTwelve, ML-KEM, ML-DSA
     * - SHA extensions
-      - SHA-224, SHA-256
+      - SHA-224, SHA-256, SLH-DSA (the SHA2 sets)
     * - AVX2
-      - SHA-3 and the other Keccak-based functions, ChaCha20, Salsa20, ML-KEM, ML-DSA
+      - SHA-3 and the other Keccak-based functions, ChaCha20, Salsa20, ML-KEM, ML-DSA,
+        SLH-DSA (with BMI1 and BMI2)
     * - SSE2 (x86, selected at compile time)
       - ChaCha20, Salsa20, scrypt, big integers (32-bit only)
     * - BMI2 and ADX

@@ -11,7 +11,7 @@ from Crypto.Hash import SHAKE256
 from Crypto.PublicKey.MLDSA import MLDSAKey
 from Crypto.Random import get_random_bytes
 from Crypto.Util._raw_api import is_buffer
-from Crypto.Util._typing import RNG, Buffer
+from Crypto.Util._typing import RNG, Buffer, Message
 from Crypto.Util.asn1 import DerObjectId
 
 __all__ = ["MLDSASigScheme", "MLDSAMuHash", "new"]
@@ -147,9 +147,10 @@ class MLDSASigScheme:
 
         return self._key.has_private()
 
-    def _message(self, msg_or_hash: Union[Buffer, Hash, XOF, MLDSAMuHash]) -> tuple[Buffer, bytes, bool]:
-        """Split the message M' to sign or verify into a prefix and the rest
-        (FIPS 204, Algorithms 2 to 5), or return mu (and ``True``)."""
+    def _message(self, msg_or_hash: Union[Buffer, Hash, XOF, MLDSAMuHash]) -> tuple[Message, bool]:
+        """The message M' to sign or verify, as two pieces to concatenate:
+        a prefix and the rest, so that a long message M is not copied
+        (FIPS 204, Algorithms 2 to 5); or mu (and ``True``)."""
 
         # mu = H(tr || M', 64), computed already
         if isinstance(msg_or_hash, MLDSAMuHash):
@@ -158,14 +159,14 @@ class MLDSASigScheme:
                 raise ValueError("A context cannot be used with an MLDSAMuHash (it has its own)")
             if msg_or_hash._pk != self._key.pk:
                 raise ValueError("The MLDSAMuHash was created for another key")
-            return msg_or_hash.digest(), b"", True
+            return (msg_or_hash.digest(),), True
 
         context = self._context or b""
         domain = bytes([len(context)]) + context
 
         # ML-DSA: M' = 0 || |ctx| || ctx || M
         if is_buffer(msg_or_hash):
-            return cast(Buffer, msg_or_hash), b"\x00" + domain, False
+            return (b"\x00" + domain, cast(Buffer, msg_or_hash)), False
 
         # HashML-DSA: M' = 1 || |ctx| || ctx || OID || PH(M)
         oid = getattr(msg_or_hash, "oid", None)
@@ -180,7 +181,7 @@ class MLDSASigScheme:
             if getattr(msg_or_hash, "_is_squeezing", False):
                 raise ValueError("The output of the XOF has already been read")
             ph = cast(XOF, msg_or_hash).copy().read(xof_len)
-        return ph, b"\x01" + domain + DerObjectId(oid).encode(), False
+        return (b"\x01" + domain + DerObjectId(oid).encode(), ph), False
 
     def _rnd(self) -> bytes:
         """The nonce rnd for a new signature (FIPS 204, Algorithm 2)"""
@@ -221,8 +222,8 @@ class MLDSASigScheme:
         if not self._key.has_private():
             raise TypeError("Private key is needed to sign")
 
-        msg, prefix, external_mu = self._message(msg_or_hash)
-        return self._key._sign(msg, self._rnd(), prefix=prefix, external_mu=external_mu)
+        M_prime, external_mu = self._message(msg_or_hash)
+        return self._key._sign(M_prime, self._rnd(), external_mu=external_mu)
 
     def verify(self, msg_or_hash: Union[Buffer, Hash, XOF, MLDSAMuHash], signature: Buffer) -> None:
         """Check if an ML-DSA signature is authentic.
@@ -240,8 +241,8 @@ class MLDSASigScheme:
             ValueError: if the signature is not authentic.
         """
 
-        msg, prefix, external_mu = self._message(msg_or_hash)
-        if not self._key._verify(msg, signature, prefix=prefix, external_mu=external_mu):
+        M_prime, external_mu = self._message(msg_or_hash)
+        if not self._key._verify(M_prime, signature, external_mu=external_mu):
             raise ValueError("The signature is not authentic")
 
 

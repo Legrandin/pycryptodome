@@ -499,6 +499,33 @@ if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64" AND CMAKE_SIZEOF_VOID_P 
     add_test(NAME test_chacha20_avx2 COMMAND test_chacha20_avx2)
 endif()
 
+# SLH-DSA, for each build of slhdsa.c
+add_executable(test_slhdsa test_slhdsa.c ../slhdsa.c)
+add_test(NAME test_slhdsa COMMAND test_slhdsa)
+
+# The build with the SHA extensions (gcc and clang only). The test does nothing on a CPU without them.
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64|i386|i686|X86|x86" AND NOT MSVC)
+    add_executable(test_slhdsa_shani test_slhdsa.c ../slhdsa_shani.c)
+    target_compile_definitions(test_slhdsa_shani PRIVATE TEST_SLHDSA_SHA_NI)
+    target_compile_options(test_slhdsa_shani PRIVATE -msha -msse4.1)
+    add_test(NAME test_slhdsa_shani COMMAND test_slhdsa_shani)
+endif()
+
+# The AVX2 build (gcc and clang only). The test does nothing on a CPU without AVX2, BMI1 and BMI2.
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64" AND CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT MSVC)
+    add_executable(test_slhdsa_avx2 test_slhdsa.c ../slhdsa_avx2_bmi2.c)
+    target_compile_definitions(test_slhdsa_avx2 PRIVATE TEST_SLHDSA_AVX2)
+    target_compile_options(test_slhdsa_avx2 PRIVATE -mavx2 -mbmi -mbmi2)
+    add_test(NAME test_slhdsa_avx2 COMMAND test_slhdsa_avx2)
+endif()
+
+# The 8-way SHA-256 of the AVX2 build (gcc and clang only). The test does nothing on a CPU without AVX2.
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64" AND CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT MSVC)
+    add_executable(test_sha256_x8_avx2 test_sha256_x8_avx2.c)
+    target_compile_options(test_sha256_x8_avx2 PRIVATE -mavx2)
+    add_test(NAME test_sha256_x8_avx2 COMMAND test_sha256_x8_avx2)
+endif()
+
 # curve25519
 add_library(mod25519 OBJECT ../mod25519.c)
 add_library(curve25519 OBJECT ../curve25519.c)
@@ -536,6 +563,16 @@ add_test(NAME test_ed25519_no_tables COMMAND test_ed25519_no_tables)
 if (AESNI)
   add_executable(test_aesni test_aesni.c ../AESNI.c)
   add_test(NAME test_aesni COMMAND test_aesni)
+endif()
+
+# SLH-DSA with the ARMv8 SHA-256 instructions. The test does nothing on a CPU without them.
+if (ARMV8_CRYPTO)
+  add_executable(test_slhdsa_armv8 test_slhdsa.c ../slhdsa_armv8.c)
+  target_compile_definitions(test_slhdsa_armv8 PRIVATE TEST_SLHDSA_ARMV8)
+  if (NOT MSVC)
+    set_source_files_properties(../slhdsa_armv8.c PROPERTIES COMPILE_OPTIONS "-march=armv8-a+crypto")
+  endif()
+  add_test(NAME test_slhdsa_armv8 COMMAND test_slhdsa_armv8)
 endif()
 
 # AES with the ARMv8 Cryptography Extensions, against the portable AES
