@@ -15,7 +15,8 @@
  * on a sha256_hash_state (and the same for SHA-512).
  *
  * If SLHDSA_SHA_NI is defined, SHA-256 uses the Intel SHA extensions
- * (SHA256_shani.c).
+ * (SHA256_shani.c), and sha256_compress_blocks_x4() compresses four blocks
+ * at once (see hash_SHA2_compress_shani.c).
  */
 
 #ifndef SLHDSA_SHA2_H
@@ -39,11 +40,17 @@
 #define sha_finalize        sha256_finalize
 
 #ifdef SLHDSA_SHA_NI
+#define SHA2_SHANI_X4       /* also sha256_compress_blocks_x4() */
+#define sha_compress_blocks_x4  sha256_compress_blocks_x4
 #include "SHA256_shani.c"
 #undef SHA2_MODULE
 #undef SHA2_SHA_NI
+#undef SHA2_SHANI_X4
 #undef SHANI_ROUNDS
 #undef SHANI_SCHEDULE
+#undef SHANI_ROUNDS_X4
+#undef SHANI_STEP_X4
+#undef sha_compress_blocks_x4
 #else
 #include "SHA256.c"
 #endif

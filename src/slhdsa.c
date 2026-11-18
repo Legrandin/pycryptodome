@@ -37,7 +37,9 @@
  *
  *  - module _slhdsa: portable code;
  *  - module _slhdsa_shani (slhdsa_shani.c): SHA-256 uses the Intel SHA
- *    extensions, for the SHA2 parameter sets;
+ *    extensions, for the SHA2 parameter sets, and wots_pkGen and fors_node
+ *    compute 4 hashes at once as for AVX2, with the rounds of the 4 blocks
+ *    interleaved through the SHA unit;
  *  - module _slhdsa_avx2_bmi2 (slhdsa_avx2_bmi2.c): with SLHDSA_AVX2 defined,
  *    wots_pkGen computes 4 chains at once, and fors_node 4 subtrees at once,
  *    with the 4-way Keccak of keccak_x4_avx2.c, for the SHAKE parameter sets.
@@ -67,6 +69,16 @@ typedef enum {
     SLHDSA_SHAKE = 0,           /* Section 11.1 */
     SLHDSA_SHA2 = 1             /* Section 11.2 */
 } HashFamily;
+
+/*
+ * The family for which the _x4 functions compute 4 hashes at once, if any:
+ * SHAKE with AVX2, SHA2 with SHA-NI
+ */
+#if defined(SLHDSA_AVX2)
+#define X4_FAMILY       SLHDSA_SHAKE
+#elif defined(SLHDSA_SHA_NI)
+#define X4_FAMILY       SLHDSA_SHA2
+#endif
 
 /* n, the length of the hashes in bytes, for NIST security categories 1, 3 and 5 */
 #define N_CAT1          16
@@ -294,7 +306,7 @@ static int context_init(Context *ctx, unsigned family, size_t n, unsigned lg_w,
  * The hash functions (Section 11).
  * The tweakable hash functions F, H, T_l and PRF of FIPS 205 are
  * thash_F(), thash_H(), thash_T_l() and thash_PRF() (and the _x4 versions
- * for SHAKE, which compute 4 hashes at once).
+ * of F, H and PRF for X4_FAMILY, which compute 4 hashes at once).
  * They cannot fail on a Context from context_init().
  * In all of them, out can be the same buffer as M.
  */
@@ -457,6 +469,100 @@ static void thash_PRF_x4(const Context *ctx, uint8_t *out[4], const ADRS adrs[4]
 
 #endif /* SLHDSA_AVX2 */
 
+#ifdef SLHDSA_SHA_NI
+
+/*
+ * The longest M for hash_sha256_x4(): n bytes for F and PRF (at most 32),
+ * and 2n bytes for H with n = 16 (H is SHA-512 for larger n)
+ */
+#define SHA256_X4_M_MAX     N_MAX
+
+/*
+ * ADRS^c || M, the padding byte 0x80 and the 8-byte length fit into
+ * the block after PK.seed: the array has a negative size (a compilation
+ * error) otherwise
+ */
+typedef char sha256_x4_input_fits_one_block[(ADRSC_LEN + SHA256_X4_M_MAX + 1 + 8 <= SHA256_BLOCK_LEN) ? 1 : -1];
+
+/*
+ * hash_sha256() for 4 addresses and 4 inputs M of M_len bytes each,
+ * with the SHA-NI rounds of the 4 blocks interleaved.
+ *
+ * M_len is at most SHA256_X4_M_MAX, so that ADRS^c || M and the padding
+ * are one block, compressed from the state after PK.seed: this is the case
+ * for F and PRF, and for H with n = 16, but not for T_l.
+ *
+ * out[j] can be the same buffer as M[j].
+ */
+static void hash_sha256_x4(const Context *ctx, uint8_t *out[4], const ADRS adrs[4],
+                           const uint8_t *M[4], size_t M_len)
+{
+    uint8_t blocks[4][SHA256_BLOCK_LEN];
+    uint32_t h[4][8];
+    const uint32_t *h_in[4];
+    const uint8_t *in[4];
+    uint32_t *h_out[4];
+    uint64_t bits;
+    unsigned j, t;
+
+    assert(M_len <= SHA256_X4_M_MAX && ctx->sha256->curlen == 0);
+    if (M_len > SHA256_X4_M_MAX)        /* also with NDEBUG: never overflow blocks */
+        return;
+
+    /* The length of PK.seed || toByte(0, 64 - n) || ADRS^c || M, in bits */
+    bits = 8 * (uint64_t)(SHA256_BLOCK_LEN + ADRSC_LEN + M_len);
+
+    for (j = 0; j < 4; j++) {
+        memset(blocks[j], 0, SHA256_BLOCK_LEN);
+        compress_adrs(blocks[j], &adrs[j]);
+        memcpy(blocks[j] + ADRSC_LEN, M[j], M_len);
+        blocks[j][ADRSC_LEN + M_len] = 0x80;
+        STORE_U64_BIG(blocks[j] + SHA256_BLOCK_LEN - 8, bits);
+        h_in[j] = ctx->sha256->h;
+        h_out[j] = h[j];
+        in[j] = blocks[j];
+    }
+
+    sha256_compress_blocks_x4(h_in, h_out, in);
+
+    /* Trunc_n */
+    for (j = 0; j < 4; j++) {
+        for (t = 0; t < ctx->n / 4; t++)
+            STORE_U32_BIG(out[j] + 4*t, h[j][t]);
+    }
+}
+
+/* F() for SHA2, 4 times at once */
+static void thash_F_x4(const Context *ctx, uint8_t *out[4], const ADRS adrs[4],
+                       const uint8_t *M_1[4])
+{
+    hash_sha256_x4(ctx, out, adrs, M_1, ctx->n);
+}
+
+/* H() for SHA2, 4 times at once: with SHA-NI for n = 16 only (SHA-512 otherwise) */
+static void thash_H_x4(const Context *ctx, uint8_t *out[4], const ADRS adrs[4],
+                       const uint8_t *M_2[4])
+{
+    unsigned j;
+
+    if (ctx->n == N_CAT1) {
+        hash_sha256_x4(ctx, out, adrs, M_2, 2 * N_CAT1);
+    } else {
+        for (j = 0; j < 4; j++)
+            hash_sha512(ctx, out[j], &adrs[j], M_2[j], 2 * ctx->n);
+    }
+}
+
+/* PRF() for SHA2, 4 times at once */
+static void thash_PRF_x4(const Context *ctx, uint8_t *out[4], const ADRS adrs[4])
+{
+    const uint8_t *sk_seed[4] = { ctx->sk_seed, ctx->sk_seed, ctx->sk_seed, ctx->sk_seed };
+
+    hash_sha256_x4(ctx, out, adrs, sk_seed, ctx->n);
+}
+
+#endif /* SLHDSA_SHA_NI */
+
 /*
  * WOTS+ (Section 5)
  */
@@ -478,7 +584,7 @@ static void chain(const Context *ctx, uint8_t *out, const uint8_t *X,
     }
 }
 
-#ifdef SLHDSA_AVX2
+#ifdef X4_FAMILY
 
 /*
  * Lines 4 to 9 of wots_pkGen (Algorithm 6) for the 4 chains i to i+3
@@ -521,7 +627,7 @@ static void wots_pkgen_x4(const Context *ctx, uint8_t *tmp, unsigned i,
         memcpy(tmp + (i + j)*n, sk_buf[j], n);
 }
 
-#endif /* SLHDSA_AVX2 */
+#endif /* X4_FAMILY */
 
 /*
  * wots_pkGen (Algorithm 6): the WOTS+ public key pk for the key pair in ADRS
@@ -539,8 +645,8 @@ static void wots_pkgen(const Context *ctx, uint8_t *pk, ADRS *adrs)
     sk_adrs = *adrs;                                                    /*  1 */
     set_type_and_clear(&sk_adrs, WOTS_PRF);                             /*  2 */
     set_key_pair_address(&sk_adrs, get_key_pair_address(adrs));         /*  3 */
-#ifdef SLHDSA_AVX2
-    if (ctx->family == SLHDSA_SHAKE) {
+#ifdef X4_FAMILY
+    if (ctx->family == X4_FAMILY) {
         /* Lines 4 to 9, 4 chains at a time */
         for (i = 0; i < ctx->len; i += 4)
             wots_pkgen_x4(ctx, tmp, i, &sk_adrs, adrs);
@@ -608,7 +714,7 @@ static void fors_skgen(const Context *ctx, uint8_t *sk, const ADRS *adrs, uint32
     thash_PRF(ctx, sk, &sk_adrs);                                   /* 5 */
 }
 
-#ifdef SLHDSA_AVX2
+#ifdef X4_FAMILY
 
 /*
  * Lines 9 to 11 of fors_node (Algorithm 15): the node i of height z,
@@ -673,7 +779,7 @@ static void fors_node_x4(const Context *ctx, uint8_t *node, uint32_t i, unsigned
     thash_H_x4(ctx, lane_node, lane_adrs, M);                           /* 11 */
 }
 
-#endif /* SLHDSA_AVX2 */
+#endif /* X4_FAMILY */
 
 /*
  * fors_node (Algorithm 15): the root node of the FORS subtree of height z
@@ -695,8 +801,8 @@ static void fors_node(const Context *ctx, uint8_t *node, uint32_t i, unsigned z,
         return;
     }
 
-#ifdef SLHDSA_AVX2
-    if (ctx->family == SLHDSA_SHAKE && z >= 2) {
+#ifdef X4_FAMILY
+    if (ctx->family == X4_FAMILY && z >= 2) {
         /* Lines 7 and 8, with the 4 grandchildren at once */
         uint8_t grandchildren[4 * N_MAX];
 
