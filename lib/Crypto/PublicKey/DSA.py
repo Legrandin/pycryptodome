@@ -565,9 +565,9 @@ def construct(
 
 
 # Dss-Parms  ::=  SEQUENCE  {
-#       p       OCTET STRING,
-#       q       OCTET STRING,
-#       g       OCTET STRING
+#       p       INTEGER,
+#       q       INTEGER,
+#       g       INTEGER
 # }
 # DSAPublicKey ::= INTEGER --  public key, y
 
@@ -590,7 +590,7 @@ def _import_subjectPublicKeyInfo(encoded, passphrase, params):
         raise ValueError("Too many DSA parameters")
 
     y = DerInteger().decode(encoded_key).value
-    p, q, g = list(DerSequence().decode(params or emb_params))
+    p, q, g = DerSequence().decode(params or emb_params, nr_elements=3, only_ints_expected=True)
     tup = (y, g, p, q)
     return construct(tup)
 
@@ -607,7 +607,7 @@ def _import_pkcs8(encoded, passphrase, params, max_iteration_count=None, threads
     if k[0] != oid:
         raise ValueError("No PKCS#8 encoded DSA key")
     x = DerInteger().decode(k[1]).value
-    p, q, g = list(DerSequence().decode(k[2]))
+    p, q, g = DerSequence().decode(k[2], nr_elements=3, only_ints_expected=True)
     tup = (pow(g, x, p), g, p, q, x)
     return construct(tup)
 
