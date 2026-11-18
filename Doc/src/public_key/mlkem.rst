@@ -18,12 +18,12 @@ Compared to ECC, keys and ciphertexts are much larger.
 FIPS 203 defines three parameter sets (see :ref:`nist_security_categories`):
 
 .. csv-table::
-   :header: Parameter set, Constant, NIST security category, Public key, Expanded private key, Ciphertext
-   :widths: 15, 25, 15, 15, 15, 15
+   :header: Parameter set, Constant, NIST security category, "Public key (bytes)", "Expanded private key (bytes)", "Ciphertext (bytes)"
+   :class: compact-table
 
-   "ML-KEM-512", "``MLKEM.ML_KEM_512``", "1", "800 bytes", "1632 bytes", "768 bytes"
-   "ML-KEM-768", "``MLKEM.ML_KEM_768``", "3", "1184 bytes", "2400 bytes", "1088 bytes"
-   "ML-KEM-1024", "``MLKEM.ML_KEM_1024``", "5", "1568 bytes", "3168 bytes", "1568 bytes"
+   "ML-KEM-512", "``MLKEM.ML_KEM_512``", "1", "800", "1632", "768"
+   "ML-KEM-768", "``MLKEM.ML_KEM_768``", "3", "1184", "2400", "1088"
+   "ML-KEM-1024", "``MLKEM.ML_KEM_1024``", "5", "1568", "3168", "1568"
 
 Pass one of these constants as the ``param_set`` argument.
 They are the members of the enum :class:`Crypto.PublicKey.MLKEM.ParamSet`,

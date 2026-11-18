@@ -19,12 +19,12 @@ FIPS 204 defines three parameter sets (see :ref:`nist_security_categories`):
 
 .. _ML-DSA table:
 .. csv-table::
-   :header: Parameter set, Constant, NIST security category, Public key, Expanded private key, Signature
+   :header: Parameter set, Constant, NIST security category, "Public key (bytes)", "Expanded private key (bytes)", "Signature (bytes)"
    :widths: 15, 25, 15, 15, 15, 15
 
-   "ML-DSA-44", "``MLDSA.ML_DSA_44``", "2", "1312 bytes", "2560 bytes", "2420 bytes"
-   "ML-DSA-65", "``MLDSA.ML_DSA_65``", "3", "1952 bytes", "4032 bytes", "3309 bytes"
-   "ML-DSA-87", "``MLDSA.ML_DSA_87``", "5", "2592 bytes", "4896 bytes", "4627 bytes"
+   "ML-DSA-44", "``MLDSA.ML_DSA_44``", "2", "1312", "2560", "2420"
+   "ML-DSA-65", "``MLDSA.ML_DSA_65``", "3", "1952", "4032", "3309"
+   "ML-DSA-87", "``MLDSA.ML_DSA_87``", "5", "2592", "4896", "4627"
 
 Pass one of these constants as the ``param_set`` argument.
 They are the members of the enum :class:`ParamSet`,

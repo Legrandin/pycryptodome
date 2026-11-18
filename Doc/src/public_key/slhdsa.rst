@@ -23,21 +23,21 @@ or *fast* signing (``f``):
 
 .. _SLH-DSA table:
 .. csv-table::
-   :header: Parameter set, Constant, NIST security category, Public key, Private key, Signature
-   :widths: 20, 30, 10, 10, 10, 10
+   :header: Parameter set, Constant, NIST security category, "Public key (bytes)", "Private key (bytes)", "Signature (bytes)"
+   :class: compact-table
 
-   "SLH-DSA-SHA2-128s", "``SLHDSA.SLH_DSA_SHA2_128s``", "1", "32 bytes", "64 bytes", "7856 bytes"
-   "SLH-DSA-SHAKE-128s", "``SLHDSA.SLH_DSA_SHAKE_128s``", "1", "32 bytes", "64 bytes", "7856 bytes"
-   "SLH-DSA-SHA2-128f", "``SLHDSA.SLH_DSA_SHA2_128f``", "1", "32 bytes", "64 bytes", "17088 bytes"
-   "SLH-DSA-SHAKE-128f", "``SLHDSA.SLH_DSA_SHAKE_128f``", "1", "32 bytes", "64 bytes", "17088 bytes"
-   "SLH-DSA-SHA2-192s", "``SLHDSA.SLH_DSA_SHA2_192s``", "3", "48 bytes", "96 bytes", "16224 bytes"
-   "SLH-DSA-SHAKE-192s", "``SLHDSA.SLH_DSA_SHAKE_192s``", "3", "48 bytes", "96 bytes", "16224 bytes"
-   "SLH-DSA-SHA2-192f", "``SLHDSA.SLH_DSA_SHA2_192f``", "3", "48 bytes", "96 bytes", "35664 bytes"
-   "SLH-DSA-SHAKE-192f", "``SLHDSA.SLH_DSA_SHAKE_192f``", "3", "48 bytes", "96 bytes", "35664 bytes"
-   "SLH-DSA-SHA2-256s", "``SLHDSA.SLH_DSA_SHA2_256s``", "5", "64 bytes", "128 bytes", "29792 bytes"
-   "SLH-DSA-SHAKE-256s", "``SLHDSA.SLH_DSA_SHAKE_256s``", "5", "64 bytes", "128 bytes", "29792 bytes"
-   "SLH-DSA-SHA2-256f", "``SLHDSA.SLH_DSA_SHA2_256f``", "5", "64 bytes", "128 bytes", "49856 bytes"
-   "SLH-DSA-SHAKE-256f", "``SLHDSA.SLH_DSA_SHAKE_256f``", "5", "64 bytes", "128 bytes", "49856 bytes"
+   "SLH-DSA-SHA2-128s", "``SLHDSA.SLH_DSA_SHA2_128s``", "1", "32", "64", "7856"
+   "SLH-DSA-SHAKE-128s", "``SLHDSA.SLH_DSA_SHAKE_128s``", "1", "32", "64", "7856"
+   "SLH-DSA-SHA2-128f", "``SLHDSA.SLH_DSA_SHA2_128f``", "1", "32", "64", "17088"
+   "SLH-DSA-SHAKE-128f", "``SLHDSA.SLH_DSA_SHAKE_128f``", "1", "32", "64", "17088"
+   "SLH-DSA-SHA2-192s", "``SLHDSA.SLH_DSA_SHA2_192s``", "3", "48", "96", "16224"
+   "SLH-DSA-SHAKE-192s", "``SLHDSA.SLH_DSA_SHAKE_192s``", "3", "48", "96", "16224"
+   "SLH-DSA-SHA2-192f", "``SLHDSA.SLH_DSA_SHA2_192f``", "3", "48", "96", "35664"
+   "SLH-DSA-SHAKE-192f", "``SLHDSA.SLH_DSA_SHAKE_192f``", "3", "48", "96", "35664"
+   "SLH-DSA-SHA2-256s", "``SLHDSA.SLH_DSA_SHA2_256s``", "5", "64", "128", "29792"
+   "SLH-DSA-SHAKE-256s", "``SLHDSA.SLH_DSA_SHAKE_256s``", "5", "64", "128", "29792"
+   "SLH-DSA-SHA2-256f", "``SLHDSA.SLH_DSA_SHA2_256f``", "5", "64", "128", "49856"
+   "SLH-DSA-SHAKE-256f", "``SLHDSA.SLH_DSA_SHAKE_256f``", "5", "64", "128", "49856"
 
 Pass one of these constants as the ``param_set`` argument.
 They are the members of the enum :class:`ParamSet`,
@@ -86,23 +86,20 @@ They have a single XMSS tree (*d* = 1), with *w* = 4 or 8 instead of 16:
 
 .. _SP 800-230 table:
 .. csv-table::
-   :header: Parameter set, Constant, NIST security category, Public key, Private key, Signature
-   :widths: 20, 30, 10, 10, 10, 10
+   :header: Parameter set, Constant, NIST security category, "Public key (bytes)", "Private key (bytes)", "Signature (bytes)"
+   :class: compact-table
 
-   "SLH-DSA-SHA2-128-24", "``SLHDSA.SLH_DSA_SHA2_128_24``", "1", "32 bytes", "64 bytes", "3856 bytes"
-   "SLH-DSA-SHAKE-128-24", "``SLHDSA.SLH_DSA_SHAKE_128_24``", "1", "32 bytes", "64 bytes", "3856 bytes"
-   "SLH-DSA-SHA2-192-24", "``SLHDSA.SLH_DSA_SHA2_192_24``", "3", "48 bytes", "96 bytes", "7752 bytes"
-   "SLH-DSA-SHAKE-192-24", "``SLHDSA.SLH_DSA_SHAKE_192_24``", "3", "48 bytes", "96 bytes", "7752 bytes"
-   "SLH-DSA-SHA2-256-24", "``SLHDSA.SLH_DSA_SHA2_256_24``", "5", "64 bytes", "128 bytes", "14944 bytes"
-   "SLH-DSA-SHAKE-256-24", "``SLHDSA.SLH_DSA_SHAKE_256_24``", "5", "64 bytes", "128 bytes", "14944 bytes"
+   "SLH-DSA-SHA2-128-24", "``SLHDSA.SLH_DSA_SHA2_128_24``", "1", "32", "64", "3856"
+   "SLH-DSA-SHAKE-128-24", "``SLHDSA.SLH_DSA_SHAKE_128_24``", "1", "32", "64", "3856"
+   "SLH-DSA-SHA2-192-24", "``SLHDSA.SLH_DSA_SHA2_192_24``", "3", "48", "96", "7752"
+   "SLH-DSA-SHAKE-192-24", "``SLHDSA.SLH_DSA_SHAKE_192_24``", "3", "48", "96", "7752"
+   "SLH-DSA-SHA2-256-24", "``SLHDSA.SLH_DSA_SHA2_256_24``", "5", "64", "128", "14944"
+   "SLH-DSA-SHAKE-256-24", "``SLHDSA.SLH_DSA_SHAKE_256_24``", "5", "64", "128", "14944"
 
 The price is the time to generate a key (or to build it from a private key) and to sign:
-about a billion hashes each, which takes several minutes on one CPU core
-(from 5 to 8 minutes to generate a key, and from 7 to 22 minutes to sign, on a recent x86-64 CPU).
+about a billion hashes each, which takes several minutes on one CPU core.
 Use the ``threads`` parameter of :func:`generate`, :func:`construct` and
-:func:`Crypto.Signature.slhdsa.new` to spread the work over several cores
-(for instance, about 30 seconds each with 16 cores).
-Verifying takes about a millisecond.
+:func:`Crypto.Signature.slhdsa.new` to spread the work over several cores.
 
 SP 800-230 also allows an implementation to store parts of the hypertree to sign faster:
 this module does not do that.

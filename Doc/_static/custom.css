@@ -62,3 +62,11 @@ ul.two-columns li > p:first-child {
     font-size: 0.8em;
     padding: 0 0.3em;
 }
+
+/* Tables of parameter sets: a smaller font, so that the cells do not wrap */
+table.compact-table {
+    font-size: 0.8em;
+}
+table.compact-table td {
+    white-space: nowrap;
+}
