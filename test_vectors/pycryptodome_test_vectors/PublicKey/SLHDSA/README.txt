@@ -129,3 +129,55 @@ openssl_slh_dsa_*_key_cert.pem
         https://github.com/openssl/openssl/tree/master/test/smime-certs
         sm_slhdsa_sha2_128s.pem, sm_slhdsa_shake_128s.pem, sm_slhdsa_shake_256s.pem
         (commit f08c66439cfb6eef09eee64c875090b1d0796c10, 18 November 2026)
+
+leancrypto_slh-dsa-shake-*.der, leancrypto_slh-dsa-shake-*.privkey
+
+    The SLH-DSA test certificates of leancrypto, with their private keys
+    (PKCS#8 as in RFC 9909), all made by leancrypto: a chain of certificates
+    signed with SLH-DSA (pure, empty context), each certificate signed by
+    the key of the one above:
+
+        slh-dsa-shake-256s_cacert   SLH-DSA-SHAKE-256s, self-signed
+        slh-dsa-shake-256f_int1     SLH-DSA-SHAKE-256f
+        slh-dsa-shake-192f_int2     SLH-DSA-SHAKE-192f
+        slh-dsa-shake-128f_leaf     SLH-DSA-SHAKE-128f
+
+    and slh-dsa-shake-128s_leaf, for an SLH-DSA-SHAKE-128s key, but issued by
+    another key with another algorithm (it tests the import of the key only).
+    Despite their names, leancrypto_slh-dsa-shake-256f_int1.der and .privkey
+    are PEM files. Unmodified copies (with the prefix leancrypto_) of:
+
+        https://github.com/smuellerDD/leancrypto/tree/master/asn1/tests/testcerts
+        (commit 0f6b32c075064ebdfe7722382e10ce32938fd806, 9 November 2026)
+
+    leancrypto is available under the BSD or the GPLv2 license; these files
+    are used under the BSD license:
+
+    Copyright (C) 2022 - 2026, Stephan Mueller <smueller@chronox.de>
+
+    Redistribution and use in source and binary forms, with or without
+    modification, are permitted provided that the following conditions are met:
+
+        1. Redistributions of source code must retain the above copyright
+           notice, this list of conditions and the following disclaimer.
+
+        2. Redistributions in binary form must reproduce the above
+           copyright notice, this list of conditions and the following
+           disclaimer in the documentation and/or other materials provided
+           with the distribution.
+
+        3. The name of the author may not be used to endorse or promote
+           products derived from this software without specific prior
+           written permission.
+
+    THIS SOFTWARE IS PROVIDED BY THE AUTHOR ``AS IS'' AND ANY EXPRESS OR
+    IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+    WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+    DISCLAIMED. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR ANY DIRECT,
+    INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+    (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+    SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+    HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT,
+    STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING
+    IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+    POSSIBILITY OF SUCH DAMAGE.

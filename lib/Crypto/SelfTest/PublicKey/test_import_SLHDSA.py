@@ -451,6 +451,58 @@ class TestOpenSSL:
         assert cert_key == key.public_key()
 
 
+def load_der_or_pem(file_name):
+    """The DER in a file, which may be PEM"""
+    data = load_file(file_name)
+    return PEM.decode(data.decode())[0] if data.startswith(b"-----") else data
+
+
+class TestLeancrypto:
+    """Certificates and private keys made by leancrypto: a chain of
+    certificates signed with SLH-DSA (pure, empty context)"""
+
+    # (name, parameter set, issuer); the 128s leaf is issued by a key
+    # that is not here (with another algorithm)
+    CERTS = [
+        ("256s_cacert", ParamSet.SLH_DSA_SHAKE_256s, "256s_cacert"),
+        ("256f_int1", ParamSet.SLH_DSA_SHAKE_256f, "256s_cacert"),
+        ("192f_int2", ParamSet.SLH_DSA_SHAKE_192f, "256f_int1"),
+        ("128f_leaf", ParamSet.SLH_DSA_SHAKE_128f, "192f_int2"),
+        ("128s_leaf", ParamSet.SLH_DSA_SHAKE_128s, None),
+    ]
+
+    @staticmethod
+    def _cert(name):
+        return load_der_or_pem("leancrypto_slh-dsa-shake-%s.der" % name)
+
+    @pytest.mark.parametrize("name, ps, issuer", CERTS)
+    def test_key(self, name, ps, issuer):
+        key = SLHDSA.import_key(self._cert(name))
+        assert not key.has_private()
+        assert key.param_set is ps
+
+        der = load_der_or_pem("leancrypto_slh-dsa-shake-%s.privkey" % name)
+        private_key = SLHDSA.import_key(der)
+        assert private_key.param_set is ps
+        assert private_key.public_key() == key
+        assert private_key.export_key() == der
+
+    @pytest.mark.parametrize("name, ps, issuer", [c for c in CERTS if c[2] is not None])
+    def test_signature(self, name, ps, issuer):
+        # Certificate ::= SEQUENCE { tbsCertificate, signatureAlgorithm, signatureValue }
+        cert = DerSequence().decode(self._cert(name), nr_elements=3)
+        tbs_certificate = cert[0]
+        signature = DerBitString().decode(cert[2]).value
+
+        issuer_key = SLHDSA.import_key(self._cert(issuer))
+        algorithm = DerSequence().decode(cert[1], nr_elements=1)
+        assert DerObjectId().decode(algorithm[0]).value == SLHDSA._oids[issuer_key.param_set]
+
+        prefix = b"\x00\x00"
+        assert issuer_key._verify((prefix, tbs_certificate), signature)
+        assert not issuer_key._verify((prefix, tbs_certificate + b"\x00"), signature)
+
+
 class TestPEM:
     ps = ParamSet.SLH_DSA_SHA2_128f
 
