@@ -10,10 +10,12 @@ New features
   twelve parameter sets (SHA2 and SHAKE, categories 1, 3 and 5, small or fast).
   The algorithms of FIPS 205 are in Python; the functions that compute most of the hashes
   (WOTS+ chains, XMSS and FORS tree nodes) are in C, on top of the SHA-2 and Keccak code
-  of PyCryptodome. On CPUs with the Intel SHA extensions, SHA-256 uses them.
-  On CPUs with AVX2 and BMI2, the SHAKE parameter sets compute 4 WOTS+ chains
-  and 4 FORS subtrees at once (4-way Keccak): key generation is about 2x faster,
-  and the FORS part of signing about 1.7x faster.
+  of PyCryptodome.
+  The C functions compute several hashes at once where the CPU allows it:
+  4 SHA-256 hashes with the Intel SHA extensions (interleaved) or the ARMv8 SHA-256
+  instructions, 8 SHA-256 hashes with AVX2 (when there are no SHA extensions),
+  and 4 SHAKE256 hashes with AVX2 and BMI2 (4-way Keccak).
+  The WOTS+ chains of a key pair are computed in one call to C.
 * SLH-DSA keys can be exported and imported as defined in RFC 9909 (pure SLH-DSA):
   public keys as X.509 ``SubjectPublicKeyInfo`` (also from certificates),
   private keys as PKCS#8 ``OneAsymmetricKey`` (also encrypted), in DER or PEM.
