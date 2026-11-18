@@ -565,6 +565,16 @@ if (AESNI)
   add_test(NAME test_aesni COMMAND test_aesni)
 endif()
 
+# SLH-DSA with the ARMv8 SHA-256 instructions. The test does nothing on a CPU without them.
+if (ARMV8_CRYPTO)
+  add_executable(test_slhdsa_armv8 test_slhdsa.c ../slhdsa_armv8.c)
+  target_compile_definitions(test_slhdsa_armv8 PRIVATE TEST_SLHDSA_ARMV8)
+  if (NOT MSVC)
+    set_source_files_properties(../slhdsa_armv8.c PROPERTIES COMPILE_OPTIONS "-march=armv8-a+crypto")
+  endif()
+  add_test(NAME test_slhdsa_armv8 COMMAND test_slhdsa_armv8)
+endif()
+
 # AES with the ARMv8 Cryptography Extensions, against the portable AES
 if (ARMV8_CRYPTO)
   add_executable(test_aes_armv8 test_aes_armv8.c ../AES_armv8.c ../AES.c)

@@ -16,7 +16,9 @@
  *
  * If SLHDSA_SHA_NI is defined, SHA-256 uses the Intel SHA extensions
  * (SHA256_shani.c), and sha256_compress_blocks_x4() compresses four blocks
- * at once (see hash_SHA2_compress_shani.c).
+ * at once (see hash_SHA2_compress_shani.c). The same with SLHDSA_ARMV8,
+ * for the SHA-256 instructions of the ARMv8 Cryptography Extensions
+ * (SHA256_armv8.c and hash_SHA2_compress_armv8.c), on 64-bit ARM only.
  */
 
 #ifndef SLHDSA_SHA2_H
@@ -50,6 +52,19 @@
 #undef SHANI_SCHEDULE
 #undef SHANI_ROUNDS_X4
 #undef SHANI_STEP_X4
+#undef sha_compress_blocks_x4
+#elif defined(SLHDSA_ARMV8)
+#define SHA2_ARMV8_X4       /* also sha256_compress_blocks_x4() */
+#define sha_compress_blocks_x4  sha256_compress_blocks_x4
+#include "SHA256_armv8.c"
+#undef SHA2_MODULE
+#undef SHA2_ARMV8
+#undef SHA2_ARMV8_X4
+#undef ARMV8_ROUNDS
+#undef ARMV8_SCHEDULE
+#undef ARMV8_ROUNDS_X4
+#undef ARMV8_STEP_X4
+#undef ARMV8_LOAD_BE
 #undef sha_compress_blocks_x4
 #else
 #include "SHA256.c"

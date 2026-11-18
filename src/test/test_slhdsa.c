@@ -14,9 +14,12 @@
  * - slhdsa_shani.c (TEST_SLHDSA_SHA_NI): SHA-256 with the Intel SHA
  *   extensions. On a CPU without them that test does nothing, unless
  *   SLHDSA_REQUIRE_SHA_NI is set;
- * - slhdsa_avx2_bmi2.c (TEST_SLHDSA_AVX2): 4 SHAKE hashes at once.
+ * - slhdsa_avx2_bmi2.c (TEST_SLHDSA_AVX2): 4 SHAKE or 8 SHA-256 hashes at once.
  *   On a CPU without AVX2, BMI1 and BMI2 that test does nothing, unless
- *   SLHDSA_REQUIRE_AVX2 is set.
+ *   SLHDSA_REQUIRE_AVX2 is set;
+ * - slhdsa_armv8.c (TEST_SLHDSA_ARMV8): SHA-256 with the ARMv8 Cryptography
+ *   Extensions. On a CPU without them that test does nothing, unless
+ *   SLHDSA_REQUIRE_ARMV8 is set.
  */
 
 #include <stdint.h>
@@ -29,6 +32,12 @@
 
 #if defined(TEST_SLHDSA_SHA_NI)
 #include <cpuid.h>
+#endif
+
+#if defined(TEST_SLHDSA_ARMV8) && defined(__linux__)
+#include <sys/auxv.h>
+#elif defined(TEST_SLHDSA_ARMV8) && defined(_M_ARM64)
+#include <windows.h>
 #endif
 
 /* As in slhdsa.c */
@@ -375,7 +384,7 @@ static void test_errors(void)
 /* Return 1 if the test must be skipped, as the CPU lacks the instructions */
 static int skip(void)
 {
-#if defined(TEST_SLHDSA_SHA_NI) || defined(TEST_SLHDSA_AVX2)
+#if defined(TEST_SLHDSA_SHA_NI) || defined(TEST_SLHDSA_AVX2) || defined(TEST_SLHDSA_ARMV8)
     const char *required;
     int supported;
 
@@ -386,6 +395,19 @@ static int skip(void)
     supported = __get_cpuid_count(7, 0, &eax, &ebx, &ecx, &edx) && (ebx & (1U << 29));
     required = getenv("SLHDSA_REQUIRE_SHA_NI");
 #define FEATURES "the SHA extensions"
+#elif defined(TEST_SLHDSA_ARMV8)
+    /* As have_sha256_armv8() in cpuid.c */
+#if defined(__aarch64__) && defined(__linux__)
+    supported = (getauxval(AT_HWCAP) & (1UL << 6)) ? 1 : 0;     /* HWCAP_SHA2 */
+#elif defined(__aarch64__) && defined(__APPLE__)
+    supported = 1;
+#elif defined(_M_ARM64)
+    supported = IsProcessorFeaturePresent(PF_ARM_V8_CRYPTO_INSTRUCTIONS_AVAILABLE) ? 1 : 0;
+#else
+    supported = 0;
+#endif
+    required = getenv("SLHDSA_REQUIRE_ARMV8");
+#define FEATURES "the ARMv8 SHA-256 instructions"
 #else
     supported = __builtin_cpu_supports("avx2") && __builtin_cpu_supports("bmi") &&
                 __builtin_cpu_supports("bmi2");

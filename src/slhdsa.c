@@ -38,13 +38,18 @@
  *  - module _slhdsa: portable code;
  *  - module _slhdsa_shani (slhdsa_shani.c): SHA-256 uses the Intel SHA
  *    extensions, for the SHA2 parameter sets;
+ *  - module _slhdsa_armv8 (slhdsa_armv8.c): SHA-256 uses the instructions
+ *    of the ARMv8 Cryptography Extensions, for the SHA2 parameter sets
+ *    (on other CPUs, such as the x86-64 half of a macOS universal2 build,
+ *    it is the portable code);
  *  - module _slhdsa_avx2_bmi2 (slhdsa_avx2_bmi2.c): compiled for AVX2.
  *
- * In the last two, wots_pkGen computes several chains at once, and fors_node
+ * In the last three, wots_pkGen computes several chains at once, and fors_node
  * several subtrees at once, one per lane (Context.lanes):
  *
- *  - SHA2 with SHA-NI: 4 lanes, with the rounds of the 4 SHA-256 blocks
- *    interleaved through the SHA unit (hash_SHA2_compress_shani.c);
+ *  - SHA2 with SHA-NI or ARMv8: 4 lanes, with the rounds of the 4 SHA-256
+ *    blocks interleaved through the SHA unit (hash_SHA2_compress_shani.c
+ *    and hash_SHA2_compress_armv8.c);
  *  - SHAKE with AVX2: 4 lanes, with the 4-way Keccak of keccak_x4_avx2.c;
  *  - SHA2 with AVX2: 8 lanes, with the 8-way SHA-256 of sha256_x8_avx2.c.
  *
@@ -55,6 +60,11 @@
 #include "common.h"
 #include "endianess.h"
 #include "errors.h"
+
+/* The ARMv8 instructions only exist on 64-bit ARM (see hash_SHA2_template.c) */
+#if defined(SLHDSA_ARMV8) && !(defined(__aarch64__) || defined(_M_ARM64))
+#undef SLHDSA_ARMV8
+#endif
 
 #define KECCAK_EMBEDDED
 #include "keccak.c"
@@ -79,7 +89,7 @@ typedef enum {
 } HashFamily;
 
 /* The builds that compute several hashes at once, one per lane */
-#if defined(SLHDSA_AVX2) || defined(SLHDSA_SHA_NI)
+#if defined(SLHDSA_AVX2) || defined(SLHDSA_SHA_NI) || defined(SLHDSA_ARMV8)
 #define SLHDSA_LANES
 #endif
 
@@ -90,6 +100,7 @@ typedef enum {
  * ctx->lanes, in the functions that use the lanes (ctx->lanes > 1),
  * from the hash family as the hash functions choose their code:
  * so the compiler sees that all the lanes that they read are set
+ * (with SHA-NI or ARMv8, only SHA2 uses the lanes)
  */
 #if defined(SLHDSA_AVX2)
 #define LANES(ctx)      ((ctx)->family == SLHDSA_SHAKE ? 4U : 8U)
@@ -301,7 +312,7 @@ static int context_init(Context *ctx, unsigned family, size_t n, unsigned lg_w,
     ctx->lg_lanes = 0;
 #if defined(SLHDSA_AVX2)
     ctx->lg_lanes = ctx->family == SLHDSA_SHAKE ? 2 : 3;
-#elif defined(SLHDSA_SHA_NI)
+#elif defined(SLHDSA_SHA_NI) || defined(SLHDSA_ARMV8)
     ctx->lg_lanes = ctx->family == SLHDSA_SHA2 ? 2 : 0;
 #endif
     ctx->lanes = 1U << ctx->lg_lanes;
@@ -476,7 +487,7 @@ static void hash_shake256_x4(const Context *ctx, uint8_t *out[4], const ADRS adr
 
 #ifdef SLHDSA_LANES
 
-/* The number of lanes for SHA2: 8 with AVX2, 4 with SHA-NI */
+/* The number of lanes for SHA2: 8 with AVX2, 4 with SHA-NI or ARMv8 */
 #ifdef SLHDSA_AVX2
 #define SHA256_LANES    8
 #else
@@ -498,7 +509,8 @@ typedef char sha256_lanes_input_fits_one_block[(ADRSC_LEN + SHA256_LANES_M_MAX +
 
 /*
  * hash_sha256() for SHA256_LANES (ctx->lanes) addresses and inputs M
- * of M_len bytes each, at once.
+ * of M_len bytes each, at once (with SHA-NI or ARMv8, the 4 SHA-256 rounds
+ * are interleaved; with AVX2, the 8 blocks are in vectors).
  *
  * M_len is at most SHA256_LANES_M_MAX, so that ADRS^c || M and the padding
  * are one block, compressed from the state after PK.seed: this is the case

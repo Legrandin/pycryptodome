@@ -33,7 +33,7 @@ from typing import Callable, NamedTuple, Optional, TypeVar
 from Crypto.Hash import HMAC, SHA256, SHA512, SHAKE256
 from Crypto.Hash.SHA256 import _load_sha_ni_lib
 from Crypto.Signature.pss import MGF1
-from Crypto.Util._cpu_features import load_avx2_bmi2_lib
+from Crypto.Util._cpu_features import have_sha256_armv8, load_avx2_bmi2_lib, load_optional_lib
 from Crypto.Util._raw_api import (
     c_size_t,
     c_uint8_ptr,
@@ -78,11 +78,16 @@ _raw_slhdsa_portable_lib = load_pycryptodome_raw_lib("Crypto.PublicKey._slhdsa",
 # The same code, with SHA-256 using the Intel SHA extensions
 _raw_slhdsa_shani_lib = _load_sha_ni_lib("Crypto.PublicKey._slhdsa_shani", _slhdsa_cdecl)
 
+# The same code, with SHA-256 using the ARMv8 Cryptography Extensions
+_raw_slhdsa_armv8_lib = load_optional_lib("Crypto.PublicKey._slhdsa_armv8", _slhdsa_cdecl, have_sha256_armv8)
+
 # The same code, compiled for AVX2 and BMI2, with 4 SHAKE or 8 SHA-256 hashes at once
 _raw_slhdsa_avx2_bmi2_lib = load_avx2_bmi2_lib("Crypto.PublicKey._slhdsa_avx2_bmi2", _slhdsa_cdecl)
 
 # The implementations used by all SLH-DSA keys, for the SHA2 and the SHAKE parameter sets
-_raw_slhdsa_sha2_lib = _raw_slhdsa_shani_lib or _raw_slhdsa_avx2_bmi2_lib or _raw_slhdsa_portable_lib
+_raw_slhdsa_sha2_lib = (
+    _raw_slhdsa_shani_lib or _raw_slhdsa_armv8_lib or _raw_slhdsa_avx2_bmi2_lib or _raw_slhdsa_portable_lib
+)
 _raw_slhdsa_shake_lib = _raw_slhdsa_avx2_bmi2_lib or _raw_slhdsa_portable_lib
 
 # The hash families, as in src/slhdsa.c

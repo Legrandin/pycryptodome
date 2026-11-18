@@ -47,6 +47,7 @@ ACCELERATED_LIBS = [
     pytest.param(lib, id=name)
     for lib, name in (
         (_fips205._raw_slhdsa_shani_lib, "shani"),
+        (_fips205._raw_slhdsa_armv8_lib, "armv8"),
         (_fips205._raw_slhdsa_avx2_bmi2_lib, "avx2_bmi2"),
     )
     if lib is not None

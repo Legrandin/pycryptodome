@@ -12,6 +12,9 @@
  * This file is not a module: it is included by hash_SHA2_template.c
  * when SHA2_ARMV8 is defined, on 64-bit ARM only (see SHA256_armv8.c),
  * after the definitions of sha2_word_t, SCHEDULE_SIZE and K[].
+ *
+ * With SHA2_ARMV8_X4 defined, it also has sha_compress_blocks_x4() for SHA-256,
+ * which compresses four independent blocks at once (see slhdsa_sha2.h).
  */
 
 #include <arm_neon.h>
@@ -66,6 +69,117 @@ static void sha_compress_words(const sha2_word_t h_in[8], sha2_word_t h_out[8], 
     vst1q_u32(&h_out[0], vaddq_u32(abcd, vld1q_u32(&h_in[0])));
     vst1q_u32(&h_out[4], vaddq_u32(efgh, vld1q_u32(&h_in[4])));
 }
+
+#ifdef SHA2_ARMV8_X4
+
+/** ARMV8_ROUNDS() for the four blocks a, b, c and d, with message words m<x><p> **/
+#define ARMV8_ROUNDS_X4(g, p) do { \
+    uint32x4_t k4 = vld1q_u32(&K[(g)*4]); \
+    uint32x4_t wka = vaddq_u32(ma##p, k4); \
+    uint32x4_t wkb = vaddq_u32(mb##p, k4); \
+    uint32x4_t wkc = vaddq_u32(mc##p, k4); \
+    uint32x4_t wkd = vaddq_u32(md##p, k4); \
+    uint32x4_t preva = abcda, prevb = abcdb, prevc = abcdc, prevd = abcdd; \
+    abcda = vsha256hq_u32(abcda, efgha, wka); \
+    abcdb = vsha256hq_u32(abcdb, efghb, wkb); \
+    abcdc = vsha256hq_u32(abcdc, efghc, wkc); \
+    abcdd = vsha256hq_u32(abcdd, efghd, wkd); \
+    efgha = vsha256h2q_u32(efgha, preva, wka); \
+    efghb = vsha256h2q_u32(efghb, prevb, wkb); \
+    efghc = vsha256h2q_u32(efghc, prevc, wkc); \
+    efghd = vsha256h2q_u32(efghd, prevd, wkd); \
+    } while (0)
+
+/** ARMV8_SCHEDULE() and ARMV8_ROUNDS_X4() for the next 4 rounds of a, b, c and d **/
+#define ARMV8_STEP_X4(g, p0, p1, p2, p3) do { \
+    ARMV8_SCHEDULE(ma##p0, ma##p1, ma##p2, ma##p3); \
+    ARMV8_SCHEDULE(mb##p0, mb##p1, mb##p2, mb##p3); \
+    ARMV8_SCHEDULE(mc##p0, mc##p1, mc##p2, mc##p3); \
+    ARMV8_SCHEDULE(md##p0, md##p1, md##p2, md##p3); \
+    ARMV8_ROUNDS_X4(g, p0); \
+    } while (0)
+
+/** Load the 4 big-endian words at p **/
+#define ARMV8_LOAD_BE(p)    vreinterpretq_u32_u8(vrev32q_u8(vld1q_u8(p)))
+
+/**
+ * Compress four independent blocks of 64 bytes at once (block[j] from
+ * the state h_in[j] into h_out[j], which may be the same array).
+ * Each round depends on the previous one: interleaving the rounds
+ * of four blocks keeps the SHA-256 unit busy while each of them waits.
+ */
+static void sha_compress_blocks_x4(const sha2_word_t *h_in[4], sha2_word_t *h_out[4],
+                                   const uint8_t *block[4])
+{
+    uint32x4_t abcda, efgha, ma0, ma1, ma2, ma3;
+    uint32x4_t abcdb, efghb, mb0, mb1, mb2, mb3;
+    uint32x4_t abcdc, efghc, mc0, mc1, mc2, mc3;
+    uint32x4_t abcdd, efghd, md0, md1, md2, md3;
+
+    abcda = vld1q_u32(&h_in[0][0]);
+    efgha = vld1q_u32(&h_in[0][4]);
+    abcdb = vld1q_u32(&h_in[1][0]);
+    efghb = vld1q_u32(&h_in[1][4]);
+    abcdc = vld1q_u32(&h_in[2][0]);
+    efghc = vld1q_u32(&h_in[2][4]);
+    abcdd = vld1q_u32(&h_in[3][0]);
+    efghd = vld1q_u32(&h_in[3][4]);
+
+    ma0 = ARMV8_LOAD_BE(block[0]);
+    ma1 = ARMV8_LOAD_BE(block[0] + 16);
+    ma2 = ARMV8_LOAD_BE(block[0] + 32);
+    ma3 = ARMV8_LOAD_BE(block[0] + 48);
+    mb0 = ARMV8_LOAD_BE(block[1]);
+    mb1 = ARMV8_LOAD_BE(block[1] + 16);
+    mb2 = ARMV8_LOAD_BE(block[1] + 32);
+    mb3 = ARMV8_LOAD_BE(block[1] + 48);
+    mc0 = ARMV8_LOAD_BE(block[2]);
+    mc1 = ARMV8_LOAD_BE(block[2] + 16);
+    mc2 = ARMV8_LOAD_BE(block[2] + 32);
+    mc3 = ARMV8_LOAD_BE(block[2] + 48);
+    md0 = ARMV8_LOAD_BE(block[3]);
+    md1 = ARMV8_LOAD_BE(block[3] + 16);
+    md2 = ARMV8_LOAD_BE(block[3] + 32);
+    md3 = ARMV8_LOAD_BE(block[3] + 48);
+
+    ARMV8_ROUNDS_X4( 0, 0);
+    ARMV8_ROUNDS_X4( 1, 1);
+    ARMV8_ROUNDS_X4( 2, 2);
+    ARMV8_ROUNDS_X4( 3, 3);
+    ARMV8_STEP_X4( 4, 0, 1, 2, 3);
+    ARMV8_STEP_X4( 5, 1, 2, 3, 0);
+    ARMV8_STEP_X4( 6, 2, 3, 0, 1);
+    ARMV8_STEP_X4( 7, 3, 0, 1, 2);
+    ARMV8_STEP_X4( 8, 0, 1, 2, 3);
+    ARMV8_STEP_X4( 9, 1, 2, 3, 0);
+    ARMV8_STEP_X4(10, 2, 3, 0, 1);
+    ARMV8_STEP_X4(11, 3, 0, 1, 2);
+    ARMV8_STEP_X4(12, 0, 1, 2, 3);
+    ARMV8_STEP_X4(13, 1, 2, 3, 0);
+    ARMV8_STEP_X4(14, 2, 3, 0, 1);
+    ARMV8_STEP_X4(15, 3, 0, 1, 2);
+
+    /* Read all of h_in[] before writing h_out[] */
+    abcda = vaddq_u32(abcda, vld1q_u32(&h_in[0][0]));
+    efgha = vaddq_u32(efgha, vld1q_u32(&h_in[0][4]));
+    abcdb = vaddq_u32(abcdb, vld1q_u32(&h_in[1][0]));
+    efghb = vaddq_u32(efghb, vld1q_u32(&h_in[1][4]));
+    abcdc = vaddq_u32(abcdc, vld1q_u32(&h_in[2][0]));
+    efghc = vaddq_u32(efghc, vld1q_u32(&h_in[2][4]));
+    abcdd = vaddq_u32(abcdd, vld1q_u32(&h_in[3][0]));
+    efghd = vaddq_u32(efghd, vld1q_u32(&h_in[3][4]));
+
+    vst1q_u32(&h_out[0][0], abcda);
+    vst1q_u32(&h_out[0][4], efgha);
+    vst1q_u32(&h_out[1][0], abcdb);
+    vst1q_u32(&h_out[1][4], efghb);
+    vst1q_u32(&h_out[2][0], abcdc);
+    vst1q_u32(&h_out[2][4], efghc);
+    vst1q_u32(&h_out[3][0], abcdd);
+    vst1q_u32(&h_out[3][4], efghd);
+}
+
+#endif /* SHA2_ARMV8_X4 */
 
 #elif WORD_SIZE == 8
 

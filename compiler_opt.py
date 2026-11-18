@@ -685,6 +685,7 @@ def set_compiler_options(extensions):
         "Crypto.Hash._ghash_pmull",
         "Crypto.Hash._SHA224_armv8",
         "Crypto.Hash._SHA256_armv8",
+        "Crypto.PublicKey._slhdsa_armv8",
     ]
     if armv8_crypto_result:
         print("Compiling support for ARMv8 Cryptography Extensions")

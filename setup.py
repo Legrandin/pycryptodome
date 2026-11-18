@@ -276,6 +276,12 @@ ext_modules = [
         py_limited_api=True,
     ),
     Extension(
+        "Crypto.PublicKey._slhdsa_armv8",
+        include_dirs=["src/"],
+        sources=["src/slhdsa_armv8.c"],
+        py_limited_api=True,
+    ),
+    Extension(
         "Crypto.PublicKey._mlkem",
         include_dirs=["src/"],
         sources=["src/mlkem.c"],
