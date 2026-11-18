@@ -42,12 +42,14 @@ Available mechanisms
 .. toctree::
     :hidden:
 
+    dsa
     pkcs1_v1_5
     pkcs1_pss
     eddsa
     mldsa
     slhdsa
-    dsa
+
+* :doc:`dsa`
 
 * :doc:`pkcs1_v1_5`
 
@@ -58,6 +60,3 @@ Available mechanisms
 * :doc:`mldsa`
 
 * :doc:`slhdsa`
-
-* :doc:`dsa`
-

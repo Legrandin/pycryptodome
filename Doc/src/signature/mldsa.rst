@@ -94,4 +94,11 @@ An :class:`MLDSAMuHash` only needs the public key: :math:`\mu` can also be compu
 apart from the private key (see :meth:`MLDSAMuHash.digest`).
 
 .. automodule:: Crypto.Signature.mldsa
+
+.. autofunction:: new
+
+.. autoclass:: MLDSASigScheme
+    :members:
+
+.. autoclass:: MLDSAMuHash
     :members:

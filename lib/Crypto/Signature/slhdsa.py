@@ -1,22 +1,21 @@
 # SPDX-FileCopyrightText: 2026 Helder Eijs <helderijs@gmail.com>
 # SPDX-License-Identifier: BSD-2-Clause
 
-"""SLH-DSA and HashSLH-DSA signatures (FIPS 205, Section 10)
+"""SLH-DSA and HashSLH-DSA signatures (FIPS 205)"""
 
-The external functions of FIPS 205: slh_sign (Algorithm 22),
-hash_slh_sign (Algorithm 23), slh_verify (Algorithm 24) and
-hash_slh_verify (Algorithm 25). A number in a comment at the end of a line
-is the line of those algorithms (first the pure ones, then the pre-hash ones).
-The differences with the pseudocode:
-
-- the context string is checked (line 1) by :func:`new`, which raises
-  an exception instead of returning an error or ``False``;
-- the message is hashed (PH_M) by the caller, who passes the hash object;
-- M' is not built: it is passed to slh_sign_internal and slh_verify_internal
-  as a prefix and the rest (M or PH_M), so a long message is not copied.
-
-slh_keygen (Algorithm 21) is :func:`Crypto.PublicKey.SLHDSA.generate`.
-"""
+# The external functions of FIPS 205: slh_sign (Algorithm 22),
+# hash_slh_sign (Algorithm 23), slh_verify (Algorithm 24) and
+# hash_slh_verify (Algorithm 25). A number in a comment at the end of a line
+# is the line of those algorithms (first the pure ones, then the pre-hash ones).
+# The differences with the pseudocode:
+#
+# - the context string is checked (line 1) by new(), which raises
+#   an exception instead of returning an error or False;
+# - the message is hashed (PH_M) by the caller, who passes the hash object;
+# - M' is not built: it is passed to slh_sign_internal and slh_verify_internal
+#   as a prefix and the rest (M or PH_M), so a long message is not copied.
+#
+# slh_keygen (Algorithm 21) is Crypto.PublicKey.SLHDSA.generate().
 
 from __future__ import annotations
 

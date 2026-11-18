@@ -84,6 +84,7 @@ verification than FIPS 205, for applications that sign rarely and verify often
 (like software, firmware and certificates).
 They have a single XMSS tree (*d* = 1), with *w* = 4 or 8 instead of 16:
 
+.. _SP 800-230 table:
 .. csv-table::
    :header: Parameter set, Constant, NIST security category, Public key, Private key, Signature
    :widths: 20, 30, 10, 10, 10, 10

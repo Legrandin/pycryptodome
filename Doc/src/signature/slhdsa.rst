@@ -13,9 +13,10 @@ FIPS 205 defines two variants:
   at once when signing, because it requires a hash function with enough
   collision resistance.
 
-This module supports both variants, with any of the twelve parameter sets of FIPS 205,
-and the six parameter sets of the draft SP 800-230, whose support is **experimental**:
-do not use them in production (see :mod:`Crypto.PublicKey.SLHDSA`).
+This module supports both variants, with any of the
+:ref:`twelve parameter sets of FIPS 205 <SLH-DSA table>`,
+and the :ref:`six parameter sets of the draft SP 800-230 <SP 800-230 table>`,
+whose support is **experimental**: do not use them in production.
 
 A signature also depends on a *context*: up to 255 bytes that separate
 different protocols or applications using the same key (empty by default).
@@ -77,4 +78,8 @@ and even more with those of SP 800-230 (several minutes): with ``threads``,
 The signature is the same with any number of threads.
 
 .. automodule:: Crypto.Signature.slhdsa
+
+.. autofunction:: new
+
+.. autoclass:: SLHDSASigScheme
     :members:
