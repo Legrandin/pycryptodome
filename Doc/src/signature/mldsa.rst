@@ -13,8 +13,16 @@ FIPS 204 defines two variants:
   at once when signing, because it requires a hash function with enough
   collision resistance.
 
-This module supports both variants, with any of the three parameter sets
-(ML-DSA-44, ML-DSA-65 and ML-DSA-87).
+This module supports both variants, with any of the three parameter sets of FIPS 204
+(see :ref:`nist_security_categories`):
+
+.. csv-table::
+   :header: Parameter set, Constant, NIST security category, "Public key (bytes)", "Expanded private key (bytes)", "Signature (bytes)"
+   :class: compact-table
+
+   "ML-DSA-44", "``MLDSA.ML_DSA_44``", "2", "1312", "2560", "2420"
+   "ML-DSA-65", "``MLDSA.ML_DSA_65``", "3", "1952", "4032", "3309"
+   "ML-DSA-87", "``MLDSA.ML_DSA_87``", "5", "2592", "4896", "4627"
 
 A signature also depends on a *context*: up to 255 bytes that separate
 different protocols or applications using the same key (empty by default).
