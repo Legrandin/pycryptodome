@@ -44,6 +44,7 @@ Resolved issues
   key of a few hundred KB (for instance, for ``RSA.import_key``) kept the CPU busy for minutes.
   It now takes linear time. Decoding an ``OBJECT IDENTIFIER`` had the same problem: its
   subidentifiers are now limited to 128 bytes. Thanks to netherportal3.
+* GH#963: Fixed the build on the x32 ABI (ILP32 on x86-64). Thanks to Kenny Cheng.
 
 4.5.0 (15 November 2026)
 +++++++++++++++++++++++++++
