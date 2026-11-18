@@ -431,19 +431,35 @@ static void test_errors(void)
     check(slhdsa_xmss_node(2, 16, 4, out, sk_seed, pk_seed, adrs, 0, 0) == ERR_VALUE, "family 2");
 }
 
+#if defined(TEST_SLHDSA_SHA_NI) || defined(TEST_SLHDSA_AVX2) || defined(TEST_SLHDSA_ARMV8)
+/* Return 1 if the environment variable is set and not empty */
+static int env_set(const char *name)
+{
+#ifdef _MSC_VER
+    /* MSVC rejects getenv() with /sdl (C4996) */
+    char value[2];
+
+    return GetEnvironmentVariableA(name, value, sizeof value) > 0;
+#else
+    const char *value = getenv(name);
+
+    return value != NULL && *value != '\0';
+#endif
+}
+#endif
+
 /* Return 1 if the test must be skipped, as the CPU lacks the instructions */
 static int skip(void)
 {
 #if defined(TEST_SLHDSA_SHA_NI) || defined(TEST_SLHDSA_AVX2) || defined(TEST_SLHDSA_ARMV8)
-    const char *required;
-    int supported;
+    int required, supported;
 
 #if defined(TEST_SLHDSA_SHA_NI)
     unsigned eax, ebx = 0, ecx, edx;
 
     /* CPUID leaf 7, EBX bit 29 */
     supported = __get_cpuid_count(7, 0, &eax, &ebx, &ecx, &edx) && (ebx & (1U << 29));
-    required = getenv("SLHDSA_REQUIRE_SHA_NI");
+    required = env_set("SLHDSA_REQUIRE_SHA_NI");
 #define FEATURES "the SHA extensions"
 #elif defined(TEST_SLHDSA_ARMV8)
     /* As have_sha256_armv8() in cpuid.c */
@@ -456,18 +472,18 @@ static int skip(void)
 #else
     supported = 0;
 #endif
-    required = getenv("SLHDSA_REQUIRE_ARMV8");
+    required = env_set("SLHDSA_REQUIRE_ARMV8");
 #define FEATURES "the ARMv8 SHA-256 instructions"
 #else
     supported = __builtin_cpu_supports("avx2") && __builtin_cpu_supports("bmi") &&
                 __builtin_cpu_supports("bmi2");
-    required = getenv("SLHDSA_REQUIRE_AVX2");
+    required = env_set("SLHDSA_REQUIRE_AVX2");
 #define FEATURES "AVX2, BMI1 and BMI2"
 #endif
 
     if (!supported) {
         /* In CI on x86-64, the test must run (the variable is set) */
-        if (required && *required) {
+        if (required) {
             printf("Failed: the CPU does not support " FEATURES ", but the test is required\n");
             exit(1);
         }
