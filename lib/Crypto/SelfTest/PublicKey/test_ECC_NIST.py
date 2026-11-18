@@ -51,6 +51,18 @@ class TestEccPoint:
         # Arithmetic on the coordinates is plain Python int arithmetic
         assert point.x - 2**300 < 0
 
+    def test_scalar_types(self) -> None:
+        # Annotated, so that mypy checks the operator types (GH#864)
+        G: EccPoint = _curves["P-256"].G
+        five = Integer(5)
+        expected = G * 5
+        assert G * five == expected
+        assert five * G == expected
+        assert expected == 5 * G
+        point = G.copy()
+        point *= five
+        assert point == expected
+
     def test_compressed_point_x_one(self):
         # On P-521, x = 1 is a valid coordinate, and x^3 - 3x is negative
         curve = _curves["p521"]

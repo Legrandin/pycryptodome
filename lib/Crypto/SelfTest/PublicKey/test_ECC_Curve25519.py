@@ -96,6 +96,18 @@ class TestEccPoint_Curve25519:
             pointH = d * base
             assert pointH.x == result
 
+    def test_scalar_types(self) -> None:
+        # Annotated, so that mypy checks the operator types (GH#864)
+        base = EccXPoint(9, "curve25519")
+        five = Integer(5)
+        expected = base * 5
+        assert base * five == expected
+        assert five * base == expected
+        assert expected == 5 * base
+        point = base.copy()
+        point *= five
+        assert point == expected
+
     def test_sizes(self):
         point = EccXPoint(9, "curve25519")
         assert point.size_in_bits() == 255

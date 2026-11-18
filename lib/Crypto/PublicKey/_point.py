@@ -382,7 +382,7 @@ class EccPoint:
         np += point
         return np
 
-    def __imul__(self, scalar: int) -> EccPoint:
+    def __imul__(self, scalar: Union[int, IntegerBase]) -> EccPoint:
         """Multiply this point by a scalar.
 
         The scalar is treated as secret, unless it is an Integer created as public.
@@ -407,14 +407,14 @@ class EccPoint:
             raise ValueError("Error %d during scalar multiplication" % result)
         return self
 
-    def __mul__(self, scalar: int) -> EccPoint:
+    def __mul__(self, scalar: Union[int, IntegerBase]) -> EccPoint:
         """Return a new point, the scalar product of this one"""
 
         np = self.copy()
         np *= scalar
         return np
 
-    def __rmul__(self, left_hand):
+    def __rmul__(self, left_hand: Union[int, IntegerBase]) -> EccPoint:
         return self.__mul__(left_hand)
 
 
@@ -536,7 +536,7 @@ class EccXPoint:
         """Size of each coordinate, in bits."""
         return self._curve.modulus_bits
 
-    def __imul__(self, scalar: int) -> EccXPoint:
+    def __imul__(self, scalar: Union[int, IntegerBase]) -> EccXPoint:
         """Multiply this point by a scalar"""
 
         scalar_func = self._curve.rawlib.scalar
@@ -549,12 +549,12 @@ class EccXPoint:
             raise ValueError("Error %d during scalar multiplication" % result)
         return self
 
-    def __mul__(self, scalar: int) -> EccXPoint:
+    def __mul__(self, scalar: Union[int, IntegerBase]) -> EccXPoint:
         """Return a new point, the scalar product of this one"""
 
         np = self.copy()
         np *= scalar
         return np
 
-    def __rmul__(self, left_hand: int) -> EccXPoint:
+    def __rmul__(self, left_hand: Union[int, IntegerBase]) -> EccXPoint:
         return self.__mul__(left_hand)
