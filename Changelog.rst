@@ -44,6 +44,7 @@ Resolved issues
   key of a few hundred KB (for instance, for ``RSA.import_key``) kept the CPU busy for minutes.
   It now takes linear time. Decoding an ``OBJECT IDENTIFIER`` had the same problem: its
   subidentifiers are now limited to 128 bytes. Thanks to netherportal3.
+* GH#965: DSA key import now rejects non-integer domain parameters with ``ValueError``.
 * GH#963: Fixed the build on the x32 ABI (ILP32 on x86-64). Thanks to Kenny Cheng.
 * GH#864: The type hints of the scalar multiplication of EC points accept ``Integer`` objects.
   Thanks to danrr and hakarrr.

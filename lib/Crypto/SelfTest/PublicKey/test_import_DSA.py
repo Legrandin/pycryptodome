@@ -447,6 +447,16 @@ eZ4k+NQDbEL8GiHmFxzDWQAuPPZKJWEEEV2p/To+WOh+kSDHQw==
         key = DSA.construct(tup)
         assert key.exportKey() == key.export_key()
 
+    @pytest.mark.parametrize("fixture", ["der_public", "der_pkcs8"])
+    def test_import_non_integer_domain_parameter(self, fixture):
+        # Dss-Parms with q encoded as OCTET STRING instead of INTEGER
+        der = getattr(self, fixture)
+        q_integer = unhexlify("021500ad32f48c")
+        assert der.count(q_integer) == 1
+        der = der.replace(q_integer, b"\x04" + q_integer[1:])
+        with pytest.raises(ValueError):
+            DSA.import_key(der)
+
     def test_import_empty(self):
         with pytest.raises(ValueError):
             DSA.import_key(b"")
