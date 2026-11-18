@@ -49,6 +49,7 @@ Authenticated encryption
 * :ref:`GCM-SIV <gcm_siv_mode>` (AES only, RFC 8452)
 * :ref:`EAX <eax_mode>`
 * :doc:`ChaCha20-Poly1305 and XChaCha20-Poly1305 </src/cipher/chacha20_poly1305>`
+* :doc:`AEGIS-128L and AEGIS-256 </src/cipher/aegis>` (RFC 10032)
 
 Key wrapping
 ~~~~~~~~~~~~
@@ -194,6 +195,7 @@ Implementation
 * AES uses the hardware instructions of the CPU when present (see below).
   Without them, it uses lookup tables in software, which are not constant time and
   can be exposed to cache-timing attacks from code running on the same machine.
+  AEGIS uses a bitsliced AES round instead, which is constant time.
 * Long messages can be processed on several CPU cores (parameter ``threads``):
   CTR, GCM, GCM-SIV and OCB modes, ChaCha20 and XChaCha20, KangarooTwelve, and scrypt;
   and so can SLH-DSA key generation and signing (the XMSS and FORS trees).
@@ -207,9 +209,9 @@ These CPU extensions are used when present:
     * - CPU extension
       - Speeds up
     * - AES-NI and CLMUL
-      - AES, GCM, GCM-SIV
+      - AES, GCM, GCM-SIV, AEGIS
     * - ARMv8 Cryptography Extensions (64-bit ARM)
-      - AES, GCM, GCM-SIV, SHA-2, SLH-DSA (the SHA2 sets)
+      - AES, GCM, GCM-SIV, AEGIS, SHA-2, SLH-DSA (the SHA2 sets)
     * - NEON (64-bit ARM)
       - KangarooTwelve, ML-KEM, ML-DSA
     * - SHA extensions

@@ -111,6 +111,7 @@ authentication (MAC). For instance:
 
 * :doc:`Modern modes of operation <modern>` for block ciphers (like GCM).
 * Stream ciphers paired with a MAC function, like :doc:`chacha20_poly1305`.
+* Dedicated authenticated ciphers, like :doc:`aegis`.
 
 .. toctree::
     :hidden:
@@ -121,6 +122,7 @@ authentication (MAC). For instance:
     chacha20
     salsa20
     chacha20_poly1305
+    aegis
 
 .. toctree::
     :hidden:
