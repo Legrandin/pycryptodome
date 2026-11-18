@@ -17,6 +17,7 @@ The differences with the pseudocode:
 
 The functions that compute most of the hashes are in C (src/slhdsa.c):
 the tweakable hash functions (F, H, T_l and PRF), chain (Algorithm 5),
+the len chains of wots_sign and wots_pkFromSig (Algorithms 7 and 8),
 xmss_node (Algorithm 9) and fors_node (Algorithm 15).
 
 Key generation and signing can use several threads (the C functions
@@ -40,6 +41,7 @@ from Crypto.Util._raw_api import (
     create_string_buffer,
     get_raw_buffer,
     load_pycryptodome_raw_lib,
+    null_pointer,
 )
 from Crypto.Util._threads import range_boundaries, run_in_threads
 from Crypto.Util._typing import Buffer, Message
@@ -59,6 +61,13 @@ _slhdsa_cdecl = """
                      const uint8_t adrs[32],
                      const uint8_t *x,
                      unsigned i, unsigned s);
+    int slhdsa_wots_chains(unsigned family, size_t n, unsigned lg_w,
+                           uint8_t *out,
+                           const uint8_t *sk_seed,
+                           const uint8_t *pk_seed,
+                           const uint8_t adrs[32],
+                           const uint8_t *x,
+                           const uint8_t *start, const uint8_t *steps, size_t len);
     int slhdsa_xmss_node(unsigned family, size_t n, unsigned lg_w,
                          uint8_t *out,
                          const uint8_t *sk_seed,
@@ -393,6 +402,34 @@ class Context:
         self._check(result, "chain")
         return get_raw_buffer(out)
 
+    def wots_chains(self, X: Optional[bytes], start: list[int], steps: list[int], adrs: ADRS) -> bytes:
+        """All the len chains of a WOTS+ key pair at once: chain i is
+        chain(X[i], start[i], steps[i]) with chain address i, where X[i] is
+        the private value of the chain (PRF) if X is None
+        (ADRS is not modified)"""
+
+        p = self.params
+        if X is None:
+            assert self.sk_seed is not None
+        elif len(X) != p.len * p.n:
+            raise ValueError("X must be len*n bytes long")
+        out = create_string_buffer(p.len * p.n)
+        result = self._lib.slhdsa_wots_chains(
+            self._family,
+            c_size_t(p.n),
+            p.lg_w,
+            out,
+            null_pointer if self.sk_seed is None else c_uint8_ptr(self.sk_seed),
+            c_uint8_ptr(self.pk_seed),
+            c_uint8_ptr(bytes(adrs)),
+            null_pointer if X is None else c_uint8_ptr(X),
+            c_uint8_ptr(bytes(start)),
+            c_uint8_ptr(bytes(steps)),
+            c_size_t(len(start)),
+        )
+        self._check(result, "wots_chains")
+        return get_raw_buffer(out)
+
     def xmss_node(self, i: int, z: int, adrs: ADRS) -> bytes:
         """Algorithm 9 (ADRS is not modified)"""
         return self._node(self._lib.slhdsa_xmss_node, i, z, adrs)
@@ -565,36 +602,26 @@ def wots_digits(ctx: Context, M: bytes) -> list[int]:
 
 
 def wots_sign(ctx: Context, M: bytes, adrs: ADRS) -> bytes:
-    """Algorithm 7"""
+    """Algorithm 7 (ADRS is not modified)"""
 
     p = ctx.params
     msg = wots_digits(ctx, M)  # 1 to 7
-    sk_adrs = adrs.copy()  # 8
-    sk_adrs.set_type_and_clear(ADRS.WOTS_PRF)  # 9
-    sk_adrs.set_key_pair_address(adrs.get_key_pair_address())  # 10
-    sig = []
-    for i in range(p.len):  # 11
-        sk_adrs.set_chain_address(i)  # 12
-        sk = ctx.PRF(sk_adrs)  # 13
-        adrs.set_chain_address(i)  # 14
-        sig.append(ctx.chain(sk, 0, msg[i], adrs))  # 15
-    return b"".join(sig)  # 17
+    # 8 to 16: sig[i] = chain(PRF(skADRS with chain address i), 0, msg[i], ADRS)
+    sig = ctx.wots_chains(None, [0] * p.len, msg, adrs)
+    return sig  # 17
 
 
 def wots_pkFromSig(ctx: Context, sig: bytes, M: bytes, adrs: ADRS) -> bytes:
-    """Algorithm 8"""
+    """Algorithm 8 (ADRS is not modified)"""
 
     p = ctx.params
-    n = p.n
     msg = wots_digits(ctx, M)  # 1 to 7
-    tmp = []
-    for i in range(p.len):  # 8
-        adrs.set_chain_address(i)  # 9
-        tmp.append(ctx.chain(sig[i * n : (i + 1) * n], msg[i], p.w - 1 - msg[i], adrs))  # 10
+    # 8 to 11: tmp[i] = chain(sig[i], msg[i], w - 1 - msg[i], ADRS)
+    tmp = ctx.wots_chains(sig, msg, [p.w - 1 - m for m in msg], adrs)
     wotspk_adrs = adrs.copy()  # 12
     wotspk_adrs.set_type_and_clear(ADRS.WOTS_PK)  # 13
     wotspk_adrs.set_key_pair_address(adrs.get_key_pair_address())  # 14
-    pk_sig = ctx.T(wotspk_adrs, b"".join(tmp))  # 15
+    pk_sig = ctx.T(wotspk_adrs, tmp)  # 15
     return pk_sig  # 16
 
 

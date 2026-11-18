@@ -55,6 +55,10 @@ int slhdsa_thash(unsigned family, size_t n, unsigned lg_w, uint8_t *out,
 int slhdsa_chain(unsigned family, size_t n, unsigned lg_w, uint8_t *out,
                  const uint8_t *pk_seed, const uint8_t adrs[ADRS_LEN],
                  const uint8_t *x, unsigned i, unsigned s);
+int slhdsa_wots_chains(unsigned family, size_t n, unsigned lg_w, uint8_t *out,
+                       const uint8_t *sk_seed, const uint8_t *pk_seed,
+                       const uint8_t adrs[ADRS_LEN], const uint8_t *x,
+                       const uint8_t *start, const uint8_t *steps, size_t len);
 int slhdsa_xmss_node(unsigned family, size_t n, unsigned lg_w, uint8_t *out,
                      const uint8_t *sk_seed, const uint8_t *pk_seed,
                      const uint8_t adrs[ADRS_LEN], uint32_t i, unsigned z);
@@ -231,6 +235,51 @@ static void test_wots_pkgen(const Params *p, uint32_t i)
     check(memcmp(node, pk, n) == 0, "wots_pkGen");
 }
 
+/*
+ * slhdsa_wots_chains() with chains of different lengths, against one chain
+ * at a time with slhdsa_chain(): from the private values (x NULL, as in
+ * wots_sign), then from them (as in wots_pkFromSig)
+ */
+static void test_wots_chains(const Params *p)
+{
+    uint8_t adrs[ADRS_LEN], sk_adrs[ADRS_LEN], before[ADRS_LEN];
+    uint8_t start[LEN_MAX], steps[LEN_MAX];
+    uint8_t x[LEN_MAX * N_MAX], out[LEN_MAX * N_MAX], expected[LEN_MAX * N_MAX];
+    unsigned j, n = p->n, len = wots_len(p->n, p->lg_w), w = 1U << p->lg_w;
+
+    base_adrs(adrs, NODE_XMSS);
+    set_type_and_clear(adrs, WOTS_HASH);
+    set_word(adrs, 20, 3);
+    memcpy(before, adrs, ADRS_LEN);
+    memcpy(sk_adrs, adrs, ADRS_LEN);
+    set_type_and_clear(sk_adrs, WOTS_PRF);
+    set_word(sk_adrs, 20, 3);
+
+    for (j = 0; j < len; j++) {
+        start[j] = (uint8_t)(j % w);
+        steps[j] = (uint8_t)((7*j) % (w - start[j]));
+        set_word(sk_adrs, 24, j);
+        check(slhdsa_thash(p->family, n, p->lg_w, x + j*n, pk_seed, sk_adrs, sk_seed, n) == 0, "PRF");
+        set_word(adrs, 24, j);
+        check(slhdsa_chain(p->family, n, p->lg_w, expected + j*n, pk_seed, adrs, x + j*n, start[j], steps[j]) == 0, "chain");
+    }
+    memcpy(adrs, before, ADRS_LEN);
+
+    check(slhdsa_wots_chains(p->family, n, p->lg_w, out, sk_seed, pk_seed, adrs, x, start, steps, len) == 0, "chains");
+    check(memcmp(out, expected, (size_t)len * n) == 0, "chains from X");
+    memset(out, 0, sizeof out);
+    check(slhdsa_wots_chains(p->family, n, p->lg_w, out, sk_seed, pk_seed, adrs, NULL, start, steps, len) == 0, "chains");
+    check(memcmp(out, expected, (size_t)len * n) == 0, "chains from the private values");
+    check(memcmp(adrs, before, ADRS_LEN) == 0, "adrs not modified");
+
+    /* The checks: len chains, start + steps up to w - 1, X or SK.seed */
+    check(slhdsa_wots_chains(p->family, n, p->lg_w, out, sk_seed, pk_seed, adrs, x, start, steps, len - 1) == ERR_VALUE, "len - 1");
+    check(slhdsa_wots_chains(p->family, n, p->lg_w, out, NULL, pk_seed, adrs, NULL, start, steps, len) == ERR_NULL, "no X nor SK.seed");
+    check(slhdsa_wots_chains(p->family, n, p->lg_w, out, NULL, pk_seed, adrs, x, start, steps, len) == 0, "X without SK.seed");
+    steps[len - 1] = (uint8_t)(w - start[len - 1]);
+    check(slhdsa_wots_chains(p->family, n, p->lg_w, out, sk_seed, pk_seed, adrs, x, start, steps, len) == ERR_VALUE, "start + steps = w");
+}
+
 /* chain(X, i, s) is chain(chain(X, i, t), i + t, s - t) */
 static void test_chain(const Params *p)
 {
@@ -315,6 +364,7 @@ static void test_rebuilt_nodes(void)
         const Params *p = &all_params[k];
 
         test_chain(p);
+        test_wots_chains(p);
         test_wots_pkgen(p, 0);
         test_wots_pkgen(p, 5);
         test_fors_leaf(p, 0);

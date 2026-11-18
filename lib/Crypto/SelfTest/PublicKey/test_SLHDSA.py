@@ -287,6 +287,107 @@ class TestC:
             ctx.T(adrs, b"\x03" * (3 * n + 1))
 
 
+class TestWOTS:
+    """wots_sign and wots_pkFromSig (Algorithms 7 and 8), whose chains are in C"""
+
+    # (sha2, n, lg_w): all the hash families, n and w, with len = 35 to 133
+    PARAMS = [(sha2, n, lg_w) for sha2 in (True, False) for n, lg_w in ((16, 4), (24, 3), (32, 2), (24, 4))]
+
+    @staticmethod
+    def _context(sha2, n, lg_w):
+        params = toy_params(sha2, n, lg_w, 2, 2, 3, 4)
+        return _fips205.Context(params, bytes(range(1, n + 1)), bytes(range(2, n + 2)))
+
+    @staticmethod
+    def _wots_sign(ctx, M, adrs):
+        """Algorithm 7, line by line, with one chain at a time"""
+        p = ctx.params
+        msg = _fips205.wots_digits(ctx, M)
+        sk_adrs = adrs.copy()
+        sk_adrs.set_type_and_clear(_fips205.ADRS.WOTS_PRF)
+        sk_adrs.set_key_pair_address(adrs.get_key_pair_address())
+        sig = []
+        for i in range(p.len):
+            sk_adrs.set_chain_address(i)
+            sk = ctx.PRF(sk_adrs)
+            adrs.set_chain_address(i)
+            sig.append(ctx.chain(sk, 0, msg[i], adrs))
+        return b"".join(sig)
+
+    @staticmethod
+    def _wots_pkFromSig(ctx, sig, M, adrs):
+        """Algorithm 8, line by line, with one chain at a time"""
+        p = ctx.params
+        n = p.n
+        msg = _fips205.wots_digits(ctx, M)
+        tmp = []
+        for i in range(p.len):
+            adrs.set_chain_address(i)
+            tmp.append(ctx.chain(sig[i * n : (i + 1) * n], msg[i], p.w - 1 - msg[i], adrs))
+        wotspk_adrs = adrs.copy()
+        wotspk_adrs.set_type_and_clear(_fips205.ADRS.WOTS_PK)
+        wotspk_adrs.set_key_pair_address(adrs.get_key_pair_address())
+        return ctx.T(wotspk_adrs, b"".join(tmp))
+
+    @staticmethod
+    def _adrs(key_pair):
+        adrs = _fips205.ADRS()
+        adrs.set_layer_address(1)
+        adrs.set_tree_address(5)
+        adrs.set_type_and_clear(_fips205.ADRS.WOTS_HASH)
+        adrs.set_key_pair_address(key_pair)
+        return adrs
+
+    @pytest.mark.parametrize("sha2, n, lg_w", PARAMS)
+    def test_same_as_one_chain_at_a_time(self, sha2, n, lg_w):
+        ctx = self._context(sha2, n, lg_w)
+        rng = random.Random(n * 10 + lg_w + sha2)
+        # All digits 0, all digits w - 1, and random ones
+        messages = [b"\x00" * n, b"\xff" * n] + [rng.randbytes(n) for _ in range(5)]
+        for key_pair, M in enumerate(messages):
+            adrs = self._adrs(key_pair)
+            before = bytes(adrs)
+            sig = _fips205.wots_sign(ctx, M, adrs)
+            assert bytes(adrs) == before
+            assert sig == self._wots_sign(ctx, M, self._adrs(key_pair))
+
+            pk = _fips205.wots_pkFromSig(ctx, sig, M, adrs)
+            assert bytes(adrs) == before
+            assert pk == self._wots_pkFromSig(ctx, sig, M, self._adrs(key_pair))
+
+            # pk is the leaf of the key pair (wots_pkGen, Algorithm 6)
+            leaf_adrs = _fips205.ADRS()
+            leaf_adrs.set_layer_address(1)
+            leaf_adrs.set_tree_address(5)
+            assert pk == ctx.xmss_node(key_pair, 0, leaf_adrs)
+
+            # Another message gives another public key
+            other = bytes([M[0] ^ 1]) + M[1:]
+            assert _fips205.wots_pkFromSig(ctx, sig, other, adrs) != pk
+
+    def test_errors(self):
+        ctx = self._context(True, 16, 4)
+        p = ctx.params
+        adrs = self._adrs(0)
+        zeros, ones = [0] * p.len, [1] * p.len
+        sig = ctx.wots_chains(None, zeros, ones, adrs)
+        assert len(ctx.wots_chains(sig, ones, ones, adrs)) == p.len * p.n
+        # start + steps at most w - 1, len digits, X of len*n bytes
+        with pytest.raises(ValueError):
+            ctx.wots_chains(sig, [p.w - 1] + zeros[1:], ones, adrs)
+        for bad in (zeros[:-1], zeros + [0]):
+            with pytest.raises(ValueError):
+                ctx.wots_chains(sig, bad, bad, adrs)
+        for bad_sig in (sig[:-1], sig + b"\x00"):
+            with pytest.raises(ValueError):
+                ctx.wots_chains(bad_sig, zeros, ones, adrs)
+        # The private values need SK.seed
+        public = _fips205.Context(p, ctx.pk_seed)
+        assert len(public.wots_chains(sig, zeros, ones, adrs)) == p.len * p.n
+        with pytest.raises((AssertionError, ValueError)):
+            public.wots_chains(None, zeros, ones, adrs)
+
+
 class TestSLHDSAKey:
     @pytest.mark.parametrize("protocol", range(pickle.HIGHEST_PROTOCOL + 1))
     def test_pickle(self, protocol):

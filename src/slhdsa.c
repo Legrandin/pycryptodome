@@ -631,58 +631,72 @@ static void chain(const Context *ctx, uint8_t *out, const uint8_t *X,
 #ifdef SLHDSA_LANES
 
 /*
- * Lines 4 to 9 of wots_pkGen (Algorithm 6) for the chains i to i + lanes - 1
- * at once: their public values go into tmp[i] onwards.
+ * wots_chains() for the chains i to i + lanes - 1 at once.
  * The chains from len onwards do not exist: their lanes compute
- * a copy of the last chain, which is not written to tmp.
+ * a copy of the last chain, which is not written to out.
+ * A lane whose chain has fewer steps than the others writes its
+ * last steps into idle[] instead.
  */
-static void wots_pkgen_lanes(const Context *ctx, uint8_t *tmp, unsigned i,
-                             const ADRS *sk_adrs, const ADRS *adrs)
+static void wots_chains_lanes(const Context *ctx, uint8_t *out, unsigned i, const uint8_t *X,
+                              const uint8_t start[], const uint8_t steps[],
+                              const ADRS *sk_adrs, const ADRS *adrs)
 {
     ADRS lane_sk_adrs[MAX_LANES], lane_adrs[MAX_LANES];
-    uint8_t sk_buf[MAX_LANES][N_MAX];
-    uint8_t *sk[MAX_LANES];
-    const uint8_t *tmp_in[MAX_LANES];
-    unsigned j, k, n;
+    uint8_t buf[MAX_LANES][N_MAX], idle[MAX_LANES][N_MAX];
+    uint8_t *lane_buf[MAX_LANES], *lane_out[MAX_LANES];
+    const uint8_t *lane_in[MAX_LANES];
+    unsigned c[MAX_LANES];
+    unsigned j, k, n, max_steps;
 
     n = ctx->n;
     assert(ctx->lanes == LANES(ctx));
 
+    max_steps = 0;
     for (j = 0; j < LANES(ctx); j++) {
-        unsigned chain_index = MIN(i + j, ctx->len - 1);
-
+        c[j] = MIN(i + j, ctx->len - 1);
         lane_sk_adrs[j] = *sk_adrs;
-        set_chain_address(&lane_sk_adrs[j], chain_index);       /* 5 */
+        set_chain_address(&lane_sk_adrs[j], c[j]);              /* 5 */
         lane_adrs[j] = *adrs;
-        set_chain_address(&lane_adrs[j], chain_index);          /* 7 */
-        sk[j] = sk_buf[j];
-        tmp_in[j] = sk_buf[j];
+        set_chain_address(&lane_adrs[j], c[j]);                 /* 7 */
+        lane_buf[j] = buf[j];
+        lane_in[j] = buf[j];
+        if (X != NULL)
+            memcpy(buf[j], X + c[j]*n, n);
+        max_steps = MAX(max_steps, steps[c[j]]);
     }
 
-    thash_PRF_lanes(ctx, sk, lane_sk_adrs);                     /* 6 */
+    if (X == NULL)
+        thash_PRF_lanes(ctx, lane_buf, lane_sk_adrs);           /* 6 */
 
-    /* 8: chain(sk, 0, w - 1, PK.seed, ADRS), in place */
-    for (k = 0; k < ctx->w - 1; k++) {
-        for (j = 0; j < LANES(ctx); j++)
-            set_hash_address(&lane_adrs[j], k);
-        thash_F_lanes(ctx, sk, lane_adrs, tmp_in);
+    /* 8: chain(X, start, steps, PK.seed, ADRS), in place */
+    for (k = 0; k < max_steps; k++) {
+        for (j = 0; j < LANES(ctx); j++) {
+            set_hash_address(&lane_adrs[j], start[c[j]] + k);
+            lane_out[j] = k < steps[c[j]] ? buf[j] : idle[j];
+        }
+        thash_F_lanes(ctx, lane_out, lane_adrs, lane_in);
     }
 
     for (j = 0; j < LANES(ctx) && i + j < ctx->len; j++)
-        memcpy(tmp + (i + j)*n, sk_buf[j], n);
+        memcpy(out + (i + j)*n, buf[j], n);
 }
 
 #endif /* SLHDSA_LANES */
 
 /*
- * wots_pkGen (Algorithm 6): the WOTS+ public key pk for the key pair in ADRS
- * (of type WOTS_HASH).
+ * The len chains of the WOTS+ key pair in ADRS (of type WOTS_HASH),
+ * into out (len*n bytes, it can be X): chain i is
+ * chain(X_i, start[i], steps[i], PK.seed, ADRS with chain address i),
+ * where X_i is X[i], or the private value of the chain (lines 1 to 6
+ * of wots_pkGen, Algorithm 6) if X is NULL.
+ * This is lines 1 to 9 of wots_pkGen, lines 8 to 16 of wots_sign
+ * (Algorithm 7) and lines 8 to 11 of wots_pkFromSig (Algorithm 8).
+ * ADRS is not modified.
  */
-static void wots_pkgen(const Context *ctx, uint8_t *pk, ADRS *adrs)
+static void wots_chains(const Context *ctx, uint8_t *out, const uint8_t *X,
+                        const uint8_t start[], const uint8_t steps[], const ADRS *adrs)
 {
-    ADRS sk_adrs, wotspk_adrs;
-    uint8_t sk[N_MAX];
-    uint8_t tmp[LEN_MAX * N_MAX];
+    ADRS sk_adrs, chain_adrs;
     unsigned i, n;
 
     n = ctx->n;
@@ -694,17 +708,36 @@ static void wots_pkgen(const Context *ctx, uint8_t *pk, ADRS *adrs)
     if (ctx->lanes > 1) {
         /* Lines 4 to 9, one chain per lane */
         for (i = 0; i < ctx->len; i += ctx->lanes)
-            wots_pkgen_lanes(ctx, tmp, i, &sk_adrs, adrs);
-    } else
-#endif
-    {
-        for (i = 0; i < ctx->len; i++) {                                /*  4 */
-            set_chain_address(&sk_adrs, i);                             /*  5 */
-            thash_PRF(ctx, sk, &sk_adrs);                               /*  6 */
-            set_chain_address(adrs, i);                                 /*  7 */
-            chain(ctx, tmp + i*n, sk, 0, ctx->w - 1, adrs);             /*  8 */
-        }
+            wots_chains_lanes(ctx, out, i, X, start, steps, &sk_adrs, adrs);
+        return;
     }
+#endif
+    for (i = 0; i < ctx->len; i++) {                                    /*  4 */
+        if (X == NULL) {
+            set_chain_address(&sk_adrs, i);                             /*  5 */
+            thash_PRF(ctx, out + i*n, &sk_adrs);                        /*  6 */
+        }
+        chain_adrs = *adrs;
+        set_chain_address(&chain_adrs, i);                              /*  7 */
+        chain(ctx, out + i*n, X ? X + i*n : out + i*n, start[i], steps[i], &chain_adrs); /* 8 */
+    }
+}
+
+/*
+ * wots_pkGen (Algorithm 6): the WOTS+ public key pk for the key pair in ADRS
+ * (of type WOTS_HASH).
+ */
+static void wots_pkgen(const Context *ctx, uint8_t *pk, ADRS *adrs)
+{
+    ADRS wotspk_adrs;
+    uint8_t tmp[LEN_MAX * N_MAX];
+    uint8_t start[LEN_MAX], steps[LEN_MAX];
+
+    /* 1 to 9: tmp[i] = chain(sk, 0, w - 1, PK.seed, ADRS) */
+    memset(start, 0, sizeof start);
+    memset(steps, (int)(ctx->w - 1), sizeof steps);
+    wots_chains(ctx, tmp, NULL, start, steps, adrs);
+
     wotspk_adrs = *adrs;                                                /* 10 */
     set_type_and_clear(&wotspk_adrs, WOTS_PK);                          /* 11 */
     set_key_pair_address(&wotspk_adrs, get_key_pair_address(adrs));     /* 12 */
@@ -950,6 +983,51 @@ EXPORT_SYM int slhdsa_chain(unsigned family, size_t n, unsigned lg_w,
     chain(&ctx, out, x, i, s, &address);
     context_free(&ctx);
     return 0;
+}
+
+/*
+ * The len WOTS+ chains of the key pair in adrs (of type WOTS_HASH), into out
+ * (len*n bytes): chain i is chain(X_i, start[i], steps[i]) with chain address i,
+ * where X_i is x[i] (x has len*n bytes), or the private value of the chain
+ * if x is NULL (sk_seed is then needed). These are lines 8 to 16 of wots_sign
+ * (Algorithm 7, with x NULL) and lines 8 to 11 of wots_pkFromSig (Algorithm 8).
+ * n is the length in bytes of sk_seed and pk_seed (16, 24 or 32).
+ * adrs is not modified.
+ */
+EXPORT_SYM int slhdsa_wots_chains(unsigned family, size_t n, unsigned lg_w,
+                                  uint8_t *out,
+                                  const uint8_t *sk_seed,
+                                  const uint8_t *pk_seed,
+                                  const uint8_t adrs[ADRS_LEN],
+                                  const uint8_t *x,
+                                  const uint8_t *start, const uint8_t *steps, size_t len)
+{
+    Context ctx;
+    ADRS address;
+    size_t i;
+    int res;
+
+    if (NULL == out || NULL == adrs || NULL == start || NULL == steps)
+        return ERR_NULL;
+    if (NULL == x && NULL == sk_seed)
+        return ERR_NULL;
+
+    res = context_init(&ctx, family, n, lg_w, pk_seed, sk_seed);
+    if (res)
+        return res;
+
+    if (len != ctx.len)
+        res = ERR_VALUE;
+    for (i = 0; res == 0 && i < len; i++) {
+        if (start[i] + steps[i] > ctx.w - 1)
+            res = ERR_VALUE;
+    }
+    if (res == 0) {
+        memcpy(address.bytes, adrs, ADRS_LEN);
+        wots_chains(&ctx, out, x, start, steps, &address);
+    }
+    context_free(&ctx);
+    return res;
 }
 
 /*
