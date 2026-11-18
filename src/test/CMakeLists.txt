@@ -519,6 +519,13 @@ if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64" AND CMAKE_SIZEOF_VOID_P 
     add_test(NAME test_slhdsa_avx2 COMMAND test_slhdsa_avx2)
 endif()
 
+# The 8-way SHA-256 of the AVX2 build (gcc and clang only). The test does nothing on a CPU without AVX2.
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64" AND CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT MSVC)
+    add_executable(test_sha256_x8_avx2 test_sha256_x8_avx2.c)
+    target_compile_options(test_sha256_x8_avx2 PRIVATE -mavx2)
+    add_test(NAME test_sha256_x8_avx2 COMMAND test_sha256_x8_avx2)
+endif()
+
 # curve25519
 add_library(mod25519 OBJECT ../mod25519.c)
 add_library(curve25519 OBJECT ../curve25519.c)
