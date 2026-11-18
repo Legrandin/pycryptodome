@@ -457,8 +457,8 @@ def compiler_supports_bmi2_adx():
 
     source = """
     #include <stdint.h>
-    #if !defined(__x86_64__)
-    #error Only for x86-64
+    #if !defined(__x86_64__) || defined(__ILP32__)
+    #error Only for 64-bit x86-64 (not the x32 ILP32 ABI)
     #endif
     int main(void) {
         uint64_t lo, hi, x = 3, y = 5;
