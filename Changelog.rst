@@ -40,6 +40,9 @@ Breaking changes
 
 Resolved issues
 ---------------
+* In the ``decrypt_and_verify()`` method of GCM, CCM, EAX and SIV, the ``output`` buffer
+  is filled with zeroes if the MAC tag is not valid, so that no unauthenticated plaintext
+  is left in it (as GCM-SIV already did). Thanks to zul5050.
 * Security: decoding a DER ``INTEGER`` took time quadratic in its length, so a crafted
   key of a few hundred KB (for instance, for ``RSA.import_key``) kept the CPU busy for minutes.
   It now takes linear time. Decoding an ``OBJECT IDENTIFIER`` had the same problem: its

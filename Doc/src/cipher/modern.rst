@@ -59,6 +59,10 @@ in classic modes of operation, a cipher object for an AEAD mode has these method
     * - ``decrypt_and_verify(ciphertext, tag)``
       - :meth:`decrypt` and ``verify()`` in one call:
         returns the plaintext, or raises ``ValueError`` if the tag is not valid.
+        If the plaintext goes to an ``output`` buffer and the tag is not valid,
+        the buffer is filled with zeroes. This is not possible when the message
+        is decrypted in pieces with :meth:`decrypt`: you must then discard what
+        it wrote, if ``verify()`` fails.
 
 The full API of each mode is at the end of its section below
 (for instance, :class:`~Crypto.Cipher._mode_gcm.GcmMode` for GCM).

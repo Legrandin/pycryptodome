@@ -363,6 +363,18 @@ class TestCcm:
         assert pt == output
         assert res is None
 
+    @pytest.mark.parametrize("wrap", [bytearray, memoryview])
+    def test_no_unauthenticated_plaintext(self, wrap):
+        pt = b"5" * 128
+        ct, tag = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96).encrypt_and_digest(pt)
+        bad_tag = bytes([tag[0] ^ 1]) + tag[1:]
+
+        output = wrap(bytearray(b"\xaa" * len(ct)))
+        cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
+        with pytest.raises(ValueError):
+            cipher.decrypt_and_verify(ct, bad_tag, output=output)
+        assert bytes(output) == bytes(len(ct))
+
     def test_output_param_memoryview(self):
         pt = b"5" * 128
         cipher = AES.new(self.key_128, AES.MODE_CCM, nonce=self.nonce_96)
