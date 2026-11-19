@@ -58,7 +58,7 @@ enum Phase { ASSOCIATED_DATA, MESSAGE, DONE };
  * The statements are written out (no loops), so that the compiler can keep
  * the state in registers.
  */
-UPDATE_INLINE void update_128l(aes_block *S, aes_block m0, aes_block m1)
+UPDATE_INLINE void update_128l(aes_block S[8], aes_block m0, aes_block m1)
 {
     aes_block in[8], rk[8];
 
@@ -82,7 +82,7 @@ UPDATE_INLINE void update_128l(aes_block *S, aes_block m0, aes_block m1)
 }
 
 /* Update(M) of AEGIS-256 (4.3) */
-UPDATE_INLINE void update_256(aes_block *S, aes_block m)
+UPDATE_INLINE void update_256(aes_block S[6], aes_block m)
 {
     aes_block in[6], rk[6];
 
@@ -114,14 +114,14 @@ typedef struct {
 } aegis_core;
 
 /* Set the state from the blocks in S */
-static void core_load(aegis_core *c, unsigned variant, const aes_block *S)
+static void core_load(aegis_core *c, unsigned variant, const aes_block S[8])
 {
     (void)variant;
     memcpy(c->S, S, sizeof c->S);
 }
 
 /* Get the blocks of the state into S */
-static void core_store(aes_block *S, const aegis_core *c, unsigned variant)
+static void core_store(aes_block S[8], const aegis_core *c, unsigned variant)
 {
     (void)variant;
     memcpy(S, c->S, sizeof c->S);
