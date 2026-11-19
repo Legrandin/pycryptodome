@@ -382,7 +382,7 @@ def new(
     mode: Literal[1, 2],
     *,
     nonce: Optional[Buffer] = None,
-    mac_len: int = 16,
+    mac_len: Literal[16, 32] = 16,
 ) -> AegisCipher:
     """Create a new AEGIS cipher object, for authenticated encryption.
 
