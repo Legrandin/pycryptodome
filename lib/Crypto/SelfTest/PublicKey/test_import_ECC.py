@@ -14,7 +14,7 @@ from Crypto.Hash import SHAKE128
 from Crypto.PublicKey import ECC
 from Crypto.PublicKey.ECC import _import_rfc5915_der
 from Crypto.SelfTest.loader import warn_skipped_tests
-from Crypto.Util.asn1 import DerBitString, DerSequence
+from Crypto.Util.asn1 import DerBitString, DerObjectId, DerSequence
 from Crypto.Util.number import bytes_to_long
 
 try:
@@ -205,6 +205,33 @@ o4N+LZfQYcTxmdwlkWOrfzCjtHDix6EznPO/LlxTsV+zfTJ/ijTjeXk=
         data_hex = "306b02010104205c4e4320ef260f91ed9fc597aee98c8236b60e0ced692cc7a057d5e45798a052a14403420004a40ad59a2050ebe92479bd5fb16bb2e45b6465eb3cb2b1effe423fabe6cb7424db8219ef0bab80acf26fd70595b61fe4760d33eed80dd03d2fd0dfb27b8ce75c"
         key = _import_rfc5915_der(unhexlify(data_hex), None, "1.2.840.10045.3.1.7")
         assert key.d == 0x5C4E4320EF260F91ED9FC597AEE98C8236B60E0CED692CC7A057D5E45798A052
+
+    @pytest.mark.parametrize(
+        "curve_name,oid,size",
+        [
+            ("P-192", "1.2.840.10045.3.1.1", 24),
+            ("P-224", "1.3.132.0.33", 28),
+            ("P-256", "1.2.840.10045.3.1.7", 32),
+            ("P-384", "1.3.132.0.34", 48),
+            ("P-521", "1.3.132.0.35", 66),
+            ("secp256k1", "1.3.132.0.10", 32),
+        ],
+    )
+    def test_import_point_at_infinity(self, curve_name, oid, size):
+        # The uncompressed encoding of (0, 0), which is how EccPoint
+        # represents the point at infinity: not a valid public key (SEC1 3.2.2.1)
+        ec_point = b"\x04" + b"\x00" * (2 * size)
+        with pytest.raises(ValueError):
+            ECC.import_key(ec_point, curve_name=curve_name)
+
+        spki = DerSequence(
+            [DerSequence([DerObjectId("1.2.840.10045.2.1"), DerObjectId(oid)]), DerBitString(ec_point)]
+        ).encode()
+        with pytest.raises(ValueError):
+            ECC.import_key(spki)
+
+        with pytest.raises(ValueError):
+            ECC.construct(curve=curve_name, point_x=0, point_y=0)
 
 
 class TestImport_P192:
