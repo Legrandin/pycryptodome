@@ -286,7 +286,7 @@ if (VALGRIND AND HAVE_VALGRIND_MEMCHECK_H)
     if (SSE)
         add_executable(test_aegis_ct_sse2 test_aegis_ct.c)
         set_target_properties(test_aegis_ct_sse2 PROPERTIES
-            COMPILE_OPTIONS "-O2;-g;-Wall;-Werror;-DUSE_SSE2"
+            COMPILE_OPTIONS "-O2;-g;-Wall;-Werror;-msse2;-DUSE_SSE2"
             LINK_OPTIONS ""
             LINK_LIBRARIES "")
         add_test(NAME test_aegis_ct_sse2 COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_aegis_ct_sse2>)
