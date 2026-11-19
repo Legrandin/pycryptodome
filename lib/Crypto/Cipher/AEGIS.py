@@ -180,6 +180,11 @@ class AegisCipher:
     @overload
     def encrypt(self, plaintext: Buffer, output: Union[bytearray, memoryview]) -> None: ...
 
+    @overload
+    def encrypt(
+        self, plaintext: Buffer, output: Optional[Union[bytearray, memoryview]] = None
+    ) -> Optional[bytes]: ...
+
     def encrypt(
         self, plaintext: Buffer, output: Optional[Union[bytearray, memoryview]] = None
     ) -> Optional[bytes]:
@@ -207,6 +212,11 @@ class AegisCipher:
 
     @overload
     def decrypt(self, ciphertext: Buffer, output: Union[bytearray, memoryview]) -> None: ...
+
+    @overload
+    def decrypt(
+        self, ciphertext: Buffer, output: Optional[Union[bytearray, memoryview]] = None
+    ) -> Optional[bytes]: ...
 
     def decrypt(
         self, ciphertext: Buffer, output: Optional[Union[bytearray, memoryview]] = None
@@ -299,34 +309,71 @@ class AegisCipher:
 
         self.verify(unhexlify(hex_mac_tag))
 
-    def encrypt_and_digest(self, plaintext: Buffer) -> tuple[bytes, bytes]:
+    @overload
+    def encrypt_and_digest(self, plaintext: Buffer) -> tuple[bytes, bytes]: ...
+
+    @overload
+    def encrypt_and_digest(
+        self, plaintext: Buffer, output: Union[bytearray, memoryview]
+    ) -> tuple[None, bytes]: ...
+
+    def encrypt_and_digest(
+        self, plaintext: Buffer, output: Optional[Union[bytearray, memoryview]] = None
+    ) -> tuple[Optional[bytes], bytes]:
         """Perform :meth:`encrypt` and :meth:`digest` in one step.
 
-        :param plaintext: The data to encrypt, of any size.
-        :type plaintext: bytes/bytearray/memoryview
-        :return: a tuple with two ``bytes`` objects:
-
-            - the ciphertext, of equal length as the plaintext
-            - the MAC tag
+        Args:
+          plaintext(bytes/bytearray/memoryview): The data to encrypt, of any size.
+        Keyword Args:
+          output(bytearray/memoryview): The location where the ciphertext
+            is written to. If ``None``, the ciphertext is returned.
+        Returns:
+          a tuple with the ciphertext (as ``bytes``, or ``None`` if ``output``
+          is given) and the MAC tag.
         """
 
-        return self.encrypt(plaintext), self.digest()
+        return self.encrypt(plaintext, output=output), self.digest()
 
-    def decrypt_and_verify(self, ciphertext: Buffer, received_mac_tag: Buffer) -> bytes:
+    @overload
+    def decrypt_and_verify(self, ciphertext: Buffer, received_mac_tag: Buffer) -> bytes: ...
+
+    @overload
+    def decrypt_and_verify(
+        self, ciphertext: Buffer, received_mac_tag: Buffer, output: Union[bytearray, memoryview]
+    ) -> None: ...
+
+    def decrypt_and_verify(
+        self,
+        ciphertext: Buffer,
+        received_mac_tag: Buffer,
+        output: Optional[Union[bytearray, memoryview]] = None,
+    ) -> Optional[bytes]:
         """Perform :meth:`decrypt` and :meth:`verify` in one step.
 
-        :param ciphertext: The piece of data to decrypt.
-        :type ciphertext: bytes/bytearray/memoryview
-        :param bytes received_mac_tag:
-            This is the *binary* MAC, as received from the sender.
-        :return: the decrypted data (as ``bytes``)
-        :raises ValueError:
-            if the MAC does not match. The message has been tampered with
+        Args:
+          ciphertext(bytes/bytearray/memoryview): The data to decrypt, of any size.
+          received_mac_tag(bytes/bytearray/memoryview): The *binary* MAC,
+            as received from the sender.
+        Keyword Args:
+          output(bytearray/memoryview): The location where the plaintext
+            is written to. If ``None``, the plaintext is returned.
+            If the MAC does not match, the location is filled with zeroes.
+        Returns:
+          If ``output`` is ``None``, the plaintext is returned as ``bytes``.
+          Otherwise, ``None``.
+        Raises:
+          ValueError: if the MAC does not match. The message has been tampered with
             or the key is incorrect.
         """
 
-        plaintext = self.decrypt(ciphertext)
-        self.verify(received_mac_tag)
+        plaintext = self.decrypt(ciphertext, output=output)
+        try:
+            self.verify(received_mac_tag)
+        except ValueError:
+            # Do not leave unauthenticated plaintext in the output
+            if output is not None:
+                output[:] = bytes(len(output))
+            raise
         return plaintext
 
 

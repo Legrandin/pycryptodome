@@ -502,6 +502,33 @@ class TestAPI:
         with pytest.raises(ValueError):
             cipher.encrypt(msg, output=bytearray(99))
 
+    @pytest.mark.parametrize("wrap", [bytearray, memoryview])
+    def test_output_one_step(self, mode, wrap):
+        msg = bytes(range(100))
+        ct, tag = AEGIS.new(self.key(mode), mode, nonce=self.nonce(mode)).encrypt_and_digest(msg)
+
+        output = wrap(bytearray(100))
+        cipher = AEGIS.new(self.key(mode), mode, nonce=self.nonce(mode))
+        assert cipher.encrypt_and_digest(msg, output=output) == (None, tag)
+        assert output == ct
+
+        output = wrap(bytearray(100))
+        cipher = AEGIS.new(self.key(mode), mode, nonce=self.nonce(mode))
+        assert cipher.decrypt_and_verify(ct, tag, output=output) is None
+        assert output == msg
+
+    @pytest.mark.parametrize("wrap", [bytearray, memoryview])
+    def test_no_unauthenticated_plaintext(self, mode, wrap):
+        msg = bytes(range(100))
+        ct, tag = AEGIS.new(self.key(mode), mode, nonce=self.nonce(mode)).encrypt_and_digest(msg)
+        bad_tag = bytes([tag[0] ^ 1]) + tag[1:]
+
+        output = wrap(bytearray(b"\xaa" * len(ct)))
+        cipher = AEGIS.new(self.key(mode), mode, nonce=self.nonce(mode))
+        with pytest.raises(ValueError):
+            cipher.decrypt_and_verify(ct, bad_tag, output=output)
+        assert bytes(output) == bytes(len(ct))
+
     def test_empty(self, mode):
         cipher = AEGIS.new(self.key(mode), mode, nonce=self.nonce(mode))
         cipher.update(b"")
