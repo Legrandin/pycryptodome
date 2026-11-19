@@ -156,7 +156,8 @@ AES-GCM is the right choice in most cases. Consider the alternatives when:
 
 * **The CPU has no AES instructions** (for instance, some small ARM devices):
   :doc:`ChaCha20-Poly1305 <../cipher/chacha20_poly1305>` is fast in software,
-  and it has the same API. With a 24-byte nonce (*XChaCha20-Poly1305*),
+  and it has the same API (on 64-bit ARM, :doc:`AEGIS-128L <../cipher/aegis>`
+  is even faster). With a 24-byte nonce (*XChaCha20-Poly1305*),
   random nonces are safe for any number of messages:
 
   .. code-block:: python

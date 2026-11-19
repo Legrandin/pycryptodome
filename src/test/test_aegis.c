@@ -6,7 +6,8 @@
 /*
  * Tests for AEGIS-128L and AEGIS-256 (RFC 10032) that the Python self-tests
  * cannot do: the AESRound and Update test vectors (Appendix A.1, A.2.1
- * and A.3.1), and the error codes.
+ * and A.3.1), and the error codes. The AESRound test is only for the backends
+ * with aes_rounds() (not for the bitsliced one, which has its own state).
  *
  * The file of the implementation is included, so that its internal functions
  * can be called: aegis_portable.c by default, aegis_aesni.c with TEST_AEGIS_AESNI,
@@ -55,6 +56,7 @@ static int same(aes_block x, const char *hex)
     return memcmp(b, e, 16) == 0;
 }
 
+#ifndef AEGIS_CORE
 /* A.1 (in all the blocks: aes_rounds() computes 6 or 8 rounds) */
 static void test_aes_round(void)
 {
@@ -69,6 +71,7 @@ static void test_aes_round(void)
     for (i = 0; i < 8; i++)
         assert(same(out[i], "7a7b4e5638782546a8c0477a3b813f43"));
 }
+#endif
 
 /* A.2.1 */
 static void test_update_128l(void)
@@ -86,12 +89,16 @@ static void test_update_128l(void)
         "09d714e6fcf9177a8ed1cde7e3d259a6", "61279ba73167f0ab76f0a11bf203bdff"
     };
     aes_block S[8];
+    aegis_core c;
+    uint8_t m[32];
     unsigned i;
 
     for (i = 0; i < 8; i++)
         S[i] = block(before[i]);
-    update_128l(S, block("033e6975b94816879e42917650955aa0"),
-                   block("fcc1968a46b7e97861bd6e89af6aa55f"));
+    unhex(m, "033e6975b94816879e42917650955aa0fcc1968a46b7e97861bd6e89af6aa55f");
+    core_load(&c, AEGIS_128L, S);
+    core_absorb(&c, AEGIS_128L, m);
+    core_store(S, &c, AEGIS_128L);
     for (i = 0; i < 8; i++)
         assert(same(S[i], after[i]));
 }
@@ -109,12 +116,18 @@ static void test_update_256(void)
         "ea788e0e572044a46059212dd007a789", "2f1498ae19b80da13fba698f088a8590",
         "a54c2ee95e8c2a2c3dae2ec743ae6b86", "a3240fceb68e32d5d114df1b5363ab67"
     };
-    aes_block S[6];
+    aes_block S[8];
+    aegis_core c;
+    uint8_t m[16];
     unsigned i;
 
+    memset(S, 0, sizeof S);
     for (i = 0; i < 6; i++)
         S[i] = block(before[i]);
-    update_256(S, block("b165617ed04ab738afb2612c6d18a1ec"));
+    unhex(m, "b165617ed04ab738afb2612c6d18a1ec");
+    core_load(&c, AEGIS_256, S);
+    core_absorb(&c, AEGIS_256, m);
+    core_store(S, &c, AEGIS_256);
     for (i = 0; i < 6; i++)
         assert(same(S[i], after[i]));
 }
@@ -161,7 +174,9 @@ static void test_errors(void)
 
 int main(void)
 {
+#ifndef AEGIS_CORE
     test_aes_round();
+#endif
     test_update_128l();
     test_update_256();
     test_errors();

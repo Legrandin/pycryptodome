@@ -41,9 +41,13 @@ or use :meth:`AegisCipher.decrypt_and_verify`.
 The implementation uses the AES instructions of the CPU (AES-NI on x86,
 the ARMv8 Cryptography Extensions on 64-bit ARM) when present: AEGIS-128L
 is then about 3 to 5 times faster than AES-GCM, and AEGIS-256 about 1.5 to 3 times.
-Without them, it uses a bitsliced AES round, which runs in constant time, but
-AEGIS-128L is then 2 to 3 times slower than :doc:`chacha20_poly1305`,
-which is the better choice on such CPUs.
+Without them, it uses a bitsliced AES round, which runs in constant time,
+with NEON on ARM and SSE2 on x86.
+On a Raspberry Pi 3 (64-bit), AEGIS-128L is then about 1.7 times faster than
+:doc:`chacha20_poly1305`, and AEGIS-256 about as fast.
+On x86, AEGIS-128L is about 1.2 times slower than ChaCha20-Poly1305, and AEGIS-256
+about 2.5 times; on other CPUs, AEGIS is 2 to 4 times slower.
+ChaCha20-Poly1305 is then the better choice.
 
 This is an example of encryption with AEGIS-256::
 

@@ -11,8 +11,12 @@
  *  - AEGIS_PREFIX, the prefix of the names of the exported functions;
  *  - aes_block, the type of an AES block, with blk_load(), blk_store(),
  *    blk_xor() and blk_and();
- *  - aes_rounds(out, in, rk, n), which sets out[i] = AESRound(in[i], rk[i])
- *    for i < n.
+ *  - either aes_rounds(out, in, rk, n), which sets out[i] = AESRound(in[i], rk[i])
+ *    for i < n, or AEGIS_CORE and their own state (aegis_core) with the
+ *    functions core_load(), core_store(), core_absorb(), core_crypt() and
+ *    core_keystream(), described below.
+ * They can also define UPDATE_INLINE, the declaration of the update functions
+ * (static inline by default), to force their inlining.
  *
  * The associated data and the message can be passed in pieces of any length.
  * The bytes of an incomplete input block are kept until the block is complete:
@@ -23,12 +27,9 @@
 #include <stdlib.h>
 #include <string.h>
 #include "errors.h"
+#include "aegis.h"
 
 #define FUNC(name) PASTE2(AEGIS_PREFIX, name)
-
-/* The variants, as in Crypto.Cipher.AEGIS */
-#define AEGIS_128L  1
-#define AEGIS_256   2
 
 /* P_MAX and A_MAX: 2^61 - 1 bytes */
 #define MAX_LEN     ((((uint64_t)1) << 61) - 1)
@@ -45,32 +46,19 @@ static const uint8_t C1[16] = {
 
 enum Phase { ASSOCIATED_DATA, MESSAGE, DONE };
 
-typedef struct {
-    aes_block S[8];         /* 8 blocks for AEGIS-128L, 6 for AEGIS-256 */
-    unsigned variant;
-    unsigned rate;          /* The size of an input block: 32 or 16 bytes */
-    enum Phase phase;
-    uint64_t ad_len;
-    uint64_t msg_len;
-    uint8_t buf[32];        /* The bytes of an incomplete input block */
-    uint8_t ks[32];         /* The keystream of an incomplete message block */
-    unsigned buf_len;
-} aegis_state;
 
-static void wipe(void *p, size_t len)
-{
-    volatile uint8_t *v = (volatile uint8_t*)p;
+#ifndef AEGIS_CORE
 
-    while (len--)
-        *v++ = 0;
-}
+#ifndef UPDATE_INLINE
+#define UPDATE_INLINE static inline
+#endif
 
 /*
  * Update(M0, M1) of AEGIS-128L (3.3).
  * The statements are written out (no loops), so that the compiler can keep
  * the state in registers.
  */
-static inline void update_128l(aes_block *S, aes_block m0, aes_block m1)
+UPDATE_INLINE void update_128l(aes_block *S, aes_block m0, aes_block m1)
 {
     aes_block in[8], rk[8];
 
@@ -94,7 +82,7 @@ static inline void update_128l(aes_block *S, aes_block m0, aes_block m1)
 }
 
 /* Update(M) of AEGIS-256 (4.3) */
-static inline void update_256(aes_block *S, aes_block m)
+UPDATE_INLINE void update_256(aes_block *S, aes_block m)
 {
     aes_block in[6], rk[6];
 
@@ -113,21 +101,119 @@ static inline void update_256(aes_block *S, aes_block m)
     aes_rounds(S, in, rk, 6);
 }
 
-/* Absorb(ai) (3.5 and 4.5): the input block is at p */
-static void absorb(aegis_state *st, const uint8_t *p)
-{
-    if (st->variant == AEGIS_128L)
-        update_128l(st->S, blk_load(p), blk_load(p + 16));
-    else
-        update_256(st->S, blk_load(p));
-}
-
 /* z0 and z1 of Enc (3.6) */
 #define Z0_128L(S)  blk_xor(blk_xor(S[1], S[6]), blk_and(S[2], S[3]))
 #define Z1_128L(S)  blk_xor(blk_xor(S[2], S[5]), blk_and(S[6], S[7]))
 
 /* z of Enc (4.6) */
 #define Z_256(S)    blk_xor(blk_xor(S[1], S[4]), blk_xor(S[5], blk_and(S[2], S[3])))
+
+/* The state: 8 blocks for AEGIS-128L, 6 for AEGIS-256 */
+typedef struct {
+    aes_block S[8];
+} aegis_core;
+
+/* Set the state from the blocks in S */
+static void core_load(aegis_core *c, unsigned variant, const aes_block *S)
+{
+    (void)variant;
+    memcpy(c->S, S, sizeof c->S);
+}
+
+/* Get the blocks of the state into S */
+static void core_store(aes_block *S, const aegis_core *c, unsigned variant)
+{
+    (void)variant;
+    memcpy(S, c->S, sizeof c->S);
+}
+
+/* Absorb(ai) (3.5 and 4.5): the input block (32 or 16 bytes) is at p */
+static void core_absorb(aegis_core *c, unsigned variant, const uint8_t *p)
+{
+    if (variant == AEGIS_128L)
+        update_128l(c->S, blk_load(p), blk_load(p + 16));
+    else
+        update_256(c->S, blk_load(p));
+}
+
+/* The keystream of the next message block (32 or 16 bytes), into ks */
+static void core_keystream(const aegis_core *c, unsigned variant, uint8_t *ks)
+{
+    const aes_block *S = c->S;
+
+    if (variant == AEGIS_128L) {
+        blk_store(ks, Z0_128L(S));
+        blk_store(ks + 16, Z1_128L(S));
+    } else {
+        blk_store(ks, Z_256(S));
+    }
+}
+
+/*
+ * Enc (3.6 and 4.6) or Dec (3.7 and 4.7) of the whole blocks in the len bytes at in,
+ * or only Absorb (3.5 and 4.5) if out is NULL.
+ * Return the number of bytes processed. in and out may be the same buffer.
+ */
+static size_t core_crypt(aegis_core *c, unsigned variant,
+                         const uint8_t *in, uint8_t *out, size_t len, int decrypt)
+{
+    aes_block S[8];
+    size_t done = 0;
+
+    /* A local copy of the state */
+    memcpy(S, c->S, sizeof S);
+    if (variant == AEGIS_128L) {
+        for (; len - done >= 32; done += 32) {
+            aes_block t0, t1, out0, out1;
+
+            t0 = blk_load(in + done);
+            t1 = blk_load(in + done + 16);
+            out0 = blk_xor(t0, Z0_128L(S));
+            out1 = blk_xor(t1, Z1_128L(S));
+            if (NULL != out) {
+                blk_store(out + done, out0);
+                blk_store(out + done + 16, out1);
+            }
+            if (decrypt)
+                update_128l(S, out0, out1);
+            else
+                update_128l(S, t0, t1);
+        }
+    } else {
+        for (; len - done >= 16; done += 16) {
+            aes_block t, o;
+
+            t = blk_load(in + done);
+            o = blk_xor(t, Z_256(S));
+            if (NULL != out)
+                blk_store(out + done, o);
+            update_256(S, decrypt ? o : t);
+        }
+    }
+    memcpy(c->S, S, sizeof S);
+    wipe(S, sizeof S);
+    return done;
+}
+
+#endif /* AEGIS_CORE */
+
+typedef struct {
+    aegis_core core;
+    unsigned variant;
+    unsigned rate;          /* The size of an input block: 32 or 16 bytes */
+    enum Phase phase;
+    uint64_t ad_len;
+    uint64_t msg_len;
+    uint8_t buf[32];        /* The bytes of an incomplete input block */
+    uint8_t ks[32];         /* The keystream of an incomplete message block */
+    unsigned buf_len;
+} aegis_state;
+
+/* Absorb an input block (32 or 16 bytes) */
+static void absorb(aegis_state *st, const uint8_t *p)
+{
+    core_absorb(&st->core, st->variant, p);
+}
 
 /* Init(key, nonce) (3.4 and 4.4) */
 EXPORT_SYM int FUNC(init)(unsigned variant,
@@ -136,9 +222,10 @@ EXPORT_SYM int FUNC(init)(unsigned variant,
                           aegis_state **pState)
 {
     aegis_state *st;
-    aes_block *S;
+    aes_block S[8];
     aes_block c0, c1;
-    unsigned i;
+    uint8_t m[64];
+    unsigned i, j;
 
     if (NULL == key || NULL == nonce || NULL == pState)
         return ERR_NULL;
@@ -157,9 +244,9 @@ EXPORT_SYM int FUNC(init)(unsigned variant,
     st->variant = variant;
     st->phase = ASSOCIATED_DATA;
 
-    S = st->S;
     c0 = blk_load(C0);
     c1 = blk_load(C1);
+    memset(S, 0, sizeof S);
 
     if (variant == AEGIS_128L) {
         aes_block k, n;
@@ -175,8 +262,13 @@ EXPORT_SYM int FUNC(init)(unsigned variant,
         S[5] = blk_xor(k, c0);
         S[6] = blk_xor(k, c1);
         S[7] = blk_xor(k, c0);
+        core_load(&st->core, variant, S);
+
+        /* Update(nonce, key), 10 times */
+        memcpy(m, nonce, 16);
+        memcpy(m + 16, key, 16);
         for (i = 0; i < 10; i++)
-            update_128l(S, n, k);
+            core_absorb(&st->core, variant, m);
     } else {
         aes_block k0, k1, n0, n1;
 
@@ -191,14 +283,19 @@ EXPORT_SYM int FUNC(init)(unsigned variant,
         S[3] = c0;
         S[4] = blk_xor(k0, c0);
         S[5] = blk_xor(k1, c1);
-        for (i = 0; i < 4; i++) {
-            update_256(S, k0);
-            update_256(S, k1);
-            update_256(S, blk_xor(k0, n0));
-            update_256(S, blk_xor(k1, n1));
-        }
+        core_load(&st->core, variant, S);
+
+        /* Update(k0), Update(k1), Update(k0 ^ n0), Update(k1 ^ n1), 4 times */
+        memcpy(m, key, 32);
+        for (i = 0; i < 32; i++)
+            m[32 + i] = key[i] ^ nonce[i];
+        for (i = 0; i < 4; i++)
+            for (j = 0; j < 4; j++)
+                core_absorb(&st->core, variant, m + 16*j);
     }
 
+    wipe(S, sizeof S);
+    wipe(m, sizeof m);
     return 0;
 }
 
@@ -226,9 +323,10 @@ EXPORT_SYM int FUNC(update_ad)(aegis_state *st, const uint8_t *in, size_t len)
         size_t n;
 
         if (st->buf_len == 0 && len >= st->rate) {
-            absorb(st, in);
-            in += st->rate;
-            len -= st->rate;
+            size_t done = core_crypt(&st->core, st->variant, in, NULL, len, 0);
+
+            in += done;
+            len -= done;
             continue;
         }
         n = st->rate - st->buf_len;
@@ -267,9 +365,7 @@ static void start_message(aegis_state *st)
  */
 static int crypt(aegis_state *st, const uint8_t *in, uint8_t *out, size_t len, int decrypt)
 {
-    aes_block S[8];
-    const aes_block *S_;
-    size_t i;
+    size_t i, done;
 
     if (NULL == st || NULL == in || NULL == out)
         return ERR_NULL;
@@ -294,45 +390,15 @@ static int crypt(aegis_state *st, const uint8_t *in, uint8_t *out, size_t len, i
         }
     }
 
-    /* Whole blocks, with a local copy of the state */
-    memcpy(S, st->S, sizeof S);
-    if (st->variant == AEGIS_128L) {
-        for (; len >= 32; in += 32, out += 32, len -= 32) {
-            aes_block t0, t1, out0, out1;
-
-            t0 = blk_load(in);
-            t1 = blk_load(in + 16);
-            out0 = blk_xor(t0, Z0_128L(S));
-            out1 = blk_xor(t1, Z1_128L(S));
-            blk_store(out, out0);
-            blk_store(out + 16, out1);
-            if (decrypt)
-                update_128l(S, out0, out1);
-            else
-                update_128l(S, t0, t1);
-        }
-    } else {
-        for (; len >= 16; in += 16, out += 16, len -= 16) {
-            aes_block t, o;
-
-            t = blk_load(in);
-            o = blk_xor(t, Z_256(S));
-            blk_store(out, o);
-            update_256(S, decrypt ? o : t);
-        }
-    }
-    memcpy(st->S, S, sizeof S);
-    wipe(S, sizeof S);
+    /* Whole blocks */
+    done = core_crypt(&st->core, st->variant, in, out, len, decrypt);
+    in += done;
+    out += done;
+    len -= done;
 
     /* Start an incomplete block */
     if (len > 0) {
-        S_ = st->S;
-        if (st->variant == AEGIS_128L) {
-            blk_store(st->ks, Z0_128L(S_));
-            blk_store(st->ks + 16, Z1_128L(S_));
-        } else {
-            blk_store(st->ks, Z_256(S_));
-        }
+        core_keystream(&st->core, st->variant, st->ks);
         for (i = 0; i < len; i++) {
             uint8_t x = in[i];
             uint8_t y = x ^ st->ks[i];
@@ -359,9 +425,9 @@ EXPORT_SYM int FUNC(decrypt)(aegis_state *st, const uint8_t *in, uint8_t *out, s
 /* Finalize(ad_len_bits, msg_len_bits) (3.9 and 4.9), for a tag of 16 or 32 bytes */
 EXPORT_SYM int FUNC(digest)(aegis_state *st, uint8_t *tag, size_t tag_len)
 {
-    aes_block *S;
+    aes_block S[8];
     aes_block t;
-    uint8_t lens[16];
+    uint8_t lens[16], tt[32];
     uint64_t bits;
     unsigned i;
 
@@ -380,16 +446,21 @@ EXPORT_SYM int FUNC(digest)(aegis_state *st, uint8_t *tag, size_t tag_len)
         st->buf_len = 0;
     }
 
-    S = st->S;
     bits = st->ad_len * 8;
     STORE_U64_LITTLE(lens, bits);
     bits = st->msg_len * 8;
     STORE_U64_LITTLE(lens + 8, bits);
 
+    /* Update(t, t) or Update(t), 7 times */
+    core_store(S, &st->core, st->variant);
+    t = blk_xor(S[st->variant == AEGIS_128L ? 2 : 3], blk_load(lens));
+    blk_store(tt, t);
+    blk_store(tt + 16, t);
+    for (i = 0; i < 7; i++)
+        core_absorb(&st->core, st->variant, tt);
+    core_store(S, &st->core, st->variant);
+
     if (st->variant == AEGIS_128L) {
-        t = blk_xor(S[2], blk_load(lens));
-        for (i = 0; i < 7; i++)
-            update_128l(S, t, t);
         if (tag_len == 16) {
             t = blk_xor(blk_xor(blk_xor(S[0], S[1]), blk_xor(S[2], S[3])),
                         blk_xor(blk_xor(S[4], S[5]), S[6]));
@@ -399,9 +470,6 @@ EXPORT_SYM int FUNC(digest)(aegis_state *st, uint8_t *tag, size_t tag_len)
             blk_store(tag + 16, blk_xor(blk_xor(S[4], S[5]), blk_xor(S[6], S[7])));
         }
     } else {
-        t = blk_xor(S[3], blk_load(lens));
-        for (i = 0; i < 7; i++)
-            update_256(S, t);
         if (tag_len == 16) {
             t = blk_xor(blk_xor(blk_xor(S[0], S[1]), blk_xor(S[2], S[3])), blk_xor(S[4], S[5]));
             blk_store(tag, t);
@@ -412,7 +480,9 @@ EXPORT_SYM int FUNC(digest)(aegis_state *st, uint8_t *tag, size_t tag_len)
     }
 
     /* The state is not needed anymore */
-    wipe(st->S, sizeof st->S);
+    wipe(S, sizeof S);
+    wipe(tt, sizeof tt);
+    wipe(&st->core, sizeof st->core);
     wipe(st->ks, sizeof st->ks);
     wipe(st->buf, sizeof st->buf);
     st->phase = DONE;

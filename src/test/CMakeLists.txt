@@ -283,6 +283,14 @@ if (VALGRIND AND HAVE_VALGRIND_MEMCHECK_H)
         LINK_OPTIONS ""
         LINK_LIBRARIES "")
     add_test(NAME test_aegis_ct COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_aegis_ct>)
+    if (SSE)
+        add_executable(test_aegis_ct_sse2 test_aegis_ct.c)
+        set_target_properties(test_aegis_ct_sse2 PROPERTIES
+            COMPILE_OPTIONS "-O2;-g;-Wall;-Werror;-DUSE_SSE2"
+            LINK_OPTIONS ""
+            LINK_LIBRARIES "")
+        add_test(NAME test_aegis_ct_sse2 COMMAND ${VALGRIND} -q --error-exitcode=1 $<TARGET_FILE:test_aegis_ct_sse2>)
+    endif()
 
     # DES and Triple DES (DES.c is included by the test)
     foreach(CIPHER des des3)
@@ -576,6 +584,20 @@ endif()
 # AEGIS (the test includes the implementation): portable, and with AES-NI or ARMv8 AES
 add_executable(test_aegis test_aegis.c)
 add_test(NAME test_aegis COMMAND test_aegis)
+if (SSE)
+  add_executable(test_aegis_sse2 test_aegis.c)
+  target_compile_definitions(test_aegis_sse2 PRIVATE USE_SSE2)
+  add_test(NAME test_aegis_sse2 COMMAND test_aegis_sse2)
+  if (NAT_32BIT_TESTS)
+    # A real 32-bit x86 build
+    add_executable(test_aegis_32_sse2 test_aegis.c)
+    set_target_properties(test_aegis_32_sse2 PROPERTIES
+        COMPILE_OPTIONS "-m32;-msse2;-DUSE_SSE2;-O2;-g;-Wall;-Werror;-fsanitize=undefined;-fsanitize=address;-UHAVE_UINT128;-USYS_BITS;-DSYS_BITS=32"
+        LINK_OPTIONS "-m32;-fsanitize=undefined;-fsanitize=address"
+        LINK_LIBRARIES "")
+    add_test(NAME test_aegis_32_sse2 COMMAND test_aegis_32_sse2)
+  endif()
+endif()
 if (AESNI)
   add_executable(test_aegis_aesni test_aegis.c)
   target_compile_definitions(test_aegis_aesni PRIVATE TEST_AEGIS_AESNI)
