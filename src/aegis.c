@@ -232,7 +232,7 @@ EXPORT_SYM int FUNC(init)(unsigned variant,
 
     if (variant != AEGIS_128L && variant != AEGIS_256)
         return ERR_VALUE;
-    if (key_len != (variant == AEGIS_128L ? 16 : 32))
+    if (key_len != (variant == AEGIS_128L ? 16u : 32u))
         return ERR_KEY_SIZE;
     if (nonce_len != key_len)
         return ERR_NONCE_SIZE;

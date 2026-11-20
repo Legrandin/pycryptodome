@@ -15,7 +15,6 @@
  */
 
 #include <assert.h>
-#include <stdio.h>
 #include <string.h>
 
 #if defined(TEST_AEGIS_AESNI)
@@ -28,15 +27,21 @@
 
 #define F(name) PASTE2(AEGIS_PREFIX, name)
 
+static unsigned hex_digit(char c)
+{
+    if (c >= '0' && c <= '9')
+        return (unsigned)(c - '0');
+    assert(c >= 'a' && c <= 'f');
+    return (unsigned)(c - 'a' + 10);
+}
+
 static void unhex(uint8_t *out, const char *hex)
 {
     size_t i, len = strlen(hex) / 2;
-    unsigned v;
 
-    for (i = 0; i < len; i++) {
-        assert(sscanf(hex + 2*i, "%2x", &v) == 1);
-        out[i] = (uint8_t)v;
-    }
+    assert(strlen(hex) % 2 == 0);
+    for (i = 0; i < len; i++)
+        out[i] = (uint8_t)(hex_digit(hex[2*i]) << 4 | hex_digit(hex[2*i + 1]));
 }
 
 static aes_block block(const char *hex)
