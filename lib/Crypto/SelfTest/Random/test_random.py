@@ -102,14 +102,9 @@ class TestSimple:
         with pytest.raises(TypeError):
             random.randint(1, "2")
         # Test choice
-        seq = range(10000)
-        x = random.choice(seq)
-        y = random.choice(seq)
-        assert x != y
-        assert (x in seq) is True
-        assert (y in seq) is True
-        for _ in range(10):
-            assert (random.choice((1, 2, 3)) in (1, 2, 3)) is True
+        # Every element is reachable (an element is missed with probability < 3 * (2/3)^200 ≈ 1e-35)
+        draws = {random.choice((1, 2, 3)) for _ in range(200)}
+        assert draws == {1, 2, 3}
         assert (random.choice([1, 2, 3]) in [1, 2, 3]) is True
         assert (random.choice(bytearray(b"123")) in bytearray(b"123")) is True
         assert random.choice([1]) == 1
