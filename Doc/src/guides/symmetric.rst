@@ -156,7 +156,8 @@ AES-GCM is the right choice in most cases. Consider the alternatives when:
 
 * **The CPU has no AES instructions** (for instance, some small ARM devices):
   :doc:`ChaCha20-Poly1305 <../cipher/chacha20_poly1305>` is fast in software,
-  and it has the same API. With a 24-byte nonce (*XChaCha20-Poly1305*),
+  and it has the same API (on 64-bit ARM, :doc:`AEGIS-128L <../cipher/aegis>`
+  is even faster). With a 24-byte nonce (*XChaCha20-Poly1305*),
   random nonces are safe for any number of messages:
 
   .. code-block:: python
@@ -166,6 +167,18 @@ AES-GCM is the right choice in most cases. Consider the alternatives when:
       key = get_random_bytes(32)
       nonce = get_random_bytes(24)
       cipher = ChaCha20_Poly1305.new(key=key, nonce=nonce)
+      ciphertext, tag = cipher.encrypt_and_digest(b"Attack at dawn")
+
+* **Speed matters, and the CPU has AES instructions**:
+  :doc:`AEGIS <../cipher/aegis>` is several times faster than AES-GCM, and it has the same API.
+  With AEGIS-256, random 32-byte nonces are safe for any number of messages:
+
+  .. code-block:: python
+
+      from Crypto.Cipher import AEGIS
+
+      key = get_random_bytes(32)
+      cipher = AEGIS.new(key, AEGIS.MODE_256)     # random nonce, in cipher.nonce
       ciphertext, tag = cipher.encrypt_and_digest(b"Attack at dawn")
 
 * **You cannot guarantee that nonces never repeat** (for instance, many devices

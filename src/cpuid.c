@@ -40,8 +40,16 @@ FAKE_INIT(cpuid_c)
 #include <intrin.h>
 #endif
 
-#if defined(__aarch64__) && defined(__linux__)
+#if defined(__aarch64__) && (defined(__linux__) || defined(__FreeBSD__))
 #include <sys/auxv.h>
+#define HAVE_ARM_HWCAP
+#elif defined(__aarch64__) && defined(__OpenBSD__)
+#include <sys/param.h>
+/* elf_aux_info() exists since OpenBSD 7.6 */
+#if OpenBSD >= 202410
+#include <sys/auxv.h>
+#define HAVE_ARM_HWCAP
+#endif
 #elif defined(__aarch64__) && defined(__APPLE__)
 #include <sys/sysctl.h>
 #elif defined(_M_ARM64)
@@ -212,13 +220,30 @@ EXPORT_SYM int have_adx(void)
 
 #endif
 
+#ifdef HAVE_ARM_HWCAP
+/** Return bit n of AT_HWCAP: Linux, FreeBSD and OpenBSD use the same bits
+ * (HWCAP_* in asm/hwcap.h or machine/elf.h) **/
+static int arm_hwcap(unsigned n)
+{
+    unsigned long caps;
+
+#if defined(__linux__)
+    caps = getauxval(AT_HWCAP);
+#else
+    if (elf_aux_info(AT_HWCAP, &caps, sizeof caps) != 0)
+        return 0;
+#endif
+    return (int)((caps >> n) & 1);
+}
+#endif
+
 /** Return non-zero if the CPU supports the AES instructions of the ARMv8
  * Cryptography Extensions (AESE, AESD, AESMC and AESIMC), in AArch64 state. **/
 EXPORT_SYM int have_aes_armv8(void)
 {
-#if defined(__aarch64__) && defined(__linux__)
-    /* HWCAP_AES in asm/hwcap.h */
-    return (getauxval(AT_HWCAP) & (1UL<<3)) ? 1 : 0;
+#if defined(HAVE_ARM_HWCAP)
+    /* HWCAP_AES */
+    return arm_hwcap(3);
 #elif defined(__aarch64__) && defined(__APPLE__)
     /* All Apple CPUs for arm64 have them */
     return 1;
@@ -233,9 +258,9 @@ EXPORT_SYM int have_aes_armv8(void)
  * of the ARMv8 Cryptography Extensions (PMULL and PMULL2), in AArch64 state. **/
 EXPORT_SYM int have_pmull(void)
 {
-#if defined(__aarch64__) && defined(__linux__)
-    /* HWCAP_PMULL in asm/hwcap.h */
-    return (getauxval(AT_HWCAP) & (1UL<<4)) ? 1 : 0;
+#if defined(HAVE_ARM_HWCAP)
+    /* HWCAP_PMULL */
+    return arm_hwcap(4);
 #elif defined(__aarch64__) && defined(__APPLE__)
     return 1;
 #elif defined(_M_ARM64)
@@ -267,9 +292,9 @@ static int apple_feature(const char *name, const char *legacy_name)
  * Cryptography Extensions (SHA256H, SHA256H2, SHA256SU0 and SHA256SU1), in AArch64 state. **/
 EXPORT_SYM int have_sha256_armv8(void)
 {
-#if defined(__aarch64__) && defined(__linux__)
-    /* HWCAP_SHA2 in asm/hwcap.h */
-    return (getauxval(AT_HWCAP) & (1UL<<6)) ? 1 : 0;
+#if defined(HAVE_ARM_HWCAP)
+    /* HWCAP_SHA2 */
+    return arm_hwcap(6);
 #elif defined(__aarch64__) && defined(__APPLE__)
     return 1;
 #elif defined(_M_ARM64)
@@ -284,9 +309,9 @@ EXPORT_SYM int have_sha256_armv8(void)
  * (SHA512H, SHA512H2, SHA512SU0 and SHA512SU1), in AArch64 state. **/
 EXPORT_SYM int have_sha512_armv8(void)
 {
-#if defined(__aarch64__) && defined(__linux__)
-    /* HWCAP_SHA512 in asm/hwcap.h */
-    return (getauxval(AT_HWCAP) & (1UL<<21)) ? 1 : 0;
+#if defined(HAVE_ARM_HWCAP)
+    /* HWCAP_SHA512 */
+    return arm_hwcap(21);
 #elif defined(__aarch64__) && defined(__APPLE__)
     return apple_feature("hw.optional.arm.FEAT_SHA512", "hw.optional.armv8_2_sha512");
 #elif defined(_M_ARM64)
@@ -300,9 +325,9 @@ EXPORT_SYM int have_sha512_armv8(void)
  * (EOR3, RAX1, XAR and BCAX), in AArch64 state. **/
 EXPORT_SYM int have_sha3_armv8(void)
 {
-#if defined(__aarch64__) && defined(__linux__)
-    /* HWCAP_SHA3 in asm/hwcap.h */
-    return (getauxval(AT_HWCAP) & (1UL<<17)) ? 1 : 0;
+#if defined(HAVE_ARM_HWCAP)
+    /* HWCAP_SHA3 */
+    return arm_hwcap(17);
 #elif defined(__aarch64__) && defined(__APPLE__)
     return apple_feature("hw.optional.arm.FEAT_SHA3", "hw.optional.armv8_2_sha3");
 #elif defined(_M_ARM64)

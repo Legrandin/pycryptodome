@@ -32,6 +32,12 @@ New features
 * New self-test option ``--include-very-slow-tests``, for the tests marked ``very_slow``
   (like key generation and signing with the SP 800-230 parameter sets, which take about
   half an hour): they do not run otherwise.
+* New module ``Crypto.Cipher.AEGIS``, for the authenticated ciphers AEGIS-128L and
+  AEGIS-256 (RFC 10032), with 16- or 32-byte tags. They use the AES instructions of the CPU
+  (AES-NI or the ARMv8 Cryptography Extensions): AEGIS-128L is then 3 to 5 times faster
+  than AES-GCM. Without them, the AES round is bitsliced (constant time), with NEON
+  on ARM and SSE2 on x86; on 64-bit ARM, AEGIS-128L is then still faster than
+  ChaCha20-Poly1305.
 
 Breaking changes
 ----------------

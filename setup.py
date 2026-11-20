@@ -139,6 +139,24 @@ ext_modules = [
         sources=["src/AES_armv8.c"],
         py_limited_api=True,
     ),
+    Extension(
+        "Crypto.Cipher._raw_aegis",
+        include_dirs=["src/"],
+        sources=["src/aegis_portable.c"],
+        py_limited_api=True,
+    ),
+    Extension(
+        "Crypto.Cipher._raw_aegis_aesni",
+        include_dirs=["src/"],
+        sources=["src/aegis_aesni.c"],
+        py_limited_api=True,
+    ),
+    Extension(
+        "Crypto.Cipher._raw_aegis_armv8",
+        include_dirs=["src/"],
+        sources=["src/aegis_armv8.c"],
+        py_limited_api=True,
+    ),
     Extension("Crypto.Cipher._raw_arc2", include_dirs=["src/"], sources=["src/ARC2.c"], py_limited_api=True),
     Extension(
         "Crypto.Cipher._raw_blowfish", include_dirs=["src/"], sources=["src/blowfish.c"], py_limited_api=True
