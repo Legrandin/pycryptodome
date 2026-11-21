@@ -861,6 +861,9 @@ def _import_pkcs8(encoded, passphrase, max_iteration_count=None, threads=1, max_
     k = PKCS8.unwrap(encoded, passphrase, max_iteration_count, threads=threads, max_memory=max_memory)
     if k[0] not in oids:
         raise ValueError("No PKCS#8 encoded RSA key")
+    # The parameters of rsaEncryption are NULL (RFC 8017, Appendix C)
+    if k[0] == oid and k[2] is not None:
+        raise ValueError("No PKCS#8 encoded RSA key")
     # The private key inside PKCS#8 is an RSAPrivateKey (RFC 8017),
     # and never another (possibly encrypted) container
     return _import_pkcs1_private(k[1])

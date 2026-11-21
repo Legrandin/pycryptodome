@@ -799,6 +799,16 @@ class DerNull(DerObject):
 
         DerObject.__init__(self, 0x05, b"", None, False)
 
+    def _decodeFromStream(self, s: BytesIO_EOF, strict: bool) -> None:
+        """Decode a DER-encoded NULL from a file."""
+
+        # Fill up self.payload
+        DerObject._decodeFromStream(self, s, strict)
+
+        # X.690, 8.8.2: the contents octets shall not contain any octets
+        if self.payload:
+            raise ValueError("Invalid encoding for DER NULL: payload is not empty")
+
 
 # The maximum length in bytes of a subidentifier in an OBJECT IDENTIFIER
 # (896 bits): far more than any OID in use, for instance the 128-bit UUIDs

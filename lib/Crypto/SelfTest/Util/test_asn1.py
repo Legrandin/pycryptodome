@@ -690,6 +690,15 @@ class TestDerNull:
         der = DerNull()
         assert der == der.decode(b"\x05\x00")
 
+    def testErrDecode1(self):
+        # The contents of a NULL must be empty (X.690, 8.8.2)
+        der = DerNull()
+        for encoded in (b"\x05\x01\x00", b"\x05\x05hello"):
+            with pytest.raises(ValueError):
+                der.decode(encoded)
+            with pytest.raises(ValueError):
+                der.decode(encoded, strict=True)
+
 
 class TestDerObjectId:
     def testInit1(self):
