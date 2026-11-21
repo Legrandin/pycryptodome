@@ -333,6 +333,17 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         assert key.n == 17
         assert key.e == 3
 
+    def test_import_bad_null_params(self):
+        """The NULL parameters of rsaEncryption must be empty"""
+        algo = asn1.DerSequence([asn1.DerObjectId(RSA.oid), b"\x05\x05hello"]).encode()
+        bit_string = asn1.DerBitString(asn1.DerSequence([self.n, self.e]).encode()).encode()
+        spki = asn1.DerSequence([algo, bit_string]).encode()
+        with pytest.raises(ValueError):
+            RSA.import_key(spki)
+        pkcs8 = asn1.DerSequence([0, algo, asn1.DerOctetString(self.rsaKeyDER).encode()]).encode()
+        with pytest.raises(ValueError):
+            RSA.import_key(pkcs8)
+
     def test_import_key_windows_cr_lf(self):
         pem_cr_lf = "\r\n".join(self.rsaKeyPEM.splitlines())
         key = RSA.importKey(pem_cr_lf)
