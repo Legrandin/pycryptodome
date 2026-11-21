@@ -551,8 +551,9 @@ def construct(
         fmt_error |= ((p - 1) % q) != 0
         fmt_error |= g <= 1 or g >= p
         fmt_error |= pow(g, q, p) != 1
-        # Public key
-        fmt_error |= y <= 0 or y >= p
+        # Public key (NIST SP 800-89, 5.3.1): 1 < y < p and y^q = 1 mod p
+        fmt_error |= y <= 1 or y >= p
+        fmt_error |= pow(y, q, p) != 1
         if "x" in key_dict:
             x = key_dict["x"]
             fmt_error |= x <= 0 or x >= q
