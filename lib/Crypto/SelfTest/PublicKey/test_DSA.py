@@ -117,6 +117,17 @@ class TestDSA:
         with pytest.raises(ValueError):
             self.dsa.construct(tup)
 
+    def test_construct_bad_public_key(self):
+        (g, p, q) = (bytes_to_long(a2b_hex(param)) for param in (self.g, self.p, self.q))
+
+        # y = 1 verifies a signature (r, s) = (g^k mod p mod q, H(m)/k) on any message
+        with pytest.raises(ValueError):
+            self.dsa.construct((1, g, p, q))
+
+        # y = p - 1 is not in the subgroup of order q
+        with pytest.raises(ValueError):
+            self.dsa.construct((p - 1, g, p, q))
+
     def test_construct_bad_key5(self):
         (y, g, p, q, x) = (
             bytes_to_long(a2b_hex(param)) for param in (self.y, self.g, self.p, self.q, self.x)
