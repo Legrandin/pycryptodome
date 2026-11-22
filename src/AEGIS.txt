@@ -52,10 +52,10 @@ the other arrows are #include.
 Notes:
   - aegis.c is the same in the three modules: it is included last, and the
     backend first defines AEGIS_PREFIX (the prefix of the exported functions),
-    aes_block with blk_load(), blk_store(), blk_xor() and blk_and(), and either
-    aes_rounds() or, with AEGIS_CORE, its own state with the core_*() functions.
-    Only aegis_scalar.c defines AEGIS_CORE.
-  - aegis.h (the variant numbers and wipe()) is included by aegis_portable.c,
+    aes_block with blk_load(), blk_store() and blk_xor(), and either
+    blk_and() and aes_rounds() or, with AEGIS_CORE, its own state with the
+    core_*() functions. Only aegis_scalar.c defines AEGIS_CORE.
+  - aegis.h (enum AegisVariant and wipe()) is included by aegis_portable.c,
     which aegis_scalar.c needs before aegis.c, and by aegis.c.
   - aegis_simd.c and aegis_scalar.c are not modules: aegis_portable.c includes
     exactly one of them, right after the type word. Each defines the operations
