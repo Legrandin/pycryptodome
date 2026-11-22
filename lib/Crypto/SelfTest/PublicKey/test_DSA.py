@@ -128,6 +128,11 @@ class TestDSA:
         with pytest.raises(ValueError):
             self.dsa.construct((p - 1, g, p, q))
 
+        # y = 0 and y = p are out of range
+        for y in (0, p):
+            with pytest.raises(ValueError):
+                self.dsa.construct((y, g, p, q))
+
     def test_construct_bad_key5(self):
         (y, g, p, q, x) = (
             bytes_to_long(a2b_hex(param)) for param in (self.y, self.g, self.p, self.q, self.x)
