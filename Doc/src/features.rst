@@ -213,13 +213,13 @@ These CPU extensions are used when present:
     * - ARMv8 Cryptography Extensions (64-bit ARM)
       - AES, GCM, GCM-SIV, AEGIS, SHA-2, SLH-DSA (the SHA2 sets)
     * - NEON (64-bit ARM)
-      - KangarooTwelve, ML-KEM, ML-DSA
+      - KangarooTwelve, ML-KEM, ML-DSA, AEGIS (without AES instructions)
     * - SHA extensions
       - SHA-224, SHA-256, SLH-DSA (the SHA2 sets)
     * - AVX2
       - SHA-3 and the other Keccak-based functions, ChaCha20, Salsa20, ML-KEM, ML-DSA,
         SLH-DSA (with BMI1 and BMI2)
     * - SSE2 (x86, selected at compile time)
-      - ChaCha20, Salsa20, scrypt, big integers (32-bit only)
+      - ChaCha20, Salsa20, scrypt, AEGIS (without AES-NI), big integers (32-bit only)
     * - BMI2 and ADX
       - Big integers, NIST curves

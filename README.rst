@@ -9,7 +9,7 @@ PyCryptodome
 
 PyCryptodome is a self-contained Python package of low-level
 cryptographic primitives: one ``pip install``, no system libraries,
-and a broad, consistent API from AES and RSA to HPKE, KangarooTwelve and post-quantum ML-DSA.
+and a broad, consistent API from AES and RSA to HPKE, KangarooTwelve and post-quantum ML-DSA and SLH-DSA.
 
 It supports Python 3.9 and newer, and PyPy.
 
@@ -49,7 +49,7 @@ Why PyCryptodome
 * **Broad.** Mainstream and specialized algorithms behind one consistent API,
   including many that are hard to find elsewhere in Python: SIV and OCB modes,
   AES key wrap (KW, KWP), HPKE, KMAC, TupleHash, TurboSHAKE, KangarooTwelve,
-  Ed448 and X448, ML-DSA, ML-KEM, and Shamir's secret sharing.
+  Ed448 and X448, AEGIS, ML-DSA, ML-KEM, SLH-DSA, and Shamir's secret sharing.
 * **Easy to use correctly.** Authenticated encryption and verification are a
   single call, nonces and IVs are generated for you, randomness comes straight
   from the operating system, and keys are imported and exported in the
@@ -58,8 +58,10 @@ Why PyCryptodome
   constant time, in C. RSA decryption is blinded, and elliptic curve scalar
   multiplications are blinded and use randomized coordinates.
 * **Fast where it counts.** AES-NI, CLMUL, the SHA extensions, AVX2 and
-  BMI2/ADX are used when the CPU has them, selected at runtime:
+  BMI2/ADX on x86, and the ARMv8 Cryptography Extensions on ARM,
+  are used when the CPU has them, selected at runtime:
   the same wheel runs everywhere, at full speed on recent hardware.
+  On 64-bit ARM, NEON is always used.
 * **Well tested.** Checked against the NIST and Wycheproof test vectors,
   on Linux, macOS and Windows, x86 and ARM, CPython and PyPy.
 * **Permissive license.** BSD 2-Clause, and public domain for the oldest code.
