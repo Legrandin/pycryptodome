@@ -9,8 +9,8 @@
  * This file is not a module: it is included by aegis_portable.c, aegis_aesni.c
  * and aegis_armv8.c, which first define:
  *  - AEGIS_PREFIX, the prefix of the names of the exported functions;
- *  - aes_block, the type of an AES block, with blk_load(), blk_store(),
- *    blk_xor() and blk_and();
+ *  - aes_block, the type of an AES block, with blk_load(), blk_store() and
+ *    blk_xor(), and blk_and() without AEGIS_CORE;
  *  - either aes_rounds(out, in, rk, n), which sets out[i] = AESRound(in[i], rk[i])
  *    for i < n, or AEGIS_CORE and their own state (aegis_core) with the
  *    functions core_load(), core_store(), core_absorb(), core_crypt() and
