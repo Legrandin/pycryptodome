@@ -11,6 +11,9 @@ PyCryptodome is a self-contained Python package of low-level
 cryptographic primitives: one ``pip install``, no system libraries,
 and a broad, consistent API from AES and RSA to HPKE, KangarooTwelve and post-quantum ML-DSA and SLH-DSA.
 
+Post-quantum: ML-DSA (FIPS 204) and SLH-DSA (FIPS 205) signatures, and, in HPKE (RFC 9180),
+ML-KEM (FIPS 203) and the hybrid X-Wing, as in the draft ``draft-ietf-hpke-pq``.
+
 It supports Python 3.9 and newer, and PyPy.
 
 You install it with::

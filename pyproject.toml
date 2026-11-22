@@ -6,7 +6,11 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "pycryptodome"
 dynamic = ["version"]
-description = "Cryptographic library for Python"
+description = "Self-contained cryptographic library for Python, classical and post-quantum"
+keywords = [
+    "cryptography", "post-quantum", "pqc", "ml-kem", "ml-dsa", "slh-dsa",
+    "kyber", "dilithium", "sphincs", "hpke", "aes", "rsa", "ecc",
+]
 readme = "README.rst"
 authors = [{name = "Helder Eijs", email = "helderijs@gmail.com"}]
 # See LICENSE.rst: the code from PyCrypto is in the public domain (Unlicense),
