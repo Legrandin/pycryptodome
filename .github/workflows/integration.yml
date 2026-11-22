@@ -2,8 +2,58 @@ name: Integration test
 
 on: [push, pull_request]
 
+# One run at a time for the whole repository (all branches, pushes and pull requests):
+# each run gets all the runners, and the others wait in a queue, in FIFO order
+# (without "queue: max", a new run would cancel the one already waiting)
+concurrency:
+  group: ${{ github.workflow }}
+  queue: max
+
 jobs:
+  # The macOS jobs are the longest ones and they start first. The Linux and Windows jobs
+  # wait for the (short) lint jobs, so that they do not take the slots of the macOS jobs:
+  # the account runs at most 20 jobs at a time (macOS included).
+  build_macos:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [ macos-15 ]
+        python-version: [ "3.15t", "3.15" ]
+        cffi: [ yes, no ]
+    env:
+      CFLAGS: "-Wconversion"
+
+    steps:
+    - uses: actions/checkout@v7
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v7
+      with:
+        python-version: ${{ matrix.python-version }}
+
+    - name: Display Python version
+      run: python -c "import sys; print(sys.version)"
+
+    - name: Install CFFI
+      if: matrix.cffi == 'yes'
+      run: pip install cffi
+
+    - name: Install dependencies (testing only)
+      run: |
+        pip install -r requirements-test.txt
+
+    - name: Install package
+      run: |
+        pip install -v .
+
+    - name: Test
+      shell: bash
+      run: |
+        python -m Crypto.SelfTest
+
   build_linux:
+    needs: [ ruff, mypy ]
+    if: ${{ !cancelled() }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
@@ -73,11 +123,13 @@ jobs:
         python -c "from Crypto.PublicKey import _nist_ecc as e; import sys; sys.exit(0 if not e._bmi2_adx else 'The portable build of the NIST curves was not selected')"
         python -m Crypto.SelfTest --skip-slow-tests
 
-  build_desktop:
+  build_windows:
+    needs: [ ruff, mypy ]
+    if: ${{ !cancelled() }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ macos-15, windows-latest, windows-11-arm ]
+        os: [ windows-latest, windows-11-arm ]
         python-version: [ "3.15t", "3.15" ]
         cffi: [ yes, no ]
     env:
@@ -122,6 +174,8 @@ jobs:
         python -m Crypto.SelfTest
 
   build_linux_arm:
+    needs: [ ruff, mypy ]
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04-arm
     strategy:
       matrix:
@@ -192,6 +246,8 @@ jobs:
         mypy lib/
 
   test_c_linux:
+    needs: [ ruff, mypy ]
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04
     strategy:
       matrix:
@@ -225,6 +281,8 @@ jobs:
         make -C build all test
 
   test_c_linux_arm:
+    needs: [ ruff, mypy ]
+    if: ${{ !cancelled() }}
     runs-on: ubuntu-24.04-arm
     steps:
     - uses: actions/checkout@v7
@@ -243,6 +301,8 @@ jobs:
         make -C build all test
 
   test_c_windows:
+    needs: [ ruff, mypy ]
+    if: ${{ !cancelled() }}
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
