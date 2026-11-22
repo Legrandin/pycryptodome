@@ -175,6 +175,33 @@ When you subsequently install ``pycryptodome``, ``pip`` finds that a directory n
 and therefore installs all the sub-packages of ``pycryptodome`` in it.
 This is probably a reasonable behavior, if it wasn't that `pip does not issue any warning even if it could detect the issue <https://github.com/pypa/pip/issues/3309>`_.
 
+Why do I get the error ``Cannot load native module``?
++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+For instance, ``OSError: Cannot load native module 'Crypto.Hash._SHA256'``.
+
+This error means that the C extensions of PyCryptodome were built for a platform other than
+the one of the Python that is loading them.
+The error message ends with the reason given by the operating system, for instance:
+
+* ``incompatible architecture (have 'x86_64', need 'arm64')``: on a Mac with Apple silicon,
+  the package was installed by an Intel (x86_64) Python running under Rosetta,
+  or it came from a cache filled by one.
+* ``invalid ELF header``: a macOS or Windows build is used on Linux,
+  for instance in an AWS Lambda layer or a container prepared on a Mac.
+* ``cannot open shared object file: No such file or directory``, although the file exists:
+  a library that the file needs is missing. For instance, a build for glibc
+  (most Linux distributions) is used on musl (Alpine Linux), or a build for x86-64
+  is used on ARM64.
+
+To fix it, reinstall the package with the Python that will run your code::
+
+        python -m pip install --force-reinstall --no-cache-dir pycryptodome
+
+For AWS Lambda and containers, install the package in an image with the same
+operating system, CPU architecture and Python version as the target.
+Do not copy the ``Crypto`` directory from another machine.
+
 Why does ``strxor`` raise ``TypeError: argument 2 must be bytes, not bytearray``?
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
