@@ -26,6 +26,7 @@ import pytest
 
 from Crypto import Random
 from Crypto.Cipher import PKCS1_v1_5 as PKCS
+from Crypto.Hash import SHAKE128
 from Crypto.PublicKey import RSA
 from Crypto.SelfTest.loader import load_test_vectors, load_test_vectors_wycheproof, wycheproof_id
 from Crypto.SelfTest.st_common import a2b_hex, mark_slow, wycheproof_warnings
@@ -254,14 +255,21 @@ class TestImplicitRejection:
         assert pt1 == pt2 == pt3
 
     def test_depends_on_key_and_ciphertext(self):
-        em = b"\x00\x01" + b"\xff" * 100 + b"\x00" + b"A" * 25
-        ct1 = self._encrypt_raw(em)
-        ct2 = self._encrypt_raw(em[:-1] + b"B")
-        results = {self.cipher.decrypt(ct1), self.cipher.decrypt(ct2)}
+        # Fixed keys: with random ones, each synthetic message is empty
+        # with probability 1/118, and two empty messages would collide
+        key1 = RSA.generate(1024, randfunc=SHAKE128.new(b"key 1").read)
+        key2 = RSA.generate(1024, randfunc=SHAKE128.new(b"key 2").read)
 
-        key2 = RSA.generate(1024)
-        ct3 = long_to_bytes(key2._encrypt(bytes_to_long(em)), 128)
-        results.add(PKCS.new(key2).decrypt(ct3))
+        def decrypt_raw(key, em):
+            ct = long_to_bytes(key._encrypt(bytes_to_long(em)), 128)
+            return PKCS.new(key).decrypt(ct)
+
+        em = b"\x00\x01" + b"\xff" * 100 + b"\x00" + b"A" * 25
+        results = {
+            decrypt_raw(key1, em),
+            decrypt_raw(key1, em[:-1] + b"B"),
+            decrypt_raw(key2, em),
+        }
         assert len(results) == 3
 
     def test_no_warning(self):
