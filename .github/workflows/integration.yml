@@ -1,6 +1,30 @@
 name: Integration test
 
-on: [push, pull_request]
+# Changes that cannot affect the tests do not trigger a run
+on:
+  push:
+    # Branches only: a tag points to a commit that has already been tested
+    branches: [ '**' ]
+    paths-ignore:
+      - 'Changelog.rst'
+      - 'AUTHORS.rst'
+      - 'INSTALL.rst'
+      - 'README.rst'
+      - 'Doc/**'
+      - '.readthedocs.yaml'
+      - '**.md'
+  pull_request:
+    paths-ignore:
+      - 'Changelog.rst'
+      - 'AUTHORS.rst'
+      - 'INSTALL.rst'
+      - 'README.rst'
+      - 'Doc/**'
+      - '.readthedocs.yaml'
+      - '**.md'
+
+permissions:
+  contents: read
 
 # One run at a time for the whole repository (all branches, pushes and pull requests):
 # each run gets all the runners, and the others wait in a queue, in FIFO order
@@ -9,12 +33,19 @@ concurrency:
   group: ${{ github.workflow }}
   queue: max
 
+# Each job has the condition:
+#   github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository
+# so that a pull request from a branch of this repository is not tested twice
+# (its push is): only pull requests from forks run on the pull_request event.
+
 jobs:
   # The macOS jobs are the longest ones and they start first. The Linux and Windows jobs
   # wait for the (short) lint jobs, so that they do not take the slots of the macOS jobs:
   # the account runs at most 20 jobs at a time (macOS included).
   build_macos:
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     strategy:
       matrix:
         os: [ macos-15 ]
@@ -26,25 +57,10 @@ jobs:
     steps:
     - uses: actions/checkout@v7
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v7
+    - uses: ./.github/actions/install
       with:
         python-version: ${{ matrix.python-version }}
-
-    - name: Display Python version
-      run: python -c "import sys; print(sys.version)"
-
-    - name: Install CFFI
-      if: matrix.cffi == 'yes'
-      run: pip install cffi
-
-    - name: Install dependencies (testing only)
-      run: |
-        pip install -r requirements-test.txt
-
-    - name: Install package
-      run: |
-        pip install -v .
+        cffi: ${{ matrix.cffi }}
 
     - name: Test
       shell: bash
@@ -53,8 +69,9 @@ jobs:
 
   build_linux:
     needs: [ ruff, mypy ]
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository) }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     strategy:
       matrix:
         os: [ ubuntu-24.04 ]
@@ -76,25 +93,10 @@ jobs:
     steps:
     - uses: actions/checkout@v7
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v7
+    - uses: ./.github/actions/install
       with:
         python-version: ${{ matrix.python-version }}
-
-    - name: Display Python version
-      run: python -c "import sys; print(sys.version)"
-
-    - name: Install CFFI
-      if: matrix.cffi == 'yes'
-      run: pip install cffi
-
-    - name: Install dependencies (testing only)
-      run: |
-        pip install -r requirements-test.txt
-
-    - name: Install package
-      run: |
-        pip install -v .
+        cffi: ${{ matrix.cffi }}
 
     # On x86-64, the big integer code (Crypto.Math._IntegerNat) and the
     # NIST curves and secp256k1 (Crypto.PublicKey._nist_ecc) must use their
@@ -125,8 +127,9 @@ jobs:
 
   build_windows:
     needs: [ ruff, mypy ]
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository) }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 60
     strategy:
       matrix:
         os: [ windows-latest, windows-11-arm ]
@@ -138,27 +141,11 @@ jobs:
     steps:
     - uses: actions/checkout@v7
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v7
+    - uses: ./.github/actions/install
       with:
         python-version: ${{ matrix.python-version }}
-
-    - name: Display Python version
-      run: python -c "import sys; print(sys.version)"
-
-    - name: Install CFFI
-      if: matrix.cffi == 'yes'
-      run: pip install cffi
-
-    - name: Install dependencies (testing only)
-      run: |
-        pip install -r requirements-test.txt
-
-    - name: Install package
-      env:
-        PYCRYPTODOME_CLANG_CL: ${{ matrix.os == 'windows-latest' && '1' || '' }}
-      run: |
-        pip install -v .
+        cffi: ${{ matrix.cffi }}
+        clang-cl: ${{ matrix.os == 'windows-latest' && '1' || '' }}
 
     - name: Test
       shell: bash
@@ -175,8 +162,9 @@ jobs:
 
   build_linux_arm:
     needs: [ ruff, mypy ]
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository) }}
     runs-on: ubuntu-24.04-arm
+    timeout-minutes: 60
     strategy:
       matrix:
         python-version: [ "3.15t", "3.15" ]
@@ -187,25 +175,10 @@ jobs:
     steps:
     - uses: actions/checkout@v7
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v7
+    - uses: ./.github/actions/install
       with:
         python-version: ${{ matrix.python-version }}
-
-    - name: Display Python version
-      run: python -c "import sys; print(sys.version)"
-
-    - name: Install CFFI
-      if: matrix.cffi == 'yes'
-      run: pip install cffi
-
-    - name: Install dependencies (testing only)
-      run: |
-        pip install -r requirements-test.txt
-
-    - name: Install package
-      run: |
-        pip install -v .
+        cffi: ${{ matrix.cffi }}
 
     - name: Test
       shell: bash
@@ -213,7 +186,9 @@ jobs:
         python -m Crypto.SelfTest
 
   ruff:
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
     - uses: actions/checkout@v7
     - name: Set up Python
@@ -231,7 +206,9 @@ jobs:
         ruff format --check .
 
   mypy:
+    if: ${{ github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
     - uses: actions/checkout@v7
     - name: Set up Python
@@ -247,8 +224,9 @@ jobs:
 
   test_c_linux:
     needs: [ ruff, mypy ]
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository) }}
     runs-on: ubuntu-24.04
+    timeout-minutes: 30
     strategy:
       matrix:
         sse: [0, 1]
@@ -282,8 +260,9 @@ jobs:
 
   test_c_linux_arm:
     needs: [ ruff, mypy ]
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository) }}
     runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
     steps:
     - uses: actions/checkout@v7
     - name: Install dependencies
@@ -302,8 +281,9 @@ jobs:
 
   test_c_windows:
     needs: [ ruff, mypy ]
-    if: ${{ !cancelled() }}
+    if: ${{ !cancelled() && (github.event_name == 'push' || github.event.pull_request.head.repo.full_name != github.repository) }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
     strategy:
       matrix:
         include:
@@ -320,7 +300,8 @@ jobs:
       with:
         python-version: "3.15"
     - name: Install MSVC
-      uses: ilammy/msvc-dev-cmd@v1
+      # A third-party action: pinned to a commit (Dependabot updates it)
+      uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756  # v1.13.0
       with:
         arch: ${{ matrix.arch }}
     - name: Test Windows 32 and 64

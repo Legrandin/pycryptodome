@@ -1,0 +1,42 @@
+name: Install PyCryptodome
+description: Set up Python, install the test dependencies and build and install the package
+
+inputs:
+  python-version:
+    description: The Python version, as for actions/setup-python
+    required: true
+  cffi:
+    description: "'yes' to install CFFI (the package then uses it instead of ctypes)"
+    required: false
+    default: "no"
+  clang-cl:
+    description: "'1' to build with clang-cl instead of cl.exe (Windows x86-64 only)"
+    required: false
+    default: ""
+
+runs:
+  using: composite
+  steps:
+    - name: Set up Python ${{ inputs.python-version }}
+      uses: actions/setup-python@v7
+      with:
+        python-version: ${{ inputs.python-version }}
+
+    - name: Display Python version
+      shell: bash
+      run: python -c "import sys; print(sys.version)"
+
+    - name: Install CFFI
+      if: inputs.cffi == 'yes'
+      shell: bash
+      run: pip install cffi
+
+    - name: Install dependencies (testing only)
+      shell: bash
+      run: pip install -r requirements-test.txt
+
+    - name: Install package
+      shell: bash
+      env:
+        PYCRYPTODOME_CLANG_CL: ${{ inputs.clang-cl }}
+      run: pip install -v .

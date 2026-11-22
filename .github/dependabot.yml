@@ -1,0 +1,10 @@
+version: 2
+updates:
+  # The actions used by the workflows (including the composite action
+  # in .github/actions), such as the commit that ilammy/msvc-dev-cmd is pinned to
+  - package-ecosystem: github-actions
+    directories:
+      - "/"
+      - "/.github/actions/*"
+    schedule:
+      interval: weekly
