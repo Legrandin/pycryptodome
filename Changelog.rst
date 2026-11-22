@@ -40,9 +40,13 @@ Breaking changes
 
 Resolved issues
 ---------------
+* Security, GH#968: ``ECC.construct()``, and so ``ECC.import_key()``, accepted the point at infinity
+  as a public key on the NIST P curves and secp256k1 (for instance, ``04`` followed by zero bytes
+  in a ``SubjectPublicKeyInfo``). ECDSA signatures for such a key can be forged without
+  any secret. It is now rejected with ``ValueError``. Thanks to Zulfareen Shaikh.
 * GH#966: in the ``decrypt_and_verify()`` method of GCM, CCM, EAX and SIV, the ``output`` buffer
   is filled with zeroes if the MAC tag is not valid, so that no unauthenticated plaintext
-  is left in it (as GCM-SIV already did). Thanks to zul5050.
+  is left in it (as GCM-SIV already did). Thanks to Zulfareen Shaikh.
 * Security: decoding a DER ``INTEGER`` took time quadratic in its length, so a crafted
   key of a few hundred KB (for instance, for ``RSA.import_key``) kept the CPU busy for minutes.
   It now takes linear time. Decoding an ``OBJECT IDENTIFIER`` had the same problem: its

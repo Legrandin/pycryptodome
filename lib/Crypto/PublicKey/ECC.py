@@ -770,7 +770,7 @@ def construct(**kwargs: Unpack[ConstructParams]) -> EccKey:
             # SEC1 3.2.2.1: on the NIST P curves and secp256k1, the public key
             # cannot be the point at infinity, which EccPoint represents as (0, 0).
             # ECDSA would accept any (r, s) with r = x((z/s)G) for it.
-            if curve.id not in _SEED_LENGTHS and params["point"].is_point_at_infinity():
+            if curve.is_weierstrass and params["point"].is_point_at_infinity():
                 raise ValueError("The point at infinity is not a valid public key")
         new_key = EccKey(**params)
 
