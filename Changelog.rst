@@ -1,7 +1,7 @@
 Changelog
 =========
 
-4.6.0 (under development)
+4.6.0 (22 November 2026)
 +++++++++++++++++++++++++++
 
 New features
