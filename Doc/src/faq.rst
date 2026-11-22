@@ -30,17 +30,17 @@ Only threads started from Python count: if native code calls into Python
 from threads of its own, pass data shared with them as ``bytes``.
 
 How can I encrypt using an ECC key?
-++++++++++++++++++++++++++++++++++++
++++++++++++++++++++++++++++++++++++
 
 Use Hybrid Public Key Encryption (HPKE, RFC 9180)
 and the module :ref:`Crypto.Protocol.HPKE<hpke>`.
 
 Is CTR cipher mode compatible with Java?
-++++++++++++++++++++++++++++++++++++++++++++++++++
+++++++++++++++++++++++++++++++++++++++++
 
 Yes. When you instantiate your AES cipher in Java::
 
-   Cipher  cipher = Cipher.getInstance("AES/CTR/NoPadding");
+   Cipher cipher = Cipher.getInstance("AES/CTR/NoPadding");
 
    SecretKeySpec keySpec = new SecretKeySpec(new byte[16], "AES");
    IvParameterSpec ivSpec = new IvParameterSpec(new byte[16]);
@@ -101,9 +101,8 @@ If you want to use another algorithm or another salt length,
 you must instantiate a ``PSSParameterSpec`` object, for instance::
 
    Signature ss = Signature.getInstance("SHA256withRSA/PSS");
-   AlgorithmParameters pss1 = ss.getParameters();
-   PSSParameterSpec pssParameterSpec = new PSSParameterSpec("SHA-256", "MGF1", new MGF1ParameterSpec("SHA-256"), 32, 0xBC);
-   ss.setParameter(spec1);
+   PSSParameterSpec pssParameterSpec = new PSSParameterSpec("SHA-256", "MGF1", new MGF1ParameterSpec("SHA-256"), 32, 1);
+   ss.setParameter(pssParameterSpec);
 
 Are RSASSA-PSS signatures compatible with OpenSSL?
 ++++++++++++++++++++++++++++++++++++++++++++++++++
@@ -128,7 +127,7 @@ In PyCryptodome, the salt length matches the digest size by default
 (which is what `RFC8017 <https://tools.ietf.org/html/rfc8017#page-40>`_ recommends).
 However, you can also maximize the salt length with::
 
-   key = RSA.import_key(open('privkey.der').read())
+   key = RSA.import_key(open('privkey.der', 'rb').read())
    h = SHA256.new(message)
    max_salt_bytes = key.size_in_bytes() - h.digest_size - 2
    signature = pss.new(key, salt_bytes=max_salt_bytes).sign(h)
@@ -167,7 +166,7 @@ The most likely cause is described `here <https://github.com/dlitz/pycrypto/issu
         pip uninstall pycryptodome
         pip install pycryptodome
 
-The root cause is that, in the past, you most likely have installed an unrelated but similarly named package called `crypto <https://pypi.org/project/crypto/>`_,
+The root cause is that, in the past, you most likely installed an unrelated but similarly named package called `crypto <https://pypi.org/project/crypto/>`_,
 which happens to operate under the namespace ``crypto``.
 
 The Windows filesystem is **case-insensitive** so ``crypto`` and ``Crypto`` are effectively considered the same thing.
@@ -215,12 +214,12 @@ If you install ``pycryptodome``, the old native module will still take priority 
 Why do I get a ``translation_unit_or_empty undefined`` error with ``pycparser``?
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-Unfortunately,``pycparser`` does not work with optimzed (``-O``) Python builds,
+Unfortunately, ``pycparser`` does not work when Python runs with ``-OO``,
 which strips out the docstrings, causing this error.
 This is a `known issue <https://github.com/eliben/pycparser/issues/291>`_ and it will not be fixed.
 
 The possible workarounds are:
 
-* Do not run Python iwth ``-O``
-* Remove `cffi` and ``cparser``. PyCryptodome will fall back to ``ctypes`` for interfacing with the native modules.
-* Use an earlier version of ``cparser`` (2.14)
+* Do not run Python with ``-OO``
+* Remove ``cffi`` and ``pycparser``. PyCryptodome will fall back to ``ctypes`` for interfacing with the native modules.
+* Use an earlier version of ``pycparser`` (2.14)
