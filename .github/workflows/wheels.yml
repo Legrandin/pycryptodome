@@ -44,7 +44,7 @@ jobs:
           echo 'CIBW_ARCHS=x86_64 universal2' >> $GITHUB_ENV
         if: runner.os == 'macOS'
 
-      - uses: pypa/cibuildwheel@v4.3.4
+      - uses: pypa/cibuildwheel@v4.3.5
         name: Build wheels
         env:
           # cibuildwheel will build wheel once and test it for each CPython version
