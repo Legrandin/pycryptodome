@@ -44,6 +44,10 @@ Resolved issues
   as a public key on the NIST P curves and secp256k1 (for instance, ``04`` followed by zero bytes
   in a ``SubjectPublicKeyInfo``). ECDSA signatures for such a key can be forged without
   any secret. It is now rejected with ``ValueError``. Thanks to Zulfareen Shaikh.
+* Security, GH#969: ``DSA.construct()``, and so ``DSA.import_key()``, accepted public keys
+  equal to 1 or outside the subgroup of order ``q`` (for instance, ``p - 1``).
+  For ``y = 1``, a signature can be forged on any message without any secret.
+  They are now rejected with ``ValueError`` (NIST SP 800-89, 5.3.1). Thanks to Zulfareen Shaikh.
 * GH#966: in the ``decrypt_and_verify()`` method of GCM, CCM, EAX and SIV, the ``output`` buffer
   is filled with zeroes if the MAC tag is not valid, so that no unauthenticated plaintext
   is left in it (as GCM-SIV already did). Thanks to Zulfareen Shaikh.
