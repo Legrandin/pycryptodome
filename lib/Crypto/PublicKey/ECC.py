@@ -1074,8 +1074,9 @@ def _import_der(encoded, passphrase, max_iteration_count=None, threads=1, max_me
 
 
 def _import_openssh_public(encoded):
-    parts = encoded.split(b" ")
-    if len(parts) not in (2, 3):
+    line = encoded.rstrip(b"\r\n")
+    parts = line.split(b" ", 2)
+    if len(parts) < 2 or b"\r" in line or b"\n" in line:
         raise ValueError("Not an openssh public key")
 
     try:

@@ -1,6 +1,13 @@
 Changelog
 =========
 
+Under development
++++++++++++++++++
+
+Resolved issues
+---------------
+* ``ECC.import_key()`` accepts an OpenSSH public key with spaces in its comment.
+
 4.6.0 (22 November 2026)
 +++++++++++++++++++++++++++
 
