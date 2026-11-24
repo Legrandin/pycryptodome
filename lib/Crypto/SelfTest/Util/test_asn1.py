@@ -334,6 +334,11 @@ class TestDerSequence:
         der = DerSequence([1, DerInteger(2), b"0\x00"])
         assert der.encode() == b"0\x08\x02\x01\x01\x02\x01\x020\x00"
 
+    def test_append_after_tuple_init(self):
+        der = DerSequence((1, 2))
+        der.append(3)
+        assert DerSequence().decode(der.encode())[:] == [1, 2, 3]
+
     def testEncode1(self):
         # Empty sequence
         der = DerSequence()
