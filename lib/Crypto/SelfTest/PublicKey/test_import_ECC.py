@@ -2510,10 +2510,18 @@ class TestImportOpenSSHCurve:
         with pytest.raises(ECC.UnsupportedEccFeature, match="nistp999"):
             ECC.import_key(encoded)
 
-    def test_public_valid(self):
+    @pytest.mark.parametrize("comment", [b"", b" workstation key"])
+    def test_public_valid(self, comment):
         key = ECC.generate(curve="P-256").public_key()
         point = key.export_key(format="SEC1")
-        assert ECC.import_key(_openssh_public(b"ecdsa-sha2-nistp256", b"nistp256", point)) == key
+        encoded = _openssh_public(b"ecdsa-sha2-nistp256", b"nistp256", point)
+        assert ECC.import_key(encoded + comment) == key
+
+    def test_public_multiple_lines(self):
+        key = ECC.generate(curve="P-256").public_key()
+        line = key.export_key(format="OpenSSH").strip() + " workstation key"
+        with pytest.raises(ValueError, match="Not an openssh public key"):
+            ECC.import_key(line + "\n" + line)
 
     @pytest.mark.parametrize(
         "name, curve",
