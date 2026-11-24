@@ -1,6 +1,13 @@
 Changelog
 =========
 
+Under development
++++++++++++++++++
+
+Resolved issues
+---------------
+* A ``DerSequence`` initialized with a tuple can now be modified like one initialized with a list.
+
 4.6.0 (22 November 2026)
 +++++++++++++++++++++++++++
 

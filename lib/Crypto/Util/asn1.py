@@ -562,8 +562,10 @@ class DerSequence(DerObject):
         self._seq: list[Any]
         if startSeq is None:
             self._seq = []
+        elif isinstance(startSeq, list):
+            self._seq = startSeq
         else:
-            self._seq = cast(list[Any], startSeq)
+            self._seq = list(startSeq)
 
     # A few methods to make it behave like a python sequence
 
