@@ -86,7 +86,9 @@ class TestKW_Wycheproof:
         cipher = AES.new(vector.key, AES.MODE_KW)
 
         try:
-            cipher.seal(vector.msg)
+            wrapped = cipher.seal(vector.msg)
+            if vector.valid and not vector.warning:
+                assert wrapped == vector.ct
         except ValueError:
             # 8-byte keys are acceptable (RFC 3394), but we follow
             # NIST SP 800-38F, which does not define their wrapping
@@ -145,7 +147,9 @@ class TestKWP_Wycheproof:
         cipher = AES.new(vector.key, AES.MODE_KWP)
 
         try:
-            cipher.seal(vector.msg)
+            wrapped = cipher.seal(vector.msg)
+            if vector.valid and not vector.warning:
+                assert wrapped == vector.ct
         except ValueError:
             if vector.valid and not vector.warning:
                 raise
