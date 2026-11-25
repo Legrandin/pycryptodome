@@ -60,6 +60,23 @@ def load_hash_by_name(hash_name):
     return __import__("Crypto.Hash." + hash_name, globals(), locals(), ["new"])
 
 
+class _PrehashedSHA256:
+    """A SHA-256 hash object with a given digest"""
+
+    digest_size = SHA256.digest_size
+    block_size = SHA256.block_size
+
+    def __init__(self, digest):
+        self._digest = digest
+
+    def digest(self):
+        return self._digest
+
+    @staticmethod
+    def new(data=None):
+        return SHA256.new(data)
+
+
 class StrRNG:
     def __init__(self, randomness):
         length = len(randomness)
@@ -1165,6 +1182,26 @@ class TestDet_ECDSA:
             hash_obj = module.new(message)
             result = signer.sign(hash_obj)
             assert r + s == result
+
+    @pytest.mark.parametrize(
+        "digest",
+        ["FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFEBAAEDCE6AF48A03BBFD25E8CD0364141", "00" * 32],
+        ids=["order", "zero"],
+    )
+    def test_hash_zero_mod_order(self, digest):
+        """bits2octets() reduces the hash mod q, to 0 here (RFC6979, section 2.3.4).
+        The signature is the one of libsecp256k1 and OpenSSL."""
+
+        key = ECC.construct(
+            curve="secp256k1", d=t2l("6b30303de7b26bfb1222b317a52113357f8bb06de00160b4261a2fef9c8b9bd8")
+        )
+        hash_obj = _PrehashedSHA256(t2b(digest))
+        signature = DSS.new(key, "deterministic-rfc6979", low_s=True).sign(hash_obj)
+        assert signature == t2b(
+            "5390c053f1e8f63a37acf133510ea6c69b801eb94cbc685450dc0442fd21082d"
+            "71acb8a7204c4a5483057f06c22f7d6ddab55530613af8cacd3f772abcb4e0ed"
+        )
+        DSS.new(key.public_key(), "deterministic-rfc6979").verify(hash_obj, signature)
 
 
 def get_hash_module(hash_name):

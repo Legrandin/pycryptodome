@@ -189,7 +189,8 @@ class DeterministicDsaSigScheme(DssSigScheme):
     def _int2octets(self, int_mod_q):
         """See 2.3.3 in RFC6979"""
 
-        assert 0 < int_mod_q < self._order
+        # 0 is valid: bits2octets() reduces a hash equal to q (or to 0) to it
+        assert 0 <= int_mod_q < self._order
         return Integer(int_mod_q).to_bytes(self._order_bytes)
 
     def _bits2octets(self, bstr):
