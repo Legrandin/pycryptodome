@@ -8,6 +8,12 @@ Resolved issues
 ---------------
 * ``ECC.import_key()`` accepts an OpenSSH public key with spaces in its comment.
 * A ``DerSequence`` initialized with a tuple can now be modified like one initialized with a list.
+* GH#535: ``RSA.import_key()`` rejects a PKCS#1 private key (also inside PKCS#8)
+  whose CRT components (``exponent1``, ``exponent2``, ``coefficient``) do not match the key.
+  They were ignored and recomputed. Thanks to sfluhrer.
+* GH#535: ``RSA.generate()`` rejects a public exponent of ``2^(bits-1)`` or more.
+  Such an exponent could be larger than the modulus, and the key could not be imported again.
+  Thanks to Bl4omArchie.
 
 4.6.0 (22 November 2026)
 +++++++++++++++++++++++++++

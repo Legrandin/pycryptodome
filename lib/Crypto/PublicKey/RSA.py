@@ -594,7 +594,8 @@ def generate(bits: int, randfunc: Optional[RNG] = None, e: Int = 65537) -> RsaKe
         Function that returns random bytes.
         The default is :func:`Crypto.Random.get_random_bytes`.
       e (integer):
-        Public RSA exponent. It must be an odd positive integer.
+        Public RSA exponent. It must be an odd integer, larger than 2
+        and smaller than :math:`2^{bits-1}` (so that it is smaller than the modulus).
         It is typically a small number with very few ones in its
         binary representation.
         The FIPS standard requires the public exponent to be
@@ -611,6 +612,9 @@ def generate(bits: int, randfunc: Optional[RNG] = None, e: Int = 65537) -> RsaKe
         raise ValueError("RSA modulus length must be <= %d" % MAX_MODULUS_BITS)
     if e % 2 == 0 or e < 3:
         raise ValueError("RSA public exponent must be a positive, odd integer larger than 2.")
+    # The modulus is at least 2^(bits-1): construct() and import_key() reject e >= n
+    if e >= 2 ** (bits - 1):
+        raise ValueError("RSA public exponent must be smaller than 2^(bits-1)")
 
     if randfunc is None:
         randfunc = Random.get_random_bytes
@@ -827,7 +831,16 @@ def _import_pkcs1_private(encoded, *kwargs):
     der = DerSequence().decode(encoded, nr_elements=9, only_ints_expected=True)
     if der[0] != 0:
         raise ValueError("No PKCS#1 encoding of an RSA private key")
-    return construct(der[1:6] + [Integer(der[4]).inverse(der[5])])
+    key = construct(der[1:6] + [Integer(der[4]).inverse(der[5])])
+
+    # The CRT values are not used (the key computes its own from p, q and d),
+    # but they must be consistent with the key, as other software relies on them.
+    # They are compared with the (constant-time) Integers of the key:
+    # only the result of the comparisons leaks.
+    exponent1, exponent2, coefficient = der[6:9]
+    if key._dp != exponent1 or key._dq != exponent2 or key._q.inverse(key._p) != coefficient:
+        raise ValueError("Inconsistent CRT components in the RSA private key")
+    return key
 
 
 def _import_pkcs1_public(encoded, *kwargs):

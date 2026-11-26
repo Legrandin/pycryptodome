@@ -344,6 +344,22 @@ Lr7UkvEtFrRhDDKMtuIIq19FrL4pUIMymPMSLBn3hJLe30Dw48GQM4UCAwEAAQ==
         with pytest.raises(ValueError):
             RSA.import_key(pkcs8)
 
+    @pytest.mark.parametrize("index", [6, 7, 8], ids=["exponent1", "exponent2", "coefficient"])
+    def test_import_inconsistent_crt(self, index):
+        """exponent1, exponent2 and coefficient must match d, p and q"""
+        components = list(asn1.DerSequence().decode(self.rsaKeyDER))
+        assert RSA.import_key(asn1.DerSequence(components).encode()).has_private()
+
+        components[index] += 2
+        der = asn1.DerSequence(components).encode()
+        with pytest.raises(ValueError):
+            RSA.import_key(der)
+
+        algo = asn1.DerSequence([asn1.DerObjectId(RSA.oid), asn1.DerNull()]).encode()
+        pkcs8 = asn1.DerSequence([0, algo, asn1.DerOctetString(der).encode()]).encode()
+        with pytest.raises(ValueError):
+            RSA.import_key(pkcs8)
+
     def test_import_key_windows_cr_lf(self):
         pem_cr_lf = "\r\n".join(self.rsaKeyPEM.splitlines())
         key = RSA.importKey(pem_cr_lf)
