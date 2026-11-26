@@ -14,6 +14,9 @@ Resolved issues
 * GH#535: ``RSA.generate()`` rejects a public exponent of ``2^(bits-1)`` or more.
   Such an exponent could be larger than the modulus, and the key could not be imported again.
   Thanks to Bl4omArchie.
+* GH#535: ``RSA.construct()`` no longer requires the private exponent to be coprime to the modulus.
+  That check was redundant, and would have rejected (with negligible probability) a valid key.
+  Thanks to sfluhrer.
 
 4.6.0 (22 November 2026)
 +++++++++++++++++++++++++++

@@ -787,11 +787,10 @@ def construct(
             raise ValueError("RSA modulus is not odd")
 
         if key.has_private():
-            # Modulus and private exponent must be coprime
+            # d need not be coprime to n: the conditions below are
+            # sufficient for the key to work
             if d <= 1 or d >= n:
                 raise ValueError("Invalid RSA private exponent")
-            if Integer(n).gcd(d) != 1:
-                raise ValueError("RSA private exponent is not coprime to modulus")
             # Modulus must be product of 2 primes
             if p * q != n:
                 raise ValueError("RSA factors do not match modulus")
