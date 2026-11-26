@@ -43,7 +43,7 @@ When creating an encrypted PKCS#8 container, the two parameters
   of the cipher mode to use (recommended: ``'AES256-CBC'``).
 
   Other values for **hash** are ``'SHA1'``, ``'SHA224'``, ``'SHA256'``,
-  ``'SHA384'``, ``'SHA512-224'``, ``'SHA512-256'``, ``'SHA3-224'``,
+  ``'SHA384'``, ``'SHA512'``, ``'SHA512-224'``, ``'SHA512-256'``, ``'SHA3-224'``,
   ``'SHA3-256'``, ``'SHA3-384'``, ``'SHA3-512'``.
 
   Other values for **cipher** are
@@ -86,6 +86,26 @@ With ``threads=0``, as many threads as the CPU cores available are used.
 Each thread needs its own block of memory (128 · *r* · *N* bytes), at the same time.
 The result does not depend on the number of threads.
 
+Decryption
+----------
+
+:func:`unwrap`, and ``import_key()`` for RSA, DSA and ECC keys,
+decrypt an encrypted PKCS#8 key protected with:
+
+* PBES2 (`RFC 8018`_), with any combination of key derivation (PBKDF2 or scrypt),
+  hash and cipher listed in :ref:`enc_params`.
+  This covers the keys encrypted by ``openssl pkcs8 -topk8``
+  (with ``-v2`` and an AES or Triple DES cipher, or with ``-scrypt``),
+  and the private key in a PKCS#12 file created by OpenSSL 3 with the default settings;
+* one of the :ref:`legacy algorithms <pkcs8_legacy>` of PBES1.
+
+Not supported are:
+
+* the password-based encryption schemes of PKCS#12 (`RFC 7292`_, Appendix C),
+  such as ``pbeWithSHAAnd3-KeyTripleDES-CBC``. They protect the private key
+  in legacy PKCS#12 files, for instance those created by OpenSSL 1.1
+  or by ``openssl pkcs12 -legacy``;
+* PBES2 with a cipher other than AES and Triple DES, such as Camellia or ARIA.
 
 Limits for decryption
 ---------------------
@@ -93,6 +113,8 @@ Limits for decryption
 To protect against malicious keys, :func:`unwrap` rejects keys whose key derivation
 is too expensive (parameters ``max_iteration_count`` and ``max_memory``).
 See :doc:`kdf_limits` for the default limits and how to change them.
+
+.. _pkcs8_legacy:
 
 Legacy algorithms
 -----------------
@@ -108,6 +130,8 @@ for backward compatibility only:
 
 .. _`PKCS#8`: http://www.ietf.org/rfc/rfc5208.txt
 .. _`RFC 5958`: https://www.rfc-editor.org/rfc/rfc5958.html
+.. _`RFC 7292`: https://www.rfc-editor.org/rfc/rfc7292.html
+.. _`RFC 8018`: https://www.rfc-editor.org/rfc/rfc8018.html
 
 .. automodule:: Crypto.IO.PKCS8
     :members:
