@@ -60,21 +60,20 @@ def load_hash_by_name(hash_name):
     return __import__("Crypto.Hash." + hash_name, globals(), locals(), ["new"])
 
 
-class _PrehashedSHA256:
-    """A SHA-256 hash object with a given digest"""
+class _Prehashed:
+    """A hash object of the given hash module, with a given digest"""
 
-    digest_size = SHA256.digest_size
-    block_size = SHA256.block_size
-
-    def __init__(self, digest):
+    def __init__(self, hash_module, digest):
+        self._hash_module = hash_module
         self._digest = digest
+        self.digest_size = hash_module.digest_size
+        self.block_size = hash_module.block_size
 
     def digest(self):
         return self._digest
 
-    @staticmethod
-    def new(data=None):
-        return SHA256.new(data)
+    def new(self, data=None):
+        return self._hash_module.new(data)
 
 
 class StrRNG:
@@ -690,6 +689,55 @@ class TestDet_DSA:
             result = signer.sign(hash_obj)
             assert sig.result == result
 
+    @pytest.mark.parametrize(
+        "key_name, hash_module, digest, signature",
+        [
+            pytest.param(
+                "DSA1024",
+                SHA1,
+                "00" * 20,
+                "06c8bd7fd772cc4010be7a58268822514e37476e2e5e236b40829350df7db72669ee5476e459daa8",
+                id="DSA1024-zero",
+            ),
+            pytest.param(
+                "DSA1024",
+                SHA1,
+                "996F967F6C8E388D9E28D01E205FBA957A5698B1",
+                "06c8bd7fd772cc4010be7a58268822514e37476e2e5e236b40829350df7db72669ee5476e459daa8",
+                id="DSA1024-q",
+            ),
+            pytest.param(
+                "DSA2048",
+                SHA256,
+                "00" * 32,
+                (
+                    "4227fd8147c72ad90471e3d4e9788909c8129933df975cdc1b67098d2d8b3acd"
+                    "1ef0e41ae17791c92a6a137f001b79a8d9665c95544be84ce74c03104ca5177e"
+                ),
+                id="DSA2048-zero",
+            ),
+            pytest.param(
+                "DSA2048",
+                SHA256,
+                "F2C3119374CE76C9356990B465374A17F23F9ED35089BD969F61C6DDE9998C1F",
+                (
+                    "4227fd8147c72ad90471e3d4e9788909c8129933df975cdc1b67098d2d8b3acd"
+                    "1ef0e41ae17791c92a6a137f001b79a8d9665c95544be84ce74c03104ca5177e"
+                ),
+                id="DSA2048-q",
+            ),
+        ],
+    )
+    def test_hash_zero_mod_q(self, key_name, hash_module, digest, signature):
+        """bits2octets() reduces the hash mod q, to 0 here (RFC6979, section 2.3.4).
+        The signatures are the ones of OpenSSL (nonce-type:1)."""
+
+        tk = self.keys[key_name]
+        key = DSA.construct([tk.y, tk.g, tk.p, tk.q, tk.x], False)
+        hash_obj = _Prehashed(hash_module, t2b(digest))
+        assert DSS.new(key, "deterministic-rfc6979").sign(hash_obj) == t2b(signature)
+        DSS.new(key.public_key(), "deterministic-rfc6979").verify(hash_obj, t2b(signature))
+
 
 class TestDet_ECDSA:
     key_priv_p192 = ECC.construct(curve="P-192", d=0x6FAB034934E4C0FC9AE67F5B5659A9D7D1FEFD187EE09FD4)
@@ -1195,13 +1243,115 @@ class TestDet_ECDSA:
         key = ECC.construct(
             curve="secp256k1", d=t2l("6b30303de7b26bfb1222b317a52113357f8bb06de00160b4261a2fef9c8b9bd8")
         )
-        hash_obj = _PrehashedSHA256(t2b(digest))
+        hash_obj = _Prehashed(SHA256, t2b(digest))
         signature = DSS.new(key, "deterministic-rfc6979", low_s=True).sign(hash_obj)
         assert signature == t2b(
             "5390c053f1e8f63a37acf133510ea6c69b801eb94cbc685450dc0442fd21082d"
             "71acb8a7204c4a5483057f06c22f7d6ddab55530613af8cacd3f772abcb4e0ed"
         )
         DSS.new(key.public_key(), "deterministic-rfc6979").verify(hash_obj, signature)
+
+    @pytest.mark.parametrize(
+        "curve, hash_module, digest, signature",
+        [
+            pytest.param(
+                "P-192",
+                SHA256,
+                "00" * 32,
+                (
+                    "7b5940740f8cb182884ab1e44ff65069acaa137f77aa9d4bdf63a830373762c7"
+                    "4eb2bf3a192001ef79011b9184aa72ba"
+                ),
+                id="P-192-zero",
+            ),
+            pytest.param(
+                "P-224",
+                SHA224,
+                "00" * 28,
+                (
+                    "6aea06c13b9b4c25efe0519a149a64b26aa20b3a4a69a91a716839cecdb8e953"
+                    "11e428c429a05c871e80be5ef19f978d2a043c336570816a"
+                ),
+                id="P-224-zero",
+            ),
+            pytest.param(
+                "P-224",
+                SHA224,
+                "FFFFFFFFFFFFFFFFFFFFFFFFFFFF16A2E0B8F03E13DD29455C5C2A3D",
+                (
+                    "6aea06c13b9b4c25efe0519a149a64b26aa20b3a4a69a91a716839cecdb8e953"
+                    "11e428c429a05c871e80be5ef19f978d2a043c336570816a"
+                ),
+                id="P-224-order",
+            ),
+            pytest.param(
+                "P-256",
+                SHA256,
+                "00" * 32,
+                (
+                    "68897a78df51058b490c6012251c95921abba96e2e488c8cc998942e440db9b7"
+                    "80587fb387363a1df2c9e83c00f8ca990fc0a55b5e470946499b82ca3b552a87"
+                ),
+                id="P-256-zero",
+            ),
+            pytest.param(
+                "P-256",
+                SHA256,
+                "FFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551",
+                (
+                    "68897a78df51058b490c6012251c95921abba96e2e488c8cc998942e440db9b7"
+                    "80587fb387363a1df2c9e83c00f8ca990fc0a55b5e470946499b82ca3b552a87"
+                ),
+                id="P-256-order",
+            ),
+            pytest.param(
+                "P-384",
+                SHA384,
+                "00" * 48,
+                (
+                    "2d19392d60736ab6f511a7f4fe4db59b123b333bfb6a87b0b5abbe8bee6e177f"
+                    "bf42b91125671eb499c00a1e6be0c9b033e7f3906fa618b2c62eb8d638313f71"
+                    "0f47b86a09d1a47fd38d1856c0dc2a1ca08a00e01a1b684ac13d5e3dbe31ce97"
+                ),
+                id="P-384-zero",
+            ),
+            pytest.param(
+                "P-384",
+                SHA384,
+                (
+                    "FFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFFC7634D81F4372DDF"
+                    "581A0DB248B0A77AECEC196ACCC52973"
+                ),
+                (
+                    "2d19392d60736ab6f511a7f4fe4db59b123b333bfb6a87b0b5abbe8bee6e177f"
+                    "bf42b91125671eb499c00a1e6be0c9b033e7f3906fa618b2c62eb8d638313f71"
+                    "0f47b86a09d1a47fd38d1856c0dc2a1ca08a00e01a1b684ac13d5e3dbe31ce97"
+                ),
+                id="P-384-order",
+            ),
+            pytest.param(
+                "P-521",
+                SHA512,
+                "00" * 64,
+                (
+                    "000f382961448dc4b079347d8bb780edfe3e50e0bc75ea8dd1712cf462816a2f"
+                    "dd01358402885c67ee2b8ca2561aeaeeb79c35ae14fba71b2c0e30a8e076ad12"
+                    "915f017abbb1f40f2c3f7763fa9f059f1e47e5176231f3c7915e6cfaaa475d7c"
+                    "9b8eead8fb803ef360f04b5090777c51932136524162c5ad242e192b877c0077"
+                    "b9e285f1"
+                ),
+                id="P-521-zero",
+            ),
+        ],
+    )
+    def test_hash_zero_mod_order_nist(self, curve, hash_module, digest, signature):
+        """bits2octets() reduces the hash mod n, to 0 here (RFC6979, section 2.3.4).
+        The signatures are the ones of OpenSSL (nonce-type:1) and python-ecdsa."""
+
+        key = getattr(self, "key_priv_p" + curve[2:])
+        hash_obj = _Prehashed(hash_module, t2b(digest))
+        assert DSS.new(key, "deterministic-rfc6979").sign(hash_obj) == t2b(signature)
+        DSS.new(key.public_key(), "deterministic-rfc6979").verify(hash_obj, t2b(signature))
 
 
 def get_hash_module(hash_name):
