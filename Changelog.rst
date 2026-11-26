@@ -11,8 +11,7 @@ Resolved issues
 * GH#535: ``RSA.import_key()`` rejects a PKCS#1 private key (also inside PKCS#8)
   whose CRT components (``exponent1``, ``exponent2``, ``coefficient``) do not match the key.
   They were ignored and recomputed. Thanks to sfluhrer.
-* GH#535: ``RSA.generate()`` rejects a public exponent of ``2^(bits-1)`` or more.
-  Such an exponent could be larger than the modulus, and the key could not be imported again.
+* GH#535: ``RSA.generate()`` rejects a public exponent of ``2^256`` or more (the upper bound of FIPS 186).
   Thanks to Bl4omArchie.
 * GH#535: ``RSA.construct()`` no longer requires the private exponent to be coprime to the modulus.
   That check was redundant, and would have rejected (with negligible probability) a valid key.

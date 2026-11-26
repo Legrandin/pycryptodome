@@ -129,15 +129,16 @@ class TestRSA:
         assert rsaObj.e == 65537
 
     def test_generate_large_e(self):
-        # The largest exponent that is always smaller than the modulus
-        e = 2**1023 - 1
+        # The largest exponent allowed (FIPS 186: e < 2^256)
+        e = 2**256 - 1
         rsaObj = self.rsa.generate(1024, e=e)
         assert rsaObj.e == e
         assert self.rsa.import_key(rsaObj.export_key()) == rsaObj
         assert self.rsa.import_key(rsaObj.public_key().export_key()) == rsaObj.public_key()
 
-        with pytest.raises(ValueError):
-            self.rsa.generate(1024, e=2**1023 + 1)
+        for e in (2**256 + 1, 2**1023 + 1):
+            with pytest.raises(ValueError):
+                self.rsa.generate(1024, e=e)
 
     def test_construct_2tuple(self):
         """RSA (default implementation) constructed key (2-tuple)"""

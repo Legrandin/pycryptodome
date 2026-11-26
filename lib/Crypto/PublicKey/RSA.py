@@ -595,11 +595,11 @@ def generate(bits: int, randfunc: Optional[RNG] = None, e: Int = 65537) -> RsaKe
         The default is :func:`Crypto.Random.get_random_bytes`.
       e (integer):
         Public RSA exponent. It must be an odd integer, larger than 2
-        and smaller than :math:`2^{bits-1}` (so that it is smaller than the modulus).
+        and smaller than :math:`2^{256}`.
         It is typically a small number with very few ones in its
         binary representation.
-        The FIPS standard requires the public exponent to be
-        at least 65537 (the default).
+        FIPS 186 requires :math:`2^{16} < e < 2^{256}`: the default (65537) complies,
+        but a smaller exponent (such as 3), while accepted, does not.
 
     Returns: an RSA key object (:class:`RsaKey`, with private key).
 
@@ -612,9 +612,10 @@ def generate(bits: int, randfunc: Optional[RNG] = None, e: Int = 65537) -> RsaKe
         raise ValueError("RSA modulus length must be <= %d" % MAX_MODULUS_BITS)
     if e % 2 == 0 or e < 3:
         raise ValueError("RSA public exponent must be a positive, odd integer larger than 2.")
-    # The modulus is at least 2^(bits-1): construct() and import_key() reject e >= n
-    if e >= 2 ** (bits - 1):
-        raise ValueError("RSA public exponent must be smaller than 2^(bits-1)")
+    # FIPS 186: e < 2^256. A larger e makes all public-key operations slower,
+    # and could be larger than the modulus, which construct() and import_key() reject
+    if e >= 2**256:
+        raise ValueError("RSA public exponent must be smaller than 2^256")
 
     if randfunc is None:
         randfunc = Random.get_random_bytes
