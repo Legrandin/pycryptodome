@@ -28,8 +28,36 @@ The standard defines 3 *Keying Options*:
 * *Option 3*: *K1* *K2*, and *K3* all match (parity bits ignored).
   As result, Triple DES degrades to Single DES.
 
-**This implementation does not support and will purposefully fail when
-attempting to configure the cipher in Option 3.**
+**This implementation purposefully fails (with** ``ValueError``\ **) when the key
+degenerates to Single DES.** That is the case of Option 3, but also of a 24-byte key
+where only *K1* and *K2* match (equivalent to Single DES with *K3*)
+or only *K2* and *K3* match (equivalent to Single DES with *K1*).
+
+If you really must use such a key (for instance, the default all-zero key of
+a smartcard or an NFC device, used once to provision a new key),
+use :doc:`des` with the equivalent key: the result is the same, in any mode.
+Its security is only that of Single DES (56 bits). For instance::
+
+    from Crypto.Cipher import DES, DES3
+
+    def new_des3_or_des(key, *args, **kwargs):
+        """Like DES3.new(), but also accept a key that degenerates to Single DES."""
+
+        if len(key) not in (16, 24):
+            raise ValueError("Not a valid TDES key")
+        k1, k2 = key[:8], key[8:16]
+        k3 = key[16:] if len(key) == 24 else k1
+
+        def same(a, b):  # parity bits are ignored
+            return all((x ^ y) & 0xFE == 0 for x, y in zip(a, b))
+
+        if same(k1, k2):
+            return DES.new(k3, *args, **kwargs)
+        if same(k2, k3):
+            return DES.new(k1, *args, **kwargs)
+        return DES3.new(key, *args, **kwargs)
+
+    cipher = new_des3_or_des(bytes(16), DES3.MODE_CBC, iv=bytes(8))
 
 As an example, encryption can be done as follows::
 
