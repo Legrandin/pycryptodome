@@ -11,6 +11,10 @@ New features
 
 Resolved issues
 ---------------
+* GH#493: ``DSS`` in mode ``'fips-186-3'`` with a DSA key raises ``ValueError`` (instead of ``AttributeError``)
+  for an object that is not a hash, for instance an HMAC.
+* An ``HMAC`` object created with a hash module (for instance, ``digestmod=SHA256``) now has the attribute ``oid``,
+  as one created with a hash object (``digestmod=SHA256.new()``).
 * ``ECC.import_key()`` accepts an OpenSSH public key with spaces in its comment.
 * A ``DerSequence`` initialized with a tuple can now be modified like one initialized with a list.
 * GH#535: ``RSA.import_key()`` rejects a PKCS#1 private key (also inside PKCS#8)

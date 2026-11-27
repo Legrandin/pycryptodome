@@ -472,6 +472,19 @@ class TestHMAC_Module_and_Instance:
         two = HMAC.new(key, payload, hashmod.new()).digest()
         assert one == two
 
+    @pytest.mark.parametrize(
+        "hashmod", [m for m in hash_modules.values() if m is not None], ids=lambda m: m.__name__
+    )
+    def test_oid(self, hashmod):
+        # The OID does not depend on how digestmod is passed (GH#493)
+        from_module = getattr(HMAC.new(b"key", digestmod=hashmod), "oid", None)
+        from_instance = getattr(HMAC.new(b"key", digestmod=hashmod.new()), "oid", None)
+        assert from_module == from_instance
+        assert getattr(HMAC.new(b"key", digestmod=hashmod).copy(), "oid", None) == from_module
+
+    def test_oid_sha256(self):
+        assert HMAC.new(b"key", digestmod=SHA256).oid == "1.2.840.113549.2.9"
+
 
 class TestHMAC_None:
     def test(self):

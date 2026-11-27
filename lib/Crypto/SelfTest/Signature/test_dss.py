@@ -36,7 +36,19 @@ from binascii import hexlify, unhexlify
 
 import pytest
 
-from Crypto.Hash import SHA1, SHA3_224, SHA3_256, SHA3_384, SHA3_512, SHA224, SHA256, SHA384, SHA512, SHAKE128
+from Crypto.Hash import (
+    HMAC,
+    SHA1,
+    SHA3_224,
+    SHA3_256,
+    SHA3_384,
+    SHA3_512,
+    SHA224,
+    SHA256,
+    SHA384,
+    SHA512,
+    SHAKE128,
+)
 from Crypto.PublicKey import DSA, ECC
 from Crypto.SelfTest.loader import load_test_vectors, load_test_vectors_wycheproof, wycheproof_id
 from Crypto.SelfTest.st_common import mark_slow, wycheproof_warnings
@@ -114,6 +126,22 @@ class TestFIPS_DSA:
         from Crypto.Hash import RIPEMD160
 
         hash_obj = RIPEMD160.new()
+        signer = DSS.new(self.key_priv, "fips-186-3")
+        with pytest.raises(ValueError):
+            signer.sign(hash_obj)
+        with pytest.raises(ValueError):
+            signer.verify(hash_obj, b"\x00" * 40)
+
+    @pytest.mark.parametrize(
+        "hash_obj",
+        [
+            HMAC.new(b"key", b"msg", SHA256),
+            _Prehashed(SHA256, bytes(32)),  # no OID
+        ],
+        ids=["hmac", "no_oid"],
+    )
+    def test_negative_not_a_hash(self, hash_obj):
+        # GH#493: ValueError, not AttributeError
         signer = DSS.new(self.key_priv, "fips-186-3")
         with pytest.raises(ValueError):
             signer.sign(hash_obj)
@@ -269,6 +297,21 @@ hVvwpph00t5f4QPFAR5u8sQtzVDV09Kfma5uuiyAySRPTFQi8Jef8MO6Xg==
         from Crypto.Hash import SHA1
 
         hash_obj = SHA1.new()
+        signer = DSS.new(self.key_priv, "fips-186-3")
+        with pytest.raises(ValueError):
+            signer.sign(hash_obj)
+        with pytest.raises(ValueError):
+            signer.verify(hash_obj, b"\x00" * 40)
+
+    @pytest.mark.parametrize(
+        "hash_obj",
+        [
+            HMAC.new(b"key", b"msg", SHA256),
+            _Prehashed(SHA256, bytes(32)),  # no OID
+        ],
+        ids=["hmac", "no_oid"],
+    )
+    def test_negative_not_a_hash(self, hash_obj):
         signer = DSS.new(self.key_priv, "fips-186-3")
         with pytest.raises(ValueError):
             signer.sign(hash_obj)

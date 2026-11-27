@@ -104,8 +104,10 @@ class HMAC:
         self._digestmod = digestmod
 
         # Hash OID --> HMAC OID
+        # digestmod is a hash object (with an OID) or a hash module (without)
         try:
-            self.oid = _hash2hmac_oid[digestmod.oid]
+            hash_oid = getattr(digestmod, "oid", None) or digestmod.new().oid
+            self.oid = _hash2hmac_oid[hash_oid]
         except (KeyError, AttributeError):
             pass
 

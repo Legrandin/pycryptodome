@@ -273,7 +273,9 @@ class FipsDsaSigScheme(DssSigScheme):
 
     def _valid_hash(self, msg_hash):
         """Verify that SHA-1, SHA-2 or SHA-3 are used"""
-        return msg_hash.oid == "1.3.14.3.2.26" or msg_hash.oid.startswith("2.16.840.1.101.3.4.2.")
+        # An object without an OID (for instance, an HMAC) is not an approved hash
+        oid = getattr(msg_hash, "oid", "")
+        return oid == "1.3.14.3.2.26" or oid.startswith("2.16.840.1.101.3.4.2.")
 
 
 class FipsEcDsaSigScheme(DssSigScheme):
