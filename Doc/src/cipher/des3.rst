@@ -5,9 +5,10 @@ Triple DES
     Use :doc:`aes` instead. This module is provided only for legacy purposes.
 
 `Triple DES`__ (or TDES or TDEA or 3DES) is a symmetric block cipher
-standardized by NIST in
-`SP 800-67 Rev1 <http://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-67r1.pdf>`_,
-though they will `deprecate`_ it soon.
+standardized by NIST in `SP 800-67 Rev. 2`_.
+NIST `withdrew`_ that standard on January 1, 2024: Triple DES must no longer be used
+to encrypt data (or to wrap keys or create MACs), but it can still be used to decrypt
+existing data.
 
 TDES has a fixed data block size of 8 bytes.
 It consists of the cascade of 3 :doc:`des` ciphers
@@ -32,10 +33,34 @@ The standard defines 3 *Keying Options*:
 degenerates to Single DES.** That is the case of Option 3, but also of a 24-byte key
 where only *K1* and *K2* match (equivalent to Single DES with *K3*)
 or only *K2* and *K3* match (equivalent to Single DES with *K1*).
+See :ref:`des3_degenerate_keys` if you must use such a key.
 
-If you really must use such a key (for instance, the default all-zero key of
-a smartcard or an NFC device, used once to provision a new key),
-use :doc:`des` with the equivalent key: the result is the same, in any mode.
+As an example, encryption can be done as follows::
+
+    >>> from Crypto.Cipher import DES3
+    >>> from Crypto.Random import get_random_bytes
+    >>>
+    >>> # Avoid Option 3
+    >>> while True:
+    ...     try:
+    ...         key = DES3.adjust_key_parity(get_random_bytes(24))
+    ...         break
+    ...     except ValueError:
+    ...         pass
+    >>>
+    >>> cipher = DES3.new(key, DES3.MODE_CFB)
+    >>> plaintext = b'We are no longer the knights who say ni!'
+    >>> msg = cipher.iv + cipher.encrypt(plaintext)
+
+.. _des3_degenerate_keys:
+
+Keys that degenerate to Single DES
+----------------------------------
+
+If you really must use a key that degenerates to Single DES
+(for instance, the default all-zero key of a smartcard or an NFC device,
+used once to provision a new key), use :doc:`des` with the equivalent key:
+the result is the same, in any mode.
 Its security is only that of Single DES (56 bits). For instance::
 
     from Crypto.Cipher import DES, DES3
@@ -59,26 +84,13 @@ Its security is only that of Single DES (56 bits). For instance::
 
     cipher = new_des3_or_des(bytes(16), DES3.MODE_CBC, iv=bytes(8))
 
-As an example, encryption can be done as follows::
-
-    >>> from Crypto.Cipher import DES3
-    >>> from Crypto.Random import get_random_bytes
-    >>>
-    >>> # Avoid Option 3
-    >>> while True:
-    ...     try:
-    ...         key = DES3.adjust_key_parity(get_random_bytes(24))
-    ...         break
-    ...     except ValueError:
-    ...         pass
-    >>>
-    >>> cipher = DES3.new(key, DES3.MODE_CFB)
-    >>> plaintext = b'We are no longer the knights who say ni!'
-    >>> msg = cipher.iv + cipher.encrypt(plaintext)
-
 .. __: http://en.wikipedia.org/wiki/Triple_DES
-.. _deprecate: https://csrc.nist.gov/News/2017/Update-to-Current-Use-and-Deprecation-of-TDEA
+.. _SP 800-67 Rev. 2: https://csrc.nist.gov/pubs/sp/800/67/r2/final
+.. _withdrew: https://csrc.nist.gov/news/2023/nist-to-withdraw-sp-800-67-rev-2
 .. _90 bits: http://people.scs.carleton.ca/~paulv/papers/Euro90.pdf
+
+API
+---
 
 .. automodule:: Crypto.Cipher.DES3
     :members:
