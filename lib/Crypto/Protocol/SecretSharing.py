@@ -14,7 +14,10 @@ from Crypto.Util.number import bytes_to_long, long_to_bytes
 
 
 def _mult_gf2(f1: int, f2: int) -> int:
-    """Multiply two polynomials in GF(2)"""
+    """Multiply two polynomials in GF(2).
+
+    Not constant time: only use with public values (e.g. derived from the share indices).
+    """
 
     # Ensure f2 is the smallest
     if f2 > f1:
@@ -34,6 +37,8 @@ def _div_gf2(a: int, b: int) -> tuple[int, int]:
     Given a and b, it finds two polynomials q and r such that:
 
     a = b*q + r with deg(r)<deg(b)
+
+    Not constant time: only use with public values (e.g. derived from the share indices).
     """
 
     if a < b:
@@ -103,13 +108,15 @@ class _Element:
             raise ValueError("The field elements belong to different fields")
 
     def __mul__(self, factor: _Element) -> _Element:
+        """Multiply two field elements.
+
+        The time depends on the bit length of ``factor``, which must be
+        a public value (such as an index). ``self`` can be secret.
+        """
+
         self._check_field(factor)
         f1 = self._value
         f2 = factor._value
-
-        # Make sure that f2 is the smallest, to speed up the loop
-        if f2 > f1:
-            f1, f2 = f2, f1
 
         if self.irr_poly in (f1, f2):
             return _Element(0, self._size)
@@ -133,7 +140,10 @@ class _Element:
         return _Element(self._value ^ term._value, self._size)
 
     def inverse(self) -> _Element:
-        """Return the inverse of this element in the field."""
+        """Return the inverse of this element in the field.
+
+        Not constant time: only use with public values (e.g. derived from the share indices).
+        """
 
         # We use the Extended GCD algorithm
         # http://en.wikipedia.org/wiki/Polynomial_greatest_common_divisor
@@ -220,7 +230,7 @@ class Shamir:
             # Horner's method
             share = _Element(0, size)
             for coeff in coeffs:
-                share = idx * share + coeff
+                share = share * idx + coeff
 
             # The ssss utility actually uses:
             #
@@ -300,6 +310,7 @@ class Shamir:
                 if m != j:
                     numerator *= x_m
                     denominator *= x_j + x_m
+            # numerator and denominator only depend on the (public) indices
             result += y_j * numerator * denominator.inverse()
 
         return result.encode()

@@ -41,6 +41,11 @@ This implementation has the following properties:
   :math:`r(x) = a_0 + a_1 x + a_2 x^2 + \ldots + a_{k-1} x^{k-1} + x^k`
 
   which requires you to specify ``ssss=True`` when calling ``split()`` and ``combine()``.
+* The arithmetic in the field is written in pure Python. It is designed to avoid branches and loops
+  that depend on the secret or on the shares, but it is not guaranteed to run in constant time,
+  because the time of the operations on Python integers depends on their values.
+  Avoid ``split()`` and ``combine()`` where an attacker can time many calls with the same secret
+  or the same shares.
 
 Each recipient needs to hold both the share number (:math:`x_i`, which is not confidential) and
 the secret (which needs to be protected securely).

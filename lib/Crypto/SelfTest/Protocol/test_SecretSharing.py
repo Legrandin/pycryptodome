@@ -102,6 +102,18 @@ class TestElement:
         assert int(x * y) == 1
 
 
+@pytest.mark.parametrize("size", [16, 32])
+def test_mult_commutative(size):
+    # The multiplication loops over the bits of the right operand only
+    rng = SHAKE128.new(b"test_mult_commutative")
+    for _ in range(20):
+        a = _Element(rng.read(size), size)
+        b = _Element(rng.read(size), size)
+        c = _Element(int.from_bytes(rng.read(1), "big"), size)
+        assert a * b == b * a
+        assert a * c == c * a
+
+
 class TestElement256:
     def test_encoding(self):
         e = _Element(256, 32)
