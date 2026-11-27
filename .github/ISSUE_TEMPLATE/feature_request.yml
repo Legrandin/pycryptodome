@@ -1,0 +1,47 @@
+name: Feature request
+description: Suggest a new algorithm, mode, format or option.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please check the [list of features](https://www.pycryptodome.org/src/features) first:
+        what you need may already be supported.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched the existing issues (open and closed) for the same request.
+          required: true
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use case
+      description: What do you want to do, and why is it not possible (or difficult) with PyCryptodome today?
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+      description: The functionality or API you would like. A code example of how you would use it helps.
+      render: python
+
+  - type: textarea
+    id: specification
+    attributes:
+      label: Standard or specification
+      description: |
+        The standard that defines the algorithm or format (RFC, NIST publication, ...),
+        and other libraries that implement it, if any.
+
+  - type: checkboxes
+    id: contribute
+    attributes:
+      label: Contribution
+      options:
+        - label: I am willing to submit a pull request (see the [contribution guidelines](https://www.pycryptodome.org/src/contribute_support)).

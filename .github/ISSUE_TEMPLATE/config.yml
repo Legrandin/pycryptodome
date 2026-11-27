@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/Legrandin/pycryptodome/blob/master/SECURITY.md
+    about: Do not open a public issue. Send an email to security@pycryptodome.org.
+  - name: Ask a question
+    url: https://groups.google.com/forum/#!forum/pycryptodome
+    about: Questions about how to use PyCryptodome go to the mailing list (pycryptodome@googlegroups.com).
+  - name: Documentation and FAQ
+    url: https://www.pycryptodome.org/src/faq
+    about: Answers to common problems (installation, error messages, compatibility with other libraries).

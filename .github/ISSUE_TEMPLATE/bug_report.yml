@@ -1,0 +1,84 @@
+name: Bug report
+description: Something does not work as documented (wrong result, crash, error, build problem).
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for taking the time to report a problem.
+        **Do not report security vulnerabilities here**: send an email to security@pycryptodome.org instead.
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched the existing issues (open and closed) for the same problem.
+          required: true
+        - label: I read the [FAQ](https://www.pycryptodome.org/src/faq).
+          required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What happens, and what did you expect to happen instead?
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Code to reproduce
+      description: |
+        The smallest complete script that shows the problem.
+        Replace real keys and secrets with test values.
+      render: python
+    validations:
+      required: true
+
+  - type: textarea
+    id: output
+    attributes:
+      label: Output or traceback
+      description: The full error message and traceback, if any.
+      render: shell
+
+  - type: input
+    id: version
+    attributes:
+      label: PyCryptodome version
+      description: 'Output of: python -c "import Crypto; print(Crypto.__version__)"'
+      placeholder: "4.6.0"
+    validations:
+      required: true
+
+  - type: input
+    id: python
+    attributes:
+      label: Python version
+      description: 'Output of: python -VV'
+      placeholder: "Python 3.13.1 (main, ...) [GCC 14.2.0]"
+    validations:
+      required: true
+
+  - type: input
+    id: platform
+    attributes:
+      label: Operating system and CPU
+      placeholder: "Ubuntu 24.04, x86-64 / Windows 11, ARM64 / macOS 15, Apple M3"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: install
+    attributes:
+      label: How was PyCryptodome installed?
+      options:
+        - pip, from a wheel (binary package)
+        - pip, built from source
+        - conda
+        - Package of a Linux distribution or of another system
+        - Other (explain in the description)
+    validations:
+      required: true
