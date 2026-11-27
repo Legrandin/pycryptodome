@@ -149,6 +149,25 @@ and ``digest()`` at the end:
     Do not use the decrypted file until ``verify()`` succeeds:
     in the example above, the output file is deleted if the tag is not valid.
 
+The chunk size does not matter: it can be different when decrypting,
+and no padding is needed.
+
+The whole file is a single GCM message, so it can be at most 64 GiB:
+a larger file raises :class:`~Crypto.MessageTooLongError`.
+For a larger file, use :doc:`AEGIS-256 <../cipher/aegis>` (with no practical limit)
+in the same code. Only the creation of the cipher and the length of the nonce change:
+
+.. code-block:: python
+
+    from Crypto.Cipher import AEGIS
+
+    nonce = get_random_bytes(32)
+    cipher = AEGIS.new(key, AEGIS.AEGIS_256, nonce=nonce)   # with a 32-byte key
+
+and, in ``decrypt_file()``, ``remaining = os.path.getsize(src) - 32 - 16``
+and ``nonce=fin.read(32)``.
+:doc:`ChaCha20-Poly1305 <../cipher/chacha20_poly1305>` is also possible, for files up to 256 GB.
+
 Alternatives
 ------------
 

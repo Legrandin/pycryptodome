@@ -107,6 +107,13 @@ The method :meth:`~Crypto.Cipher._mode_cbc.CbcMode.encrypt` (and likewise :meth:
 expects data to have length multiple of the block size (e.g. 16 bytes for AES).
 You might need to use :mod:`Crypto.Util.Padding` to align the plaintext to the right boundary.
 
+To process a long message in pieces, call ``encrypt()`` several times on the same object:
+each piece must be a multiple of the block size, and only the *last* piece is padded.
+The result is the same as encrypting the whole message at once,
+so it can be decrypted in pieces of any size (multiple of the block size),
+and unpadded only at the end.
+Do not pad each piece: decryption would then depend on how the message was cut.
+
 A CBC cipher object has a read-only attribute :attr:`~Crypto.Cipher._mode_cbc.CbcMode.iv`, holding the
 *Initialization Vector* (*bytes*).
 
