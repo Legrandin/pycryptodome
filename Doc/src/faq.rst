@@ -201,15 +201,38 @@ For AWS Lambda and containers, install the package in an image with the same
 operating system, CPU architecture and Python version as the target.
 Do not copy the ``Crypto`` directory from another machine.
 
+.. _pycrypto_conflict:
+
+What if both ``pycryptodome`` and the old ``pycrypto`` are installed?
++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+The two packages install their files in the same ``Crypto`` directory,
+and ``pip`` does not detect the conflict: whichever package was installed last
+overwrites some of the files of the other one. Typical symptoms are:
+
+* ``Crypto.__version__`` is ``2.6.1``, and modern features are missing
+  (for instance, ``AES.MODE_GCM``): ``pycrypto`` was installed last.
+* ``strxor`` raises ``TypeError`` for a ``bytearray`` (``argument 2 must be bytes, not bytearray``):
+  ``pycryptodome`` was installed last, but the native ``strxor`` module
+  (``.so`` or ``.pyd`` file) left by ``pycrypto`` takes priority
+  over the Python module of ``pycryptodome``.
+* ``ImportError: cannot import name 'AES' from 'Crypto.Cipher'``:
+  ``pycrypto`` was uninstalled, and it removed the files it shared with ``pycryptodome``.
+
+Uninstalling ``pycrypto`` is not enough. Remove both packages, and then install
+``pycryptodome`` again::
+
+        python -m pip uninstall -y pycrypto pycryptodome
+        python -m pip install pycryptodome
+
+If one of your dependencies requires ``pycrypto``, replace that dependency or
+move it to another virtual environment: the two packages cannot work side by side.
+
 Why does ``strxor`` raise ``TypeError: argument 2 must be bytes, not bytearray``?
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
-Most probably you have installed both the ``pycryptodome`` and the old ``pycrypto`` packages.
-
-Run ``pip uninstall pycrypto`` and try again.
-
-The old PyCrypto shipped with a ``strxor`` module written as a native library (``.so`` or ``.dll`` file).
-If you install ``pycryptodome``, the old native module will still take priority over the new Python extension that comes in the latter.
+Most probably you have installed both the ``pycryptodome`` and the old ``pycrypto`` packages:
+see :ref:`pycrypto_conflict`.
 
 Why do I get a ``translation_unit_or_empty undefined`` error with ``pycparser``?
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
