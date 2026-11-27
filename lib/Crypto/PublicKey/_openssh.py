@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import binascii
 import struct
 from typing import Optional
 
@@ -138,3 +139,67 @@ def import_openssh_private_generic(
     ssh_name, decrypted = read_string(decrypted)
 
     return ssh_name, decrypted
+
+
+# OpenSSH certificates (PROTOCOL.certkeys in the OpenSSH source):
+# for each certificate type, the plain key type and the number of
+# fields of the certified public key (after the nonce)
+_CERT_TYPES = {
+    b"ssh-rsa-cert-v01@openssh.com": (b"ssh-rsa", 2),  # e, n
+    b"ssh-dss-cert-v01@openssh.com": (b"ssh-dss", 4),  # p, q, g, y
+    b"ecdsa-sha2-nistp256-cert-v01@openssh.com": (b"ecdsa-sha2-nistp256", 2),  # curve, Q
+    b"ecdsa-sha2-nistp384-cert-v01@openssh.com": (b"ecdsa-sha2-nistp384", 2),
+    b"ecdsa-sha2-nistp521-cert-v01@openssh.com": (b"ecdsa-sha2-nistp521", 2),
+    b"ssh-ed25519-cert-v01@openssh.com": (b"ssh-ed25519", 1),  # public key
+}
+
+
+def openssh_certificate_to_public_key(line: bytes) -> bytes:
+    """Return the OpenSSH public key line of the key in an OpenSSH certificate.
+
+    The certificate is **not** verified: neither its signature,
+    nor its validity period or its principals.
+    """
+
+    parts = line.rstrip(b"\r\n").split(b" ", 2)
+    if len(parts) < 2 or parts[0] not in _CERT_TYPES:
+        raise ValueError("Not an OpenSSH certificate")
+    key_type, nr_fields = _CERT_TYPES[parts[0]]
+
+    try:
+        blob = binascii.a2b_base64(parts[1])
+    except binascii.Error:
+        raise ValueError("Invalid base64 in the OpenSSH certificate")
+
+    cert_type, data = read_bytes(blob)
+    if cert_type != parts[0]:
+        raise ValueError("Mismatch in the type of the OpenSSH certificate")
+    _nonce, data = read_bytes(data)
+
+    fields = []
+    for _ in range(nr_fields):
+        field, data = read_bytes(data)
+        fields.append(field)
+
+    # serial (uint64), type (uint32), key id, principals,
+    # valid after and valid before (uint64), critical options, extensions,
+    # reserved, signature key, signature
+    if len(data) < 12:
+        raise ValueError("Insufficient data")
+    cert_kind = struct.unpack(">I", data[8:12])[0]
+    if cert_kind not in (1, 2):  # user or host certificate
+        raise ValueError("Invalid type of OpenSSH certificate")
+    data = data[12:]
+    for _ in range(2):
+        _, data = read_bytes(data)
+    if len(data) < 16:
+        raise ValueError("Insufficient data")
+    data = data[16:]
+    for _ in range(5):
+        _, data = read_bytes(data)
+    if data:
+        raise ValueError("Trailing data in the OpenSSH certificate")
+
+    key_blob = b"".join(struct.pack(">I", len(x)) + x for x in [key_type] + fields)
+    result = [key_type, binascii.b2a_base64(key_blob, newline=False)]
+    return b" ".join(result + parts[2:])

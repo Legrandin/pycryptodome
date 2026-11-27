@@ -654,6 +654,9 @@ def import_key(
         - X.509 certificate (binary DER or PEM)
         - X.509 ``subjectPublicKeyInfo`` (binary DER or PEM)
         - OpenSSH (ASCII one-liner, see `RFC4253`_)
+        - OpenSSH certificate (ASCII one-liner).
+          Only the certified public key is returned: the certificate is **not** verified
+          (neither its signature, nor its validity period or principals).
 
         The following formats are supported for a DSA **private** key:
 
@@ -719,6 +722,13 @@ def import_key(
     extern_key = tobytes(extern_key)
     if passphrase is not None:
         passphrase = tobytes(passphrase)
+
+    # OpenSSH certificate: only the certified public key is used
+    space = extern_key.find(b" ")
+    if space > 0 and extern_key.endswith(b"-cert-v01@openssh.com", 0, space):
+        from ._openssh import openssh_certificate_to_public_key
+
+        extern_key = openssh_certificate_to_public_key(extern_key)
 
     if extern_key.startswith(b"-----"):
         # This is probably a PEM encoded key

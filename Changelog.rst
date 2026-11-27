@@ -6,11 +6,16 @@ Under development
 
 New features
 ------------
+* GH#843: ``import_key()`` of RSA, DSA and ECC accepts an OpenSSH certificate
+  (such as ``ssh-rsa-cert-v01@openssh.com``) and returns the certified public key.
+  The certificate is not verified.
 * GH#402: ``Shamir.split()`` and ``Shamir.combine()`` accept 32-byte secrets and shares, in GF(2^256).
   With ``ssss=True``, the shares are compatible with ``ssss -s 256 -D``.
 
 Resolved issues
 ---------------
+* ``ECC.import_key()`` showed binary data (as the curve name) in the error
+  for an unsupported OpenSSH key type starting with ``ecdsa-sha2-``.
 * GH#493: ``DSS`` in mode ``'fips-186-3'`` with a DSA key raises ``ValueError`` (instead of ``AttributeError``)
   for an object that is not a hash, for instance an HMAC.
 * An ``HMAC`` object created with a hash module (for instance, ``digestmod=SHA256``) now has the attribute ``oid``,

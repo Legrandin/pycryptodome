@@ -1093,18 +1093,13 @@ def _import_openssh_public(encoded):
 
         # NIST P curves
         if parts[0].startswith(b"ecdsa-sha2-"):
-            for _curve_name, curve in _curves.items():
-                if curve.openssh is None:
-                    continue
-                if not curve.openssh.startswith("ecdsa-sha2"):
-                    continue
-                middle = tobytes(curve.openssh.split("-")[2])
-                if keyparts[1] == middle:
-                    break
-            else:
-                raise ValueError("Unsupported ECC curve: %r" % keyparts[1])
-
-            if tobytes(curve.openssh) != parts[0]:
+            # The curve is selected by the key type in the line (for instance,
+            # nistp256 in ecdsa-sha2-nistp256), and the key must name the same curve
+            curve_name = parts[0][len(b"ecdsa-sha2-") :].decode("latin-1")
+            if not curve_name.startswith("nistp") or curve_name not in _curves:
+                raise ValueError("Unsupported ECC curve: %r" % parts[0])
+            curve = _curves[curve_name]
+            if tobytes(curve.openssh) != parts[0] or keyparts[1] != tobytes(curve_name):
                 raise ValueError("Mismatch in openssh public key")
 
             ecc_key = _import_public_der(keyparts[2], curve_oid=curve.oid)
@@ -1309,6 +1304,10 @@ def import_key(
           You must also provide the ``curve_name`` (with a value from the `ECC table`_)
         * OpenSSH line, defined in RFC5656_ and RFC8709_ (ASCII).
           This is normally the content of files like ``~/.ssh/id_ecdsa.pub``.
+        * OpenSSH certificate line (ASCII), such as the content of ``~/.ssh/id_ecdsa-cert.pub``,
+          for NIST P-256, P-384, P-521 and Ed25519 keys.
+          Only the certified public key is returned: the certificate is **not** verified
+          (neither its signature, nor its validity period or principals).
 
         Supported formats for an ECC **private** key:
 
@@ -1409,6 +1408,13 @@ def import_key(
     encoded = tobytes(encoded)
     if passphrase is not None:
         passphrase = tobytes(passphrase)
+
+    # OpenSSH certificate: only the certified public key is used
+    space = encoded.find(b" ")
+    if space > 0 and encoded.endswith(b"-cert-v01@openssh.com", 0, space):
+        from ._openssh import openssh_certificate_to_public_key
+
+        encoded = openssh_certificate_to_public_key(encoded)
 
     # PEM
     if encoded.startswith(b"-----BEGIN OPENSSH PRIVATE KEY"):

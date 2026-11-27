@@ -951,6 +951,9 @@ def import_key(
           encoding)
         - `PKCS#1`_ ``RSAPublicKey`` DER SEQUENCE (binary or PEM encoding)
         - An OpenSSH line (e.g. the content of ``~/.ssh/id_ecdsa``, ASCII)
+        - An OpenSSH certificate line (e.g. the content of ``~/.ssh/id_rsa-cert.pub``, ASCII).
+          Only the certified public key is returned: the certificate is **not** verified
+          (neither its signature, nor its validity period or principals).
 
         The following formats are supported for an RSA **private key**:
 
@@ -1018,6 +1021,13 @@ def import_key(
     extern_key = tobytes(extern_key)
     if passphrase is not None:
         passphrase = tobytes(passphrase)
+
+    # OpenSSH certificate: only the certified public key is used
+    space = extern_key.find(b" ")
+    if space > 0 and extern_key.endswith(b"-cert-v01@openssh.com", 0, space):
+        from ._openssh import openssh_certificate_to_public_key
+
+        extern_key = openssh_certificate_to_public_key(extern_key)
 
     if extern_key.startswith(b"-----BEGIN OPENSSH PRIVATE KEY"):
         text_encoded = extern_key.decode("latin-1")
