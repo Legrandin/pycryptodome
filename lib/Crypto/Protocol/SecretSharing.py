@@ -50,27 +50,40 @@ def _div_gf2(a: int, b: int) -> tuple[int, int]:
     return (q, r)
 
 
+# The irreducible polynomials defining the fields GF(2^128) and GF(2^256),
+# indexed by the size in bytes of their elements.
+# They are the same as in the ssss utility.
+_IRR_POLY = {
+    16: 2**128 + 2**7 + 2**2 + 2 + 1,  # Same as AES-GCM
+    32: 2**256 + 2**10 + 2**5 + 2**2 + 1,
+}
+
+
 class _Element:
-    """Element of GF(2^128) field"""
+    """Element of the field GF(2^128) or GF(2^256)"""
 
-    # The irreducible polynomial defining
-    # this field is 1 + x + x^2 + x^7 + x^128
-    irr_poly: int = 1 + 2 + 4 + 128 + 2**128
-
-    def __init__(self, encoded_value: Union[int, bytes]) -> None:
+    def __init__(self, encoded_value: Union[int, bytes], size: int = 16) -> None:
         """Initialize the element to a certain value.
 
         The value passed as parameter is internally encoded as
-        a 128-bit integer, where each bit represents a polynomial
+        an integer of ``8*size`` bits, where each bit represents a polynomial
         coefficient. The LSB is the constant coefficient.
+
+        ``size`` is the length in bytes of the encoded element:
+        16 for GF(2^128), 32 for GF(2^256).
         """
+
+        if size not in _IRR_POLY:
+            raise ValueError("The size of the field element must be 16 or 32 bytes")
+        self._size = size
+        self.irr_poly: int = _IRR_POLY[size]
 
         if isinstance(encoded_value, int):
             self._value = encoded_value
-        elif len(encoded_value) == 16:
+        elif len(encoded_value) == size:
             self._value = bytes_to_long(encoded_value)
         else:
-            raise ValueError("The encoded value must be an integer or a 16 byte string")
+            raise ValueError("The encoded value must be an integer or a %d byte string" % size)
 
     def __eq__(self, other: object) -> bool:
         if not isinstance(other, _Element):
@@ -78,14 +91,19 @@ class _Element:
         return self._value == other._value
 
     def __int__(self) -> int:
-        """Return the field element, encoded as a 128-bit integer."""
+        """Return the field element, encoded as an integer."""
         return self._value
 
     def encode(self) -> bytes:
-        """Return the field element, encoded as a 16 byte string."""
-        return long_to_bytes(self._value, 16)
+        """Return the field element, encoded as a byte string (16 or 32 bytes)."""
+        return long_to_bytes(self._value, self._size)
+
+    def _check_field(self, other: _Element) -> None:
+        if self._size != other._size:
+            raise ValueError("The field elements belong to different fields")
 
     def __mul__(self, factor: _Element) -> _Element:
+        self._check_field(factor)
         f1 = self._value
         f2 = factor._value
 
@@ -94,26 +112,28 @@ class _Element:
             f1, f2 = f2, f1
 
         if self.irr_poly in (f1, f2):
-            return _Element(0)
+            return _Element(0, self._size)
 
-        mask1 = 2**128
+        bits = 8 * self._size
+        mask1 = 2**bits
         v, z = f1, 0
         while f2:
             # if f2 ^ 1: z ^= v
-            mask2 = int(bin(f2 & 1)[2:] * 128, base=2)
+            mask2 = int(bin(f2 & 1)[2:] * bits, base=2)
             z = (mask2 & (z ^ v)) | ((mask1 - mask2 - 1) & z)
             v <<= 1
             # if v & mask1: v ^= self.irr_poly
-            mask3 = int(bin((v >> 128) & 1)[2:] * 128, base=2)
+            mask3 = int(bin((v >> bits) & 1)[2:] * bits, base=2)
             v = (mask3 & (v ^ self.irr_poly)) | ((mask1 - mask3 - 1) & v)
             f2 >>= 1
-        return _Element(z)
+        return _Element(z, self._size)
 
     def __add__(self, term: _Element) -> _Element:
-        return _Element(self._value ^ term._value)
+        self._check_field(term)
+        return _Element(self._value ^ term._value, self._size)
 
     def inverse(self) -> _Element:
-        """Return the inverse of this element in GF(2^128)."""
+        """Return the inverse of this element in the field."""
 
         # We use the Extended GCD algorithm
         # http://en.wikipedia.org/wiki/Polynomial_greatest_common_divisor
@@ -127,10 +147,10 @@ class _Element:
             q = _div_gf2(r0, r1)[0]
             r0, r1 = r1, r0 ^ _mult_gf2(q, r1)
             s0, s1 = s1, s0 ^ _mult_gf2(q, s1)
-        return _Element(s0)
+        return _Element(s0, self._size)
 
     def __pow__(self, exponent: int) -> _Element:
-        result = _Element(self._value)
+        result = _Element(self._value, self._size)
         for _ in range(exponent - 1):
             result = result * self
         return result
@@ -160,7 +180,8 @@ class Shamir:
           n (integer):
             The number of shares to create (at least ``k``).
           secret (byte string):
-            A byte string of 16 bytes (e.g. an AES 128 key).
+            A byte string of 16 bytes (e.g. an AES 128 key)
+            or 32 bytes (e.g. an AES 256 key).
           ssss (bool):
             If ``True``, the shares can be used with the ``ssss`` utility
             (without using the "diffusion layer").
@@ -171,28 +192,33 @@ class Shamir:
             A tuple contains two items:
 
             1. the unique index (an integer)
-            2. the share (16 bytes)
+            2. the share (as long as the secret: 16 or 32 bytes)
         """
 
+        size = len(secret)
+        if size not in _IRR_POLY:
+            raise ValueError("The secret must be 16 or 32 bytes long")
+
         #
-        # We create a polynomial with random coefficients in GF(2^128):
+        # We create a polynomial with random coefficients
+        # in GF(2^128) or GF(2^256), depending on the size of the secret:
         #
         # p(x) = c_0 + \sum_{i=1}^{k-1} c_i * x^i
         #
         # c_0 is the secret.
         #
 
-        coeffs = [_Element(rng(16)) for i in range(k - 1)]
-        coeffs.append(_Element(secret))
+        coeffs = [_Element(rng(size), size) for i in range(k - 1)]
+        coeffs.append(_Element(secret, size))
 
         # Each share is y_i = p(x_i) where x_i
         # is the index assigned to the share.
 
         def make_share(user, coeffs, ssss):
-            idx = _Element(user)
+            idx = _Element(user, size)
 
             # Horner's method
-            share = _Element(0)
+            share = _Element(0, size)
             for coeff in coeffs:
                 share = idx * share + coeff
 
@@ -201,7 +227,7 @@ class Shamir:
             # p(x) = c_0 + \sum_{i=1}^{k-1} c_i * x^i + x^k
             #
             if ssss:
-                share += _Element(user) ** len(coeffs)
+                share += _Element(user, size) ** len(coeffs)
 
             return share.encode()
 
@@ -214,8 +240,8 @@ class Shamir:
         Args:
           shares (tuples):
             The *k* tuples, each containing the index (an integer) and
-            the share (a byte string, 16 bytes long) that were assigned to
-            a participant.
+            the share (a byte string, 16 or 32 bytes long) that were assigned to
+            a participant. All shares must have the same length.
 
             .. note::
 
@@ -228,7 +254,7 @@ class Shamir:
             Default: ``False``.
 
         Return:
-            The original secret, as a byte string (16 bytes long).
+            The original secret, as a byte string (as long as the shares).
         """
 
         #
@@ -246,23 +272,28 @@ class Shamir:
         #
 
         k = len(shares)
+        size = len(shares[0][1])
+        if size not in _IRR_POLY:
+            raise ValueError("The shares must be 16 or 32 bytes long")
 
         gf_shares: list[tuple[_Element, _Element]] = []
         for x in shares:
-            idx = _Element(x[0])
-            value = _Element(x[1])
+            if len(x[1]) != size:
+                raise ValueError("The shares must all have the same length")
+            idx = _Element(x[0], size)
+            value = _Element(x[1], size)
             if any(y[0] == idx for y in gf_shares):
                 raise ValueError("Duplicate share")
             if ssss:
                 value += idx**k
             gf_shares.append((idx, value))
 
-        result = _Element(0)
+        result = _Element(0, size)
         for j in range(k):
             x_j, y_j = gf_shares[j]
 
-            numerator = _Element(1)
-            denominator = _Element(1)
+            numerator = _Element(1, size)
+            denominator = _Element(1, size)
 
             for m in range(k):
                 x_m = gf_shares[m][0]

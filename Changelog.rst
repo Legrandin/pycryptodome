@@ -4,6 +4,11 @@ Changelog
 Under development
 +++++++++++++++++
 
+New features
+------------
+* GH#402: ``Shamir.split()`` and ``Shamir.combine()`` accept 32-byte secrets and shares, in GF(2^256).
+  With ``ssss=True``, the shares are compatible with ``ssss -s 256 -D``.
+
 Resolved issues
 ---------------
 * ``ECC.import_key()`` accepts an OpenSSH public key with spaces in its comment.

@@ -102,6 +102,39 @@ class TestElement:
         assert int(x * y) == 1
 
 
+class TestElement256:
+    def test_encoding(self):
+        e = _Element(256, 32)
+        assert int(e) == 256
+        assert e.encode() == bytes(30) + b"\x01\x00"
+
+        e = _Element(bytes(30) + b"\x01\x10", 32)
+        assert int(e) == 0x110
+
+        # Only 32 byte strings are a valid encoding
+        with pytest.raises(ValueError):
+            _Element(bytes(16), 32)
+
+        # Only GF(2^128) and GF(2^256)
+        with pytest.raises(ValueError):
+            _Element(1, 24)
+
+    def test_reduction(self):
+        # x^256 = x^10 + x^5 + x^2 + 1
+        x = _Element(2**255, 32) * _Element(2, 32)
+        assert int(x) == 2**10 + 2**5 + 2**2 + 1
+
+    def test_inverse(self):
+        x = _Element(bytes(range(32)), 32)
+        assert int(x * x.inverse()) == 1
+
+    def test_different_fields(self):
+        with pytest.raises(ValueError):
+            _Element(1, 16) + _Element(1, 32)
+        with pytest.raises(ValueError):
+            _Element(1, 16) * _Element(1, 32)
+
+
 class TestShamir:
     def test1(self):
         # Test splitting
@@ -206,6 +239,31 @@ class TestShamir:
                 "11-065d0082c80b1aea18f4abe0c49df72e",
                 "12-84a09430c1d20ea9f388f3123c3733a3",
             ),
+            # 32-byte secrets (ssss -s 256 -D -x)
+            (
+                2,
+                "bf0b8977a74db7d7ce8d72487026ec4acdaca9b78aa328d70b34c990be5b5be0",
+                "1-d006cdbacb5da00dfbe0639f3de7584790096a2969546a7437751ce092fe618b",
+                "2-611100ed7f6d9863a45751e6eba5845076e72e8a4d4dad9173b76370e7112f30",
+                "3-0e1c4420137d8fb9913a4031a664305d2b42ed14aebaef324ff6b600cbb4155b",
+                "4-033e9a42170de8bf1b39351547203c7fbb3ba7cc057e225bfa339c500ccfb67d",
+            ),
+            (
+                3,
+                "1938003e6fb69e2decd6dd9add01357532213601b85d59fbee72ca8c72ffcbf8",
+                "1-26c5062b78004f37a6205f342d92421f955d84d51e0814b68d614c20350cdfd7",
+                "2-b9e221018ebe2ca3af3f4adceb1b0364cbd26439cffd589501ed559e232cf5f2",
+                "3-861f27149908fdb9e5c9c8721b88740e6caed6ed69a815d862fed33264dfe1db",
+                "4-240cf6169433b9da3317bb79edc63a441def4c35bb3734f697afbd83a98de68e",
+                "5-1bf1f003838568c079e139d71d554d2eba93fee11d6279bbf4bc3b2fee7ef2b5",
+            ),
+            (
+                2,
+                "cbc2cd4a9f638ec2146d27a3913cb45a8fb3628e502d5853ce60d45fbc4fe5f0",
+                "10-bb360b247eb034b432a48c768ed46758aaede7e43ca43ce568ac02322b5a9712",
+                "11-b67bebd5ce87a7133710b7eb58b07a7250cef23f981ab3a2784de069438de5fc",
+                "12-949a4901de015d662f1c153a7b8c29a6b6279b3de7231f770ae84fe959a9b964",
+            ),
         )
 
         def get_share(p):
@@ -267,3 +325,36 @@ class TestShamir:
         shares = Shamir.split(2, 3, secret)
         with pytest.raises(ValueError):
             Shamir.combine((shares[0], shares[0]))
+
+    def test_secret_32_bytes(self):
+        rng = SHAKE128.new(b"test_secret_32_bytes")
+
+        for ssss in (False, True):
+            for _ in range(10):
+                secret = rng.read(32)
+
+                shares = Shamir.split(3, 5, secret, ssss=ssss)
+                assert [idx for idx, _ in shares] == [1, 2, 3, 4, 5]
+                assert all(len(share) == 32 for _, share in shares)
+
+                assert Shamir.combine(shares[:3], ssss=ssss) == secret
+                assert Shamir.combine([shares[4], shares[1], shares[3]], ssss=ssss) == secret
+
+    @pytest.mark.parametrize("size", [0, 1, 15, 17, 24, 31, 33, 64])
+    def test_wrong_secret_length(self, size):
+        with pytest.raises(ValueError):
+            Shamir.split(2, 3, bytes(size))
+
+    @pytest.mark.parametrize("size", [0, 15, 17, 24, 64])
+    def test_wrong_share_length(self, size):
+        shares = [(1, bytes(size)), (2, bytes(size))]
+        with pytest.raises(ValueError):
+            Shamir.combine(shares)
+
+    def test_mixed_share_lengths(self):
+        shares16 = Shamir.split(2, 3, bytes(16))
+        shares32 = Shamir.split(2, 3, bytes(32))
+        with pytest.raises(ValueError):
+            Shamir.combine([shares16[0], shares32[1]])
+        with pytest.raises(ValueError):
+            Shamir.combine([shares32[0], shares16[1]])

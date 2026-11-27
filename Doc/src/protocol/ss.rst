@@ -24,13 +24,18 @@ but unique number assigned to the share's recipient and :math:`y_i=q(x_i)`.
 
 This implementation has the following properties:
 
-* The secret is a byte string of 16 bytes (e.g. an AES 128 key).
-* Each share is a byte string of 16 bytes.
+* The secret is a byte string of 16 bytes (e.g. an AES 128 key) or 32 bytes (e.g. an AES 256 key).
+* Each share is a byte string as long as the secret.
 * The recipients of the shares are assigned an integer starting from 1 (share number :math:`x_i`).
-* The polynomial :math:`q(x)` is defined over the field GF(:math:`2^{128}`) with
-  the same irriducible polynomial as used in AES-GCM: :math:`1 + x + x^2 + x^7 + x^{128}`.
-* It can be compatible with the popular `ssss`_ tool when used with the 128 bit security level
-  and no dispersion: the command line arguments must include ``-s 128 -D``.
+* The polynomial :math:`q(x)` is defined over a binary field:
+
+  - for a 16-byte secret, GF(:math:`2^{128}`) with
+    the same irreducible polynomial as used in AES-GCM: :math:`1 + x + x^2 + x^7 + x^{128}`;
+  - for a 32-byte secret, GF(:math:`2^{256}`) with
+    the irreducible polynomial :math:`1 + x^2 + x^5 + x^{10} + x^{256}`.
+
+* It can be compatible with the popular `ssss`_ tool when used with the 128 or 256 bit security level
+  and no dispersion: the command line arguments must include ``-s 128 -D`` or ``-s 256 -D``.
   Note that ``ssss`` uses a slightly different polynomial:
 
   :math:`r(x) = a_0 + a_1 x + a_2 x^2 + \ldots + a_{k-1} x^{k-1} + x^k`
