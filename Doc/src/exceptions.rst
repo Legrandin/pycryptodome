@@ -80,7 +80,7 @@ Key derivation limits
 
 Deriving a key from a password or a passphrase can be made as expensive as wanted,
 and the data that states the cost may come from an attacker:
-an encrypted private key, or a bcrypt hash.
+an encrypted private key, or a bcrypt or Argon2 hash.
 The functions that process such data reject a cost above a limit,
 before doing any work. See :ref:`pkcs8_limits`.
 
@@ -91,13 +91,14 @@ before doing any work. See :ref:`pkcs8_limits`.
     It is raised by :func:`Crypto.PublicKey.RSA.import_key`, :func:`Crypto.PublicKey.DSA.import_key`,
     :func:`Crypto.PublicKey.ECC.import_key` and :func:`Crypto.IO.PKCS8.unwrap`
     (parameter ``max_iteration_count``), and by :func:`Crypto.Protocol.KDF.bcrypt_check`
-    (parameter ``max_cost``).
+    and :func:`Crypto.Protocol.KDF.argon2_check` (parameter ``max_cost``).
 
 .. autoexception:: Crypto.KdfMemoryLimitError
 
     It is raised by :func:`Crypto.PublicKey.RSA.import_key`, :func:`Crypto.PublicKey.DSA.import_key`,
     :func:`Crypto.PublicKey.ECC.import_key` and :func:`Crypto.IO.PKCS8.unwrap`
-    (parameter ``max_memory``), for keys protected with scrypt.
+    (parameter ``max_memory``), for keys protected with scrypt,
+    and by :func:`Crypto.Protocol.KDF.argon2_check` (parameter ``max_memory``).
 
 Ciphers
 -------

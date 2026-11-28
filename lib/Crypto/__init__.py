@@ -63,8 +63,9 @@ class KdfLimitError(ValueError):
 
 class KdfIterationLimitError(KdfLimitError):
     """The cost of the key derivation (the iteration count of PBKDF2,
-    the cost of scrypt, or the rounds of bcrypt) is above the limit
-    (for instance, the one set with ``max_iteration_count``).
+    the cost of scrypt, the rounds of bcrypt, or the passes and memory of Argon2)
+    is above the limit (for instance, the one set with ``max_iteration_count``
+    or ``max_cost``).
     """
 
 

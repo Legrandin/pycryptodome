@@ -29,6 +29,8 @@ the caller chooses the parameters then.
 A similar limit, ``max_cost``, protects :func:`Crypto.Protocol.KDF.bcrypt_check`,
 when it verifies a password against a bcrypt hash that states its own cost
 (see `bcrypt password hashes`_).
+:func:`Crypto.Protocol.KDF.argon2_check` has both ``max_cost`` and ``max_memory``
+(see `Argon2 password hashes`_).
 
 Default limits
 --------------
@@ -157,6 +159,29 @@ before any hashing, with :class:`Crypto.KdfIterationLimitError` (a ``ValueError`
 
 The usual costs for passwords (10 to 14) are well within the default limit.
 
+Argon2 password hashes
+----------------------
+
+:func:`Crypto.Protocol.KDF.argon2_check` verifies a password against an Argon2 hash
+(``$argon2id$v=19$m=...,t=...,p=...$...``), which states its own memory *m* (in KiB,
+up to 4 TiB), number of passes *t* and lanes *p*.
+Before any hashing, it rejects a hash:
+
+* that needs more than ``max_memory`` bytes, with :class:`Crypto.KdfMemoryLimitError`.
+  The memory is *m′* KiB, where *m′* is *m* rounded down to a multiple of *4·p*.
+  By default (``max_memory=None``), the limit is 256 MiB, as for scrypt;
+* whose work *t·m′* (in KiB) is above ``max_cost``, with :class:`Crypto.KdfIterationLimitError`.
+  By default (``max_cost=None``), the limit is 2\ :sup:`25`: for instance, 128 passes
+  over 256 MiB, or 512 passes over 64 MiB. It takes about one minute on one thread of a
+  recent x86-64 laptop (about 600 MiB per second).
+
+With 0, no limit applies. The work does not depend on the number of lanes or threads:
+the lanes share the memory, and with *k* threads the time is about *k* times shorter.
+
+The hashes made with the default of :func:`Crypto.Protocol.KDF.argon2_hash`
+(64 MiB and 3 passes), and with the profiles for logins, are well within both limits.
+The profiles with 1 GiB and 2 GiB of memory need a higher ``max_memory``.
+
 Explicit limits
 ---------------
 
@@ -219,7 +244,8 @@ What is not covered
 
 * Private keys encrypted with the legacy PEM encryption (``Proc-Type: 4,ENCRYPTED``):
   their key derivation has a fixed, low cost.
-* Password hashes checked with :func:`Crypto.Protocol.KDF.bcrypt_check`:
-  they have their own limit, ``max_cost`` (see `bcrypt password hashes`_).
+* Password hashes checked with :func:`Crypto.Protocol.KDF.bcrypt_check`
+  and :func:`Crypto.Protocol.KDF.argon2_check`:
+  they have their own limits (see `bcrypt password hashes`_ and `Argon2 password hashes`_).
 
 .. _`PKCS#8`: https://datatracker.ietf.org/doc/html/rfc5208

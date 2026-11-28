@@ -515,6 +515,34 @@ if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64" AND CMAKE_SIZEOF_VOID_P 
     add_test(NAME test_chacha20_avx2 COMMAND test_chacha20_avx2)
 endif()
 
+# Argon2, for each build of the compression function (the test includes argon2.c)
+add_executable(test_argon2 test_argon2.c ../blake2b.c)
+if (MSVC)
+    # Without SSE2, even if enabled for all the other tests
+    target_compile_options(test_argon2 PRIVATE /UUSE_SSE2)
+endif()
+add_test(NAME test_argon2 COMMAND test_argon2)
+
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64|i386|i686|X86|x86")
+    add_executable(test_argon2_sse2 test_argon2.c ../blake2b.c)
+    target_compile_definitions(test_argon2_sse2 PRIVATE USE_SSE2)
+    if (MSVC)
+        target_compile_definitions(test_argon2_sse2 PRIVATE HAVE_INTRIN_H)
+    else()
+        target_compile_definitions(test_argon2_sse2 PRIVATE HAVE_X86INTRIN_H)
+        target_compile_options(test_argon2_sse2 PRIVATE -msse2)
+    endif()
+    add_test(NAME test_argon2_sse2 COMMAND test_argon2_sse2)
+endif()
+
+# The AVX2 build (gcc and clang only). The test does nothing on a CPU without AVX2.
+if (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64|AMD64|amd64" AND CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT MSVC)
+    add_executable(test_argon2_avx2 test_argon2.c ../blake2b.c)
+    target_compile_definitions(test_argon2_avx2 PRIVATE TEST_ARGON2_AVX2 USE_SSE2 HAVE_X86INTRIN_H)
+    target_compile_options(test_argon2_avx2 PRIVATE -mavx2 -mbmi -mbmi2 -msse2)
+    add_test(NAME test_argon2_avx2 COMMAND test_argon2_avx2)
+endif()
+
 # SLH-DSA, for each build of slhdsa.c
 add_executable(test_slhdsa test_slhdsa.c ../slhdsa.c)
 add_test(NAME test_slhdsa COMMAND test_slhdsa)
