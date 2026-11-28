@@ -23,8 +23,14 @@
 
 from __future__ import annotations
 
-# Python 3.15+ imports Argon2 on first use (PEP 810); earlier versions ignore this
-__lazy_modules__ = ["Crypto.Protocol._argon2"]
+# Python 3.15+ imports these modules on first use (PEP 810); earlier versions ignore this
+__lazy_modules__ = [
+    "Crypto.Protocol._argon2",
+    "Crypto.Hash",
+    "Crypto.Random",
+    "Crypto.Util.number",
+    "Crypto.Util.strxor",
+]
 
 import re
 import struct
