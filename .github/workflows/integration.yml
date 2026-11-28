@@ -247,6 +247,7 @@ jobs:
         # Likewise for the AVX2 build of Salsa20
         SALSA20_REQUIRE_AVX2: ${{ matrix.arch == 'x64' && '1' || '' }}
         CHACHA20_REQUIRE_AVX2: ${{ matrix.arch == 'x64' && '1' || '' }}
+        ARGON2_REQUIRE_AVX2: ${{ matrix.arch == 'x64' && '1' || '' }}
         # And for the SHA-NI and AVX2 builds of SLH-DSA
         SLHDSA_REQUIRE_SHA_NI: ${{ matrix.arch == 'x64' && '1' || '' }}
         SLHDSA_REQUIRE_AVX2: ${{ matrix.arch == 'x64' && '1' || '' }}

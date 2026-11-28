@@ -6,6 +6,13 @@ Under development
 
 New features
 ------------
+* Argon2 (RFC 9106) in ``Crypto.Protocol.KDF``: ``argon2()`` derives keys, and ``argon2_hash()``
+  and ``argon2_check()`` store and check passwords as PHC strings (``$argon2id$v=19$...``),
+  compatible with most other implementations. Argon2id, Argon2i and Argon2d are supported,
+  the lanes can run on several threads (``threads``), the blocks are computed with SSE2
+  or AVX2 on x86, and ``Argon2Profile`` offers
+  the recommended parameters of RFC 9106, OWASP and libsodium.
+  ``argon2_check()`` rejects hashes that need too much memory (``max_memory``) or time (``max_cost``).
 * GH#402: ``Shamir.split()`` and ``Shamir.combine()`` accept 32-byte secrets and shares, in GF(2^256).
   With ``ssss=True``, the shares are compatible with ``ssss -s 256 -D``.
 

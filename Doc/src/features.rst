@@ -163,6 +163,7 @@ Key derivation
 
 .. rst-class:: two-columns
 
+* :ref:`Argon2 <argon2_func>` (Argon2id, Argon2i, Argon2d)
 * :ref:`PBKDF2 <pbkdf2_func>`
 * :ref:`scrypt <scrypt_func>`
 * :ref:`bcrypt <bcrypt_func>`

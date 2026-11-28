@@ -43,6 +43,16 @@ and then encrypt as in :doc:`symmetric`:
     data = encrypt("correct horse battery staple", b"Attack at dawn")
     assert decrypt("correct horse battery staple", data) == b"Attack at dawn"
 
+You can also derive the key with :ref:`Argon2 <argon2_func>`, in the same way.
+Choose a profile, and keep it: a different profile gives a different key.
+
+.. code-block:: python
+
+    from Crypto.Protocol.KDF import Argon2Profile, argon2
+
+    def derive_key(password: str, salt: bytes) -> bytes:
+        return argon2(password, 32, salt=salt, profile=Argon2Profile.RFC9106_2021_64MIB)
+
 A wrong password makes ``decrypt_and_verify()`` raise ``ValueError``,
 exactly like a modified message.
 
@@ -69,92 +79,99 @@ Store and check passwords for a login
 -------------------------------------
 
 To check the password of a user, you don't need to decrypt anything:
-store a :ref:`bcrypt <bcrypt_func>` hash of the password, and compare
+store an :ref:`Argon2 <argon2_func>` hash of the password, and compare
 the password typed at login against it:
 
 .. code-block:: python
 
-    from Crypto.Protocol.KDF import bcrypt, bcrypt_check
+    from Crypto.Protocol.KDF import argon2_check, argon2_hash
 
-    # At registration: store the hash (it includes the salt and the cost)
-    stored_hash = bcrypt("correct horse battery staple", cost=12)
+    # At registration: store the hash (it includes the salt and the parameters)
+    stored_hash = argon2_hash("correct horse battery staple")
 
     # At login
     try:
-        bcrypt_check("correct horse battery staple", stored_hash)
+        argon2_check("correct horse battery staple", stored_hash)
         print("Welcome back")
     except ValueError:
         print("Incorrect password")
 
-The ``cost`` doubles the time at each step: 12 takes a fraction of a second.
+The hash is a string like ``$argon2id$v=19$m=65536,t=3,p=4$...``, which
+most other Argon2 libraries can also check.
+By default, it uses Argon2id with 64 MiB of memory and 3 passes
+(the second recommended option of RFC 9106), which takes a fraction of a second.
 
-bcrypt only accepts passwords of up to 72 bytes.
-To accept longer passwords, hash them first with SHA-256
-(and encode the result, since bcrypt does not accept the zero byte):
+Argon2 is memory-hard: every guess costs an attacker as much memory as it costs you,
+which makes GPUs and custom hardware much less effective than against bcrypt or PBKDF2.
+It accepts passwords of any length.
+
+Choosing the parameters
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Pass a ``profile`` (see the :ref:`table of profiles <argon2_func>`) or the costs.
+For instance, on a server with many concurrent logins and little memory:
 
 .. code-block:: python
 
-    from base64 import b64encode
-    from Crypto.Hash import SHA256
+    from Crypto.Protocol.KDF import Argon2Profile
 
-    def prehash(password: str) -> bytes:
-        return b64encode(SHA256.new(password.encode()).digest())
+    stored_hash = argon2_hash("correct horse battery staple", profile=Argon2Profile.OWASP_2023_19MIB)
 
-    stored_hash = bcrypt(prehash("a very long passphrase " * 10), cost=12)
-    bcrypt_check(prehash("a very long passphrase " * 10), stored_hash)
+The parameters are stored in each hash: you can raise them later for new passwords,
+and still check the old ones.
+:func:`~Crypto.Protocol.KDF.argon2_check` rejects a hash that needs more than 256 MiB
+of memory, to protect against hashes from untrusted sources
+(change the limit with ``max_memory``).
 
-Alternatives to bcrypt
+Alternatives to Argon2
 ~~~~~~~~~~~~~~~~~~~~~~
 
-bcrypt is the easiest choice to use correctly with this library,
-because a single string holds everything needed to check a password.
-Consider the alternatives when:
-
-* **You want the strongest protection against cracking hardware** (GPUs, ASICs).
-  Memory-hard functions like scrypt are more costly to attack than bcrypt,
-  which needs little memory.
-  With :ref:`scrypt <scrypt_func>`, you must store the salt and the parameters
-  yourself, together with the hash, and compare the hashes in constant time:
+* **You must check existing bcrypt hashes**, or interoperate with a system that uses them.
+  Use :ref:`bcrypt <bcrypt_func>`, which also stores everything in a single string:
 
   .. code-block:: python
 
-      import hmac
-      from base64 import b64decode, b64encode
-      from Crypto.Protocol.KDF import scrypt
-      from Crypto.Random import get_random_bytes
+      from Crypto.Protocol.KDF import bcrypt, bcrypt_check
 
-      def hash_password(password: str, N: int = 2**17, r: int = 8, p: int = 1) -> str:
-          salt = get_random_bytes(16)
-          h = scrypt(password, salt, key_len=32, N=N, r=r, p=p)
-          return f"scrypt${N}${r}${p}${b64encode(salt).decode()}${b64encode(h).decode()}"
+      stored_hash = bcrypt("correct horse battery staple", cost=12)
+      bcrypt_check("correct horse battery staple", stored_hash)   # ValueError if wrong
 
-      def check_password(password: str, stored: str) -> bool:
-          _, N, r, p, salt, h = stored.split("$")
-          candidate = scrypt(password, b64decode(salt), key_len=32,
-                             N=int(N), r=int(r), p=int(p))
-          return hmac.compare_digest(candidate, b64decode(h))
+  The ``cost`` doubles the time at each step: 12 takes a fraction of a second.
+  bcrypt only accepts passwords of up to 72 bytes, without the zero byte.
+  To accept longer passwords, hash them first with SHA-256 and encode the result:
 
-      stored = hash_password("correct horse battery staple")
-      assert check_password("correct horse battery staple", stored)
-      assert not check_password("wrong password", stored)
+  .. code-block:: python
 
-  Because the parameters are stored with each hash, you can increase them later
-  for new passwords, and still check the old ones.
-  Only accept stored values from a trusted source: huge parameters make the check very slow.
+      from base64 import b64encode
+      from Crypto.Hash import SHA256
+
+      def prehash(password: str) -> bytes:
+          return b64encode(SHA256.new(password.encode()).digest())
+
+      stored_hash = bcrypt(prehash("a very long passphrase " * 10), cost=12)
+      bcrypt_check(prehash("a very long passphrase " * 10), stored_hash)
 
 * **You must comply with FIPS 140**, which only approves PBKDF2.
   It is the weakest option, because it needs no memory:
   use HMAC-SHA256 and at least 600 000 iterations (the OWASP recommendation),
-  and store the salt and the iteration count as for scrypt:
+  and store the salt and the iteration count together with the hash.
+  Compare the hashes in constant time:
 
   .. code-block:: python
 
+      import hmac
       from Crypto.Hash import SHA256
       from Crypto.Protocol.KDF import PBKDF2
+      from Crypto.Random import get_random_bytes
 
       salt = get_random_bytes(16)
       h = PBKDF2("correct horse battery staple", salt, dkLen=32,
                  count=600_000, hmac_hash_module=SHA256)
+
+      # At login, with the stored salt and h
+      candidate = PBKDF2("correct horse battery staple", salt, dkLen=32,
+                         count=600_000, hmac_hash_module=SHA256)
+      assert hmac.compare_digest(candidate, h)
 
 Protect a private key with a password
 -------------------------------------

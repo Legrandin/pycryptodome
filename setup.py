@@ -234,6 +234,15 @@ ext_modules = [
     Extension(
         "Crypto.Protocol._scrypt", include_dirs=["src/"], sources=["src/scrypt.c"], py_limited_api=True
     ),
+    Extension(
+        "Crypto.Protocol._argon2_core", include_dirs=["src/"], sources=["src/argon2.c"], py_limited_api=True
+    ),
+    Extension(
+        "Crypto.Protocol._argon2_core_avx2_bmi2",
+        include_dirs=["src/"],
+        sources=["src/argon2_avx2_bmi2.c"],
+        py_limited_api=True,
+    ),
     # Utility modules
     Extension("Crypto.Util._strxor", include_dirs=["src/"], sources=["src/strxor.c"], py_limited_api=True),
     Extension("Crypto.Util._base64", include_dirs=["src/"], sources=["src/base64.c"], py_limited_api=True),

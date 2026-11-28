@@ -370,6 +370,62 @@ def _lower_search_priority_of_cipher_modes():
     PythonDomain.get_objects = patched_get_objects
 
 
+def _argon2_profiles_directive():
+    """The directive ``.. argon2-profiles::``: the table of the members of
+    :class:`Crypto.Protocol.KDF.Argon2Profile`, generated from the enum itself,
+    so that the documentation and the code cannot disagree."""
+
+    from docutils import nodes
+    from docutils.parsers.rst import Directive
+    from docutils.statemachine import StringList
+
+    from Crypto.Protocol.KDF import ARGON2_DEFAULT_PROFILE, Argon2Profile
+
+    def memory(kib):
+        if kib % (1024 * 1024) == 0:
+            return "%d GiB" % (kib // (1024 * 1024))
+        if kib % 1024 == 0:
+            return "%d MiB" % (kib // 1024)
+        return "%d KiB" % kib
+
+    class Argon2ProfilesTable(Directive):
+        has_content = False
+
+        def run(self):
+            lines = [
+                ".. list-table::",
+                "   :header-rows: 1",
+                "   :widths: 30 6 10 6 48",
+                "",
+                "   * - Profile",
+                "     - *t*",
+                "     - *m*",
+                "     - *p*",
+                "     - Purpose and source",
+            ]
+            for profile in Argon2Profile:
+                purpose = profile.rationale + "."
+                if profile is ARGON2_DEFAULT_PROFILE:
+                    purpose += " **The default of** :func:`~Crypto.Protocol.KDF.argon2_hash`."
+                if profile.deprecated:
+                    purpose += " **Deprecated**: " + profile.deprecated
+                lines += [
+                    "   * - :attr:`~Crypto.Protocol.KDF.Argon2Profile.%s`" % profile.name,
+                    "     - %d" % profile.time_cost,
+                    "     - %s" % memory(profile.memory_cost),
+                    "     - %d" % profile.lanes,
+                    "     - %s" % purpose,
+                    "",
+                    "       %s" % profile.source,
+                ]
+            container = nodes.container()
+            self.state.nested_parse(StringList(lines), self.content_offset, container)
+            return container.children
+
+    return Argon2ProfilesTable
+
+
 def setup(app):
     app.connect("autodoc-process-signature", _hide_cipher_mode_signature, priority=400)
     _lower_search_priority_of_cipher_modes()
+    app.add_directive("argon2-profiles", _argon2_profiles_directive())

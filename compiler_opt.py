@@ -723,6 +723,7 @@ def set_compiler_options(extensions):
         "Crypto.PublicKey._mldsa_avx2_bmi2",
         "Crypto.PublicKey._mlkem_avx2_bmi2",
         "Crypto.PublicKey._slhdsa_avx2_bmi2",
+        "Crypto.Protocol._argon2_core_avx2_bmi2",
     ]
     if avx2_bmi2_result:
         print("Compiling support for AVX2 and BMI2 instructions")

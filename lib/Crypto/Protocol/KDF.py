@@ -34,6 +34,15 @@ from typing import TYPE_CHECKING, Any, Callable, Literal, Optional, Union, overl
 
 from Crypto import KdfIterationLimitError
 from Crypto.Hash import CMAC, HMAC, SHA1, SHA256
+
+# Argon2 lives in its own module (re-exported here)
+from Crypto.Protocol._argon2 import ARGON2_DEFAULT_PROFILE as ARGON2_DEFAULT_PROFILE
+from Crypto.Protocol._argon2 import Argon2Params as Argon2Params
+from Crypto.Protocol._argon2 import Argon2Profile as Argon2Profile
+from Crypto.Protocol._argon2 import Argon2Variant as Argon2Variant
+from Crypto.Protocol._argon2 import argon2 as argon2
+from Crypto.Protocol._argon2 import argon2_check as argon2_check
+from Crypto.Protocol._argon2 import argon2_hash as argon2_hash
 from Crypto.Random import get_random_bytes
 from Crypto.Util._bytes import tobytes
 from Crypto.Util._raw_api import (

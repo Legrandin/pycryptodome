@@ -20,7 +20,8 @@ It is computationally expensive (a property that can be tuned via the ``count`` 
 However, it uses a very limited amount of RAM which makes it insufficiently
 protected against advanced and motivated adversaries that can leverage GPUs.
 
-New applications and protocols should use :ref:`scrypt <scrypt_func>` or :ref:`bcrypt <bcrypt_func>` instead.
+New applications and protocols should use :ref:`Argon2id <argon2_func>`, :ref:`scrypt <scrypt_func>`
+or :ref:`bcrypt <bcrypt_func>` instead.
 
 Always pass the ``count`` and ``hmac_hash_module`` parameters: their defaults
 (1000 iterations and HMAC-SHA1) are weak, deprecated (they emit a :class:`DeprecationWarning`),
@@ -41,6 +42,145 @@ For example, if you need to derive two AES256 keys::
 .. _pbkdf2_func:
 
 .. autofunction:: Crypto.Protocol.KDF.PBKDF2
+
+.. _argon2_func:
+
+Argon2
++++++++
+
+`Argon2 <https://www.rfc-editor.org/rfc/rfc9106>`_ (RFC 9106) is the winner of the
+`Password Hashing Competition <https://www.password-hashing.net/>`_.
+It is memory-hard, like scrypt: an attacker needs as much memory as you
+for every password they try, which makes GPUs and custom hardware much less effective.
+
+It comes in three variants (:class:`Argon2Variant <Crypto.Protocol.KDF.Argon2Variant>`).
+Use **Argon2id**, the default and the variant recommended by RFC 9106.
+Argon2d is slightly stronger against cracking hardware, but its memory accesses
+depend on the password, so it leaks information through cache timing
+to an attacker who can run code on the same machine.
+Argon2i avoids that leak, but it is weaker against other attacks;
+Argon2id combines the two.
+
+The module offers three functions:
+
+* :func:`argon2() <Crypto.Protocol.KDF.argon2>` derives keys from a password, like :func:`~Crypto.Protocol.KDF.scrypt`;
+* :func:`argon2_hash() <Crypto.Protocol.KDF.argon2_hash>` and
+  :func:`argon2_check() <Crypto.Protocol.KDF.argon2_check>` store and check passwords,
+  like :func:`~Crypto.Protocol.KDF.bcrypt` and :func:`~Crypto.Protocol.KDF.bcrypt_check`, in the PHC string format
+  (``$argon2id$v=19$m=65536,t=3,p=4$...``) used by most other implementations.
+
+To store a password, and check it later::
+
+    from Crypto.Protocol.KDF import argon2_check, argon2_hash
+
+    stored = argon2_hash("correct horse battery staple")
+    # b'$argon2id$v=19$m=65536,t=3,p=4$...$...'
+
+    try:
+        argon2_check("correct horse battery staple", stored)
+    except ValueError:
+        print("Incorrect password")
+
+The hash contains the parameters and the random salt: you only need to store it.
+
+To derive a key, for instance to encrypt a file::
+
+    from Crypto.Protocol.KDF import Argon2Profile, argon2
+    from Crypto.Random import get_random_bytes
+
+    salt = get_random_bytes(16)
+    key = argon2("correct horse battery staple", 32, salt=salt,
+                 profile=Argon2Profile.RFC9106_2021_64MIB)
+
+You need the same salt (and the same parameters) to derive the same key again,
+so store the salt with the encrypted data.
+
+Choosing the parameters
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Argon2 has three costs:
+
+* ``memory_cost`` (*m*): the memory, in **KiB**;
+* ``time_cost`` (*t*): the number of passes over the memory;
+* ``lanes`` (*p*): the number of lanes that the memory is divided into.
+
+They are easier to choose from a *profile*: a member of
+:class:`Argon2Profile <Crypto.Protocol.KDF.Argon2Profile>`,
+named after the document that recommends it, and the year:
+
+.. argon2-profiles::
+
+A profile never changes, and it is never removed:
+``profile=Argon2Profile.RFC9106_2021_64MIB`` derives the same key in every version
+of this library. All of them use Argon2id, a 16-byte salt and a 32-byte tag.
+
+Which profile?
+
+* **To store passwords on a server**, the default of :func:`~Crypto.Protocol.KDF.argon2_hash`
+  (currently ``RFC9106_2021_64MIB``).
+  With many concurrent logins and little memory, ``OWASP_2023_19MIB``.
+* **To derive a key to encrypt a file**, ``RFC9106_2021_2GIB`` if 2 GiB are available,
+  otherwise ``RFC9106_2021_64MIB``.
+* **To derive the same keys as libsodium** (``crypto_pwhash()`` with Argon2id),
+  the matching ``LIBSODIUM_2017_*`` profile.
+
+The profiles are generic. RFC 9106 (Section 4) recommends tuning the parameters for
+your own hardware instead: choose the largest amount of memory that you can afford,
+and then the largest number of passes that fits your time budget.
+You can pass the parameters explicitly, or override part of a profile::
+
+    # A profile, on a single lane
+    key = argon2(password, 32, salt=salt, profile=Argon2Profile.RFC9106_2021_64MIB, lanes=1)
+
+    # Explicit parameters: all of time_cost, memory_cost and lanes
+    key = argon2(password, 32, salt=salt, time_cost=2, memory_cost=512 * 1024, lanes=4)
+
+The parameters of :func:`~Crypto.Protocol.KDF.argon2_hash` are stored in the hash,
+so you can raise them later for new passwords, and still check the old ones.
+With :func:`~Crypto.Protocol.KDF.argon2`, you must use the same parameters to get the same key.
+
+Lanes and threads
+~~~~~~~~~~~~~~~~~
+
+``lanes`` is part of the result, while ``threads`` only decides how fast it comes,
+as for scrypt's ``p``. The lanes can be computed in parallel, on up to ``lanes``
+threads::
+
+    key = argon2(password, 32, salt=salt, profile=Argon2Profile.RFC9106_2021_64MIB, threads=4)
+
+With ``threads=0``, Argon2 uses as many threads as the CPU cores available to the process.
+The output does not depend on the number of threads, and all threads share
+the same memory.
+
+Hashes from untrusted sources
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+An Argon2 hash states its own parameters, so a malicious hash can ask for
+terabytes of memory or hours of work. :func:`~Crypto.Protocol.KDF.argon2_check` rejects a hash that
+needs more than 256 MiB of memory (``max_memory``, in bytes), or whose passes times
+memory exceed :math:`2^{25}` KiB, about one minute on a recent laptop (``max_cost``):
+see :ref:`the limits<pkcs8_limits>`.
+
+.. autoclass:: Crypto.Protocol.KDF.Argon2Variant
+    :members:
+    :undoc-members:
+    :member-order: bysource
+
+.. autoclass:: Crypto.Protocol.KDF.Argon2Profile
+    :members: RFC9106_2021_2GIB, RFC9106_2021_64MIB, OWASP_2023_19MIB,
+              LIBSODIUM_2017_INTERACTIVE, LIBSODIUM_2017_MODERATE, LIBSODIUM_2017_SENSITIVE
+    :member-order: bysource
+
+.. autoclass:: Crypto.Protocol.KDF.Argon2Params
+    :members:
+    :member-order: bysource
+
+.. autodata:: Crypto.Protocol.KDF.ARGON2_DEFAULT_PROFILE
+    :no-value:
+
+.. autofunction:: Crypto.Protocol.KDF.argon2
+.. autofunction:: Crypto.Protocol.KDF.argon2_hash
+.. autofunction:: Crypto.Protocol.KDF.argon2_check
 
 scrypt
 +++++++
