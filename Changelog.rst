@@ -26,6 +26,10 @@ Resolved issues
   That check was redundant, and would have rejected (with negligible probability) a valid key.
   Thanks to sfluhrer.
 
+Other changes
+-------------
+* Added the Wycheproof test vectors for PBKDF2 (with HMAC-SHA1, SHA-224, SHA-256, SHA-384 and SHA-512).
+
 4.6.0 (22 November 2026)
 +++++++++++++++++++++++++++
 

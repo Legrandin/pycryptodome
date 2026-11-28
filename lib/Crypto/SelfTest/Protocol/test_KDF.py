@@ -1024,6 +1024,50 @@ class TestVectorsHKDFWycheproof:
         self.check_verify(tv)
 
 
+_PBKDF2_WYCHEPROOF_HASHES = {
+    "PBKDF2-HMACSHA1": SHA1,
+    "PBKDF2-HMACSHA224": SHA224,
+    "PBKDF2-HMACSHA256": SHA256,
+    "PBKDF2-HMACSHA384": SHA384,
+    "PBKDF2-HMACSHA512": SHA512,
+}
+
+
+def _load_tests_pbkdf2(filename):
+    result = load_test_vectors_wycheproof(
+        ("Protocol", "wycheproof"),
+        filename,
+        "Wycheproof PBKDF2 (%s)" % filename,
+        root_tag={"hash_module": lambda root: _PBKDF2_WYCHEPROOF_HASHES[root["algorithm"]]},
+        unit_tag={
+            "password": lambda unit: unhexlify(unit["password"]),
+            "iterationCount": lambda unit: int(unit["iterationCount"]),
+            "dkLen": lambda unit: int(unit["dkLen"]),
+            "dk": lambda unit: unhexlify(unit["dk"]),
+        },
+    )
+    return result
+
+
+def load_wycheproof_vectors_pbkdf2():
+    vectors = []
+    for name in ("sha1", "sha224", "sha256", "sha384", "sha512"):
+        vectors += _load_tests_pbkdf2("pbkdf2_hmac%s_test.json" % name)
+    # The vectors with millions of iterations take seconds each
+    return [tv for tv in vectors if tv.iterationCount <= 100000] + mark_slow(
+        [tv for tv in vectors if tv.iterationCount > 100000]
+    )
+
+
+class TestVectorsPBKDF2Wycheproof:
+    @pytest.mark.parametrize("tv", load_wycheproof_vectors_pbkdf2(), ids=wycheproof_id)
+    def test(self, tv):
+        # All the vectors are valid
+        assert tv.valid
+        key = PBKDF2(tv.password, tv.salt, tv.dkLen, count=tv.iterationCount, hmac_hash_module=tv.hash_module)
+        assert key == tv.dk
+
+
 def load_hash_by_name(hash_name):
     return __import__("Crypto.Hash." + hash_name, globals(), locals(), ["new"])
 
